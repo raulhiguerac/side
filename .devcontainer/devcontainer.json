@@ -1,17 +1,19 @@
 {
-  "name": "FastAPI Dev",
+  "name": "Mi casa en minutos",
   "dockerComposeFile": [
-    "docker-compose.yml"
+    "../docker-compose.yml"
   ],
-  "service": "api",
+  "service": "develop",
   "workspaceFolder": "/workspace",
-  "forwardPorts": [8000, 5432],
+  "forwardPorts": [8000, 5432, 8080],
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "cweijan.vscode-database-client2"
+        "cweijan.vscode-database-client2",
+        "vue.volar",
+        "mariorodeghiero.vue-theme"
       ]
     }
   },
