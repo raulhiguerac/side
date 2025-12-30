@@ -10,7 +10,7 @@ fi
 
 base="./$ms_name"
 
-mkdir -p "$base/src/app"/{api,core,models,schemas,services,repositories,db,migrations,utils}
+mkdir -p "$base/src/app"/{api,core,models,schemas,services,repositories,db,utils,integrations}
 mkdir -p "$base/src/app/api"/{routers,deps}
 mkdir -p "$base/tests"/{unit,integration}
 
@@ -20,6 +20,7 @@ touch "$base/src/app/api/routers/__init__.py"
 touch "$base/src/app/core/__init__.py"
 touch "$base/src/app/db/__init__.py"
 touch "$base/src/app/schemas/__init__.py"
+touch "$base/src/app/integrations/__init__.py"
 
 touch "$base/src/app/main.py"
 touch "$base/src/app/api/routers/health.py"

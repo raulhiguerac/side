@@ -3,6 +3,9 @@
   "dockerComposeFile": [
     "../docker-compose.yml"
   ],
+  "features": {
+		"ghcr.io/rails/devcontainer/features/postgres-client:1": {}
+	},
   "service": "develop",
   "workspaceFolder": "/workspace",
   "forwardPorts": [8000, 5432, 8080],

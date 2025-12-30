@@ -20,17 +20,31 @@ class User(SQLModel, table=True):
     __tablename__ = "users"
 
     user_id: uuid.UUID = Field(primary_key=True, index=True)
-    email: str = Field(unique=True, max_length=255)
-    name: str = Field(nullable=False)
-    last_name: str = Field(nullable=False)
-    phone: Optional[str] = Field(default=None)
-    intent: UserIntent = Field(nullable=False)
+    email: str = Field(unique=True, index=True, max_length=255)
     onboarding_step: int = Field(nullable=False, default=1)
-    profile_score: int = Field(nullable=False, default=0)
     is_active: bool = Field(nullable=False, default=True)
     deactivated_at: Optional[datetime] = Field(default=None)
     created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
     updated_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now(),onupdate=func.now()))
+
+class UserProfile(SQLModel, table=True):
+    __tablename__ = "user_profile"
+
+    user_id: uuid.UUID = Field(
+        sa_column=Column(
+            ForeignKey("users.user_id", ondelete="CASCADE"),
+            primary_key=True
+        )
+    )
+    name: str = Field(nullable=False)
+    last_name: str = Field(nullable=False)
+    phone: Optional[str] = Field(default=None)
+    intent: Optional[UserIntent] = Field(default=None)
+    photo_url: Optional[str] = Field(default=None)
+    description: Optional[str] = Field(default=None)
+    profile_score: int = Field(nullable=False, default=0)
+    created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(), server_default=func.now()))
+    updated_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(), server_default=func.now(), onupdate=func.now()))
 
 class Country(SQLModel, table=True):
 
@@ -38,8 +52,8 @@ class Country(SQLModel, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
     name: str = Field(unique=True, nullable=False)
-    iso2: str = Field(nullable=False)
-    iso3: str = Field(nullable=False)
+    iso2: str = Field(unique=True, nullable=False)
+    iso3: str = Field(unique=True, nullable=False)
     phone_code: str = Field(nullable=False)
     currency: str = Field(nullable=False)
     is_active: bool = Field(nullable=False)
@@ -58,6 +72,10 @@ class City(SQLModel, table=True):
     is_active: bool = Field(nullable=False)
     timezone: str = Field(nullable=False)
 
+    __table_args__ = (
+        UniqueConstraint("country_id", "code", name="uq_city_country_id_code"),
+    )
+
 class Neighborhood(SQLModel, table=True):
 
     __tablename__ = "neighborhood"
@@ -71,7 +89,7 @@ class Neighborhood(SQLModel, table=True):
     is_active: bool = Field(default=True)
 
     __table_args__ = (
-        UniqueConstraint("city_id", "name", name="uq_neighborhood_name"),
+        UniqueConstraint("city_id", "name", name="uq_neighborhood_city_id_name"),
     )
 
 
@@ -80,8 +98,14 @@ class UserInterest(SQLModel, table=True):
     __tablename__ = "user_interest"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
-    user_id: uuid.UUID = Field(foreign_key="users.user_id", index=True)
-    city_id: uuid.UUID = Field(foreign_key="city.id")
+    user_id: uuid.UUID = Field(
+        sa_column=Column(
+            ForeignKey("users.user_id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        )
+    )
+    city_id: uuid.UUID = Field(foreign_key="city.id", index=True)
     is_active: bool = Field(default=True)
     deactivated_at: Optional[datetime] = Field(default=None)
     created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
@@ -123,6 +147,7 @@ class UserNeighborhoodInterest(SQLModel, table=True):
         ),
         Index("ix_interest_rank", "user_interest_id", "interest_rank"),
         CheckConstraint("interest_rank BETWEEN 1 AND 5", name="ck_interest_rank_range"),
+        UniqueConstraint("user_interest_id", "neighborhood_id", name="uq_user_interest_neighborhood")
     )
 
 class PropertyType(str,Enum):
@@ -137,8 +162,7 @@ class UserPropertyTypeInterest(SQLModel, table=True):
         sa_column=Column(
             ForeignKey("user_interest.id", ondelete="CASCADE"),
             primary_key=True
-        ),
-        index=True
+        )
     )
     property_type: PropertyType = Field(primary_key=True)
     created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
@@ -148,8 +172,38 @@ class UserConsents(SQLModel, table=True):
 
     __tablename__ = "user_consents"
 
-    user_id: uuid.UUID = Field(foreign_key="users.user_id", primary_key=True)
+    user_id: uuid.UUID = Field(
+        sa_column=Column(
+            ForeignKey("users.user_id", ondelete="CASCADE"),
+            primary_key=True
+        )
+    )
     terms: bool = Field(nullable=False)
     marketing: bool = Field(nullable=False)
+    created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
+    updated_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now(),onupdate=func.now()))
+
+class KcTaskType(str,Enum):
+    delete_kc_user = "delete_kc_user"
+
+class KcTaskStatus(str,Enum):
+    pending = "pending"
+    done = "done"
+    failed = "failed"
+
+class KcCompensationTask(SQLModel, table=True):
+
+    __tablename__ = "kc_compensation_tasks"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
+    task_type: KcTaskType = Field(default=KcTaskType.delete_kc_user)
+    kc_user_id: uuid.UUID = Field(index=True)
+    email: Optional[str] = Field(default=None, index=True)
+    status: KcTaskStatus = Field(default=KcTaskStatus.pending, index=True)
+    attempts: int = Field(default=0, nullable=False)
+    next_retry_at: datetime = Field(
+        sa_column=Column(sa.DateTime(), nullable=False, server_default=func.now(), index=True)
+    )
+    last_error: Optional[str] = Field(default=None)
     created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
     updated_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now(),onupdate=func.now()))
