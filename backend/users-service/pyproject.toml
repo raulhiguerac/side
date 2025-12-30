@@ -5,8 +5,13 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "fastapi>=0.126.0",
+    "alembic>=1.17.2",
+    "apscheduler>=3.11.2",
+    "fastapi[standard]>=0.126.0",
+    "psycopg2-binary>=2.9.11",
     "pydantic>=2.12.5",
+    "python-dotenv>=1.2.1",
+    "python-keycloak>=5.8.1",
     "sqlmodel>=0.0.27",
     "starlette>=0.50.0",
     "uvicorn>=0.38.0",
