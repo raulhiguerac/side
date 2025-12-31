@@ -15,12 +15,13 @@ class UserIntent(str,Enum):
     renter = "renter"
     explorer = "explorer"
 
-class User(SQLModel, table=True):
+class Accounts(SQLModel, table=True):
 
-    __tablename__ = "users"
+    __tablename__ = "accounts"
 
-    user_id: uuid.UUID = Field(primary_key=True, index=True)
+    account_id: uuid.UUID = Field(primary_key=True, index=True)
     email: str = Field(unique=True, index=True, max_length=255)
+    account_type :str = Field(nullable=False)
     onboarding_step: int = Field(nullable=False, default=1)
     is_active: bool = Field(nullable=False, default=True)
     deactivated_at: Optional[datetime] = Field(default=None)
@@ -30,9 +31,9 @@ class User(SQLModel, table=True):
 class UserProfile(SQLModel, table=True):
     __tablename__ = "user_profile"
 
-    user_id: uuid.UUID = Field(
+    account_id: uuid.UUID = Field(
         sa_column=Column(
-            ForeignKey("users.user_id", ondelete="CASCADE"),
+            ForeignKey("accounts.account_id", ondelete="CASCADE"),
             primary_key=True
         )
     )
@@ -40,6 +41,24 @@ class UserProfile(SQLModel, table=True):
     last_name: str = Field(nullable=False)
     phone: Optional[str] = Field(default=None)
     intent: Optional[UserIntent] = Field(default=None)
+    photo_url: Optional[str] = Field(default=None)
+    description: Optional[str] = Field(default=None)
+    profile_score: int = Field(nullable=False, default=0)
+    created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(), server_default=func.now()))
+    updated_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(), server_default=func.now(), onupdate=func.now()))
+
+class CompanyProfile(SQLModel, table=True):
+    __tablename__ = "company_profile"
+
+    account_id: uuid.UUID = Field(
+        sa_column=Column(
+            ForeignKey("accounts.account_id", ondelete="CASCADE"),
+            primary_key=True
+        )
+    )
+    display_name: str = Field(nullable=False)
+    phone: Optional[str] = Field(default=None)
+    intent: UserIntent = Field(nullable=False, default=UserIntent.seller)
     photo_url: Optional[str] = Field(default=None)
     description: Optional[str] = Field(default=None)
     profile_score: int = Field(nullable=False, default=0)
@@ -98,9 +117,9 @@ class UserInterest(SQLModel, table=True):
     __tablename__ = "user_interest"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
-    user_id: uuid.UUID = Field(
+    account_id: uuid.UUID = Field(
         sa_column=Column(
-            ForeignKey("users.user_id", ondelete="CASCADE"),
+            ForeignKey("accounts.account_id", ondelete="CASCADE"),
             nullable=False,
             index=True,
         )
@@ -113,7 +132,7 @@ class UserInterest(SQLModel, table=True):
 
     __table_args__ = (
         UniqueConstraint(
-            "user_id",
+            "account_id",
             "city_id",
             name="uq_user_interest_user_city"
         ),
@@ -135,7 +154,7 @@ class UserNeighborhoodInterest(SQLModel, table=True):
             primary_key=True
         )
     )
-    interest_rank: int
+    interest_rank: int = Field(nullable=False)
     created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
     updated_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now(),onupdate=func.now()))
 
@@ -172,9 +191,9 @@ class UserConsents(SQLModel, table=True):
 
     __tablename__ = "user_consents"
 
-    user_id: uuid.UUID = Field(
+    account_id: uuid.UUID = Field(
         sa_column=Column(
-            ForeignKey("users.user_id", ondelete="CASCADE"),
+            ForeignKey("accounts.account_id", ondelete="CASCADE"),
             primary_key=True
         )
     )
