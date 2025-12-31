@@ -40,6 +40,7 @@ services:
     image: quay.io/keycloak/keycloak:26.4.7
     depends_on:
       - keycloak-db
+    command: ["start-dev", "--import-realm"]
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
@@ -59,6 +60,8 @@ services:
     command: start-dev
     ports:
       - "8180:8080"
+    volumes:
+      - ./infra/keycloak/realm.template.json:/opt/keycloak/data/import/realm.json:ro
     networks:
       - dev-net
 
