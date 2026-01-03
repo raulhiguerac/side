@@ -57,7 +57,6 @@ services:
 
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-    command: start-dev
     ports:
       - "8180:8080"
     volumes:
