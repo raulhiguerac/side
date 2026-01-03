@@ -5,7 +5,7 @@ import random
 
 from keycloak.exceptions import KeycloakGetError
 
-from app.models.user import KcCompensationTask, KcTaskStatus
+from app.models.kc_tasks import KcCompensationTask, KcTaskStatus
 from app.integrations.keycloak_client import KeycloakIntegration
 
 from sqlmodel import Session
@@ -48,7 +48,7 @@ def retry_keycloak_deletions(session: Session):
     for task in tasks:
 
         try:
-            keycloak.delete_user(task.kc_user_id)
+            keycloak.delete_account(task.kc_user_id)
             task.status = KcTaskStatus.done
             task.last_error = None
 

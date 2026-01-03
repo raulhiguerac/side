@@ -8,7 +8,7 @@ from keycloak.exceptions import KeycloakGetError
 from app.core.exceptions.integrations import(
     KeycloakRegisterError,
     KeycloakSetPasswordError,
-    KeycloakDeleteUserError
+    KeycloakDeleteAccountError
 )
 
 load_dotenv()
@@ -23,7 +23,10 @@ class KeycloakIntegration:
             verify = True
         )
     
-    def create_user_record(self, email: str, first_name: str, last_name: str) -> uuid.UUID:
+    def create_account_record(
+            self, 
+            email: str
+        ) -> uuid.UUID:
         """
         Crea un usuario en Keycloak y extrae el UUID generado.
         """
@@ -31,9 +34,7 @@ class KeycloakIntegration:
             user_data: Dict[str, Any] = {
                 "email": email,
                 "username": email,
-                "enabled": True,
-                "firstName": first_name,
-                "lastName": last_name
+                "enabled": True
             }
             
             user_id_str: str = self.admin.create_user(user_data)
@@ -57,7 +58,7 @@ class KeycloakIntegration:
         except Exception as e:
             raise KeycloakSetPasswordError(detail=str(e), user_id=str(user_id), cause=e) from e
 
-    def delete_user(self, user_id: uuid.UUID) -> bool:
+    def delete_account(self, user_id: uuid.UUID) -> bool:
         """
         Elimina un usuario (útil para rollback).
         """
@@ -68,6 +69,6 @@ class KeycloakIntegration:
             status = getattr(e, "response_code", None) or getattr(e, "response_status", None)
             if status == 404:
                 return True
-            raise KeycloakDeleteUserError(detail=str(e), user_id=str(user_id), cause=e) from e
+            raise KeycloakDeleteAccountError(detail=str(e), user_id=str(user_id), cause=e) from e
         except Exception as e:
-            raise KeycloakDeleteUserError(detail=str(e), user_id=str(user_id), cause=e) from e
+            raise KeycloakDeleteAccountError(detail=str(e), user_id=str(user_id), cause=e) from e
