@@ -15,13 +15,17 @@ class UserIntent(str,Enum):
     renter = "renter"
     explorer = "explorer"
 
+class AccountType(str,Enum):
+    person = "person"
+    organization = "organization"
+
 class Accounts(SQLModel, table=True):
 
     __tablename__ = "accounts"
 
     account_id: uuid.UUID = Field(primary_key=True, index=True)
     email: str = Field(unique=True, index=True, max_length=255)
-    account_type :str = Field(nullable=False)
+    account_type :AccountType = Field(nullable=False)
     onboarding_step: int = Field(nullable=False, default=1)
     is_active: bool = Field(nullable=False, default=True)
     deactivated_at: Optional[datetime] = Field(default=None)
@@ -37,7 +41,7 @@ class UserProfile(SQLModel, table=True):
             primary_key=True
         )
     )
-    name: str = Field(nullable=False)
+    first_name: str = Field(nullable=False)
     last_name: str = Field(nullable=False)
     phone: Optional[str] = Field(default=None)
     intent: Optional[UserIntent] = Field(default=None)
@@ -58,7 +62,7 @@ class CompanyProfile(SQLModel, table=True):
     )
     display_name: str = Field(nullable=False)
     phone: Optional[str] = Field(default=None)
-    intent: UserIntent = Field(nullable=False, default=UserIntent.seller)
+    intent: UserIntent = Field(nullable=False)
     photo_url: Optional[str] = Field(default=None)
     description: Optional[str] = Field(default=None)
     profile_score: int = Field(nullable=False, default=0)

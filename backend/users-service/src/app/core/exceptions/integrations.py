@@ -20,7 +20,7 @@ class KeycloakSetPasswordError(BaseError):
             cause=cause,
         )
 
-class KeycloakDeleteUserError(BaseError):
+class KeycloakDeleteAccountError(BaseError):
     def __init__(self, detail: str | None = None, *, user_id: str | None = None, cause: Exception | None = None):
         super().__init__(
             message="Failed to delete user in keycloak",
