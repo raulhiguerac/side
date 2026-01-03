@@ -9,8 +9,9 @@ from alembic import context
 
 from sqlmodel import SQLModel
 from models.user import (
-    User,
+    Accounts,
     UserProfile,
+    CompanyProfile,
     Country,
     City,
     Neighborhood,
