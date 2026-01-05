@@ -28,3 +28,7 @@ class RegisterResponse(StrictBase):
     model_config = ConfigDict(from_attributes=True)
     account_id: uuid.UUID
     email: EmailStr
+
+class AccountLogin(StrictBase):
+    email: EmailStr
+    password: str
