@@ -1,5 +1,15 @@
 from app.core.exceptions.base import BaseError
 
+class IdentityProviderUnavailableError(BaseError):
+    def __init__(self, detail: str | None = None, *, cause: Exception | None = None):
+        super().__init__(
+            message="Identity provider unavailable",
+            code="IDENTITY_PROVIDER_UNAVAILABLE",
+            status_code=502,
+            context={"detail": detail},
+            cause=cause,
+        )
+
 class KeycloakRegisterError(BaseError):
     def __init__(self, detail: str | None = None, *, email: str | None = None, cause: Exception | None = None):
         super().__init__(

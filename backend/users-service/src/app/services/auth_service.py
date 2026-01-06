@@ -19,24 +19,26 @@ from app.models.kc_tasks import (
     KcTaskStatus
 )
 
-from app.schemas.auth import RegisterRequest
+from app.schemas.auth import AccountLogin, AccessTokenResponse, RegisterRequest
 from app.repositories.account_repository import (
     get_account_by_email, 
     create_account,
     create_profile
 )
 
-from app.integrations.keycloak_client import KeycloakIntegration
+from app.integrations.keycloak_admin import KeycloakAdminIntegration
+from app.integrations.keycloak_auth import KeycloakAuthIntegration
 
 from app.core.exceptions.base import BaseError
 from app.core.exceptions.user import EmailAlreadyRegisteredError
-from app.core.exceptions.integrations import KeycloakDeleteAccountError
+from app.core.exceptions.auth import InvalidCredentialsError
+from app.core.exceptions.integrations import KeycloakDeleteAccountError, KeycloakSetPasswordError, IdentityProviderUnavailableError
 
 from app.core.logging.logger import get_logger
 logger = get_logger(__name__)
 
 
-async def create_account_keycloak(keycloak:KeycloakIntegration, account: RegisterRequest) -> uuid.UUID:
+async def create_account_keycloak(keycloak:KeycloakAdminIntegration, account: RegisterRequest) -> uuid.UUID:
 
     logger.info("kc_user_create_started", extra={"extra": {"email_hash": email_hash(account.email)}})
 
@@ -53,8 +55,16 @@ async def create_account_keycloak(keycloak:KeycloakIntegration, account: Registe
         )
         logger.info("kc_user_create_succeeded", extra={"extra": {"kc_user_id": str(keycloak_uuid)}})
         return keycloak_uuid
+    
+    except IdentityProviderUnavailableError as infra_exc:
+        logger.error(
+            "kc_user_set_password_infra_error",
+            extra={"extra": {"kc_user_id": str(keycloak_uuid)}},
+            exc_info=True,
+        )
+        raise infra_exc
 
-    except Exception as set_pwd_exc:
+    except KeycloakSetPasswordError as set_pwd_exc:
         logger.warning("kc_user_set_password_failed", extra={"extra": {"kc_user_id": str(keycloak_uuid)}}, exc_info=True)
         try:
             await run_in_threadpool(keycloak.delete_account, keycloak_uuid)
@@ -80,7 +90,7 @@ async def create_account_keycloak(keycloak:KeycloakIntegration, account: Registe
                 cause=delete_exc
             ) from set_pwd_exc
 
-        raise
+        raise set_pwd_exc
 
 def _persist_compensation_task_safe(session: Session, task: KcCompensationTask, *, log_extra: dict) -> None:
     """
@@ -101,7 +111,7 @@ async def create_account_service(session: Session, account: RegisterRequest) -> 
     if existing_account:
         raise EmailAlreadyRegisteredError(email=account.email)
 
-    keycloak = KeycloakIntegration()
+    keycloak = KeycloakAdminIntegration()
 
     kc_user_id: uuid.UUID | None = None
 
@@ -291,4 +301,39 @@ async def create_account_service(session: Session, account: RegisterRequest) -> 
             },
             cause=db_exc,
         ) from db_exc
+
+async def create_access_token_service(account: AccountLogin) -> AccessTokenResponse:
+    keycloak = KeycloakAuthIntegration()
+    try:
+        token = await run_in_threadpool(
+            keycloak.keycloak_login,
+            account.email,
+            account.password,
+        )
+
+        logger.info(
+            "account_successfully_login",
+            extra={"extra": {"email_hash": email_hash(account.email)}},
+        )
+
+        return AccessTokenResponse(
+            access_token=token.get("access_token"),
+            expires_in=token.get("expires_in"),
+            refresh_token=token.get("refresh_token"),
+            refresh_expires_in=token.get("refresh_expires_in"),
+        )
+
+    except InvalidCredentialsError:
+        logger.info(
+            "account_credentials_error",
+            extra={"extra": {"email_hash": email_hash(account.email)}},
+        )
+        raise
+
+    except IdentityProviderUnavailableError:
+        logger.warning(
+            "account_session_infra_error",
+            extra={"extra": {"email_hash": email_hash(account.email)}},
+        )
+        raise
 
