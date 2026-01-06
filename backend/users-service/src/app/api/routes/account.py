@@ -11,7 +11,7 @@ from app.schemas.auth import (
     AccountLogin
 )
 
-from app.services.auth_service import create_account_service
+from app.services.auth_service import create_account_service, create_access_token_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -24,18 +24,27 @@ async def register_account_generic_flow(
     return account
 
 @router.post("/login", status_code=status.HTTP_200_OK)
-async def login(
-        payload: AccountLogin,
-        response: Response
-    ):
-    account_session = await create_account_session(payload)
+async def login(payload: AccountLogin, response: Response):
+    token = await create_access_token_service(payload)
+
     response.set_cookie(
-        key="session",
-        value=account_session,
+        key="access_token",
+        value=token.access_token,
         httponly=True,
         secure=False,
         samesite="lax",
         path="/",
-        max_age=60 * 60
+        max_age=token.expires_in,
     )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=token.refresh_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        path="/auth/refresh",
+        max_age=token.refresh_expires_in,
+    )
+
     return {"message": "ok"}

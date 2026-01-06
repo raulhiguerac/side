@@ -32,3 +32,10 @@ class RegisterResponse(StrictBase):
 class AccountLogin(StrictBase):
     email: EmailStr
     password: str
+
+class AccessTokenResponse(StrictBase):
+    access_token: str
+    expires_in: int
+    refresh_token: str
+    refresh_expires_in: int
+    token_type: str = "Bearer"

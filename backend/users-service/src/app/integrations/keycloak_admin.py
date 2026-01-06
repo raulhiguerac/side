@@ -8,12 +8,15 @@ from keycloak.exceptions import KeycloakGetError
 from app.core.exceptions.integrations import(
     KeycloakRegisterError,
     KeycloakSetPasswordError,
-    KeycloakDeleteAccountError
+    KeycloakDeleteAccountError,
+    IdentityProviderUnavailableError
 )
+
+from app.integrations._utils import get_keycloak_status
 
 load_dotenv()
 
-class KeycloakIntegration:
+class KeycloakAdminIntegration:
     def __init__(self):
         self.admin = KeycloakAdmin(
             server_url = os.getenv('KEYCLOAK_URL'),
@@ -41,7 +44,16 @@ class KeycloakIntegration:
             
             return uuid.UUID(user_id_str)
         except Exception as e:
-            raise KeycloakRegisterError(detail=str(e), email=email, cause=e) from e
+            status = get_keycloak_status(e)
+
+            if status is None or status >= 500:
+                raise IdentityProviderUnavailableError(cause=e) from e
+
+            raise KeycloakRegisterError(
+                detail=str(e),
+                email=email,
+                cause=e
+            ) from e
 
     def set_password(self, user_id: uuid.UUID, password: str) -> bool:
         """
@@ -56,7 +68,16 @@ class KeycloakIntegration:
             )
             return True
         except Exception as e:
-            raise KeycloakSetPasswordError(detail=str(e), user_id=str(user_id), cause=e) from e
+            status = get_keycloak_status(e)
+
+            if status is None or status >= 500:
+                raise IdentityProviderUnavailableError(cause=e) from e
+
+            raise KeycloakSetPasswordError(
+                detail=str(e),
+                user_id=str(user_id),
+                cause=e
+            ) from e
 
     def delete_account(self, user_id: uuid.UUID) -> bool:
         """
@@ -66,9 +87,19 @@ class KeycloakIntegration:
             self.admin.delete_user(user_id=str(user_id))
             return True
         except KeycloakGetError as e:
-            status = getattr(e, "response_code", None) or getattr(e, "response_status", None)
+            status = get_keycloak_status(e)
+
             if status == 404:
                 return True
-            raise KeycloakDeleteAccountError(detail=str(e), user_id=str(user_id), cause=e) from e
+            
+            if status is None or status >= 500:
+                raise IdentityProviderUnavailableError(cause=e) from e
+
+            raise KeycloakDeleteAccountError(
+                detail=str(e),
+                user_id=str(user_id),
+                cause=e
+            ) from e
+
         except Exception as e:
-            raise KeycloakDeleteAccountError(detail=str(e), user_id=str(user_id), cause=e) from e
+            raise IdentityProviderUnavailableError(cause=e) from e

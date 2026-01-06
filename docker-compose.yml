@@ -63,8 +63,32 @@ services:
       - ./infra/keycloak/realm.template.json:/opt/keycloak/data/import/realm.json:ro
     networks:
       - dev-net
+  
+  redis:
+    image: redis:latest
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - dev-net
+  
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports:
+      - '5540:5540'
+    volumes:
+      - redisinsight_data:/db
+    networks:
+      - dev-net
+    environment:
+      REDISINSIGHT_HOST: redis
+    depends_on:
+      - redis
 
 volumes:
+  redis_data:
+  redisinsight_data:
   users-postgres-data:
   keycloak-postgres-data:
 

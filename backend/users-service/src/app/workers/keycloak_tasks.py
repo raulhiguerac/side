@@ -6,7 +6,7 @@ import random
 from keycloak.exceptions import KeycloakGetError
 
 from app.models.kc_tasks import KcCompensationTask, KcTaskStatus
-from app.integrations.keycloak_client import KeycloakIntegration
+from app.integrations.keycloak_admin import KeycloakAdminIntegration
 
 from sqlmodel import Session
 from app.api.deps.db import engine
@@ -43,7 +43,7 @@ def retry_keycloak_deletions(session: Session):
         logger.info("no_compensation_task_to_run")
         return
 
-    keycloak = KeycloakIntegration()
+    keycloak = KeycloakAdminIntegration()
 
     for task in tasks:
 
