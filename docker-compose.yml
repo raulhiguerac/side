@@ -11,6 +11,8 @@ services:
       - "5173:5173"
       - "8080:8080"
     command: sleep infinity
+    env_file:
+      - .env
     networks:
       - dev-net
 
@@ -57,6 +59,9 @@ services:
 
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+
+      KC_PROXY: edge
+      
     ports:
       - "8180:8080"
     volumes:

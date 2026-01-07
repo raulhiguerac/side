@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated, Union, Literal
+from typing import Annotated, Union, Literal, List, Optional
 from pydantic import ConfigDict, EmailStr, Field
 
 from app.schemas.base import StrictBase
@@ -39,3 +39,9 @@ class AccessTokenResponse(StrictBase):
     refresh_token: str
     refresh_expires_in: int
     token_type: str = "Bearer"
+
+class Principal(StrictBase):
+    sub: str
+    email: Optional[EmailStr]
+    email_verified: bool = False
+    scope: List[str] = []
