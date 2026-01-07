@@ -10,6 +10,7 @@ dependencies = [
     "fastapi[standard]>=0.126.0",
     "psycopg2-binary>=2.9.11",
     "pydantic>=2.12.5",
+    "pyjwt>=2.10.1",
     "python-dotenv>=1.2.1",
     "python-keycloak>=5.8.1",
     "redis[hiredis]>=7.1.0",
