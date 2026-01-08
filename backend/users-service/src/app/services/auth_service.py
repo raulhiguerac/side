@@ -30,8 +30,7 @@ from app.integrations.keycloak_admin import KeycloakAdminIntegration
 from app.integrations.keycloak_auth import KeycloakAuthIntegration
 
 from app.core.exceptions.base import BaseError
-from app.core.exceptions.user import EmailAlreadyRegisteredError
-from app.core.exceptions.auth import InvalidCredentialsError
+from app.core.exceptions.auth import EmailAlreadyRegisteredError, InvalidCredentialsError
 from app.core.exceptions.integrations import KeycloakDeleteAccountError, KeycloakSetPasswordError, IdentityProviderUnavailableError
 
 from app.core.logging.logger import get_logger
@@ -302,19 +301,21 @@ async def create_account_service(session: Session, account: RegisterRequest) -> 
             cause=db_exc,
         ) from db_exc
 
-async def create_access_token_service(account: AccountLogin) -> AccessTokenResponse:
+async def create_access_token_service(session: Session, account: AccountLogin) -> AccessTokenResponse:
+    current_account = get_account_by_email(session, account.email)
+
+    if not current_account:
+        logger.info("login_unknown_email", extra={"extra": {"email_hash": email_hash(account.email)}})
+        raise InvalidCredentialsError()
+
+    if not current_account.is_active:
+        logger.info("login_blocked_inactive", extra={"extra": {"email_hash": email_hash(account.email)}})
+        raise InvalidCredentialsError()
+
     keycloak = KeycloakAuthIntegration()
     try:
-        token = await run_in_threadpool(
-            keycloak.keycloak_login,
-            account.email,
-            account.password,
-        )
-
-        logger.info(
-            "account_successfully_login",
-            extra={"extra": {"email_hash": email_hash(account.email)}},
-        )
+        token = await run_in_threadpool(keycloak.keycloak_login, account.email, account.password)
+        logger.info("account_successfully_login", extra={"extra": {"email_hash": email_hash(account.email)}})
 
         return AccessTokenResponse(
             access_token=token.get("access_token"),
@@ -324,16 +325,9 @@ async def create_access_token_service(account: AccountLogin) -> AccessTokenRespo
         )
 
     except InvalidCredentialsError:
-        logger.info(
-            "account_credentials_error",
-            extra={"extra": {"email_hash": email_hash(account.email)}},
-        )
+        logger.info("login_invalid_password", extra={"extra": {"email_hash": email_hash(account.email)}})
         raise
 
     except IdentityProviderUnavailableError:
-        logger.warning(
-            "account_session_infra_error",
-            extra={"extra": {"email_hash": email_hash(account.email)}},
-        )
+        logger.warning("account_session_infra_error", extra={"extra": {"email_hash": email_hash(account.email)}})
         raise
-

@@ -24,8 +24,12 @@ async def register_account_generic_flow(
     return account
 
 @router.post("/login", status_code=status.HTTP_200_OK)
-async def login(payload: AccountLogin, response: Response):
-    token = await create_access_token_service(payload)
+async def login(
+        payload: AccountLogin, 
+        session: Annotated[Session, Depends(get_session)],
+        response: Response
+    ):
+    token = await create_access_token_service(session, payload)
 
     response.set_cookie(
         key="access_token",
