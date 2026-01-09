@@ -29,3 +29,6 @@ class CurrentUserOut(StrictBase):
     email: EmailStr
     account_type: Literal["person", "organization"]
     onboarding_step: int
+
+class PhotoUploadOut(StrictBase):
+    photo_url: str

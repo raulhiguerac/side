@@ -10,7 +10,8 @@ from app.schemas.user import(
     CurrentUserOut,
     CurrentUserProfileOut,
     CurrentUserPerson, 
-    CurrentUserOrganization
+    CurrentUserOrganization,
+    PhotoUploadOut
 )
 
 from app.models.account import AccountType
@@ -98,3 +99,8 @@ async def get_current_profile(
         )
 
     return CurrentUserProfileOut(profile=profile_model)
+
+async def upload_current_profile_photo(
+        session: Session,
+        principal: Principal
+    ) -> PhotoUploadOut: 

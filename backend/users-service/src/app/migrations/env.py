@@ -8,23 +8,26 @@ from sqlalchemy import pool
 from alembic import context
 
 from sqlmodel import SQLModel
-from models.user import (
-    Accounts,
+from models.account import (
+    Account,
     UserProfile,
     CompanyProfile,
-    Country,
-    City,
-    Neighborhood,
-    UserInterest,
-    UserNeighborhoodInterest,
-    UserPropertyTypeInterest,
-    UserConsents,
-    KcCompensationTask
+    AccountConsents
 )
 
-from dotenv import load_dotenv
+from models.location import (
+    Country,
+    City,
+    Neighborhood
+)
 
-load_dotenv()
+from models.interests import (
+    UserInterest,
+    UserNeighborhoodInterest,
+    UserPropertyTypeInterest
+)
+
+from models.kc_tasks import KcCompensationTask
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
