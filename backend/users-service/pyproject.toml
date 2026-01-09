@@ -7,7 +7,10 @@ requires-python = ">=3.10"
 dependencies = [
     "alembic>=1.17.2",
     "apscheduler>=3.11.2",
+    "boto3>=1.42.24",
+    "botocore>=1.42.24",
     "fastapi[standard]>=0.126.0",
+    "filetype>=1.2.0",
     "psycopg2-binary>=2.9.11",
     "pydantic>=2.12.5",
     "pyjwt>=2.10.1",

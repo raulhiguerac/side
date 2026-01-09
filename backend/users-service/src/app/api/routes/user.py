@@ -10,7 +10,8 @@ from app.api.deps.auth import get_current_principal
 
 from app.schemas.user import (
     CurrentUserOut,
-    CurrentUserProfileOut
+    CurrentUserProfileOut,
+    PhotoUploadOut
 )
 
 from app.schemas.auth import Principal
@@ -36,3 +37,11 @@ async def get_current_user_profile(
     ):
     user = await get_current_profile(session, redis, principal)
     return user
+
+@router.post("/me/profile/photo", response_model=PhotoUploadOut, status_code=status.HTTP_201_CREATED)
+async def upload_user_photo(
+        session: Annotated[Session, Depends(get_session)],
+        principal: Annotated[Principal, Depends(get_current_principal)]
+    ):
+    user_photo = await upload_current_profile_photo(session, principal)
+    return user_photo
