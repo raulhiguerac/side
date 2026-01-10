@@ -5,6 +5,8 @@ import uuid
 from sqlmodel import Session
 from redis.asyncio.client import Redis
 
+from fastapi import UploadFile
+
 from app.schemas.auth import Principal
 from app.schemas.user import( 
     CurrentUserOut,
@@ -14,10 +16,12 @@ from app.schemas.user import(
     PhotoUploadOut
 )
 
-from app.models.account import AccountType
+from app.models.account import AccountType, UserProfile, CompanyProfile
 
 from app.repositories.account_repository import get_active_account_by_id
 from app.repositories.user_repository import get_user_profile_by_account_id, get_company_profile_by_account_id
+
+from app.integrations.storage import StorageIntegration
 
 from redis.exceptions import RedisError
 
@@ -102,5 +106,33 @@ async def get_current_profile(
 
 async def upload_current_profile_photo(
         session: Session,
-        principal: Principal
+        principal: Principal,
+        file: UploadFile,
+        bucket: str,
+        storage_client: StorageIntegration,
+        base_url: str,
+        redis: Redis
     ) -> PhotoUploadOut: 
+
+    key = f"accounts/{principal.sub}/profile/photo"
+    photo_url = f"{base_url}/{bucket}/{key}"
+    storage_client.upload_file(
+        fileobj=file.file,
+        bucket=bucket,
+        key=key,
+        extra_args={"ContentType": file.content_type}
+    )
+
+    account = await get_current_account(session, redis, principal)
+    if account.account_type == AccountType.person:
+        UserProfile(
+            photo_url = photo_url,
+            photo_key = key
+        )
+    
+    if account.account_type == AccountType.organization:
+        CompanyProfile(
+            photo_url = photo_url,
+            photo_key = key
+        )
+        

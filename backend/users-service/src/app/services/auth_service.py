@@ -31,7 +31,7 @@ from app.integrations.keycloak_auth import KeycloakAuthIntegration
 
 from app.core.exceptions.base import BaseError
 from app.core.exceptions.auth import EmailAlreadyRegisteredError, InvalidCredentialsError
-from app.core.exceptions.integrations import KeycloakDeleteAccountError, KeycloakSetPasswordError, IdentityProviderUnavailableError
+from app.core.exceptions.identity_provider import KeycloakDeleteAccountError, KeycloakSetPasswordError, IdentityProviderUnavailableError
 
 from app.core.logging.logger import get_logger
 logger = get_logger(__name__)

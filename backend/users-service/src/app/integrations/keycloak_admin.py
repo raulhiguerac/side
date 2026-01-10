@@ -5,7 +5,7 @@ from typing import Dict, Any, Optional
 from keycloak import KeycloakAdmin
 from keycloak.exceptions import KeycloakGetError
 
-from app.core.exceptions.integrations import(
+from app.core.exceptions.identity_provider import(
     KeycloakRegisterError,
     KeycloakSetPasswordError,
     KeycloakDeleteAccountError,
