@@ -21,7 +21,4 @@ def validate_profile_photo_upload(upload_file: UploadFile):
             context={"size": size, "max": policy.max_size_bytes}
         )
 
-    return {
-        "mime": mime,
-        "size": size,
-    }
+    return None

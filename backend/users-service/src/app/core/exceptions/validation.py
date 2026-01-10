@@ -1,8 +1,8 @@
 from typing import Any, Dict, Optional
 
-from app.core.exceptions.base import ValidationError
+from app.core.exceptions.base import BaseError
 
-class UnsupportedFileTypeError(ValidationError):
+class UnsupportedFileTypeError(BaseError):
     def __init__(self, context: Optional[Dict[str, Any]] = None):
         super().__init__(
             message="Unsupported file type",
@@ -10,7 +10,7 @@ class UnsupportedFileTypeError(ValidationError):
             context=context
         )
 
-class FileTooLargeError(ValidationError):
+class FileTooLargeError(BaseError):
     def __init__(self, context: Optional[Dict[str, Any]] = None):
         super().__init__(
             message="File too large",

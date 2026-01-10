@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from keycloak import KeycloakOpenID
 from keycloak.exceptions import KeycloakAuthenticationError, KeycloakPostError
 
-from app.core.exceptions.integrations import IdentityProviderUnavailableError
+from app.core.exceptions.identity_provider import IdentityProviderUnavailableError
 from app.core.exceptions.auth import InvalidCredentialsError
 
 from app.integrations._utils import get_keycloak_status,get_keycloak_error_text

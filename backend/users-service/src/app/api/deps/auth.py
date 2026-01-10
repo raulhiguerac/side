@@ -15,7 +15,7 @@ from jwt.exceptions import (
 
 
 from app.core.exceptions.auth import MissingCookieException, InvalidTokenException
-from app.core.exceptions.integrations import IdentityProviderUnavailableError
+from app.core.exceptions.identity_provider import IdentityProviderUnavailableError
 
 from app.schemas.auth import Principal
 from app.core.logging.logger import get_logger

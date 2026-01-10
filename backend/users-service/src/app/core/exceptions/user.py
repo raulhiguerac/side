@@ -12,7 +12,6 @@ class AccountNotFoundError(BaseError):
         super().__init__(
             message="Account not found",
             code="ACCOUNT_NOT_FOUND",
-            status_code=404,
             context=context,
         )
 
@@ -26,7 +25,6 @@ class AccountDisabledError(BaseError):
         super().__init__(
             message="Account disabled",
             code="ACCOUNT_DISABLED",
-            status_code=403,
             context=context,
         )
 
@@ -38,6 +36,5 @@ class ProfileNotFoundError(BaseError):
         super().__init__(
             message="Account not found",
             code="ACCOUNT_NOT_FOUND",
-            status_code=403,
             context=context,
         )

@@ -1,22 +1,17 @@
 from typing import Annotated
 from sqlmodel import Session
 from redis.asyncio.client import Redis
-
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, UploadFile, File
 
 from app.api.deps.db import get_session
 from app.api.deps.redis import get_redis
 from app.api.deps.auth import get_current_principal
-
-from app.schemas.user import (
-    CurrentUserOut,
-    CurrentUserProfileOut,
-    PhotoUploadOut
-)
-
+from app.api.deps.storage import get_storage, get_profile_photos_bucket,get_public_base_url
+from app.api.deps.upload_validation import validate_profile_photo_upload
+from app.integrations.storage import StorageIntegration
+from app.schemas.user import CurrentUserOut, CurrentUserProfileOut, PhotoUploadOut
 from app.schemas.auth import Principal
-
-from app.services.user_service import get_current_account, get_current_profile
+from app.services.user_service import get_current_account, get_current_profile, upload_current_profile_photo
 
 router = APIRouter(prefix="/users", tags=["profile"])
 
@@ -41,7 +36,21 @@ async def get_current_user_profile(
 @router.post("/me/profile/photo", response_model=PhotoUploadOut, status_code=status.HTTP_201_CREATED)
 async def upload_user_photo(
         session: Annotated[Session, Depends(get_session)],
-        principal: Annotated[Principal, Depends(get_current_principal)]
+        principal: Annotated[Principal, Depends(get_current_principal)],
+        file: Annotated[UploadFile, File(...)],
+        _: Annotated[None, Depends(validate_profile_photo_upload)],
+        storage_client: Annotated[StorageIntegration, Depends(get_storage)],
+        bucket: Annotated[str, Depends(get_profile_photos_bucket)],
+        base_url: Annotated[str, Depends(get_public_base_url)],
+        redis: Annotated[Redis, Depends(get_redis)],
     ):
-    user_photo = await upload_current_profile_photo(session, principal)
+    user_photo = await upload_current_profile_photo(
+        session=session,
+        principal=principal,
+        file=file,
+        bucket=bucket,
+        storage=storage_client,
+        base_url=base_url,
+        redis=redis
+    )
     return user_photo
