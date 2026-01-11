@@ -24,7 +24,7 @@ from app.core.exceptions.storage import (
 )
 
 
-class StorageIntegration:
+class StorageClient:
     def __init__(self):
         minio_url = os.getenv("MINIO_URL")
         access_key = os.getenv("ACCESS_KEY")
