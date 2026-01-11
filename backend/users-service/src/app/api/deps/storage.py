@@ -1,13 +1,13 @@
 import os
 from functools import lru_cache
 
-from app.integrations.storage import StorageIntegration
+from app.integrations.storage import StorageClient
 
 from app.core.exceptions.storage import StorageMisconfiguredError
 
 @lru_cache
-def get_storage() -> StorageIntegration:
-    return StorageIntegration()
+def get_storage() -> StorageClient:
+    return StorageClient()
 
 @lru_cache
 def get_profile_photos_bucket() -> str:
