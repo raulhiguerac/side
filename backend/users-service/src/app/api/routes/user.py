@@ -9,9 +9,9 @@ from app.api.deps.storage import get_storage, get_profile_photos_bucket,get_publ
 from app.api.deps.upload_validation import validate_profile_photo_upload
 from app.integrations.cache import CacheClient
 from app.integrations.storage import StorageClient
-from app.schemas.user import CurrentUserOut, CurrentUserProfileOut, PhotoUploadOut
+from app.schemas.user import CurrentUserOut, CurrentUserProfileOut, PhotoUploadOut, UpdateRequest
 from app.schemas.auth import Principal
-from app.services.user_service import get_current_account, get_current_profile, upload_current_profile_photo
+from app.services.user.service import get_current_account, get_current_profile, upload_current_profile_photo, update_profile
 
 router = APIRouter(prefix="/users", tags=["profile"])
 
@@ -54,3 +54,13 @@ async def upload_user_photo(
         cache=cache
     )
     return user_photo
+
+@router.patch("/me/profile", response_model=CurrentUserProfileOut, status_code=status.HTTP_200_OK)
+async def update_user_profile(
+        session: Annotated[Session, Depends(get_session)],
+        cache: Annotated[CacheClient, Depends(get_cache)],
+        principal: Annotated[Principal, Depends(get_current_principal)],
+        payload: UpdateRequest
+    ):
+    user = await update_profile(session, cache, principal, payload)
+    return user
