@@ -4,28 +4,30 @@ import uuid
 from sqlmodel import Session
 
 from fastapi import UploadFile
+from fastapi.concurrency import run_in_threadpool
+
+from app.services.user.helpers import get_profile_db, account_cache_key, profile_cache_key
+from app.services.user.mapper import map_profile_db_to_schema
 
 from app.schemas.auth import Principal
 from app.schemas.user import( 
     CurrentUserOut,
     CurrentUserProfileOut,
-    CurrentUserPerson, 
-    CurrentUserOrganization,
-    PhotoUploadOut
+    PhotoUploadOut,
+    UpdateRequest
 )
 
-from app.models.account import AccountType
-
 from app.repositories.account_repository import get_active_account_by_id
-from app.repositories.user_repository import get_user_profile_by_account_id, get_company_profile_by_account_id
 
 from app.integrations.cache import CacheClient
 from app.integrations.storage import StorageClient
 
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from app.core.exceptions.auth import InvalidTokenException
-from app.core.exceptions.user import AccountNotFoundError, AccountDisabledError, ProfileNotFoundError
+from app.core.exceptions.user import AccountNotFoundError, AccountDisabledError
 
 CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "120"))
+PROFILE_CACHE_TTL_SECONDS = int(os.getenv("PROFILE_CACHE_TTL_SECONDS", "600"))
 
 async def get_current_account(
         session: Session,
@@ -37,13 +39,13 @@ async def get_current_account(
     except ValueError:
         raise InvalidTokenException("Invalid subject (sub) claim")
     
-    cache_key = f"account:{account_id}"
+    cache_key = account_cache_key(account_id)
 
     cached = await cache.get(cache_key)
     if cached:
         return CurrentUserOut.model_validate_json(cached)
      
-    current_account = get_active_account_by_id(session,account_id)
+    current_account = await run_in_threadpool(get_active_account_by_id, session, account_id)
     if not current_account:
         raise AccountNotFoundError(account_id=account_id, email=getattr(principal, "email", None))
     if not current_account.is_active:
@@ -63,42 +65,19 @@ async def get_current_profile(
 
     account = await get_current_account(session, cache, principal)
 
-    cache_key = f"profile:{account.account_id}"
+    cache_key = profile_cache_key(account.account_id)
 
     cached = await cache.get(cache_key)
     if cached:
         return CurrentUserProfileOut.model_validate_json(cached)
+    
+    profile_db = await get_profile_db(session, account.account_id, account.account_type)
 
-    if account.account_type == AccountType.person:
-        profile_db = get_user_profile_by_account_id(session, account.account_id)
-        if not profile_db:
-            raise ProfileNotFoundError(account_id=account.account_id)
-
-        profile_model = CurrentUserPerson(
-            first_name=profile_db.first_name,
-            last_name=profile_db.last_name,
-            phone=profile_db.phone,
-            photo_url=profile_db.photo_url,
-            description=profile_db.description,
-            account_type="person",
-        )
-
-    else:
-        profile_db = get_company_profile_by_account_id(session, account.account_id)
-        if not profile_db:
-            raise ProfileNotFoundError(account_id=account.account_id)
-
-        profile_model = CurrentUserOrganization(
-            display_name=profile_db.display_name,
-            phone=profile_db.phone,
-            photo_url=profile_db.photo_url,
-            description=profile_db.description,
-            account_type="organization",
-        )
+    profile_model = map_profile_db_to_schema(account.account_type, profile_db)
     
     out = CurrentUserProfileOut(profile=profile_model)
 
-    await cache.set(cache_key,out.model_dump_json(),600)
+    await cache.set(cache_key,out.model_dump_json(),PROFILE_CACHE_TTL_SECONDS)
 
     return out
 
@@ -114,18 +93,13 @@ async def upload_current_profile_photo(
 
     account = await get_current_account(session, cache, principal)
 
-    if account.account_type == AccountType.person:
-        profile_db = get_user_profile_by_account_id(session, account.account_id)
-    else:
-        profile_db = get_company_profile_by_account_id(session, account.account_id)
-
-    if not profile_db:
-        raise ProfileNotFoundError(account_id=account.account_id)
+    profile_db = await get_profile_db(session, account.account_id, account.account_type)
 
     key = f"accounts/{account.account_id}/profile/photo"
     photo_url = f"{base_url}/{bucket}/{key}"
 
-    storage_client.upload_file(
+    await run_in_threadpool(
+        storage_client.upload_file,
         fileobj=file.file,
         bucket=bucket,
         key=key,
@@ -136,7 +110,40 @@ async def upload_current_profile_photo(
     profile_db.photo_key = key
     session.commit()
 
-    await cache.delete(f"profile:{account.account_id}")
+    await cache.delete(profile_cache_key(account.account_id))
 
     return PhotoUploadOut(photo_url=profile_db.photo_url)
+
+async def update_profile(
+        session: Session,
+        cache: CacheClient,
+        principal: Principal,
+        updated_data: UpdateRequest
+    ) -> CurrentUserProfileOut:
+
+    account = await get_current_account(session, cache, principal)
+
+    profile_db = await get_profile_db(session, account.account_id, account.account_type)
+
+    data = updated_data.model_dump(exclude_unset=True, exclude={"account_type"})
+    for field, value in data.items():
+        setattr(profile_db, field, value)
+ 
+    try:
+        session.commit()
+        session.refresh(profile_db)
+    except IntegrityError as e:
+        session.rollback()
+        raise
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise
+
+    await cache.delete(profile_cache_key(account.account_id))
+    out = CurrentUserProfileOut(profile=map_profile_db_to_schema(account.account_type, profile_db))
+    await cache.set(profile_cache_key(account.account_id),out.model_dump_json(),PROFILE_CACHE_TTL_SECONDS)
+
+    return out
+    
+
         
