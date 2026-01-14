@@ -1,0 +1,6 @@
+import uuid
+from typing import Protocol
+
+class IdentityProvider(Protocol):
+    async def create_account(self, *, email: str, password: str) -> uuid.UUID: ...
+    async def delete_account(self, user_id: uuid.UUID) -> None: ...

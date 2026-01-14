@@ -20,9 +20,6 @@ from app.core.exceptions.identity_provider import IdentityProviderUnavailableErr
 from app.schemas.auth import Principal
 from app.core.logging.logger import get_logger
 
-from dotenv import load_dotenv
-
-load_dotenv()
 logger = get_logger(__name__)
 
 

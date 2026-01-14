@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from keycloak import KeycloakOpenID
 from keycloak.exceptions import KeycloakAuthenticationError, KeycloakPostError
 
-from app.core.exceptions.identity_provider import IdentityProviderUnavailableError
+from app.core.exceptions.identity_provider import IdentityProviderUnavailableError, IdentityProviderMisconfiguredError
 from app.core.exceptions.auth import InvalidCredentialsError
 
 from app.integrations._utils import get_keycloak_status,get_keycloak_error_text
@@ -14,8 +14,28 @@ load_dotenv()
 
 logger = get_logger(__name__)
 
-class KeycloakAuthIntegration:
+class KeycloakAuthClient:
     def __init__(self):
+        server_url = os.getenv('KEYCLOAK_URL')
+        client_id = os.getenv('KC_CLIENT_ID')
+        realm_name = os.getenv('KC_REALM')
+        client_secret_key = os.getenv('KC_ADMIN_SECRET')
+
+        missing = [
+            name for name, value in {
+                "KEYCLOAK_URL": server_url,
+                "KC_CLIENT_ID": client_id,
+                "KC_REALM": realm_name,
+                "KC_ADMIN_SECRET": client_secret_key,
+            }.items()
+            if not value
+        ]
+
+        if missing:
+            raise IdentityProviderMisconfiguredError(
+                detail=f"Missing Keycloak env vars: {', '.join(missing)}"
+            )
+        
         self.auth_client = KeycloakOpenID(
             server_url = os.getenv('KEYCLOAK_URL'),
             client_id = os.getenv('KC_CLIENT_AUTH'),
@@ -32,6 +52,7 @@ class KeycloakAuthIntegration:
             )
 
         except KeycloakAuthenticationError as e:
+            logger.warning("keycloak_login_failed")
             raise InvalidCredentialsError(cause=e) from e
 
         except KeycloakPostError as e:
