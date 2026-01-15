@@ -45,3 +45,10 @@ class Principal(StrictBase):
     email: Optional[EmailStr]
     email_verified: bool = False
     scope: List[str] = []
+
+class RefreshToken(StrictBase):
+    refresh_token: str
+
+class ChangePassword(StrictBase):
+    old_password: str
+    new_password: str

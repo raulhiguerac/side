@@ -16,13 +16,8 @@ class KeycloakAuthenticationProvider(AuthenticationProvider):
     def __init__(self, client: KeycloakAuthClient):
         self.client = client
 
-    async def login(self, *, email: str, password: str) -> AuthTokens:
-        token = await run_in_threadpool(
-            self.client.keycloak_login,
-            email,
-            password,
-        )
-
+    @staticmethod
+    def _normalize_idp_tokens(*, token: dict) -> AuthTokens:
         access_token = token.get("access_token")
         expires_in = token.get("expires_in")
 
@@ -30,8 +25,18 @@ class KeycloakAuthenticationProvider(AuthenticationProvider):
             raise IdentityProviderUnavailableError(
                 detail="Identity provider returned an invalid token response",
                 context={
-                    "missing_access_token": access_token is None,
+                    "missing_access_token": not bool(access_token),
                     "missing_expires_in": expires_in is None,
+                },
+            )
+        
+        try:
+            expires_in = int(expires_in)
+        except (TypeError, ValueError):
+            raise IdentityProviderUnavailableError(
+                detail="Identity provider returned a non-castable expires_in",
+                context={
+                    "expires_in": str(expires_in),
                 },
             )
 
@@ -42,3 +47,18 @@ class KeycloakAuthenticationProvider(AuthenticationProvider):
             refresh_expires_in=token.get("refresh_expires_in"),
             token_type=token.get("token_type", "Bearer"),
         )
+
+    async def login(self, *, email: str, password: str) -> AuthTokens:
+        token = await run_in_threadpool(
+            self.client.keycloak_login,
+            email,
+            password,
+        )
+        return self._normalize_idp_tokens(token=token)
+    
+    async def refresh_token(self, *, refresh_token: str) -> AuthTokens:
+        token = await run_in_threadpool(
+            self.client.keycloak_refresh_token,
+            refresh_token
+        )
+        return self._normalize_idp_tokens(token=token)
