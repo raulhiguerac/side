@@ -21,10 +21,9 @@ def get_account_by_email(session: Session, email: str) -> Account | None:
     session_user = session.exec(statement).first()
     return session_user
 
-def get_active_account_by_id(session: Session, account_id: uuid.UUID) -> Account | None:
+def get_account_by_id(session: Session, account_id: uuid.UUID) -> Account | None:
     statement = select(Account).where(
         Account.account_id == account_id,
-        Account.is_active.is_(True),
     )
     return session.exec(statement).first()
 

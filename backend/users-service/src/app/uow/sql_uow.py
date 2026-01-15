@@ -1,6 +1,9 @@
+import uuid
+
 from sqlmodel import Session
 from app.repositories.account_repository import (
     get_account_by_email,
+    get_account_by_id,
     create_account,
     create_profile,
 )
@@ -20,6 +23,9 @@ class SqlUnitOfWork:
 
     def get_by_email(self, email: str):
         return get_account_by_email(self.session, email)
+    
+    def get_by_id(self, account_id: uuid.UUID):
+        return get_account_by_id(self.session, account_id)
 
     def add_account(self, account):
         return create_account(self.session, account)

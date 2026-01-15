@@ -17,7 +17,7 @@ from app.schemas.user import(
     UpdateRequest
 )
 
-from app.repositories.account_repository import get_active_account_by_id
+from app.repositories.account_repository import get_account_by_id
 
 from app.integrations.cache import CacheClient
 from app.integrations.storage import StorageClient
@@ -45,7 +45,7 @@ async def get_current_account(
     if cached:
         return CurrentUserOut.model_validate_json(cached)
      
-    current_account = await run_in_threadpool(get_active_account_by_id, session, account_id)
+    current_account = await run_in_threadpool(get_account_by_id, session, account_id)
     if not current_account:
         raise AccountNotFoundError(account_id=account_id, email=getattr(principal, "email", None))
     if not current_account.is_active:

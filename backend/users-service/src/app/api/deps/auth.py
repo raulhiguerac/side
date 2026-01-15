@@ -12,12 +12,12 @@ from jwt.exceptions import (
     DecodeError,
     InvalidTokenError,
 )
-
+from typing import NewType
 
 from app.core.exceptions.auth import MissingCookieException, InvalidTokenException
 from app.core.exceptions.identity_provider import IdentityProviderUnavailableError
 
-from app.schemas.auth import Principal
+from app.schemas.auth import Principal, RefreshToken
 from app.core.logging.logger import get_logger
 
 logger = get_logger(__name__)
@@ -99,3 +99,12 @@ async def get_current_principal(request: Request) -> Principal:
 
     return principal
 
+async def get_refresh_token_from_cookie(request: Request) -> RefreshToken:
+    refresh_token = request.cookies.get("refresh_token")
+
+    if not refresh_token:
+        raise MissingCookieException(
+            cause=ValueError("Missing refresh token cookie")
+        )
+
+    return RefreshToken(refresh_token=refresh_token)

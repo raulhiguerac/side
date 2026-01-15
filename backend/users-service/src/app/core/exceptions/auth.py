@@ -16,6 +16,14 @@ class InvalidCredentialsError(BaseError):
             cause=cause,
         )
 
+class InvalidRefreshTokenError(BaseError):
+    def __init__(self, *, cause: Exception | None = None):
+        super().__init__(
+            message="Invalid refresh token",
+            code="INVALID_REFRESH_TOKEN",
+            cause=cause,
+        )
+
 class MissingCookieException(BaseError):
     def __init__(self, *, cause: Exception | None = None):
         super().__init__(

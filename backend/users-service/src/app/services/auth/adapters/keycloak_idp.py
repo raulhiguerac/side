@@ -40,3 +40,6 @@ class KeycloakIdentityProvider(IdentityProvider):
 
     async def delete_user(self, account_id: uuid.UUID) -> None:
         await run_in_threadpool(self.client.delete_account, account_id)
+
+    async def reset_password(self, *, account_id: uuid.UUID, new_password: str) -> None:
+        return await run_in_threadpool(self.client.set_password, account_id, new_password)

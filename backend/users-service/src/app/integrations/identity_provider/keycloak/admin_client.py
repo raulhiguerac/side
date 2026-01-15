@@ -93,12 +93,12 @@ class KeycloakAdminClient:
                 cause=e,
             ) from e
 
-    def delete_account(self, user_id: uuid.UUID) -> None:
+    def delete_account(self, account_id: uuid.UUID) -> None:
         """
         Elimina un usuario (útil para rollback).
         """
         try:
-            self.admin.delete_user(user_id=str(user_id))
+            self.admin.delete_user(user_id=str(account_id))
 
         except KeycloakGetError as e:
             status = get_keycloak_status(e)
@@ -109,7 +109,7 @@ class KeycloakAdminClient:
 
             raise KeycloakDeleteAccountError(
                 detail=str(e),
-                user_id=str(user_id),
+                user_id=str(account_id),
                 cause=e,
             ) from e
 
