@@ -14,7 +14,7 @@ class KeycloakAuthenticationProvider(AuthenticationProvider):
     """
 
     def __init__(self, client: KeycloakAuthClient):
-        self.client = client
+        self._client = client
 
     @staticmethod
     def _normalize_idp_tokens(*, token: dict) -> AuthTokens:
@@ -50,7 +50,7 @@ class KeycloakAuthenticationProvider(AuthenticationProvider):
 
     async def login(self, *, email: str, password: str) -> AuthTokens:
         token = await run_in_threadpool(
-            self.client.keycloak_login,
+            self._client.keycloak_login,
             email,
             password,
         )
@@ -58,7 +58,10 @@ class KeycloakAuthenticationProvider(AuthenticationProvider):
     
     async def refresh_token(self, *, refresh_token: str) -> AuthTokens:
         token = await run_in_threadpool(
-            self.client.keycloak_refresh_token,
+            self._client.keycloak_refresh_token,
             refresh_token
         )
         return self._normalize_idp_tokens(token=token)
+    
+    async def logout(self, *, refresh_token: str) -> None:
+        await run_in_threadpool(self._client.keycloak_revoke_token, refresh_token)

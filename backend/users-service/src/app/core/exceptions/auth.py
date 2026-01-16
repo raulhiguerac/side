@@ -40,3 +40,12 @@ class InvalidTokenException(BaseError):
             context={"detail": detail},
             cause=cause,
         )
+
+class SamePasswordNotAllowedError(BaseError):
+    def __init__(self, *, detail: str | None = None, cause: Exception | None = None):
+        super().__init__(
+            message="New password is equal to the old password",
+            code="PASSWORD_SAME_AS_OLD",
+            context={"detail": detail},
+            cause=cause,
+        )

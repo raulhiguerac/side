@@ -14,6 +14,7 @@ from app.services.shared.policies.account_email_availability_policy import (
 from app.services.auth.use_cases.register_account import RegisterAccountUseCase
 from app.services.auth.use_cases.authenticate_account import AuthenticateAccountUseCase
 from app.services.auth.use_cases.change_password import ChangeAccountPasswordUseCase
+from app.services.auth.use_cases.logout import LogoutUseCase
 
 from app.services.auth.ports.identity_provider import IdentityProvider
 from app.services.auth.ports.authentication_provider import AuthenticationProvider
@@ -125,4 +126,11 @@ def get_change_password_uc(
         auth_provider=auth_provider,
         idp=identity_provider,
         account_policy=account_policy,
+    )
+
+def get_logout_account_uc(
+    auth_provider: AuthenticationProvider = Depends(get_auth_provider),
+) -> LogoutUseCase:
+    return LogoutUseCase(
+        auth_provider=auth_provider,
     )

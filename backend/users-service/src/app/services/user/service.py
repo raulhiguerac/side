@@ -6,7 +6,7 @@ from sqlmodel import Session
 from fastapi import UploadFile
 from fastapi.concurrency import run_in_threadpool
 
-from app.services.user.helpers import get_profile_db, account_cache_key, profile_cache_key
+from app.services.user.helpers.profile_helpers import get_profile_db, account_cache_key, profile_cache_key
 from app.services.user.mapper import map_profile_db_to_schema
 
 from app.schemas.auth import Principal
@@ -19,8 +19,8 @@ from app.schemas.user import(
 
 from app.repositories.account_repository import get_account_by_id
 
-from app.integrations.cache import CacheClient
-from app.integrations.storage import StorageClient
+from app.integrations.cache.redis.cache import CacheClient
+from app.integrations.storage.minio.storage import StorageClient
 
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from app.core.exceptions.auth import InvalidTokenException

@@ -101,10 +101,14 @@ async def get_current_principal(request: Request) -> Principal:
 
 async def get_refresh_token_from_cookie(request: Request) -> RefreshToken:
     refresh_token = request.cookies.get("refresh_token")
-
     if not refresh_token:
         raise MissingCookieException(
             cause=ValueError("Missing refresh token cookie")
         )
+    return RefreshToken(refresh_token=refresh_token)
 
+async def get_refresh_token_from_cookie_optional(request: Request) -> RefreshToken | None:
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        return None
     return RefreshToken(refresh_token=refresh_token)

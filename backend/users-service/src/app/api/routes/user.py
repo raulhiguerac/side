@@ -7,31 +7,31 @@ from app.api.deps.cache import get_cache
 from app.api.deps.auth import get_current_principal
 from app.api.deps.storage import get_storage, get_profile_photos_bucket,get_public_base_url
 from app.api.deps.upload_validation import validate_profile_photo_upload
-from app.integrations.cache import CacheClient
-from app.integrations.storage import StorageClient
+from app.integrations.cache.redis.cache import CacheClient
+from app.integrations.storage.minio.storage import StorageClient
 from app.schemas.user import CurrentUserOut, CurrentUserProfileOut, PhotoUploadOut, UpdateRequest
 from app.schemas.auth import Principal
-from app.services.user.service import get_current_account, get_current_profile, upload_current_profile_photo, update_profile
+from app.services.user.service import upload_current_profile_photo, update_profile
+from app.api.deps.user_use_cases import get_current_account_uc, get_current_profile_uc
+from app.services.user.use_cases.get_current_account import GetCurrentAccountUseCase
+from app.services.user.use_cases.get_current_profile import GetCurrentProfileUseCase
+
 
 router = APIRouter(prefix="/users", tags=["profile"])
 
 @router.get("/me", response_model=CurrentUserOut, status_code=status.HTTP_200_OK)
 async def get_current_user(
-        session: Annotated[Session, Depends(get_session)],
-        cache: Annotated[CacheClient, Depends(get_cache)],
-        principal: Annotated[Principal, Depends(get_current_principal)]
-    ):
-    user = await get_current_account(session, cache, principal)
-    return user
+    principal: Annotated[Principal, Depends(get_current_principal)],
+    uc: Annotated[GetCurrentAccountUseCase, Depends(get_current_account_uc)],
+):
+    return await uc.execute(principal=principal)
 
 @router.get("/me/profile", response_model=CurrentUserProfileOut, status_code=status.HTTP_200_OK)
 async def get_current_user_profile(
-        session: Annotated[Session, Depends(get_session)],
-        cache: Annotated[CacheClient, Depends(get_cache)],
-        principal: Annotated[Principal, Depends(get_current_principal)]
-    ):
-    user = await get_current_profile(session, cache, principal)
-    return user
+    principal: Annotated[Principal, Depends(get_current_principal)],
+    uc: Annotated[GetCurrentProfileUseCase, Depends(get_current_profile_uc)],
+):
+    return await uc.execute(principal=principal)
 
 @router.post("/me/profile/photo", response_model=PhotoUploadOut, status_code=status.HTTP_201_CREATED)
 async def upload_user_photo(

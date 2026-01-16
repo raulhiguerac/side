@@ -1,7 +1,7 @@
 import os
 from functools import lru_cache
 
-from app.integrations.storage import StorageClient
+from app.integrations.storage.minio.storage import StorageClient
 
 from app.core.exceptions.storage import StorageMisconfiguredError
 
