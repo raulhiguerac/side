@@ -11,7 +11,7 @@ def create_account(session: Session, account: Account) -> Account:
     session.flush()
     return account
 
-def create_profile(session: Session,profile: TProfile) -> TProfile:
+def create_profile(session: Session, profile: TProfile) -> TProfile:
     session.add(profile)
     session.flush()
     return profile

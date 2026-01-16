@@ -1,7 +1,8 @@
-from typing import Protocol, Dict, Any
+from typing import Protocol
 
 from app.schemas.auth import AuthTokens
 
 class AuthenticationProvider(Protocol):
     async def login(self, *, email: str, password: str) -> AuthTokens: ...
     async def refresh_token(self, *, refresh_token: str) -> AuthTokens: ...
+    async def logout(self, *, refresh_token: str) -> None: ...

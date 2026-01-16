@@ -41,7 +41,7 @@ class AuthTokens(StrictBase):
     token_type: str = "Bearer"
 
 class Principal(StrictBase):
-    sub: str
+    sub: uuid.UUID
     email: Optional[EmailStr]
     email_verified: bool = False
     scope: List[str] = []

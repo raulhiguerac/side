@@ -29,7 +29,7 @@ def set_auth_cookies(
             httponly=True,
             secure=secure,
             samesite=samesite,
-            path="/v1/auth/refresh_token",
+            path="/",
             max_age=tokens.refresh_expires_in,
         )
 

@@ -1,14 +1,14 @@
 import os
+
 from keycloak import KeycloakOpenID
-from keycloak.exceptions import KeycloakAuthenticationError, KeycloakPostError
 
-from app.core.exceptions.identity_provider import IdentityProviderUnavailableError, IdentityProviderMisconfiguredError
-from app.core.exceptions.auth import InvalidCredentialsError, InvalidRefreshTokenError
-from app.core.exceptions.validation import BadRequestError
-
-from app.integrations._utils import get_keycloak_status,get_keycloak_error_text
-
+from app.core.exceptions.identity_provider import (
+    IdentityProviderMisconfiguredError,
+)
 from app.core.logging.logger import get_logger
+from app.integrations.identity_provider.keycloak.mappers.error_mapper import (
+    translate_keycloak_error,
+)
 
 logger = get_logger(__name__)
 
@@ -49,112 +49,19 @@ class KeycloakAuthClient:
                 password = password
             )
 
-        except KeycloakAuthenticationError as e:
-            text = str(e).lower()
-            if "invalid_grant" in text or "invalid user credentials" in text:
-                logger.warning(
-                    "keycloak_login_invalid_credentials",
-                    extra={"extra": {"kc_error": text[:200]}},
-                )
-                raise InvalidCredentialsError(cause=e) from e
-
-            if "invalid_client" in text or "unauthorized_client" in text:
-                logger.error(
-                    "keycloak_login_client_misconfigured",
-                    extra={"extra": {"kc_error": text[:200]}},
-                )
-                raise IdentityProviderMisconfiguredError(cause=e) from e
-
-            logger.exception("keycloak_login_auth_error_unexpected")
-            raise IdentityProviderUnavailableError(detail=str(e), cause=e) from e
-
-        except KeycloakPostError as e:
-            status = get_keycloak_status(e)
-            text = (get_keycloak_error_text(e) or "").lower()
-
-            match status:
-                case 400 | 401:
-                    if "invalid_grant" in text:
-                        logger.warning(
-                            "keycloak_login_invalid_credentials",
-                            extra={"extra": {"kc_status": status, "kc_error": text[:200]}},
-                        )
-                        raise InvalidCredentialsError(cause=e) from e
-
-                    if "invalid_client" in text or "unauthorized_client" in text:
-                        logger.error(
-                            "keycloak_login_client_misconfigured",
-                            extra={"extra": {"kc_status": status, "kc_error": text[:200]}},
-                        )
-                        raise IdentityProviderMisconfiguredError(cause=e) from e
-
-                    if "invalid_request" in text:
-                        raise BadRequestError(detail=text, cause=e) from e
-
-            raise IdentityProviderUnavailableError(detail=text, cause=e) from e
-
         except Exception as e:
-            raise IdentityProviderUnavailableError(cause=e) from e
+            translate_keycloak_error(error=e, operation="login")
         
     def keycloak_refresh_token(self, refresh_token: str) -> dict:
         try:
             return self.auth_client.refresh_token(refresh_token=refresh_token)
         
-        except KeycloakAuthenticationError as e:
-            text = str(e).lower()
-            if "invalid_grant" in text or "invalid user credentials" in text:
-                logger.warning(
-                    "keycloak_login_invalid_credentials",
-                    extra={"extra": {"kc_error": text[:200]}},
-                )
-                raise InvalidCredentialsError(cause=e) from e
-
-            if "invalid_client" in text or "unauthorized_client" in text:
-                logger.error(
-                    "keycloak_login_client_misconfigured",
-                    extra={"extra": {"kc_error": text[:200]}},
-                )
-                raise IdentityProviderMisconfiguredError(cause=e) from e
-
-            logger.exception("keycloak_login_auth_error_unexpected")
-            raise IdentityProviderUnavailableError(detail=str(e), cause=e) from e
-
-        except KeycloakPostError as e:
-            status = get_keycloak_status(e)
-            error_text = get_keycloak_error_text(e)
-
-            match status, error_text:
-                case (400 | 401), text if "invalid_grant" in text:
-                    logger.warning(
-                        "keycloak_refresh_token_failed",
-                        extra={
-                            "extra": {
-                                "kc_status": status,
-                                "kc_error": text[:200],
-                            }
-                        },
-                    )
-                    raise InvalidRefreshTokenError(cause=e) from e
-                
-                case (400 | 401), text if "invalid_client" in text or "unauthorized_client" in text:
-                    logger.warning(
-                        "keycloak_refresh_token_failed",
-                        extra={
-                            "extra": {
-                                "kc_status": status,
-                                "kc_error": text[:200],
-                            }
-                        },
-                    )
-                    raise IdentityProviderMisconfiguredError(cause=e) from e
-                
-                case (400 | 401), text if "invalid_request" in text:
-                    raise BadRequestError(detail=text)
-
-            raise IdentityProviderUnavailableError(
-                detail=error_text,
-                cause=e
-            ) from e
-
         except Exception as e:
-            raise IdentityProviderUnavailableError(cause=e) from e
+            translate_keycloak_error(error=e, operation="refresh")
+    
+    def keycloak_revoke_token(self, refresh_token: str) -> None:
+        try:
+            return self.auth_client.logout(refresh_token=refresh_token)
+        
+        except Exception as e:
+            translate_keycloak_error(error=e, operation="revoke")
