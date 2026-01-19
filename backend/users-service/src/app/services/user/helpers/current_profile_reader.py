@@ -67,3 +67,10 @@ class CurrentProfileReader:
         )
 
         return out
+    
+    async def get_model(self, *, account_id: uuid.UUID, account_type: AccountType):
+        return await get_profile_db(
+            uow=self.uow,
+            account_id=account_id,
+            account_type=account_type,
+        )
