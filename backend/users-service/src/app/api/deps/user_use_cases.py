@@ -16,6 +16,8 @@ from app.integrations.cache.redis.cache import CacheClient
 from app.services.user.helpers.current_account_reader import CurrentAccountReader
 from app.services.user.helpers.current_profile_reader import CurrentProfileReader
 
+from app.services.user.services.get_profile_orchestrator import ProfileApplicationService
+
 from app.services.user.use_cases.get_current_account import GetCurrentAccountUseCase
 from app.services.user.use_cases.get_current_profile import GetCurrentProfileUseCase
 
@@ -53,7 +55,14 @@ def get_current_profile_reader(
 ) -> CurrentProfileReader:
     return CurrentProfileReader(uow=uow, cache_client=cache)
 
-
+def get_profile_application_service(
+    profile_reader: CurrentProfileReader = Depends(get_current_profile_reader),
+    account_reader: CurrentAccountReader = Depends(get_current_account_reader),
+) -> ProfileApplicationService:
+    return ProfileApplicationService(
+        profile_reader=profile_reader,
+        account_reader=account_reader
+    )
 # -------------------------------------------------------------------------
 # Use cases
 # -------------------------------------------------------------------------
@@ -64,10 +73,8 @@ def get_current_account_uc(
     return GetCurrentAccountUseCase(account_reader=account_reader)
 
 def get_current_profile_uc(
-    profile_reader: CurrentProfileReader = Depends(get_current_profile_reader),
-    account_reader: CurrentAccountReader = Depends(get_current_account_reader),
+    profile_service: ProfileApplicationService = Depends(get_profile_application_service),
 ) -> GetCurrentProfileUseCase:
     return GetCurrentProfileUseCase(
-        profile_reader=profile_reader,
-        account_reader=account_reader
+        profile_service=profile_service,
     )
