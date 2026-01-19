@@ -12,7 +12,7 @@ from app.services.user.helpers.profile_helpers import build_public_url,  profile
 from app.services.user.helpers.current_account_reader import CurrentAccountReader
 from app.services.user.helpers.current_profile_reader import CurrentProfileReader
 
-class UpdateCurrentUserProfilePhoto:
+class UpdateCurrentProfilePhotoUseCase:
     def __init__(
             self, 
             *,
@@ -50,7 +50,7 @@ class UpdateCurrentUserProfilePhoto:
                 extra_args={"ContentType": content_type},
             )
 
-        photo_url = build_public_url(self.base_url, self.bucket_name, key)
+        photo_url = build_public_url(base_url=self.base_url, bucket=self.bucket_name, key=key)
             
         profile_db.photo_url = photo_url
         profile_db.photo_key = key
@@ -59,6 +59,6 @@ class UpdateCurrentUserProfilePhoto:
 
         cache_key = profile_cache_key(account_id=account_id)
 
-        await self.cache_client.delete(cache_key)
+        await self.cache_client.delete(key=cache_key)
 
         return PhotoUploadOut(photo_url=photo_url)

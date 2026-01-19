@@ -13,7 +13,4 @@ class GetCurrentAccountUseCase:
 
     async def execute(self, *, principal: Principal) -> CurrentUserOut:
         account_id = principal.sub
-        if not isinstance(principal.sub, uuid.UUID):
-            raise InvalidTokenException("Invalid subject (sub) claim")
-
         return await self.account_reader.get(account_id=account_id)

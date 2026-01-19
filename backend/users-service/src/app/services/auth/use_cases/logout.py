@@ -1,7 +1,6 @@
 from app.core.logging.logger import get_logger
 
 from app.services.auth.ports.authentication_provider import AuthenticationProvider
-from app.services.shared.policies.active_account_policy import AccountActivePolicy
 
 logger = get_logger(__name__)
 

@@ -1,66 +1,159 @@
 from typing import Annotated
-from sqlmodel import Session
-from fastapi import APIRouter, Depends, status, UploadFile, File
 
-from app.api.deps.db import get_session
-from app.api.deps.cache import get_cache
+from fastapi import APIRouter, Depends, File, UploadFile, status
+
 from app.api.deps.auth import get_current_principal
-from app.api.deps.storage import get_storage, get_profile_photos_bucket,get_public_base_url
 from app.api.deps.upload_validation import validate_profile_photo_upload
-from app.integrations.cache.redis.cache import CacheClient
-from app.integrations.storage.minio.storage import StorageClient
-from app.schemas.user import CurrentUserOut, CurrentUserProfileOut, PhotoUploadOut, UpdateRequest
-from app.schemas.auth import Principal
-from app.services.user.service import upload_current_profile_photo, update_profile
-from app.api.deps.user_use_cases import get_current_account_uc, get_current_profile_uc
+from app.api.deps.user_use_cases import (
+    get_current_account_uc,
+    get_current_profile_uc,
+    get_update_current_profile_photo_uc,
+    get_update_current_profile_uc,
+    get_deactivate_current_account_uc,
+)
+
+from app.api.deps.auth_use_cases import (
+    get_logout_account_uc
+)
+
+from app.api.deps.auth import (
+    get_refresh_token_from_cookie_optional, 
+    get_current_principal
+)
+
+from app.schemas.auth import Principal, RefreshToken
+from app.schemas.user import (
+    CurrentUserOut,
+    CurrentUserProfileOut,
+    PhotoUploadOut,
+    UpdateRequest,
+)
+
 from app.services.user.use_cases.get_current_account import GetCurrentAccountUseCase
 from app.services.user.use_cases.get_current_profile import GetCurrentProfileUseCase
-
+from app.services.user.use_cases.upload_profile_photo import (
+    UpdateCurrentProfilePhotoUseCase,
+)
+from app.services.user.use_cases.update_current_profile import (
+    UpdateCurrentProfileUseCase,
+)
+from app.services.user.use_cases.deactivate_current_account import (
+    DeactivateCurrentAccountUseCase,
+)
+from app.services.auth.use_cases.logout import (
+    LogoutUseCase,
+)
 
 router = APIRouter(prefix="/users", tags=["profile"])
 
-@router.get("/me", response_model=CurrentUserOut, status_code=status.HTTP_200_OK)
+
+# -------------------------------------------------------------------------
+# Current user
+# -------------------------------------------------------------------------
+
+@router.get(
+    "/me",
+    response_model=CurrentUserOut,
+    status_code=status.HTTP_200_OK,
+)
 async def get_current_user(
     principal: Annotated[Principal, Depends(get_current_principal)],
     uc: Annotated[GetCurrentAccountUseCase, Depends(get_current_account_uc)],
 ):
     return await uc.execute(principal=principal)
 
-@router.get("/me/profile", response_model=CurrentUserProfileOut, status_code=status.HTTP_200_OK)
+
+# -------------------------------------------------------------------------
+# Profile (read)
+# -------------------------------------------------------------------------
+
+@router.get(
+    "/me/profile",
+    response_model=CurrentUserProfileOut,
+    status_code=status.HTTP_200_OK,
+)
 async def get_current_user_profile(
     principal: Annotated[Principal, Depends(get_current_principal)],
     uc: Annotated[GetCurrentProfileUseCase, Depends(get_current_profile_uc)],
 ):
     return await uc.execute(principal=principal)
 
-@router.post("/me/profile/photo", response_model=PhotoUploadOut, status_code=status.HTTP_201_CREATED)
-async def upload_user_photo(
-        session: Annotated[Session, Depends(get_session)],
-        principal: Annotated[Principal, Depends(get_current_principal)],
-        file: Annotated[UploadFile, File(...)],
-        _: Annotated[None, Depends(validate_profile_photo_upload)],
-        storage_client: Annotated[StorageClient, Depends(get_storage)],
-        bucket: Annotated[str, Depends(get_profile_photos_bucket)],
-        base_url: Annotated[str, Depends(get_public_base_url)],
-        cache: Annotated[CacheClient, Depends(get_cache)],
-    ):
-    user_photo = await upload_current_profile_photo(
-        session=session,
-        principal=principal,
-        file=file,
-        bucket=bucket,
-        storage_client=storage_client,
-        base_url=base_url,
-        cache=cache
-    )
-    return user_photo
 
-@router.patch("/me/profile", response_model=CurrentUserProfileOut, status_code=status.HTTP_200_OK)
+# -------------------------------------------------------------------------
+# Profile photo (write)
+# -------------------------------------------------------------------------
+
+@router.post(
+    "/me/profile/photo",
+    response_model=PhotoUploadOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_user_profile_photo(
+    file: Annotated[UploadFile, File(...)],
+    validated_mime: Annotated[str, Depends(validate_profile_photo_upload)],
+    principal: Annotated[Principal, Depends(get_current_principal)],
+    uc: Annotated[
+        UpdateCurrentProfilePhotoUseCase,
+        Depends(get_update_current_profile_photo_uc),
+    ],
+):
+    return await uc.execute(
+        file=file.file,
+        content_type=validated_mime,
+        principal=principal,
+    )
+
+
+# -------------------------------------------------------------------------
+# Profile (update)
+# -------------------------------------------------------------------------
+
+@router.patch(
+    "/me/profile",
+    response_model=CurrentUserProfileOut,
+    status_code=status.HTTP_200_OK,
+)
 async def update_user_profile(
-        session: Annotated[Session, Depends(get_session)],
-        cache: Annotated[CacheClient, Depends(get_cache)],
-        principal: Annotated[Principal, Depends(get_current_principal)],
-        payload: UpdateRequest
-    ):
-    user = await update_profile(session, cache, principal, payload)
-    return user
+    req: UpdateRequest,
+    principal: Annotated[Principal, Depends(get_current_principal)],
+    uc: Annotated[
+        UpdateCurrentProfileUseCase,
+        Depends(get_update_current_profile_uc),
+    ],
+):
+    return await uc.execute(
+        principal=principal,
+        req=req,
+    )
+
+# -------------------------------------------------------------------------
+# Account (deactivate)
+# -------------------------------------------------------------------------
+
+@router.post(
+    "/me/deactivate",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def deactivate_user_account(
+    principal: Annotated[Principal, Depends(get_current_principal)],
+    refresh: Annotated[
+        RefreshToken | None,
+        Depends(get_refresh_token_from_cookie_optional),
+    ],
+    uc: Annotated[
+        DeactivateCurrentAccountUseCase,
+        Depends(get_deactivate_current_account_uc),
+    ],
+    uc_logout: Annotated[
+        LogoutUseCase,
+        Depends(get_logout_account_uc),
+    ],
+) -> None:
+    await uc.execute(principal=principal)
+
+    try:
+        await uc_logout.logout(
+            refresh_token=refresh.refresh_token if refresh else None
+        )
+    except Exception:
+        pass
