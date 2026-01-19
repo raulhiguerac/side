@@ -47,15 +47,7 @@ class CurrentAccountReader:
                 pass
         
 
-        account = await run_in_threadpool(
-            partial(
-                self.uow.accounts.get_by_id,
-                account_id=account_id,
-            )
-        )
-
-        if not account:
-            raise AccountNotFoundError(account_id=account_id)
+        account = await self.uow.accounts.get_by_id(account_id=account_id)
 
         if not account.is_active:
             raise AccountDisabledError(email=account.email)

@@ -5,7 +5,7 @@ from app.core.files.validators import detect_file_mime_type, get_file_size
 
 from app.core.exceptions.validation import FileTooLargeError, UnsupportedFileTypeError
 
-def validate_profile_photo_upload(file: UploadFile):
+def validate_profile_photo_upload(file: UploadFile) -> str:
     policy = PROFILE_PHOTO_UPLOAD_POLICY
 
     mime = detect_file_mime_type(file.file)
@@ -21,4 +21,4 @@ def validate_profile_photo_upload(file: UploadFile):
             context={"size": size, "max": policy.max_size_bytes}
         )
 
-    return None
+    return mime

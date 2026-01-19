@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 
 from fastapi import Depends
@@ -6,12 +7,15 @@ from sqlmodel import Session
 from app.api.deps.db import get_session
 
 from app.services.user.ports.cache import CachePort
+from app.services.user.ports.storage import StoragePort
 from app.services.user.ports.unit_of_work import UserUnitOfWork
 
 from app.services.user.adapters.redis_cache_adapter import RedisCacheAdapter
+from app.services.user.adapters.minio_storage_adapter import MinioStorageAdapter
 from app.services.user.adapters.sql_unit_of_work import SqlUserUnitOfWork
 
 from app.integrations.cache.redis.cache import CacheClient
+from app.integrations.storage.minio.storage import StorageClient
 
 from app.services.user.helpers.current_account_reader import CurrentAccountReader
 from app.services.user.helpers.current_profile_reader import CurrentProfileReader
@@ -20,7 +24,11 @@ from app.services.user.services.get_profile_orchestrator import ProfileApplicati
 
 from app.services.user.use_cases.get_current_account import GetCurrentAccountUseCase
 from app.services.user.use_cases.get_current_profile import GetCurrentProfileUseCase
+from app.services.user.use_cases.upload_profile_photo import UpdateCurrentProfilePhotoUseCase
+from app.services.user.use_cases.update_current_profile import UpdateCurrentProfileUseCase
+from app.services.user.use_cases.deactivate_current_account import DeactivateCurrentAccountUseCase
 
+from app.core.exceptions.storage import StorageMisconfiguredError
 
 # -------------------------------------------------------------------------
 # Providers (stateless → safe to cache)
@@ -29,6 +37,28 @@ from app.services.user.use_cases.get_current_profile import GetCurrentProfileUse
 @lru_cache(maxsize=1)
 def get_cache_port() -> CachePort:
     return RedisCacheAdapter(CacheClient())
+
+@lru_cache(maxsize=1)
+def get_storage_port() -> StoragePort:
+    return MinioStorageAdapter(StorageClient())
+
+@lru_cache(maxsize=1)
+def get_profile_photos_bucket() -> str:
+    bucket = os.getenv("PROFILE_PHOTOS_BUCKET")
+    if not bucket:
+        raise StorageMisconfiguredError(
+            context={"missing": "PROFILE_PHOTOS_BUCKET"}
+        )
+    return bucket
+
+@lru_cache(maxsize=1)
+def get_public_base_url() -> str:
+    base_url = os.getenv("STORAGE_PUBLIC_BASE_URL")
+    if not base_url:
+        raise StorageMisconfiguredError(
+            context={"missing": "STORAGE_PUBLIC_BASE_URL"}
+        )
+    return base_url
 
 
 # -------------------------------------------------------------------------
@@ -77,4 +107,47 @@ def get_current_profile_uc(
 ) -> GetCurrentProfileUseCase:
     return GetCurrentProfileUseCase(
         profile_service=profile_service,
+    )
+
+def get_update_current_profile_photo_uc(
+    uow: UserUnitOfWork = Depends(get_uow),
+    cache: CachePort = Depends(get_cache_port),
+    storage: StoragePort = Depends(get_storage_port),
+    account_reader: CurrentAccountReader = Depends(get_current_account_reader),
+    profile_reader: CurrentProfileReader = Depends(get_current_profile_reader),
+    bucket_name: str = Depends(get_profile_photos_bucket),
+    base_url: str = Depends(get_public_base_url)
+
+) -> UpdateCurrentProfilePhotoUseCase:
+    return UpdateCurrentProfilePhotoUseCase(
+        uow=uow,
+        cache_client=cache,
+        storage_client=storage,
+        account_reader=account_reader,
+        profile_reader=profile_reader,
+        bucket_name=bucket_name,
+        base_url=base_url,
+    )
+
+def get_update_current_profile_uc(
+    uow: UserUnitOfWork = Depends(get_uow),
+    cache: CachePort = Depends(get_cache_port),
+    account_reader: CurrentAccountReader = Depends(get_current_account_reader),
+    profile_reader: CurrentProfileReader = Depends(get_current_profile_reader),
+
+) -> UpdateCurrentProfileUseCase:
+    return UpdateCurrentProfileUseCase(
+        uow=uow,
+        cache_client=cache,
+        account_reader=account_reader,
+        profile_reader=profile_reader,
+    )
+
+def get_deactivate_current_account_uc(
+    uow: UserUnitOfWork = Depends(get_uow),
+    cache: CachePort = Depends(get_cache_port),
+) -> DeactivateCurrentAccountUseCase:
+    return DeactivateCurrentAccountUseCase(
+        uow=uow,
+        cache_client=cache,
     )

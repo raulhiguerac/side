@@ -1,4 +1,5 @@
 from sqlmodel import Session
+from fastapi.concurrency import run_in_threadpool
 
 from app.services.user.adapters.sql_account_repository import (
     SqlAccountRepository,
@@ -15,8 +16,8 @@ class SqlUserUnitOfWork(UserUnitOfWork):
         self.accounts = SqlAccountRepository(session)
         self.users = SqlUserRepository(session)
 
-    def commit(self) -> None:
-        self._session.commit()
+    async def commit(self) -> None:
+        await run_in_threadpool(self._session.commit)
 
-    def rollback(self) -> None:
-        self._session.rollback()
+    async def rollback(self) -> None:
+        await run_in_threadpool(self._session.rollback)
