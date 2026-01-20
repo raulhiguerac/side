@@ -116,6 +116,18 @@ wheels = [
 ]
 
 [[package]]
+name = "brevo-python"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "certifi" },
+    { name = "python-dateutil" },
+    { name = "six" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a8/13/9c5fcc8be41af68273e3861e84eef48f655392b51d55a69f9c05a2fc9ba2/brevo_python-1.2.0.tar.gz", hash = "sha256:50d2a1aecfea81a0c162a43f78a7032b4917ba59f64fa0bee4758e45321c6d00", size = 445121 }
+
+[[package]]
 name = "certifi"
 version = "2025.11.12"
 source = { registry = "https://pypi.org/simple" }
@@ -1808,6 +1820,7 @@ dependencies = [
     { name = "apscheduler" },
     { name = "boto3" },
     { name = "botocore" },
+    { name = "brevo-python" },
     { name = "fastapi", extra = ["standard"] },
     { name = "filetype" },
     { name = "psycopg2-binary" },
@@ -1827,6 +1840,7 @@ requires-dist = [
     { name = "apscheduler", specifier = ">=3.11.2" },
     { name = "boto3", specifier = ">=1.42.24" },
     { name = "botocore", specifier = ">=1.42.24" },
+    { name = "brevo-python", specifier = ">=1.2.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.126.0" },
     { name = "filetype", specifier = ">=1.2.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.11" },

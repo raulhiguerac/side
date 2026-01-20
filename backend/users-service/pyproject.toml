@@ -9,6 +9,7 @@ dependencies = [
     "apscheduler>=3.11.2",
     "boto3>=1.42.24",
     "botocore>=1.42.24",
+    "brevo-python>=1.2.0",
     "fastapi[standard]>=0.126.0",
     "filetype>=1.2.0",
     "psycopg2-binary>=2.9.11",
