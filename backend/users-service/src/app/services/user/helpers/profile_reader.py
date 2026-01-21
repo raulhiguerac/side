@@ -46,17 +46,3 @@ async def get_profile_db(
         raise ProfileNotFoundError(account_id=account_id)
 
     return profile
-
-
-def account_cache_key(account_id: uuid.UUID) -> str:
-    return f"account:{account_id}"
-
-
-def profile_cache_key(account_id: uuid.UUID) -> str:
-    return f"profile:{account_id}"
-
-def profile_photo_storage_key(account_id: uuid.UUID) -> str:
-    return f"accounts/{account_id}/profile/photo"
-
-def build_public_url(*, base_url: str, bucket: str, key: str) -> str:
-    return f"{base_url.rstrip('/')}/{bucket}/{key.lstrip('/')}"

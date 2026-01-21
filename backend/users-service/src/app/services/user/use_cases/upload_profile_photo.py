@@ -7,7 +7,9 @@ from app.services.user.ports.cache import CachePort
 from app.services.user.ports.storage import StoragePort
 from app.services.user.ports.unit_of_work import UserUnitOfWork
 
-from app.services.user.helpers.profile_helpers import build_public_url,  profile_cache_key, profile_photo_storage_key
+from app.services.shared.helpers.url_builder import build_public_url
+from app.services.user.helpers.cache_keys import profile_cache_key
+from app.services.user.helpers.storage_keys import profile_photo_storage_key
 
 from app.services.user.helpers.current_account_reader import CurrentAccountReader
 from app.services.user.helpers.current_profile_reader import CurrentProfileReader
@@ -36,7 +38,7 @@ class UpdateCurrentProfilePhotoUseCase:
         account_id = principal.sub
         key = profile_photo_storage_key(account_id=account_id)
 
-        account = await self.account_reader.get(account_id=account_id)
+        account = await self.account_reader.get_active(account_id=account_id)
         profile_db = await self.profile_reader.get_model(
             account_id=account_id, 
             account_type=account.account_type

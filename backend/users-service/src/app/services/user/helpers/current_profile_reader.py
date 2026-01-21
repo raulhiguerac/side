@@ -10,7 +10,8 @@ from app.schemas.user import CurrentUserProfileOut
 from app.services.user.ports.unit_of_work import UserUnitOfWork
 from app.services.user.ports.cache import CachePort
 
-from app.services.user.helpers.profile_helpers import profile_cache_key, get_profile_db
+from app.services.user.helpers.profile_reader import get_profile_db
+from app.services.user.helpers.cache_keys import profile_cache_key
 from app.services.user.mapper import map_profile_db_to_schema
 
 
