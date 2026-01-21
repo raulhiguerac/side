@@ -1,4 +1,6 @@
 import os
+import uuid
+
 import jwt
 from fastapi import Request
 from fastapi.concurrency import run_in_threadpool
@@ -79,11 +81,16 @@ async def get_current_principal(request: Request) -> Principal:
     except InvalidTokenError as e:
         raise InvalidTokenException(cause=e)
     
-    sub = claims.get("sub")
-    if not sub:
+    sub_raw = claims.get("sub")
+    if not sub_raw:
         raise InvalidTokenException(
             detail="Sub is not defined", cause=ValueError("Sub is not defined")
         )
+
+    try:
+        sub = uuid.UUID(str(sub_raw))
+    except (ValueError, TypeError) as e:
+        raise InvalidTokenException(detail="Invalid subject (sub) claim", cause=e)
 
     scope_str = claims.get("scope", "")
     scope = scope_str.split() if scope_str else []

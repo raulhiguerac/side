@@ -9,9 +9,9 @@ from fastapi.concurrency import run_in_threadpool
 from app.schemas.user import CurrentUserOut
 from app.services.user.ports.unit_of_work import UserUnitOfWork
 from app.services.user.ports.cache import CachePort
-from app.services.user.helpers.profile_helpers import account_cache_key
+from app.services.user.helpers.cache_keys import account_cache_key
 
-from app.core.exceptions.user import AccountNotFoundError, AccountDisabledError
+from app.core.exceptions.user import AccountDisabledError
 
 CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "120"))
 
@@ -45,12 +45,8 @@ class CurrentAccountReader:
                 return CurrentUserOut.model_validate_json(cached)
             except ValidationError:
                 pass
-        
 
         account = await self.uow.accounts.get_by_id(account_id=account_id)
-
-        if not account.is_active:
-            raise AccountDisabledError(email=account.email)
 
         model = CurrentUserOut.model_validate(account)
 
@@ -61,3 +57,14 @@ class CurrentAccountReader:
         )
 
         return model
+    
+    async def get_active(self, *, account_id: uuid.UUID) -> CurrentUserOut:
+        account = await self.get(account_id=account_id)
+
+        if not account.is_active:
+            raise AccountDisabledError(
+                account_id=account_id,
+                email=account.email,
+            )
+
+        return account

@@ -33,6 +33,7 @@ class CurrentUserOut(StrictBase):
     email: EmailStr
     account_type: Literal["person", "organization"]
     onboarding_step: int
+    is_active: bool
 
 class PhotoUploadOut(StrictBase):
     photo_url: str
@@ -53,3 +54,6 @@ UpdateRequest = Annotated[
     Union[UserPersonUpdate, UserOrganizationUpdate],
     Field(discriminator="account_type")
 ]
+
+class RequestReactivationIn(StrictBase):
+    email: EmailStr

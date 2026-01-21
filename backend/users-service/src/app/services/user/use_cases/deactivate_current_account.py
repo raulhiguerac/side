@@ -1,7 +1,8 @@
 from datetime import datetime
 
 from app.schemas.auth import Principal
-from app.services.user.helpers.profile_helpers import account_cache_key, profile_cache_key
+from app.models.account import AccountActionActor, AccountDeactivationReason
+from app.services.user.helpers.cache_keys import account_cache_key, profile_cache_key
 from app.services.user.ports.cache import CachePort
 from app.services.user.ports.unit_of_work import UserUnitOfWork
 
@@ -25,6 +26,8 @@ class DeactivateCurrentAccountUseCase:
 
         account.is_active = False
         account.deactivated_at = datetime.utcnow()
+        account.deactivated_by = AccountActionActor.user
+        account.deactivation_reason = AccountDeactivationReason.user_request
 
         try:
             await self.uow.commit()

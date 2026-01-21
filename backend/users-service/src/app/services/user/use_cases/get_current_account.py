@@ -13,4 +13,4 @@ class GetCurrentAccountUseCase:
 
     async def execute(self, *, principal: Principal) -> CurrentUserOut:
         account_id = principal.sub
-        return await self.account_reader.get(account_id=account_id)
+        return await self.account_reader.get_active(account_id=account_id)

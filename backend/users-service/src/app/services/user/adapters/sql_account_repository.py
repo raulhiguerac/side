@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from app.core.exceptions.user import AccountNotFoundError
 from app.models.account import Account
-from app.repositories.account_repository import get_account_by_id
+from app.repositories.account_repository import get_account_by_id, get_account_by_email
 from app.services.user.ports.account_repository import AccountRepository
 
 
@@ -22,5 +22,17 @@ class SqlAccountRepository(AccountRepository):
 
         if account is None:
             raise AccountNotFoundError(account_id=account_id)
+
+        return account
+    
+    async def get_by_email(self, *, email: str) -> Account:
+        account = await run_in_threadpool(
+            get_account_by_email,
+            self._session,
+            email,
+        )
+
+        if account is None:
+            raise AccountNotFoundError(email=email)
 
         return account

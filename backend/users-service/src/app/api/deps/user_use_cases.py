@@ -9,24 +9,29 @@ from app.api.deps.db import get_session
 from app.services.user.ports.cache import CachePort
 from app.services.user.ports.storage import StoragePort
 from app.services.user.ports.unit_of_work import UserUnitOfWork
+from app.services.shared.ports.email_sender import EmailSenderPort
 
 from app.services.user.adapters.redis_cache_adapter import RedisCacheAdapter
 from app.services.user.adapters.minio_storage_adapter import MinioStorageAdapter
 from app.services.user.adapters.sql_unit_of_work import SqlUserUnitOfWork
+from app.services.shared.adapters.brevo_email_sender_adapter import BrevoSenderAdapter
 
 from app.integrations.cache.redis.cache import CacheClient
 from app.integrations.storage.minio.storage import StorageClient
+from app.integrations.email.brevo.client import EmailClient
 
 from app.services.user.helpers.current_account_reader import CurrentAccountReader
 from app.services.user.helpers.current_profile_reader import CurrentProfileReader
 
 from app.services.user.services.get_profile_orchestrator import ProfileApplicationService
+from app.services.user.services.reactivation_mailer import ReactivationMailer
 
 from app.services.user.use_cases.get_current_account import GetCurrentAccountUseCase
 from app.services.user.use_cases.get_current_profile import GetCurrentProfileUseCase
 from app.services.user.use_cases.upload_profile_photo import UpdateCurrentProfilePhotoUseCase
 from app.services.user.use_cases.update_current_profile import UpdateCurrentProfileUseCase
 from app.services.user.use_cases.deactivate_current_account import DeactivateCurrentAccountUseCase
+from app.services.user.use_cases.request_account_reactivation import RequestReactivationUseCase
 
 from app.core.exceptions.storage import StorageMisconfiguredError
 
@@ -60,6 +65,10 @@ def get_public_base_url() -> str:
         )
     return base_url
 
+@lru_cache(maxsize=1)
+def get_email_sender() -> EmailSenderPort:
+    return BrevoSenderAdapter(EmailClient())
+
 
 # -------------------------------------------------------------------------
 # Unit of Work (request-scoped)
@@ -85,7 +94,7 @@ def get_current_profile_reader(
 ) -> CurrentProfileReader:
     return CurrentProfileReader(uow=uow, cache_client=cache)
 
-def get_profile_application_service(
+def get_profile_application(
     profile_reader: CurrentProfileReader = Depends(get_current_profile_reader),
     account_reader: CurrentAccountReader = Depends(get_current_account_reader),
 ) -> ProfileApplicationService:
@@ -93,6 +102,13 @@ def get_profile_application_service(
         profile_reader=profile_reader,
         account_reader=account_reader
     )
+
+def get_reactivation_mailer(
+    email_sender: EmailSenderPort = Depends(get_email_sender)
+) -> ReactivationMailer:
+    return ReactivationMailer(email_sender=email_sender)
+    
+
 # -------------------------------------------------------------------------
 # Use cases
 # -------------------------------------------------------------------------
@@ -103,7 +119,7 @@ def get_current_account_uc(
     return GetCurrentAccountUseCase(account_reader=account_reader)
 
 def get_current_profile_uc(
-    profile_service: ProfileApplicationService = Depends(get_profile_application_service),
+    profile_service: ProfileApplicationService = Depends(get_profile_application),
 ) -> GetCurrentProfileUseCase:
     return GetCurrentProfileUseCase(
         profile_service=profile_service,
@@ -150,4 +166,17 @@ def get_deactivate_current_account_uc(
     return DeactivateCurrentAccountUseCase(
         uow=uow,
         cache_client=cache,
+    )
+
+def get_request_reactivation_uc(
+    uow: UserUnitOfWork = Depends(get_uow),
+    cache: CachePort = Depends(get_cache_port),
+    profile_service: ProfileApplicationService = Depends(get_profile_application),
+    reactivation_mailer: ReactivationMailer = Depends(get_reactivation_mailer),
+) -> RequestReactivationUseCase:
+    return RequestReactivationUseCase(
+        uow=uow,
+        cache_client=cache,
+        profile_service=profile_service,
+        reactivation_mailer=reactivation_mailer
     )

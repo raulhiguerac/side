@@ -11,7 +11,7 @@ from app.services.user.ports.unit_of_work import UserUnitOfWork
 from app.services.user.helpers.current_account_reader import CurrentAccountReader
 from app.services.user.helpers.current_profile_reader import CurrentProfileReader
 
-from app.services.user.helpers.profile_helpers import profile_cache_key
+from app.services.user.helpers.cache_keys import profile_cache_key
 
 PROFILE_CACHE_TTL_SECONDS = int(os.getenv("PROFILE_CACHE_TTL_SECONDS", "600"))
 
@@ -32,7 +32,7 @@ class UpdateCurrentProfileUseCase:
     async def execute(self, *, principal: Principal, req: UpdateRequest) -> CurrentUserProfileOut:
         account_id = principal.sub
 
-        account = await self.account_reader.get(account_id=account_id)
+        account = await self.account_reader.get_active(account_id=account_id)
         profile_db = await self.profile_reader.get_model(
             account_id=account_id, 
             account_type=account.account_type

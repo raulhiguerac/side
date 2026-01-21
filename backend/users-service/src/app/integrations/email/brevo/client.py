@@ -52,3 +52,35 @@ class EmailClient:
                     "reason": getattr(e, "reason", None),
                 },
             )
+    
+    def send_email_template(
+        self,
+        *,
+        template_id: int,
+        to: List[Dict[str, str]],
+        params: Optional[Dict[str, object]] = None,
+        sender: Optional[str] = None,
+        subject: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+    ) -> None:
+        email = brevo_python.SendSmtpEmail(
+            to=to,
+            template_id=template_id,
+            params=params or {},
+            tags=tags or [],
+            # sender={"email": sender} if sender else None,
+            subject=subject,
+        )
+        
+        try:
+            self._emails_api.send_transac_email(email)
+        except ApiException as e:
+            print(str(e))
+            raise EmailSenderUnavailableError(
+                cause=e,
+                context={
+                    "provider": "brevo",
+                    "status": getattr(e, "status", None),
+                    "reason": getattr(e, "reason", None),
+                },
+            )

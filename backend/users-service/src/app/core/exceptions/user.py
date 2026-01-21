@@ -4,6 +4,7 @@ from app.core.exceptions.base import BaseError
 
 class AccountNotFoundError(BaseError):
     def __init__(self, *, account_id: Optional[uuid.UUID] = None, email: Optional[str] = None):
+        context: dict[str, str] = {}
         if account_id:
             context = {"account_id": str(account_id)}
         if email:
@@ -17,6 +18,7 @@ class AccountNotFoundError(BaseError):
 
 class AccountDisabledError(BaseError):
     def __init__(self, *, account_id: Optional[uuid.UUID] = None, email: Optional[str] = None):
+        context: dict[str, str] = {}
         if account_id:
             context = {"account_id": str(account_id)}
         if email:
@@ -30,6 +32,7 @@ class AccountDisabledError(BaseError):
 
 class ProfileNotFoundError(BaseError):
     def __init__(self, *, account_id: Optional[uuid.UUID] = None):
+        context: dict[str, str] = {}
         if account_id:
             context = {"account_id": str(account_id)}
 
