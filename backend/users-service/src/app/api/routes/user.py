@@ -6,6 +6,7 @@ from app.api.deps.auth import (
     get_current_principal,
     get_refresh_token_from_cookie_optional,
 )
+from app.api.deps.action_token import get_action_token_from_bearer
 from app.api.deps.auth_use_cases import get_logout_account_uc
 from app.api.deps.upload_validation import validate_profile_photo_upload
 from app.api.deps.user_use_cases import (
@@ -15,6 +16,7 @@ from app.api.deps.user_use_cases import (
     get_request_reactivation_uc,
     get_update_current_profile_photo_uc,
     get_update_current_profile_uc,
+    get_confirm_reactivation_uc
 )
 
 from app.schemas.auth import Principal, RefreshToken
@@ -39,6 +41,7 @@ from app.services.user.use_cases.update_current_profile import UpdateCurrentProf
 from app.services.user.use_cases.upload_profile_photo import (
     UpdateCurrentProfilePhotoUseCase,
 )
+from app.services.user.use_cases.reactivate_current_account import ConfirmReactivationUseCase
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -164,3 +167,18 @@ async def request_account_reactivation(
     ],
 ) -> None:
     await uc.execute(email=req.email)
+    return {
+        "message": "If the account exists, a reactivation email will be sent shortly."
+    }
+
+@router.post(
+    "/reactivation/confirm",
+    status_code=status.HTTP_200_OK,
+)
+async def confirm_account_reactivation(
+    token: Annotated[str, Depends(get_action_token_from_bearer)],
+    uc: Annotated[ConfirmReactivationUseCase, Depends(get_confirm_reactivation_uc)],
+) -> dict[str, str]:
+    await uc.execute(token=token)
+    return {"status": "reactivated"}
+

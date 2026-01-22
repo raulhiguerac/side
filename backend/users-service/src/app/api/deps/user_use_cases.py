@@ -32,6 +32,7 @@ from app.services.user.use_cases.upload_profile_photo import UpdateCurrentProfil
 from app.services.user.use_cases.update_current_profile import UpdateCurrentProfileUseCase
 from app.services.user.use_cases.deactivate_current_account import DeactivateCurrentAccountUseCase
 from app.services.user.use_cases.request_account_reactivation import RequestReactivationUseCase
+from app.services.user.use_cases.reactivate_current_account import ConfirmReactivationUseCase
 
 from app.core.exceptions.storage import StorageMisconfiguredError
 
@@ -179,4 +180,13 @@ def get_request_reactivation_uc(
         cache_client=cache,
         profile_service=profile_service,
         reactivation_mailer=reactivation_mailer
+    )
+
+def get_confirm_reactivation_uc(
+    uow: UserUnitOfWork = Depends(get_uow),
+    cache: CachePort = Depends(get_cache_port)
+) -> ConfirmReactivationUseCase:
+    return ConfirmReactivationUseCase(
+        uow=uow,
+        cache_client=cache,
     )

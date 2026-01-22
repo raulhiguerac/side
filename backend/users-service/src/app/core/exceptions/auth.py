@@ -49,3 +49,12 @@ class SamePasswordNotAllowedError(BaseError):
             context={"detail": detail},
             cause=cause,
         )
+
+class TokenInvalidOrExpiredError(BaseError):
+    def __init__(self, *, detail: str | None = None, cause: Exception | None = None):
+        super().__init__(
+            message="The token is invalid or expired",
+            code="TOKEN_INVALID_OR_EXPIRED",
+            context={"detail": detail},
+            cause=cause,
+        )
