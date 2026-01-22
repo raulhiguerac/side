@@ -57,6 +57,24 @@ class CacheClient:
         except Exception as exc:
             log_cache_error(exc=exc, operation="get_json", key=key)
             return None
+    
+    async def get_del(self, key: str) -> str | None:
+        try:
+            return await self.client.getdel(key)
+        except Exception as exc:
+            log_cache_error(exc=exc, operation="getdel", key=key)
+            return None
+
+
+    async def get_del_json(self, key: str) -> dict | list | None:
+        try:
+            value = await self.client.getdel(key)
+            if value is None:
+                return None
+            return json.loads(value)
+        except Exception as exc:
+            log_cache_error(exc=exc, operation="getdel_json", key=key)
+            return None
 
     async def delete(self, key: str) -> None:
         try:

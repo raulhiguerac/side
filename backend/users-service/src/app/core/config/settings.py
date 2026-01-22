@@ -10,7 +10,7 @@ class Settings:
             raise RuntimeError("FRONT_BASE_URL is not set")
 
         self.CACHE_REACTIVATION_TTL_SECONDS = int(
-            os.getenv("CACHE_TTL_SECONDS", "900")
+            os.getenv("CACHE_REACTIVATION_TTL_SECONDS", "900")
         )
 
 

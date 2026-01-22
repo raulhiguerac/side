@@ -13,12 +13,18 @@ class RedisCacheAdapter(CachePort):
 
     async def get(self, *, key: str) -> str | None:
         return await self._client.get(key)
+    
+    async def getdel(self, *, key) -> str | None:
+        return await self._client.get_del(key=key)
 
     async def set(self, *, key: str, value: str, ttl: int | None = None) -> None:
         await self._client.set(key, value, ttl)
 
     async def get_json(self, *, key: str) -> dict | list | None:
         return await self._client.get_json(key)
+    
+    async def getdel_json(self, *, key: str) -> dict | list | None:
+        return await self._client.get_del_json(key=key)
 
     async def set_json(
         self,
