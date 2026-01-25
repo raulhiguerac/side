@@ -3,8 +3,8 @@ from app.core.logging.utils import email_hash
 
 from fastapi.concurrency import run_in_threadpool
 
-from app.core.exceptions.auth import InvalidCredentialsError
-from app.schemas.auth import AccountLogin, AuthTokens
+from app.services.auth.schemas.login import AccountLogin
+from app.services.auth.schemas.tokens import AuthTokens
 
 from app.services.auth.ports.authentication_provider import AuthenticationProvider
 from app.services.shared.policies.active_account_policy import AccountActivePolicy

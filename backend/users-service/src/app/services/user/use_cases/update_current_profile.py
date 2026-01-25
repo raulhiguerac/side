@@ -1,11 +1,12 @@
 import os
 
-from app.schemas.auth import Principal
-from app.schemas.user import CurrentUserProfileOut, UpdateRequest
+from app.schemas.common import Principal
+from app.services.user.schemas.update import UpdateRequest
+from app.services.user.schemas.current import CurrentUserProfileOut
 
-from app.services.user.mapper import map_profile_db_to_schema
+from app.services.user.helpers.mapper import map_profile_db_to_schema
 
-from app.services.user.ports.cache import CachePort
+from app.services.shared.ports.cache import CachePort
 from app.services.user.ports.unit_of_work import UserUnitOfWork
 
 from app.services.user.helpers.current_account_reader import CurrentAccountReader

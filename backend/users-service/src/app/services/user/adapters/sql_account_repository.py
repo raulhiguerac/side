@@ -1,38 +1,20 @@
-import uuid
-
-from fastapi.concurrency import run_in_threadpool
-from sqlmodel import Session
-
-from app.core.exceptions.user import AccountNotFoundError
-from app.models.account import Account
-from app.repositories.account_repository import get_account_by_id, get_account_by_email
+from app.core.exceptions.account import AccountNotFoundError 
 from app.services.user.ports.account_repository import AccountRepository
+from app.services.shared.adapters.sql_account_reader import SqlAccountReader
 
 
-class SqlAccountRepository(AccountRepository):
-    def __init__(self, session: Session) -> None:
-        self._session = session
+class UserAccountRepository(AccountRepository):
+    def __init__(self, reader: SqlAccountReader):
+        self._reader = reader
 
-    async def get_by_id(self, *, account_id: uuid.UUID) -> Account:
-        account = await run_in_threadpool(
-            get_account_by_id,
-            self._session,
-            account_id,
-        )
-
+    async def get_by_id(self, *, account_id):
+        account = await self._reader.get_by_id(account_id=account_id)
         if account is None:
             raise AccountNotFoundError(account_id=account_id)
-
         return account
-    
-    async def get_by_email(self, *, email: str) -> Account:
-        account = await run_in_threadpool(
-            get_account_by_email,
-            self._session,
-            email,
-        )
 
+    async def get_by_email(self, *, email):
+        account = await self._reader.get_by_email(email=email)
         if account is None:
             raise AccountNotFoundError(email=email)
-
         return account

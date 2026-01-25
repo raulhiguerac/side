@@ -1,5 +1,5 @@
 from app.models.account import AccountType, UserProfile, CompanyProfile
-from app.schemas.user import CurrentUserPerson, CurrentUserOrganization
+from app.services.user.schemas.current import CurrentUserPerson, CurrentUserOrganization
 
 def map_profile_db_to_schema(
     account_type: AccountType,

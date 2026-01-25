@@ -1,8 +1,7 @@
 import uuid
 
-from app.schemas.auth import Principal
-from app.schemas.user import CurrentUserOut
-from app.core.exceptions.auth import InvalidTokenException
+from app.schemas.common import Principal
+from app.services.user.schemas.current import CurrentUserOut
 
 from app.services.user.helpers.current_account_reader import CurrentAccountReader
 

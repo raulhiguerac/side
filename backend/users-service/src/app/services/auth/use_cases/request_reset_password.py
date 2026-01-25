@@ -6,6 +6,8 @@ from app.services.shared.helpers.security import hash_token
 from app.services.shared.helpers.url_builder import build_redirect_url
 from app.services.user.helpers.cache_keys import reset_password_cache_key
 
+from app.services.shared.ports.cache import CachePort
+
 from app.services.shared.policies.active_account_policy import AccountActivePolicy
 from app.services.auth.services.reset_password_mailer import ResetPasswordMailer
 
@@ -14,12 +16,10 @@ class RequestResetPasswordUseCase:
     def __init__(
         self,
         *,
-        uow: UserUnitOfWork,
         cache_client: CachePort,
         account_guard: AccountActivePolicy,
         reset_password_mailer: ResetPasswordMailer,
     ) -> None:
-        self.uow = uow
         self.cache = cache_client
         self.account_guard = account_guard
         self.reset_password_mailer = reset_password_mailer

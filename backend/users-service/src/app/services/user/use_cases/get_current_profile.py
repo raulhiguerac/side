@@ -1,6 +1,6 @@
 import uuid
 
-from app.schemas.user import CurrentUserProfileOut
+from app.services.user.schemas.current import CurrentUserProfileOut
 
 from app.services.user.services.get_profile_orchestrator import ProfileApplicationService
 from app.core.exceptions.user import AccountDisabledError

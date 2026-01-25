@@ -3,7 +3,7 @@ from fastapi.concurrency import run_in_threadpool
 from app.services.auth.ports.authentication_provider import AuthenticationProvider
 from app.integrations.identity_provider.keycloak.auth_client import KeycloakAuthClient
 
-from app.schemas.auth import AuthTokens
+from app.services.auth.schemas.tokens import AuthTokens
 from app.core.exceptions.identity_provider import IdentityProviderUnavailableError
 
 

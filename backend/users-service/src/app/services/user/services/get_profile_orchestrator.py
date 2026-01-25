@@ -1,7 +1,6 @@
 import uuid
 
-from app.schemas.auth import Principal
-from app.schemas.user import CurrentUserProfileOut
+from app.services.user.schemas.current import CurrentUserProfileOut
 
 from app.services.user.helpers.current_profile_reader import CurrentProfileReader
 from app.services.user.helpers.current_account_reader import CurrentAccountReader

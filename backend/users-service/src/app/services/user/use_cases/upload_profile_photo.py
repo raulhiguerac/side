@@ -1,10 +1,10 @@
 from typing import IO
 
-from app.schemas.auth import Principal
-from app.schemas.user import PhotoUploadOut
+from app.schemas.common import Principal
+from app.services.user.schemas.photo import PhotoUploadOut
 
-from app.services.user.ports.cache import CachePort
-from app.services.user.ports.storage import StoragePort
+from app.services.shared.ports.cache import CachePort
+from app.services.shared.ports.storage import StoragePort
 from app.services.user.ports.unit_of_work import UserUnitOfWork
 
 from app.services.shared.helpers.url_builder import build_public_url

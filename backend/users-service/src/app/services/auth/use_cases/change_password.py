@@ -1,5 +1,7 @@
 from app.core.logging.logger import get_logger
-from app.schemas.auth import Principal, ChangePassword
+
+from app.schemas.common import Principal
+from app.services.auth.schemas.passwords import ChangePassword
 
 from app.services.auth.ports.identity_provider import IdentityProvider
 from app.services.auth.ports.authentication_provider import AuthenticationProvider
