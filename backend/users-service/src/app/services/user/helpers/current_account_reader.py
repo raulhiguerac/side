@@ -1,14 +1,11 @@
 import os
 import uuid
-from functools import partial
 
 from pydantic import ValidationError
 
-from fastapi.concurrency import run_in_threadpool
-
-from app.schemas.user import CurrentUserOut
+from app.services.user.schemas.current import CurrentUserOut
 from app.services.user.ports.unit_of_work import UserUnitOfWork
-from app.services.user.ports.cache import CachePort
+from app.services.shared.ports.cache import CachePort
 from app.services.user.helpers.cache_keys import account_cache_key
 
 from app.core.exceptions.user import AccountDisabledError

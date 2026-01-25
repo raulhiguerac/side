@@ -1,4 +1,4 @@
-from app.services.user.ports.cache import CachePort
+from app.services.shared.ports.cache import CachePort
 
 from app.integrations.cache.redis.cache import CacheClient
 

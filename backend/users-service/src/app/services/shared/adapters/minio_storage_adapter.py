@@ -2,8 +2,8 @@ from typing import Any, Dict, IO, Optional
 
 from fastapi.concurrency import run_in_threadpool
 
-from app.schemas.storage import UploadResult
-from app.services.user.ports.storage import StoragePort
+from app.services.shared.schemas.storage import UploadResult
+from app.services.shared.ports.storage import StoragePort
 from app.integrations.storage.minio.storage import StorageClient
 
 

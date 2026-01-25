@@ -1,6 +1,6 @@
 import uuid
 from app.models.account import AccountType, UserProfile, CompanyProfile
-from app.schemas.auth import RegisterRequest
+from app.services.auth.schemas.registration import RegisterRequest
 
 class ProfileFactory:
     def from_register(self, *, req: RegisterRequest, account_id: uuid.UUID):
