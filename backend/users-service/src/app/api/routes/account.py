@@ -15,14 +15,11 @@ from app.api.deps.auth_use_cases import (
 )
 from app.api.http.cookies import set_auth_cookies, delete_auth_cookies
 
-from app.schemas.auth import (
-    Principal,
-    RegisterRequest,
-    RegisterResponse,
-    AccountLogin,
-    RefreshToken,
-    ChangePassword
-)
+from app.schemas.common import Principal
+from app.services.auth.schemas.registration import RegisterRequest, RegisterResponse
+from app.services.auth.schemas.login import AccountLogin
+from app.services.auth.schemas.tokens import RefreshToken
+from app.services.auth.schemas.passwords import ChangePassword
 
 from app.services.auth.use_cases.authenticate_account import (
     AuthenticateAccountUseCase,

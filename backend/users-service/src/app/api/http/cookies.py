@@ -1,5 +1,5 @@
 from fastapi import Response
-from app.schemas.auth import AuthTokens
+from app.services.auth.schemas.tokens import AuthTokens
 
 
 def set_auth_cookies(

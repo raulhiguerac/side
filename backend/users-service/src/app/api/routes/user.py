@@ -19,14 +19,13 @@ from app.api.deps.user_use_cases import (
     get_confirm_reactivation_uc
 )
 
-from app.schemas.auth import Principal, RefreshToken
-from app.schemas.user import (
-    CurrentUserOut,
-    CurrentUserProfileOut,
-    PhotoUploadOut,
-    UpdateRequest,
-    RequestReactivationIn,
-)
+from app.schemas.common import Principal
+from app.services.auth.schemas.tokens import RefreshToken
+from app.services.user.schemas.photo import PhotoUploadOut
+from app.services.user.schemas.update import UpdateRequest
+from app.services.user.schemas.reactivation import RequestReactivationIn
+from app.services.user.schemas.current import CurrentUserOut, CurrentUserProfileOut
+
 
 from app.services.auth.use_cases.logout import LogoutUseCase
 from app.services.user.use_cases.deactivate_current_account import (

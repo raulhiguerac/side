@@ -8,7 +8,6 @@ from keycloak.exceptions import KeycloakGetError
 from app.models.kc_tasks import KcCompensationTask, KcTaskStatus
 from app.integrations.identity_provider.keycloak.admin_client import KeycloakAdminClient
 
-from sqlmodel import Session
 from app.api.deps.db import engine
 
 
@@ -59,15 +58,14 @@ def retry_keycloak_deletions(session: Session):
 
         except Exception as e:
             task.attempts += 1
-            task.last_error = f"{type(e).__name__}: {str(e)[:500]}"  # truncado
+            task.last_error = f"{type(e).__name__}: {str(e)[:500]}"
 
             delay_min = min(MAX_DELAY_MIN, 2 ** task.attempts)
             jitter_sec = random.randint(0, 30)
             task.next_retry_at = datetime.utcnow() + timedelta(minutes=delay_min, seconds=jitter_sec)
 
-            # opcional: si attempts llegó al máximo, márcala failed
             if task.attempts >= MAX_ATTEMPTS:
-                task.status = KcTaskStatus.failed  # si tienes ese enum
+                task.status = KcTaskStatus.failed
 
             logger.warning(
                 "kc_user_deleted_fail",
