@@ -4,7 +4,8 @@ from fastapi import Depends
 from sqlmodel import Session
 
 from app.api.deps.db import get_session
-from app.uow.sql_uow import SqlUnitOfWork
+from app.services.auth.ports.unit_of_work import AuthUnitOfWork
+from app.services.auth.adapters.sql_unit_of_work import SqlAuthUnitOfWork
 
 from app.services.shared.policies.active_account_policy import AccountActivePolicy
 from app.services.shared.policies.account_email_availability_policy import (
@@ -55,11 +56,12 @@ def get_auth_provider() -> AuthenticationProvider:
 # Unit of Work (request-scoped)
 # -------------------------------------------------------------------------
 
-def get_uow(session: Session = Depends(get_session)) -> SqlUnitOfWork:
+def get_uow(session: Session = Depends(get_session)) -> AuthUnitOfWork:
     """
     One Unit of Work per request, bound to the current DB session.
     """
-    return SqlUnitOfWork(session=session)
+    return SqlAuthUnitOfWork(session=session)
+
 
 
 # -------------------------------------------------------------------------
@@ -67,7 +69,7 @@ def get_uow(session: Session = Depends(get_session)) -> SqlUnitOfWork:
 # -------------------------------------------------------------------------
 
 def get_account_active_policy(
-    uow: SqlUnitOfWork = Depends(get_uow),
+    uow: AuthUnitOfWork = Depends(get_uow),
 ) -> AccountActivePolicy:
     """
     Ensures an account exists and is active (e.g., for login/change password).
@@ -76,7 +78,7 @@ def get_account_active_policy(
 
 
 def get_email_availability_policy(
-    uow: SqlUnitOfWork = Depends(get_uow),
+    uow: AuthUnitOfWork = Depends(get_uow),
 ) -> AccountEmailAvailabilityPolicy:
     """
     Ensures an email is available (e.g., for register).
@@ -89,7 +91,7 @@ def get_email_availability_policy(
 # -------------------------------------------------------------------------
 
 def get_register_account_uc(
-    uow: SqlUnitOfWork = Depends(get_uow),
+    uow: AuthUnitOfWork = Depends(get_uow),
     identity_provider: IdentityProvider = Depends(get_identity_provider),
     email_policy: AccountEmailAvailabilityPolicy = Depends(get_email_availability_policy),
 ) -> RegisterAccountUseCase:

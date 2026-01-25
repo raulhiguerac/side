@@ -6,13 +6,13 @@ from sqlmodel import Session
 
 from app.api.deps.db import get_session
 
-from app.services.user.ports.cache import CachePort
-from app.services.user.ports.storage import StoragePort
+from app.services.shared.ports.cache import CachePort
+from app.services.shared.ports.storage import StoragePort
 from app.services.user.ports.unit_of_work import UserUnitOfWork
 from app.services.shared.ports.email_sender import EmailSenderPort
 
-from app.services.user.adapters.redis_cache_adapter import RedisCacheAdapter
-from app.services.user.adapters.minio_storage_adapter import MinioStorageAdapter
+from app.services.shared.adapters.redis_cache_adapter import RedisCacheAdapter
+from app.services.shared.adapters.minio_storage_adapter import MinioStorageAdapter
 from app.services.user.adapters.sql_unit_of_work import SqlUserUnitOfWork
 from app.services.shared.adapters.brevo_email_sender_adapter import BrevoSenderAdapter
 
