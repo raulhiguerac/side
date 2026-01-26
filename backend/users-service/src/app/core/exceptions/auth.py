@@ -50,6 +50,15 @@ class SamePasswordNotAllowedError(BaseError):
             cause=cause,
         )
 
+class PasswordsDoNotMatchError(BaseError):
+    def __init__(self, *, detail: str | None = None, cause: Exception | None = None):
+        super().__init__(
+            message="Passwords do not match",
+            code="PASSWORDS_DO_NOT_MATCH",
+            context={"detail": detail},
+            cause=cause,
+        )
+
 class TokenInvalidOrExpiredError(BaseError):
     def __init__(self, *, detail: str | None = None, cause: Exception | None = None):
         super().__init__(
