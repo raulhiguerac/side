@@ -8,7 +8,7 @@ class ResetPasswordMailer:
     def __init__(self, email_sender: EmailSenderPort) -> None:
         self._email_sender = email_sender
 
-    async def send(
+    async def send_reset_password_email(
         self,
         *,
         email: str,

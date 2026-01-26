@@ -2,7 +2,7 @@ from fastapi.concurrency import run_in_threadpool
 from sqlmodel import Session
 
 from app.models.account import UserProfile, CompanyProfile
-from app.services.auth.ports.profile_repository import ProfileWriter
+from app.services.auth.ports.profile_registration_writer import ProfileWriter
 
 
 class SqlProfileRepository(ProfileWriter):

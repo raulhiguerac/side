@@ -2,37 +2,38 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response, status
 
+# Dependencies
+from app.api.deps.action_token import get_action_token_from_bearer
 from app.api.deps.auth import (
-    get_refresh_token_from_cookie, 
-    get_refresh_token_from_cookie_optional, 
-    get_current_principal
+    get_current_principal,
+    get_refresh_token_from_cookie,
+    get_refresh_token_from_cookie_optional,
 )
 from app.api.deps.auth_use_cases import (
     get_authenticate_account_uc,
-    get_register_account_uc,
     get_change_password_uc,
-    get_logout_account_uc
+    get_confirm_reset_password_uc,
+    get_logout_account_uc,
+    get_register_account_uc,
+    get_reset_password_uc,
 )
-from app.api.http.cookies import set_auth_cookies, delete_auth_cookies
+from app.api.http.cookies import delete_auth_cookies, set_auth_cookies
 
+# Schemas
 from app.schemas.common import Principal
-from app.services.auth.schemas.registration import RegisterRequest, RegisterResponse
 from app.services.auth.schemas.login import AccountLogin
+from app.services.auth.schemas.passwords import ChangePassword, ResetPassword
+from app.services.auth.schemas.registration import RegisterRequest, RegisterResponse
+from app.services.auth.schemas.reset import RequestResetPasswordIn
 from app.services.auth.schemas.tokens import RefreshToken
-from app.services.auth.schemas.passwords import ChangePassword
 
-from app.services.auth.use_cases.authenticate_account import (
-    AuthenticateAccountUseCase,
-)
-from app.services.auth.use_cases.register_account import (
-    RegisterAccountUseCase,
-)
-from app.services.auth.use_cases.change_password import (
-    ChangeAccountPasswordUseCase,
-)
-from app.services.auth.use_cases.logout import (
-    LogoutUseCase,
-)
+# Use cases
+from app.services.auth.use_cases.authenticate_account import AuthenticateAccountUseCase
+from app.services.auth.use_cases.change_password import ChangeAccountPasswordUseCase
+from app.services.auth.use_cases.confirm_reset_password import ConfirmResetPasswordUseCase
+from app.services.auth.use_cases.logout import LogoutUseCase
+from app.services.auth.use_cases.register_account import RegisterAccountUseCase
+from app.services.auth.use_cases.request_reset_password import RequestResetPasswordUseCase
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -79,7 +80,7 @@ async def refresh(
     return {"message": "ok"}
 
 
-@router.post("/change_password", status_code=status.HTTP_200_OK)
+@router.post("/change-password", status_code=status.HTTP_200_OK)
 async def change_password(
     payload: ChangePassword,
     principal: Annotated[Principal, Depends(get_current_principal)],
@@ -107,3 +108,41 @@ async def logout(
     await uc.logout(
         refresh_token=refresh.refresh_token if refresh else None
     )
+
+@router.post(
+    "/reset-password/request",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Request password reset",
+    description="Sends a password reset email if the account exists.",
+)
+async def request_reset_password(
+    payload: RequestResetPasswordIn,
+    uc: Annotated[
+        RequestResetPasswordUseCase,
+        Depends(get_reset_password_uc),
+    ],
+) -> dict[str, str]:
+    await uc.execute(email=payload.email)
+
+    return {
+        "message": (
+            "If the account exists, a reset email will be sent shortly."
+        )
+    }
+
+@router.post(
+    "/reset-password/confirm",
+    status_code=status.HTTP_200_OK,
+    summary="Confirm password reset",
+    description="Sets a new password using a one-time reset token.",
+)
+async def confirm_reset_password(
+    payload: ResetPassword,
+    token: Annotated[str, Depends(get_action_token_from_bearer)],
+    uc: Annotated[
+        ConfirmResetPasswordUseCase,
+        Depends(get_confirm_reset_password_uc),
+    ],
+) -> dict[str, str]:
+    await uc.execute(token=token, req=payload)
+    return {"message": "Password updated successfully."}
