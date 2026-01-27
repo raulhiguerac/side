@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col">
+  <div class="lg:h-full flex flex-col">
     <!-- Header -->
     <div class="mb-3 flex-shrink-0">
       <h1 class="text-brand-text text-lg font-bold">Mi Perfil</h1>
@@ -7,12 +7,12 @@
     </div>
 
     <!-- Grid: Form + Intent -->
-    <div class="flex flex-col lg:flex-row gap-4 h-[80%]">
-      <!-- Form Card - 50% width -->
+    <div class="flex flex-col lg:flex-row gap-4 flex-1 lg:h-[80%]">
+      <!-- Form Card - 50% width on desktop -->
       <div
-        class="lg:w-1/2 h-full bg-white rounded-xl border border-brand-divider p-4 flex flex-col"
+        class="lg:w-1/2 lg:h-full bg-white rounded-xl border border-brand-divider p-4 flex flex-col"
       >
-        <form @submit.prevent="saveProfile" class="flex flex-col h-full">
+        <form @submit.prevent="saveProfile" class="flex flex-col lg:h-full">
           <!-- Avatar centrado -->
           <div class="flex justify-center mb-4 flex-shrink-0">
             <div class="relative">
@@ -82,7 +82,7 @@
           <textarea
             v-model="form.description"
             placeholder="Descripción"
-            class="flex-1 min-h-0 px-3 py-2 mb-3 bg-white border border-brand-border rounded-lg text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary resize-none"
+            class="min-h-[100px] lg:flex-1 lg:min-h-0 px-3 py-2 mb-3 bg-white border border-brand-border rounded-lg text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary resize-none"
           ></textarea>
 
           <!-- Actions -->
