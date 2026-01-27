@@ -104,7 +104,7 @@
             </div>
           </div>
         </div>
-        <div class="w-full h-[400px] sm:h-[400px] flex flex-col">
+        <div class="w-full h-auto sm:h-[400px] flex flex-col">
           <form class="flex flex-col flex-1">
             <div v-if="step === 1" class="flex flex-col gap-6 flex-1">
               <!-- Paragraph arriba -->
@@ -331,28 +331,37 @@
                 </div>
               </div>
 
-              <!-- Botón -->
-              <button
-                @click="nextStep"
-                :disabled="!user.name || !user.lastName || !user.phone"
-                class="w-full h-12 rounded-xl font-semibold transition-all mt-8"
-                :class="
-                  user.name && user.lastName && user.phone
-                    ? 'bg-brand-primary hover:bg-green-600 text-white cursor-pointer'
-                    : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
-                "
-              >
-                Siguiente
-              </button>
+              <!-- Botones -->
+              <div class="flex flex-col gap-3 mt-8">
+                <button
+                  @click="step--"
+                  type="button"
+                  class="w-full h-12 rounded-xl font-semibold bg-gray-400 hover:bg-gray-500 text-white transition-all"
+                >
+                  ← Volver
+                </button>
+                <button
+                  @click="nextStep"
+                  :disabled="!user.name || !user.lastName || !user.phone"
+                  class="w-full h-12 rounded-xl font-semibold transition-all"
+                  :class="
+                    user.name && user.lastName && user.phone
+                      ? 'bg-brand-primary hover:bg-green-600 text-white cursor-pointer'
+                      : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
+                  "
+                >
+                  Siguiente
+                </button>
+              </div>
             </div>
             <div v-if="step === 3" class="flex flex-col flex-1">
               <!-- Texto arriba -->
-              <p class="text-brand-muted text-sm text-center mb-4">
+              <p class="text-brand-muted text-sm text-center mb-3">
                 Todo está listo para mostrarte tu próxima propiedad
               </p>
 
               <!-- Campos -->
-              <div class="flex flex-col gap-3">
+              <div class="flex flex-col gap-2">
                 <!-- Email -->
                 <div class="flex flex-col gap-1.5">
                   <label class="text-brand-text text-xs font-semibold"
@@ -428,28 +437,76 @@
                 </div>
 
                 <!-- Texto protección -->
-                <p class="text-brand-placeholder text-xs text-center">
-                  Tus datos están protegidos · Puedes cambiar tu contraseña
-                  cuando quieras
+                <p
+                  class="text-brand-placeholder text-xs text-center hidden sm:block"
+                >
+                  · Tus datos están protegidos
+                </p>
+                <p
+                  class="text-brand-placeholder text-xs text-center hidden sm:block"
+                >
+                  · Puedes cambiar tu contraseña cuando quieras
+                </p>
+
+                <!-- Mensaje de error -->
+                <p
+                  v-if="errorMessage"
+                  class="text-red-500 text-xs text-center bg-red-50 py-2 px-3 rounded-lg"
+                >
+                  {{ errorMessage }}
                 </p>
               </div>
 
               <!-- Botones -->
-              <div class="flex flex-col gap-3 mt-4">
+              <div class="flex flex-col gap-2 mt-3">
+                <button
+                  @click="step--"
+                  type="button"
+                  class="w-full h-10 rounded-xl font-semibold bg-gray-400 hover:bg-gray-500 text-white transition-all text-sm"
+                >
+                  ← Volver
+                </button>
                 <!-- Botón finalizar -->
                 <button
                   @click="registerUser"
                   :disabled="
-                    !user.email || !user.password || user.password.length < 8
+                    !user.email ||
+                    !user.password ||
+                    user.password.length < 8 ||
+                    isLoading
                   "
-                  class="w-full h-12 rounded-xl font-semibold transition-all"
+                  class="w-full h-10 rounded-xl font-semibold transition-all text-sm flex items-center justify-center"
                   :class="
-                    user.email && user.password && user.password.length >= 8
+                    user.email &&
+                    user.password &&
+                    user.password.length >= 8 &&
+                    !isLoading
                       ? 'bg-brand-primary hover:bg-green-600 text-white cursor-pointer'
                       : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
                   "
                 >
-                  Finalizar registro
+                  <svg
+                    v-if="isLoading"
+                    class="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    />
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  <span v-else>Finalizar registro</span>
                 </button>
 
                 <!-- Divider -->
@@ -463,9 +520,8 @@
 
                 <!-- Botón Google -->
                 <button
-                  @click="loginWithGoogle"
                   type="button"
-                  class="w-full h-12 bg-white border-[1.5px] border-brand-border rounded-[10px] flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-colors"
+                  class="w-full h-10 bg-white border-[1.5px] border-brand-border rounded-[10px] flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-colors"
                 >
                   <img
                     src="https://www.svgrepo.com/show/475656/google-color.svg"
@@ -486,12 +542,23 @@
 </template>
 
 <script lang="ts" setup>
+/**
+ * 📝 REGISTER VIEW - Pantalla de registro (3 pasos)
+ *
+ * Flujo:
+ * 1. Paso 1: Seleccionar tipo de cuenta (persona/organización)
+ * 2. Paso 2: Datos personales (nombre, apellido, teléfono)
+ * 3. Paso 3: Credenciales (email, password)
+ * 4. Al finalizar → llamamos al store.register()
+ */
 import { ref } from "vue";
-import axios from "axios";
 import router from "../router";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { useAuthStore } from "@/stores/auth";
 
-// Estado del formulario
+// 🔌 Conectamos con el store de autenticación
+const authStore = useAuthStore();
+
+// 📝 Datos del formulario (locales durante el wizard)
 const user = ref({
   accountType: "" as "person" | "organization" | "",
   name: "",
@@ -503,46 +570,45 @@ const user = ref({
 
 const step = ref(1);
 const showPassword = ref(false);
+const isLoading = ref(false);
+const errorMessage = ref(""); // Para mostrar errores
 
 // Navegación entre pasos
 const nextStep = () => {
   step.value++;
 };
 
-// Registro con email/password
+/**
+ * 📝 Registro con email/password
+ *
+ * Usa el store para hacer el registro, así:
+ * - El store maneja la cookie automáticamente
+ * - El store guarda los datos del usuario
+ * - Redirigimos al home si es exitoso
+ */
 const registerUser = async () => {
-  try {
-    const response = await axios.post(
-      "http://localhost:8000/v1/auth/register",
-      {
-        account_type: user.value.accountType,
-        email: user.value.email,
-        password: user.value.password,
-        first_name: user.value.name,
-        last_name: user.value.lastName,
-        phone: user.value.phone,
-      },
-      { withCredentials: true }
-    );
+  isLoading.value = true;
+  errorMessage.value = "";
 
-    if (response.status === 201) {
-      router.push("/");
-    }
-  } catch (error) {
-    console.error("Error en registro:", error);
-  }
-};
+  // Llamamos al store con todos los datos del usuario
+  const success = await authStore.register({
+    email: user.value.email,
+    password: user.value.password,
+    first_name: user.value.name,
+    last_name: user.value.lastName,
+    phone: user.value.phone,
+    account_type: user.value.accountType as "person" | "organization",
+  });
 
-// Registro con Google
-const loginWithGoogle = async () => {
-  try {
-    const auth = getAuth();
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    console.log("Google login:", result.user);
+  if (success) {
+    // ✅ Registro exitoso - redirigimos
     router.push("/");
-  } catch (error) {
-    console.error("Error en login con Google:", error);
+  } else {
+    // ❌ Registro fallido
+    errorMessage.value =
+      "Error al crear la cuenta. El email podría estar en uso.";
   }
+
+  isLoading.value = false;
 };
 </script>
