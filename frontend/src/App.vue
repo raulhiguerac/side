@@ -1,9 +1,11 @@
 <template>
-  <div class="min-h-screen lg:h-screen flex flex-col lg:overflow-hidden">
+  <div class="min-h-screen xl:h-screen flex flex-col xl:overflow-hidden">
     <NavBar v-if="!$route.meta.hideNavbar" :links="links" class="flex-none" />
 
-    <main class="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
-      <router-view></router-view>
+    <main
+      class="flex-1 min-h-0 overflow-y-auto xl:overflow-hidden flex flex-col"
+    >
+      <router-view class="flex-1"></router-view>
     </main>
   </div>
 </template>

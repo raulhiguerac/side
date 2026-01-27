@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="lg:h-full flex flex-col">
     <!-- Header -->
     <div class="mb-8">
       <h1 class="text-brand-text text-2xl font-bold">Cuenta</h1>

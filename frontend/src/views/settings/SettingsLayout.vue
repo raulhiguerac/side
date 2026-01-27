@@ -1,5 +1,7 @@
 <template>
-  <div class="bg-brand-bg h-full flex flex-col overflow-hidden">
+  <div
+    class="bg-brand-bg h-full flex flex-col overflow-auto lg:overflow-hidden"
+  >
     <!-- Mobile menu -->
     <div
       class="md:hidden bg-white border-b border-brand-divider sticky top-0 z-10"
@@ -23,14 +25,14 @@
 
     <!-- Desktop layout -->
     <div
-      class="flex items-start px-[5%] sm:px-[8%] lg:px-[10%] flex-1 overflow-hidden py-4 md:py-6"
+      class="flex items-start px-[5%] sm:px-[8%] lg:px-[10%] flex-1 py-4 md:py-6 lg:overflow-hidden"
     >
       <!-- Sidebar (solo desktop) -->
       <SettingsSidebar class="hidden md:block flex-shrink-0" />
 
       <!-- Content -->
-      <main class="flex-1 md:pl-8 flex flex-col overflow-hidden h-full">
-        <router-view class="h-full" />
+      <main class="flex-1 md:pl-8 flex flex-col lg:overflow-hidden lg:h-full">
+        <router-view class="lg:h-full" />
       </main>
     </div>
   </div>
