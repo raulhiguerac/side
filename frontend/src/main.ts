@@ -1,4 +1,5 @@
 import { createApp } from "vue";
+import { createPinia } from "pinia"; // 👈 Importamos Pinia
 import App from "./App.vue";
 import router from "./router";
 import VueCookies from "vue3-cookies";
@@ -16,5 +17,12 @@ const firebaseConfig = {
   measurementId: "G-07RPYZKH8W",
 };
 
+// Creamos la instancia de Pinia (el "contenedor" de todos los stores)
+const pinia = createPinia();
+
 initializeApp(firebaseConfig);
-createApp(App).use(router).use(VueCookies).mount("#app");
+createApp(App)
+  .use(pinia) // 👈 Primero Pinia (antes del router)
+  .use(router)
+  .use(VueCookies)
+  .mount("#app");

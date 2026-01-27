@@ -17,7 +17,7 @@ module.exports = {
         },
       },
       fontFamily: {
-        geist: ["Geist", "system-ui", "sans-serif"],
+        sans: ['"Plus Jakarta Sans"', "system-ui", "sans-serif"],
       },
     },
   },

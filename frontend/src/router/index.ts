@@ -1,8 +1,6 @@
 import { createRouter, createWebHashHistory, RouteRecordRaw } from "vue-router";
 import HomeView from "../views/HomeView.vue";
-// import AboutView from "@/views/AboutView.vue";
-import { useCookies } from "vue3-cookies";
-// Vue.use(VueCookies, { expires: '7d'});
+import { useAuthStore } from "@/stores/auth";
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -39,6 +37,52 @@ const routes: Array<RouteRecordRaw> = [
       isLogged: true,
     },
   },
+  {
+    path: "/forgot-password",
+    name: "forgot-password",
+    component: () => import("../views/ResetPasswordView.vue"),
+    meta: {
+      hideNavbar: true,
+    },
+  },
+  // Settings routes
+  {
+    path: "/settings",
+    component: () => import("../views/settings/SettingsLayout.vue"),
+    meta: {
+      requiresAuth: true,
+    },
+    children: [
+      {
+        path: "",
+        redirect: "/settings/profile",
+      },
+      {
+        path: "profile",
+        name: "settings-profile",
+        component: () => import("../views/settings/SettingsProfile.vue"),
+      },
+      {
+        path: "security",
+        name: "settings-security",
+        component: () => import("../views/settings/SettingsSecurity.vue"),
+      },
+      {
+        path: "account",
+        name: "settings-account",
+        component: () => import("../views/settings/SettingsAccount.vue"),
+      },
+    ],
+  },
+  // Properties routes
+  {
+    path: "/properties",
+    name: "my-properties",
+    component: () => import("../views/MyPropertiesView.vue"),
+    meta: {
+      requiresAuth: true,
+    },
+  },
 ];
 
 const router = createRouter({
@@ -46,19 +90,25 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to) => {
-  const { cookies } = useCookies();
-  const accesToken = cookies.get("token");
+router.beforeEach(async (to) => {
+  const authStore = useAuthStore();
+
+  // Si aún no hemos verificado la autenticación, esperamos
+  if (!authStore._authChecked) {
+    await authStore.checkAuth();
+  }
+
+  // Rutas que requieren autenticación
   if (to.matched.some((record) => record.meta.requiresAuth)) {
-    // this route requires auth, check if logged in
-    // if not, redirect to login page.
-    if (accesToken == null) {
+    if (!authStore.isAuthenticated) {
       return { name: "login" };
     }
   }
+
+  // Rutas solo para usuarios NO logueados (login, register)
   if (to.matched.some((record) => record.meta.isLogged)) {
-    if (accesToken) {
-      return { name: "about" };
+    if (authStore.isAuthenticated) {
+      return { name: "home" };
     }
   }
 });

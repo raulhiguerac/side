@@ -1,13 +1,23 @@
+<!-- TODO: Descomentar cuando se integre el mapa -->
+<template>
+  <div><!-- MapUser placeholder --></div>
+</template>
+
+<script lang="ts" setup>
+// Componente deshabilitado temporalmente
+</script>
+
+<!-- CÓDIGO COMENTADO PARA REFERENCIA:
 <template>
   <div class="m-auto w-[90vw] h-[60vh] flex">
     <div class="w-1/4 h-full mx-1">
-      <!-- <input
+      <input
         v-model="adress"
         type="text"
         class="border border-gray-400 py-1 px-2 w-full rounded-lg h-11"
         placeholder="Dirección"
         required
-      /> -->
+      />
       <vue-google-autocomplete
         v-model="adress"
         id="map"
@@ -81,3 +91,4 @@ watchEffect(() => {
   console.log(adress.value);
 });
 </script>
+-->
