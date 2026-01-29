@@ -133,7 +133,7 @@
 
       <!-- Intent Selector - 50% width -->
       <div class="lg:w-1/2 lg:self-start">
-        <IntentSelector v-model="intent" @saved="onIntentSaved" />
+        <IntentSelector v-model="intent" />
       </div>
     </div>
   </div>
@@ -222,9 +222,5 @@ const saveProfile = async () => {
   } finally {
     isLoading.value = false;
   }
-};
-
-const onIntentSaved = (newIntent: Intent) => {
-  authStore.updateUser({ intent: newIntent });
 };
 </script>

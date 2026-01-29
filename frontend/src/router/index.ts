@@ -7,18 +7,15 @@ const routes: Array<RouteRecordRaw> = [
     path: "/",
     name: "home",
     component: HomeView,
-    meta: {
-      requiresAuth: false,
-    },
+    meta: { requiresAuth: false },
   },
   {
     path: "/about",
     name: "about",
     component: () => import("../views/AboutView.vue"),
-    meta: {
-      requiresAuth: false,
-    },
+    meta: { requiresAuth: false },
   },
+
   {
     path: "/login",
     name: "login",
@@ -26,6 +23,7 @@ const routes: Array<RouteRecordRaw> = [
     meta: {
       hideNavbar: true,
       isLogged: true,
+      requiresAuth: false,
     },
   },
   {
@@ -35,23 +33,20 @@ const routes: Array<RouteRecordRaw> = [
     meta: {
       hideNavbar: true,
       isLogged: true,
+      requiresAuth: false,
     },
   },
   {
     path: "/forgot-password",
     name: "forgot-password",
     component: () => import("../views/ResetPasswordView.vue"),
-    meta: {
-      hideNavbar: true,
-    },
+    meta: { hideNavbar: true },
   },
-  // Settings routes
+
   {
     path: "/settings",
     component: () => import("../views/settings/SettingsLayout.vue"),
-    meta: {
-      requiresAuth: true,
-    },
+    meta: { requiresAuth: true },
     children: [
       {
         path: "",
@@ -74,14 +69,12 @@ const routes: Array<RouteRecordRaw> = [
       },
     ],
   },
-  // Properties routes
+
   {
     path: "/properties",
     name: "my-properties",
     component: () => import("../views/MyPropertiesView.vue"),
-    meta: {
-      requiresAuth: true,
-    },
+    meta: { requiresAuth: true },
   },
 ];
 
@@ -93,23 +86,24 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const authStore = useAuthStore();
 
-  // Si aún no hemos verificado la autenticación, esperamos
-  if (!authStore._authChecked) {
-    await authStore.checkAuth();
+  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+  const isGuestRoute = to.matched.some((record) => record.meta.isLogged);
+
+  if (isGuestRoute) {
+    if (authStore.isAuthenticated) return { name: "home" };
+    return;
   }
 
-  // Rutas que requieren autenticación
-  if (to.matched.some((record) => record.meta.requiresAuth)) {
-    if (!authStore.isAuthenticated) {
-      return { name: "login" };
+  if (requiresAuth && !authStore._authChecked) {
+    try {
+      await authStore.checkAuth();
+    } catch (e) {
+      console.error("🚫 Error verificando identidad en navegación protegida");
     }
   }
 
-  // Rutas solo para usuarios NO logueados (login, register)
-  if (to.matched.some((record) => record.meta.isLogged)) {
-    if (authStore.isAuthenticated) {
-      return { name: "home" };
-    }
+  if (requiresAuth && !authStore.isAuthenticated) {
+    return { name: "login" };
   }
 });
 

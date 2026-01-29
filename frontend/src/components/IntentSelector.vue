@@ -90,6 +90,7 @@
 <script lang="ts" setup>
 import { ref, computed, h, watch } from "vue";
 import axios from "axios";
+import { useAuthStore } from "@/stores/auth";
 
 export type Intent = "buyer" | "seller" | "renter" | "explorer";
 
@@ -231,6 +232,8 @@ const selectIntent = (value: Intent) => {
   emit("update:modelValue", value);
 };
 
+const authStore = useAuthStore();
+
 const saveIntent = async () => {
   if (!props.modelValue) return;
 
@@ -241,6 +244,7 @@ const saveIntent = async () => {
       { intent: props.modelValue },
       { withCredentials: true }
     );
+    authStore.updateUser({ intent: props.modelValue });
     originalValue.value = props.modelValue;
     emit("saved", props.modelValue);
   } catch (error) {
