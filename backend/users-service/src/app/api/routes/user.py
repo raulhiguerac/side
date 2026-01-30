@@ -2,45 +2,49 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, UploadFile, status
 
+from app.api.deps.action_token import get_action_token_from_bearer
 from app.api.deps.auth import (
     get_current_principal,
     get_refresh_token_from_cookie_optional,
 )
-from app.api.deps.action_token import get_action_token_from_bearer
 from app.api.deps.auth_use_cases import get_logout_account_uc
 from app.api.deps.upload_validation import validate_profile_photo_upload
 from app.api.deps.user_use_cases import (
+    get_confirm_reactivation_uc,
     get_current_account_uc,
     get_current_profile_uc,
     get_deactivate_current_account_uc,
     get_request_reactivation_uc,
     get_update_current_profile_photo_uc,
     get_update_current_profile_uc,
-    get_confirm_reactivation_uc
 )
 
 from app.schemas.common import Principal
 from app.services.auth.schemas.tokens import RefreshToken
-from app.services.user.schemas.photo import PhotoUploadOut
-from app.services.user.schemas.update import UpdateRequest
-from app.services.user.schemas.reactivation import RequestReactivationIn
-from app.services.user.schemas.current import CurrentUserOut, CurrentUserProfileOut
-
-
 from app.services.auth.use_cases.logout import LogoutUseCase
-from app.services.user.use_cases.deactivate_current_account import (
+
+from app.services.user.schemas.current import CurrentUserOut, CurrentUserProfileOut
+from app.services.user.schemas.photo import PhotoUploadOut
+from app.services.user.schemas.reactivation import RequestReactivationIn
+from app.services.user.schemas.update import UpdateRequest
+
+from app.services.user.use_cases.account.deactivate_current_account import (
     DeactivateCurrentAccountUseCase,
 )
-from app.services.user.use_cases.get_current_account import GetCurrentAccountUseCase
-from app.services.user.use_cases.get_current_profile import GetCurrentProfileUseCase
-from app.services.user.use_cases.request_account_reactivation import (
+from app.services.user.use_cases.account.get_current_account import GetCurrentAccountUseCase
+from app.services.user.use_cases.account.reactivate_current_account import (
+    ConfirmReactivationUseCase,
+)
+from app.services.user.use_cases.account.request_account_reactivation import (
     RequestReactivationUseCase,
 )
-from app.services.user.use_cases.update_current_profile import UpdateCurrentProfileUseCase
-from app.services.user.use_cases.upload_profile_photo import (
+from app.services.user.use_cases.profile.get_current_profile import GetCurrentProfileUseCase
+from app.services.user.use_cases.profile.update_current_profile import (
+    UpdateCurrentProfileUseCase,
+)
+from app.services.user.use_cases.profile.upload_profile_photo import (
     UpdateCurrentProfilePhotoUseCase,
 )
-from app.services.user.use_cases.reactivate_current_account import ConfirmReactivationUseCase
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -48,6 +52,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 # -------------------------------------------------------------------------
 # Current user
 # -------------------------------------------------------------------------
+
 
 @router.get(
     "/me",
@@ -65,6 +70,7 @@ async def get_current_user(
 # Profile (read)
 # -------------------------------------------------------------------------
 
+
 @router.get(
     "/me/profile",
     response_model=CurrentUserProfileOut,
@@ -80,6 +86,7 @@ async def get_current_user_profile(
 # -------------------------------------------------------------------------
 # Profile (update)
 # -------------------------------------------------------------------------
+
 
 @router.patch(
     "/me/profile",
@@ -97,6 +104,7 @@ async def update_user_profile(
 # -------------------------------------------------------------------------
 # Profile photo (write)
 # -------------------------------------------------------------------------
+
 
 @router.post(
     "/me/profile/photo",
@@ -122,6 +130,7 @@ async def upload_user_profile_photo(
 # -------------------------------------------------------------------------
 # Account (deactivate)
 # -------------------------------------------------------------------------
+
 
 @router.post(
     "/me/deactivate",
@@ -154,21 +163,20 @@ async def deactivate_user_account(
 # Account (reactivation)
 # -------------------------------------------------------------------------
 
+
 @router.post(
     "/reactivation/request",
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def request_account_reactivation(
     req: RequestReactivationIn,
-    uc: Annotated[
-        RequestReactivationUseCase,
-        Depends(get_request_reactivation_uc),
-    ],
-) -> None:
+    uc: Annotated[RequestReactivationUseCase, Depends(get_request_reactivation_uc)],
+) -> dict[str, str]:
     await uc.execute(email=req.email)
     return {
         "message": "If the account exists, a reactivation email will be sent shortly."
     }
+
 
 @router.post(
     "/reactivation/confirm",
@@ -180,4 +188,3 @@ async def confirm_account_reactivation(
 ) -> dict[str, str]:
     await uc.execute(token=token)
     return {"status": "reactivated"}
-

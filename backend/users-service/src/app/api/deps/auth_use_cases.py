@@ -10,12 +10,13 @@ from app.integrations.email.brevo.client import EmailClient
 from app.integrations.identity_provider.keycloak.admin_client import KeycloakAdminClient
 from app.integrations.identity_provider.keycloak.auth_client import KeycloakAuthClient
 
+from app.services.shared.db.db_error_translator import DbErrorTranslator
+
 from app.services.auth.adapters.keycloak_auth_provider import (
     KeycloakAuthenticationProvider,
 )
 from app.services.auth.adapters.keycloak_idp import KeycloakIdentityProvider
 from app.services.auth.adapters.sql_unit_of_work import SqlAuthUnitOfWork
-from app.services.auth.helpers.db_error_translator import DbErrorTranslator
 from app.services.auth.helpers.profile_factory import ProfileFactory
 from app.services.auth.ports.authentication_provider import AuthenticationProvider
 from app.services.auth.ports.identity_provider import IdentityProvider

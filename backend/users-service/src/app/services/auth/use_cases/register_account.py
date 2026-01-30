@@ -14,7 +14,7 @@ from app.services.auth.schemas.registration import RegisterRequest
 
 from app.services.auth.schemas.compensation import CreateKcCompensationTask
 
-from app.services.auth.helpers.db_error_translator import DbErrorTranslator
+from app.services.shared.db.db_error_translator import DbErrorTranslator
 from app.services.auth.helpers.profile_factory import ProfileFactory
 from app.services.auth.ports.identity_provider import IdentityProvider
 

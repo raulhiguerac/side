@@ -26,13 +26,14 @@ from app.services.user.helpers.current_profile_reader import CurrentProfileReade
 from app.services.user.services.get_profile_orchestrator import ProfileApplicationService
 from app.services.user.services.reactivation_mailer import ReactivationMailer
 
-from app.services.user.use_cases.get_current_account import GetCurrentAccountUseCase
-from app.services.user.use_cases.get_current_profile import GetCurrentProfileUseCase
-from app.services.user.use_cases.upload_profile_photo import UpdateCurrentProfilePhotoUseCase
-from app.services.user.use_cases.update_current_profile import UpdateCurrentProfileUseCase
-from app.services.user.use_cases.deactivate_current_account import DeactivateCurrentAccountUseCase
-from app.services.user.use_cases.request_account_reactivation import RequestReactivationUseCase
-from app.services.user.use_cases.reactivate_current_account import ConfirmReactivationUseCase
+from app.services.user.use_cases.account.get_current_account import GetCurrentAccountUseCase
+from app.services.user.use_cases.account.deactivate_current_account import DeactivateCurrentAccountUseCase
+from app.services.user.use_cases.account.request_account_reactivation import RequestReactivationUseCase
+from app.services.user.use_cases.account.reactivate_current_account import ConfirmReactivationUseCase
+
+from app.services.user.use_cases.profile.get_current_profile import GetCurrentProfileUseCase
+from app.services.user.use_cases.profile.update_current_profile import UpdateCurrentProfileUseCase
+from app.services.user.use_cases.profile.upload_profile_photo import UpdateCurrentProfilePhotoUseCase
 
 from app.core.exceptions.storage import StorageMisconfiguredError
 
