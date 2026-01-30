@@ -27,6 +27,12 @@ class AccountDeactivationReason(str,Enum):
     system_inactive = "system_inactive"
     system_cleanup = "system_cleanup"
 
+class OnboardingStep(str,Enum):
+    intent = "intent"
+    city = "city"
+    neighborhood = "neighborhood"
+    done = "done"
+
 class Account(SQLModel, table=True):
 
     __tablename__ = "accounts"
@@ -34,7 +40,7 @@ class Account(SQLModel, table=True):
     account_id: uuid.UUID = Field(primary_key=True, index=True)
     email: str = Field(unique=True, index=True, max_length=255)
     account_type :AccountType = Field(nullable=False)
-    onboarding_step: int = Field(nullable=False, default=1)
+    onboarding_step: OnboardingStep = Field(nullable=False, default= OnboardingStep.intent)
     is_active: bool = Field(nullable=False, default=True)
     deactivated_at: Optional[datetime] = Field(default=None)
     deactivated_by: Optional[AccountActionActor] = Field(default=None)

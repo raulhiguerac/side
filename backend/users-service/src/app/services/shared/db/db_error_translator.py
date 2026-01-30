@@ -18,14 +18,21 @@ class DbErrorTranslator:
         self,
         exc: IntegrityError,
         *,
-        email: str,
+        email: Optional[str] = None,
         kc_user_id: Optional[uuid.UUID] = None,
     ) -> BaseError:
         pgcode, constraint_name, column_name = self._extract_pg_details(exc)
 
+        ctx = {
+            "constraint_name": constraint_name,
+            "kc_user_id": kc_user_id
+        }
+        if email:
+            ctx["email_hash"] = email_hash(email)
+
         if pgcode == "23505":
             if constraint_name in {"accounts_email_key", "uq_accounts_email"}:
-                raise EmailAlreadyRegisteredError(email=email) from exc
+                return EmailAlreadyRegisteredError(email=email)
 
             return BaseError(
                 message="Unique constraint violated",
