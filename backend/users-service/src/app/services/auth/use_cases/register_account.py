@@ -7,7 +7,7 @@ from app.core.exceptions.base import BaseError
 from app.core.logging.logger import get_logger
 from app.core.logging.utils import email_hash
 
-from app.models.account import Account
+from app.models.account import Account, OnboardingStep
 from app.models.kc_tasks import KcTaskType
 
 from app.services.auth.schemas.registration import RegisterRequest
@@ -85,7 +85,7 @@ class RegisterAccountUseCase:
                 account_id=kc_user_id,
                 email=req.email,
                 account_type=req.account_type,
-                onboarding_step=1,
+                onboarding_step=OnboardingStep.intent,
             )
             await self.uow.accounts.create_account(account=account)
 
@@ -104,15 +104,15 @@ class RegisterAccountUseCase:
             await self.uow.rollback()
             try:
                 await self.idp.delete_account(kc_user_id)
-            except Exception as e:
+            except Exception as delete_err:
                 await self._enqueue_delete_kc_user_task(
                     kc_user_id=kc_user_id,
                     email=req.email,
-                    error=e,
+                    error=delete_err,
                 )
-                raise self.db_errors.translate_integrity_error(
-                    e, email=req.email, kc_user_id=kc_user_id
-                ) from e
+            raise self.db_errors.translate_integrity_error(
+                e, email=req.email, kc_user_id=kc_user_id
+            ) from e
 
         except BaseError as e:
             await self.uow.rollback()
