@@ -3,7 +3,7 @@ from typing import Annotated, Union, Literal, Optional
 from pydantic import EmailStr, Field 
 from app.schemas.base import StrictBase 
 
-from app.models.account import AccountIntent
+from app.models.account import AccountIntent, OnboardingStep
     
 class CurrentUserPerson(StrictBase): 
     first_name: str 
@@ -32,5 +32,5 @@ class CurrentUserOut(StrictBase):
     account_id: uuid.UUID
     email: EmailStr
     account_type: Literal["person", "organization"]
-    onboarding_step: int
+    onboarding_step: OnboardingStep
     is_active: bool
