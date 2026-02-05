@@ -1,12 +1,42 @@
+"""
+=============================================================================
+MODELOS GEOGRAFICOS - SOURCE OF TRUTH
+=============================================================================
+
+Estructura jerárquica simple (un solo nivel administrativo):
+
+    Country (ISO 3166-1)
+        └── AdminDivision (departamento/estado/región)
+                └── Locality (municipio/ciudad)
+                        └── Neighborhood (barrio, opcional)
+
+Ejemplos por país:
+- Colombia: Country → Departamento → Municipio (Locality) → Barrio
+- USA: Country → State → City (Locality) → Neighborhood
+- España: Country → Comunidad Autónoma → Municipio (Locality) → Barrio
+- México: Country → Estado → Municipio (Locality) → Colonia
+"""
+
 import uuid
+from enum import Enum
 from typing import Optional
 from datetime import datetime
 
 from sqlmodel import Field, SQLModel
-from sqlalchemy import UniqueConstraint, Column, Index, func, DateTime
+from sqlalchemy import Column, ForeignKey, Index, UniqueConstraint
+from sqlalchemy.sql import func
+from sqlalchemy import DateTime
 from geoalchemy2 import Geometry
 
+
+# =============================================================================
+# MIXINS
+# =============================================================================
+
+
 class AuditMixin(SQLModel):
+    """Campos de auditoría para todas las entidades."""
+
     created_at: datetime = Field(
         sa_column=Column(
             DateTime(timezone=True),
@@ -14,7 +44,6 @@ class AuditMixin(SQLModel):
             nullable=False,
         )
     )
-
     updated_at: datetime = Field(
         sa_column=Column(
             DateTime(timezone=True),
@@ -23,56 +52,236 @@ class AuditMixin(SQLModel):
             nullable=False,
         )
     )
+    created_by: Optional[uuid.UUID] = Field(default=None)
+    updated_by: Optional[uuid.UUID] = Field(default=None)
 
-    created_by: Optional[uuid.UUID] = Field(default=None, index=True)
-    updated_by: Optional[uuid.UUID] = Field(default=None, index=True)
+
+# =============================================================================
+# COUNTRY - ISO 3166-1
+# =============================================================================
+
 
 class Country(AuditMixin, SQLModel, table=True):
-    __tablename__ = "country"
+    """
+    País según ISO 3166-1.
 
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
-    name: str = Field(nullable=False, unique=True, max_length=80)
-    iso2: str = Field(nullable=False, unique=True, max_length=2)
-    iso3: str = Field(nullable=False, unique=True, max_length=3)
-    phone_code: str = Field(nullable=False, max_length=8)
-    currency: str = Field(nullable=False, max_length=3)
+    Fuente de datos: https://www.iso.org/iso-3166-country-codes.html
+    """
+
+    __tablename__ = "countries"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
+    # ISO 3166-1 codes
+    iso_alpha2: str = Field(
+        max_length=2, nullable=False, unique=True, index=True
+    )  # "CO"
+    iso_alpha3: str = Field(max_length=3, nullable=False, unique=True)  # "COL"
+    iso_numeric: str = Field(max_length=3, nullable=False, unique=True)  # "170"
+
+    # Names
+    name: str = Field(max_length=100, nullable=False)  # "Colombia"
+    official_name: Optional[str] = Field(
+        max_length=200, default=None
+    )  # "Republic of Colombia"
+    native_name: Optional[str] = Field(max_length=100, default=None)  # "Colombia"
+
+    # Metadata
+    phone_code: str = Field(max_length=8, nullable=False)  # "+57"
+    currency_code: str = Field(max_length=3, nullable=False)  # "COP" (ISO 4217)
+    default_locale: str = Field(max_length=10, default="es")  # "es", "en", "pt"
+    default_timezone: str = Field(
+        max_length=64, nullable=False
+    )  # "America/Bogota"
+
+    # Control
     is_active: bool = Field(default=True, nullable=False)
+    is_supported: bool = Field(
+        default=False, nullable=False
+    )  # Si el sistema lo soporta activamente
 
 
-class City(AuditMixin, SQLModel, table=True):
-    __tablename__ = "city"
+# =============================================================================
+# ADMIN DIVISION - Nivel administrativo (ISO 3166-2 compatible)
+# =============================================================================
 
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
-    country_id: uuid.UUID = Field(foreign_key="country.id", index=True)
-    name: str = Field(nullable=False, max_length=80)
-    admin1_code: str = Field(nullable=False, max_length=50)
-    code: str = Field(nullable=False, max_length=30)
-    latitude: float = Field(nullable=False)
-    longitude: float = Field(nullable=False)
-    timezone: str = Field(nullable=False, max_length=64)
+
+class AdminDivision(AuditMixin, SQLModel, table=True):
+    """
+    División administrativa de primer nivel.
+
+    Representa el nivel inmediatamente debajo del país:
+    - Colombia: Departamento
+    - USA: State
+    - España: Comunidad Autónoma
+    - México: Estado
+
+    Sin recursión. Un solo nivel.
+    """
+
+    __tablename__ = "admin_divisions"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    country_id: uuid.UUID = Field(
+        sa_column=Column(
+            ForeignKey("countries.id", ondelete="RESTRICT"),
+            nullable=False,
+            index=True,
+        )
+    )
+
+    # Identificadores
+    code: str = Field(
+        max_length=20, nullable=False, index=True
+    )  # Código local (DANE, FIPS, INSEE)
+    iso_code: Optional[str] = Field(
+        max_length=10, default=None
+    )  # ISO 3166-2: "CO-CUN", "US-CA"
+
+    # Nombres
+    name: str = Field(max_length=150, nullable=False)  # "Cundinamarca"
+    type_name: str = Field(
+        max_length=50, nullable=False
+    )  # "Departamento", "State", "Comunidad Autónoma"
+
+    # Control
     is_active: bool = Field(default=True, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("country_id", "code", name="uq_city_country_id_code"),
-        UniqueConstraint("country_id", "name", name="uq_city_country_id_name"),
+        # Código único por país
+        UniqueConstraint("country_id", "code", name="uq_admin_div_country_code"),
+        # ISO code único global si existe
+        Index(
+            "ix_admin_div_iso_code",
+            "iso_code",
+            unique=True,
+            postgresql_where="iso_code IS NOT NULL",
+        ),
     )
+
+
+# =============================================================================
+# LOCALITY - Lugar poblado (ciudad, pueblo, villa)
+# =============================================================================
+
+
+class LocalityType(str, Enum):
+    """Tipo de localidad según tamaño/importancia."""
+
+    city = "city"      # Ciudad grande (>100k hab)
+    town = "town"      # Pueblo/ciudad pequeña
+    village = "village"  # Vereda/corregimiento/villa
+
+
+class Locality(AuditMixin, SQLModel, table=True):
+    """
+    Municipio o lugar poblado.
+
+    En la mayoría de países latinoamericanos, esto ES el municipio.
+    El tipo (city/town/village) indica el tamaño, no la clasificación
+    administrativa.
+
+    Ejemplos:
+    - Bogotá D.C. → city
+    - Zipaquirá → town
+    - Choachí → village
+    """
+
+    __tablename__ = "localities"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    country_id: uuid.UUID = Field(
+        sa_column=Column(
+            ForeignKey("countries.id", ondelete="RESTRICT"),
+            nullable=False,
+            index=True,
+        )
+    )
+    admin_division_id: uuid.UUID = Field(
+        sa_column=Column(
+            ForeignKey("admin_divisions.id", ondelete="RESTRICT"),
+            nullable=False,
+            index=True,
+        )
+    )
+
+    # Identificadores
+    code: str = Field(
+        max_length=20, nullable=False, index=True
+    )  # Código oficial local
+
+    # Nombres
+    name: str = Field(max_length=150, nullable=False)
+    local_name: Optional[str] = Field(max_length=150, default=None)
+    search_name: str = Field(
+        max_length=150, nullable=False, index=True
+    )  # Normalizado: "medellin"
+
+    # Clasificación
+    locality_type: LocalityType = Field(default=LocalityType.city, nullable=False)
+
+    # Geografía
+    latitude: float = Field(nullable=False)
+    longitude: float = Field(nullable=False)
+    timezone: str = Field(max_length=64, nullable=False)
+
+    # Control
+    is_active: bool = Field(default=True, nullable=False)
+    is_capital: bool = Field(default=False, nullable=False)  # Capital del admin_division
+
+    __table_args__ = (
+        UniqueConstraint("country_id", "code", name="uq_locality_country_code"),
+        Index("ix_locality_coords", "latitude", "longitude"),
+    )
+
+
+# =============================================================================
+# NEIGHBORHOOD - Barrio/Zona (con geometría de polígono)
+# =============================================================================
+
 
 class Neighborhood(AuditMixin, SQLModel, table=True):
-    __tablename__ = "neighborhood"
+    """
+    Barrio o zona dentro de una localidad.
 
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
-    city_id: uuid.UUID = Field(foreign_key="city.id", index=True)
-    code: str = Field(max_length=20, nullable=False, index=True)
-    name: str = Field(max_length=150, nullable=False)
-    postal_code: Optional[str] = Field(default=None, max_length=20)
-    latitude: float = Field(nullable=False)
-    longitude: float = Field(nullable=False)
-    geom: Optional[str] = Field(
-        sa_column=Column(Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=False)
+    Este nivel es opcional y generalmente solo existe para ciudades grandes.
+    Incluye geometría de polígono para queries espaciales (point-in-polygon).
+    """
+
+    __tablename__ = "neighborhoods"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    locality_id: uuid.UUID = Field(
+        sa_column=Column(
+            ForeignKey("localities.id", ondelete="RESTRICT"),
+            nullable=False,
+            index=True,
+        )
     )
+
+    # Identificadores
+    code: str = Field(max_length=30, nullable=False, index=True)
+    postal_code: Optional[str] = Field(max_length=20, default=None, index=True)
+
+    # Nombres
+    name: str = Field(max_length=150, nullable=False)
+    search_name: str = Field(max_length=150, nullable=False)  # Normalizado
+
+    # Geografía
+    latitude: float = Field(nullable=False)  # Centroide
+    longitude: float = Field(nullable=False)  # Centroide
+    geom: Optional[bytes] = Field(
+        sa_column=Column(
+            Geometry(geometry_type="MULTIPOLYGON", srid=4326),
+            nullable=True,  # Algunos barrios no tienen polígono definido
+        ),
+        default=None,
+    )
+
+    # Control
     is_active: bool = Field(default=True, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("city_id", "code", name="uq_neighborhood_city_id_code"),
+        UniqueConstraint("locality_id", "code", name="uq_neighborhood_locality_code"),
         Index("ix_neighborhood_geom", "geom", postgresql_using="gist"),
     )
