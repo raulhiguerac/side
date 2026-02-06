@@ -22,7 +22,7 @@ from enum import Enum
 from typing import Optional
 from datetime import datetime
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy import Column, ForeignKey, Index, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy import DateTime
@@ -37,21 +37,21 @@ from geoalchemy2 import Geometry
 class AuditMixin(SQLModel):
     """Campos de auditoría para todas las entidades."""
 
-    created_at: datetime = Field(
-        sa_column=Column(
-            DateTime(timezone=True),
-            server_default=func.now(),
-            nullable=False,
+    created_at: datetime = Field(                                                                                                         
+        sa_type=DateTime(timezone=True),                                                                                                  
+            sa_column_kwargs={                                                                                                                
+                "server_default": func.now(),                                                                                                 
+                "nullable": False,                                                                                                            
+            }                                                                                                                                 
+        )                                                                                                                                     
+    updated_at: datetime = Field(                                                                                                         
+        sa_type=DateTime(timezone=True),                                                                                                  
+            sa_column_kwargs={                                                                                                                
+                "server_default": func.now(),                                                                                                 
+                "onupdate": func.now(),                                                                                                       
+                "nullable": False,                                                                                                            
+            }                                                                                                                                 
         )
-    )
-    updated_at: datetime = Field(
-        sa_column=Column(
-            DateTime(timezone=True),
-            server_default=func.now(),
-            onupdate=func.now(),
-            nullable=False,
-        )
-    )
     created_by: Optional[uuid.UUID] = Field(default=None)
     updated_by: Optional[uuid.UUID] = Field(default=None)
 
@@ -205,6 +205,9 @@ class Locality(AuditMixin, SQLModel, table=True):
         )
     )
 
+    # Relationships
+    admin_division: Optional["AdminDivision"] = Relationship()
+
     # Identificadores
     code: str = Field(
         max_length=20, nullable=False, index=True
@@ -258,6 +261,9 @@ class Neighborhood(AuditMixin, SQLModel, table=True):
             index=True,
         )
     )
+
+    # Relationships
+    locality: Optional["Locality"] = Relationship()
 
     # Identificadores
     code: str = Field(max_length=30, nullable=False, index=True)
