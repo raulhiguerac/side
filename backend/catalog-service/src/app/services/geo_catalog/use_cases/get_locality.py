@@ -1,15 +1,20 @@
 import uuid
 from typing import List
+from functools import partial
+from fastapi.concurrency import run_in_threadpool
 
 from app.services.geo_catalog.helpers.cache_keys import cache_key_localities
 from app.services.geo_catalog.schemas.locality import LocalityListItem
+
+from app.services.shared.ports.cache import CachePort
+from app.services.geo_catalog.ports.unit_of_work import GeoCatalogUnitOfWork
 
 class GetLocalitiesUseCase:
     def __init__(
         self, 
         *, 
-        uow,
-        cache_client
+        uow: GeoCatalogUnitOfWork,
+        cache_client: CachePort
     ) -> None:
         self.uow = uow
         self.cache = cache_client
@@ -23,7 +28,12 @@ class GetLocalitiesUseCase:
         except Exception:                                                                                  
             pass
 
-        localities = await self.uow.localities.get_active_by_country_id(country_id=country_id)                       
+        localities = await run_in_threadpool(
+            partial(
+                self.uow.localities.get_active_by_country_id,
+                country_id=country_id
+            )
+        )                 
         result = [LocalityListItem.model_validate(loc) for loc in localities]
         
         try:                                                                                               
