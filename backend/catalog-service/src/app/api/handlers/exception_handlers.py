@@ -6,22 +6,31 @@ from app.core.logging.logger import get_logger
 
 logger = get_logger(__name__)
 
+ERROR_CODE_TO_HTTP_STATUS: dict[str, int] = {
+    "LOCALITY_NOT_FOUND": 404,
+    "NEIGHBORHOOD_NOT_FOUND": 404,
+}
+
+DEFAULT_ERROR_STATUS = 500
+
 
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(BaseError)
     async def base_error_handler(request: Request, exc: BaseError):
+        status_code = ERROR_CODE_TO_HTTP_STATUS.get(exc.code, DEFAULT_ERROR_STATUS)
+
         logger.warning(
             "business_error",
             extra={
                 "extra": {
                     "error_code": exc.code,
-                    "http_status": exc.http_status,
+                    "http_status": status_code,
                     "path": request.url.path,
                 }
             },
         )
         return JSONResponse(
-            status_code=exc.http_status,
+            status_code=status_code,
             content={
                 "message": exc.message,
                 "code": exc.code,
