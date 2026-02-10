@@ -11,3 +11,7 @@ class LocalityRepository(Protocol):
     def get_active_by_admin_division_id(
         self, *, admin_division_id: uuid.UUID
     ) -> list[Locality]: ...
+
+    def get_active_by_id(
+        self, *, locality_id: uuid.UUID
+    ) -> Locality: ...

@@ -41,3 +41,18 @@ class SqlLocalityRepository(LocalityRepository):
         )
 
         return self.session.exec(stmt).all()
+    
+    def get_active_by_id(
+            self,
+            *,
+            locality_id: uuid.UUID,
+        ) -> Locality:
+
+        stmt = (
+            select(Locality)
+            .options(selectinload(Locality.admin_division))
+            .where(Locality.id == locality_id)
+            .where(Locality.is_active == True)
+        )
+
+        return self.session.exec(stmt).first()
