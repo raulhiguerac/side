@@ -7,11 +7,12 @@ from app.services.geo_catalog.ports.unit_of_work import GeoCatalogUnitOfWork
 
 class SqlGeoCatalogUnitOfWork(GeoCatalogUnitOfWork):
     def __init__(self, session: Session):
+        self.session = session
         self.localities = SqlLocalityRepository(session = session)
         self.neighborhoods = SqlNeighborhoodRepository(session = session)
     
     async def commit(self) -> None:
-        await run_in_threadpool(self._session.commit)
+        await run_in_threadpool(self.session.commit)
 
     async def rollback(self) -> None:
-        await run_in_threadpool(self._session.rollback)
+        await run_in_threadpool(self.session.rollback)
