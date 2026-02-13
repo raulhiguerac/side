@@ -10,6 +10,8 @@ Estructura jerárquica simple (un solo nivel administrativo):
                 └── Locality (municipio/ciudad)
                         └── Neighborhood (barrio, opcional)
 
+    PointOfInterest (POI) → referencia Locality y opcionalmente Neighborhood
+
 Ejemplos por país:
 - Colombia: Country → Departamento → Municipio (Locality) → Barrio
 - USA: Country → State → City (Locality) → Neighborhood
@@ -25,7 +27,8 @@ from datetime import datetime
 from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy import Column, ForeignKey, Index, UniqueConstraint
 from sqlalchemy.sql import func
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, JSON
+from sqlalchemy.dialects.postgresql import ARRAY, VARCHAR
 from geoalchemy2 import Geometry
 
 
@@ -283,6 +286,10 @@ class Neighborhood(AuditMixin, SQLModel, table=True):
         ),
         default=None,
     )
+    geohashes: Optional[list[str]] = Field(
+        sa_column=Column(ARRAY(VARCHAR(12)), nullable=True),
+        default=None,
+    )  # Celdas geohash-7 que cubren el polígono. Precomputado al insertar/actualizar geom.
 
     # Control
     is_active: bool = Field(default=True, nullable=False)
@@ -290,4 +297,146 @@ class Neighborhood(AuditMixin, SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("locality_id", "code", name="uq_neighborhood_locality_code"),
         Index("ix_neighborhood_geom", "geom", postgresql_using="gist"),
+        Index("ix_neighborhood_geohashes", "geohashes", postgresql_using="gin"),
     )
+
+
+# =============================================================================
+# POINT OF INTEREST - POI con cache-aside de Mapbox
+# =============================================================================
+
+
+class PoiSource(str, Enum):
+    """Origen del dato del POI."""
+
+    mapbox = "mapbox"  # Obtenido via Mapbox API
+    manual = "manual"  # Creado manualmente
+    seed = "seed"      # Carga inicial / seed data
+
+
+class PointOfInterest(AuditMixin, SQLModel, table=True):
+    """
+    Punto de interés (POI).
+
+    Funciona como cache persistente de Mapbox con estrategia cache-aside:
+        Request → Redis → PostgreSQL (esta tabla) → Mapbox API
+
+    El campo `mapbox_id` permite deduplicar y evitar llamadas repetidas.
+    El campo `raw_response` almacena el response completo de Mapbox para
+    extraer campos adicionales sin re-fetch.
+    """
+
+    __tablename__ = "points_of_interest"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    locality_id: uuid.UUID = Field(
+        sa_column=Column(
+            ForeignKey("localities.id", ondelete="RESTRICT"),
+            nullable=False,
+            index=True,
+        )
+    )
+    neighborhood_id: Optional[uuid.UUID] = Field(
+        sa_column=Column(
+            ForeignKey("neighborhoods.id", ondelete="SET NULL"),
+            nullable=True,
+            index=True,
+        )
+    )
+
+    # Relationships
+    locality: Optional["Locality"] = Relationship()
+    neighborhood: Optional["Neighborhood"] = Relationship()
+
+    # Mapbox / cache-aside
+    mapbox_id: Optional[str] = Field(max_length=255, default=None, unique=True, index=True)
+    source: PoiSource = Field(default=PoiSource.mapbox, nullable=False)
+    raw_response: Optional[dict] = Field(
+        sa_column=Column(JSON, nullable=True),
+        default=None,
+    )
+    fetched_at: Optional[datetime] = Field(
+        sa_type=DateTime(timezone=True),
+        default=None,
+    )
+    is_stale: bool = Field(default=False, nullable=False)
+
+    # Datos del POI
+    name: str = Field(max_length=255, nullable=False)
+    search_name: str = Field(max_length=255, nullable=False, index=True)
+    full_address: Optional[str] = Field(max_length=500, default=None)
+    category: Optional[str] = Field(max_length=100, default=None, index=True)
+    subcategories: Optional[list[str]] = Field(
+        sa_column=Column(ARRAY(VARCHAR(100)), nullable=True),
+        default=None,
+    )
+
+    # Geografía
+    latitude: float = Field(nullable=False)
+    longitude: float = Field(nullable=False)
+    geohash: str = Field(max_length=12, nullable=False, index=True)  # Precomputado: pygeohash.encode(lat, lon, 7)
+    geom: Optional[bytes] = Field(
+        sa_column=Column(
+            Geometry(geometry_type="POINT", srid=4326),
+            nullable=True,
+        ),
+        default=None,
+    )
+
+    # Contacto
+    phone: Optional[str] = Field(max_length=50, default=None)
+    website: Optional[str] = Field(max_length=500, default=None)
+
+    # Control
+    is_active: bool = Field(default=True, nullable=False)
+
+    __table_args__ = (
+        Index("ix_poi_coords", "latitude", "longitude"),
+        Index("ix_poi_geom", "geom", postgresql_using="gist"),
+        Index(
+            "ix_poi_mapbox_id",
+            "mapbox_id",
+            unique=True,
+            postgresql_where="mapbox_id IS NOT NULL",
+        ),
+    )
+
+
+# =============================================================================
+# FETCH ZONE - Registro de celdas ya fetcheadas desde Mapbox
+# =============================================================================
+
+
+class FetchZone(AuditMixin, SQLModel, table=True):
+    """
+    Registro de celdas geohash-7 (~150m x 150m) ya consultadas a Mapbox.
+
+    Permite saber si una zona ya fue poblada y cuándo, sin recalcular
+    aggregates espaciales en cada request. El batch nocturno itera esta
+    tabla para decidir qué zonas refrescar.
+    """
+
+    __tablename__ = "fetch_zones"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    locality_id: uuid.UUID = Field(
+        sa_column=Column(
+            ForeignKey("localities.id", ondelete="RESTRICT"),
+            nullable=False,
+            index=True,
+        )
+    )
+
+    # Geohash precision 7 (~150m x 150m)
+    geohash: str = Field(max_length=12, nullable=False, unique=True, index=True)
+
+    # Métricas de fetch
+    poi_count: int = Field(default=0, nullable=False)
+    fetched_at: datetime = Field(
+        sa_type=DateTime(timezone=True),
+        sa_column_kwargs={
+            "server_default": func.now(),
+            "nullable": False,
+        },
+    )
+    is_stale: bool = Field(default=False, nullable=False, index=True)
