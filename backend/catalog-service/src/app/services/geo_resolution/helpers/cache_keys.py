@@ -1,4 +1,11 @@
 import uuid
+import hashlib
+
+
+def cache_key_forward_geocode(query: str, locality_id: uuid.UUID) -> str:
+    raw = f"{query.strip().lower()}:{locality_id}"
+    digest = hashlib.sha256(raw.encode()).hexdigest()[:16]
+    return f"geo:fwd:{digest}"
 
 
 def cache_key_poi(poi_id: uuid.UUID) -> str:

@@ -1,0 +1,68 @@
+import uuid
+from functools import partial
+from fastapi.concurrency import run_in_threadpool
+
+from app.services.shared.ports.cache import CachePort
+from app.services.geo_resolution.ports.geocoding_gateway import GeocodingGateway
+from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWork
+
+from app.services.geo_resolution.schemas.neighborhood import NeighborhoodInfo
+
+from app.services.geo_resolution.helpers.cache_keys import cache_key_forward_geocode
+
+from app.core.exceptions.geo_resolution import NeighborhoodResolutionError
+
+
+class ResolveNeighborhoodUseCase:
+    def __init__(
+        self,
+        *,
+        uow: GeoResolutionUnitOfWork,
+        cache_client: CachePort,
+        georef: GeocodingGateway,
+    ) -> None:
+        self.uow = uow
+        self.cache = cache_client
+        self.georef = georef
+
+    async def execute(self, query: str, locality_id: uuid.UUID) -> NeighborhoodInfo:
+        lat, lon = await self._resolve_coordinates(query, locality_id)
+
+        neighborhood = await run_in_threadpool(
+            partial(
+                self.uow.georef.get_neighborhood_by_coordinates,
+                lat=lat, lon=lon, locality_id=locality_id,
+            )
+        )
+
+        if not neighborhood:
+            raise NeighborhoodResolutionError(
+                latitude=lat,
+                longitude=lon,
+                locality_id=str(locality_id),
+            )
+
+        return NeighborhoodInfo.model_validate(neighborhood)
+
+    async def _resolve_coordinates(self, query: str, locality_id: uuid.UUID) -> tuple[float, float]:
+        cache_key = cache_key_forward_geocode(query=query, locality_id=locality_id)
+
+        try:
+            cached = await self.cache.get_json(key=cache_key)
+            if cached:
+                return cached["lat"], cached["lon"]
+        except Exception:
+            pass
+
+        result = await self.georef.forward_geocode(query=query)
+
+        try:
+            await self.cache.set_json(
+                key=cache_key,
+                value={"lat": result.latitude, "lon": result.longitude},
+                ttl=3600 * 24 * 30,
+            )
+        except Exception:
+            pass
+
+        return result.latitude, result.longitude
