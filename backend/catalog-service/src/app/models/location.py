@@ -302,14 +302,14 @@ class Neighborhood(AuditMixin, SQLModel, table=True):
 
 
 # =============================================================================
-# POINT OF INTEREST - POI con cache-aside de Mapbox
+# POINT OF INTEREST - POI con cache-aside (provider-agnostic)
 # =============================================================================
 
 
 class PoiSource(str, Enum):
     """Origen del dato del POI."""
 
-    mapbox = "mapbox"  # Obtenido via Mapbox API
+    osm = "osm"        # Obtenido via Overpass API (OpenStreetMap)
     manual = "manual"  # Creado manualmente
     seed = "seed"      # Carga inicial / seed data
 
@@ -318,11 +318,11 @@ class PointOfInterest(AuditMixin, SQLModel, table=True):
     """
     Punto de interés (POI).
 
-    Funciona como cache persistente de Mapbox con estrategia cache-aside:
-        Request → Redis → PostgreSQL (esta tabla) → Mapbox API
+    Funciona como cache persistente con estrategia cache-aside:
+        Request → Redis → PostgreSQL (esta tabla) → Provider API
 
-    El campo `mapbox_id` permite deduplicar y evitar llamadas repetidas.
-    El campo `raw_response` almacena el response completo de Mapbox para
+    El campo `external_id` + `source` permite deduplicar y evitar llamadas repetidas.
+    El campo `raw_response` almacena el response completo del proveedor para
     extraer campos adicionales sin re-fetch.
     """
 
@@ -348,9 +348,9 @@ class PointOfInterest(AuditMixin, SQLModel, table=True):
     locality: Optional["Locality"] = Relationship()
     neighborhood: Optional["Neighborhood"] = Relationship()
 
-    # Mapbox / cache-aside
-    mapbox_id: Optional[str] = Field(max_length=255, default=None, unique=True, index=True)
-    source: PoiSource = Field(default=PoiSource.mapbox, nullable=False)
+    # Provider / cache-aside
+    external_id: Optional[str] = Field(max_length=255, default=None, index=True)
+    source: PoiSource = Field(default=PoiSource.osm, nullable=False)
     raw_response: Optional[dict] = Field(
         sa_column=Column(JSON, nullable=True),
         default=None,
@@ -391,25 +391,20 @@ class PointOfInterest(AuditMixin, SQLModel, table=True):
     is_active: bool = Field(default=True, nullable=False)
 
     __table_args__ = (
+        UniqueConstraint("external_id", "source", name="uq_poi_external_id_source"),
         Index("ix_poi_coords", "latitude", "longitude"),
         Index("ix_poi_geom", "geom", postgresql_using="gist"),
-        Index(
-            "ix_poi_mapbox_id",
-            "mapbox_id",
-            unique=True,
-            postgresql_where="mapbox_id IS NOT NULL",
-        ),
     )
 
 
 # =============================================================================
-# FETCH ZONE - Registro de celdas ya fetcheadas desde Mapbox
+# FETCH ZONE - Registro de celdas ya fetcheadas desde provider externo
 # =============================================================================
 
 
 class FetchZone(AuditMixin, SQLModel, table=True):
     """
-    Registro de celdas geohash-7 (~150m x 150m) ya consultadas a Mapbox.
+    Registro de celdas geohash-7 (~150m x 150m) ya consultadas al proveedor de POIs.
 
     Permite saber si una zona ya fue poblada y cuándo, sin recalcular
     aggregates espaciales en cada request. El batch nocturno itera esta
