@@ -17,6 +17,7 @@ dependencies = [
     "geoalchemy2>=0.18.1",
     "pygeohash>=3.2.2",
     "mapbox>=0.18.1",
+    "overpass>=0.7.2",
 ]
 
 [project.optional-dependencies]
