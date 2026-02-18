@@ -1,8 +1,15 @@
 import uuid
 from sqlmodel import select, Session, col
+from sqlalchemy.dialects.postgresql import insert
 
 from app.models.location import PointOfInterest
 from app.services.geo_resolution.ports.poi_repository import PoiRepository
+
+UPSERT_FIELDS = {
+    "name", "search_name", "full_address", "category", "subcategories",
+    "latitude", "longitude", "h3_index", "phone", "website",
+    "raw_response", "fetched_at", "is_stale",
+}
 
 class SqlPoiRepository(PoiRepository):
     
@@ -21,15 +28,15 @@ class SqlPoiRepository(PoiRepository):
                 .where(PointOfInterest.is_active == True)
         return self.session.exec(stmt).all()
     
-    def get_by_geohash(self, *, geohash: str) -> list[PointOfInterest]:
+    def get_by_h3_index(self, *, h3_index: str) -> list[PointOfInterest]:
         stmt =  select(PointOfInterest) \
-                .where(PointOfInterest.geohash == geohash) \
+                .where(PointOfInterest.h3_index == h3_index) \
                 .where(PointOfInterest.is_active == True)
         return self.session.exec(stmt).all()
-    
-    def get_by_neighborhood_geohashes(self, *, geohashes: list[str]) -> list[PointOfInterest]:
+
+    def get_by_h3_cells(self, *, h3_cells: list[str]) -> list[PointOfInterest]:
         stmt =  select(PointOfInterest) \
-                .where(col(PointOfInterest.geohash).in_(geohashes)) \
+                .where(col(PointOfInterest.h3_index).in_(h3_cells)) \
                 .where(PointOfInterest.is_active == True)
         return self.session.exec(stmt).all()
 
@@ -40,10 +47,25 @@ class SqlPoiRepository(PoiRepository):
                 .where(PointOfInterest.is_active == True)
         return self.session.exec(stmt).all()
     
+    def _to_dict(self, poi: PointOfInterest) -> dict:
+        return {k: v for k, v in poi.model_dump().items() if v is not None}
+
     def add(self, *, poi: PointOfInterest) -> None:
-        self.session.add(poi)
+        stmt = insert(PointOfInterest).values(self._to_dict(poi))
+        stmt = stmt.on_conflict_do_update(
+            constraint="uq_poi_external_id_source",
+            set_={k: stmt.excluded[k] for k in UPSERT_FIELDS},
+        )
+        self.session.execute(stmt)
         self.session.flush()
 
     def add_many(self, *, pois: list[PointOfInterest]) -> None:
-        self.session.add_all(pois)
+        if not pois:
+            return
+        stmt = insert(PointOfInterest).values([self._to_dict(p) for p in pois])
+        stmt = stmt.on_conflict_do_update(
+            constraint="uq_poi_external_id_source",
+            set_={k: stmt.excluded[k] for k in UPSERT_FIELDS},
+        )
+        self.session.execute(stmt)
         self.session.flush()

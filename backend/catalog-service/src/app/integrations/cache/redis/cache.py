@@ -76,6 +76,13 @@ class CacheClient:
             log_cache_error(exc=exc, operation="getdel_json", key=key)
             return None
 
+    async def set_nx(self, key: str, value: str, ttl: int | None = None) -> bool:
+        try:
+            return await self.client.set(key, value, nx=True, ex=ttl)
+        except Exception as exc:
+            log_cache_error(exc=exc, operation="set_nx", key=key, payload_type=type(value).__name__)
+            return False
+
     async def delete(self, key: str) -> None:
         try:
             await self.client.delete(key)

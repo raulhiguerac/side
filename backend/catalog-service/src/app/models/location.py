@@ -286,10 +286,10 @@ class Neighborhood(AuditMixin, SQLModel, table=True):
         ),
         default=None,
     )
-    geohashes: Optional[list[str]] = Field(
-        sa_column=Column(ARRAY(VARCHAR(12)), nullable=True),
+    h3_cells: Optional[list[str]] = Field(
+        sa_column=Column(ARRAY(VARCHAR(16)), nullable=True),
         default=None,
-    )  # Celdas geohash-7 que cubren el polígono. Precomputado al insertar/actualizar geom.
+    )  # Celdas H3 resolution 9 (~300m) que cubren el polígono. Poblado gradualmente con tráfico.
 
     # Control
     is_active: bool = Field(default=True, nullable=False)
@@ -297,7 +297,7 @@ class Neighborhood(AuditMixin, SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("locality_id", "code", name="uq_neighborhood_locality_code"),
         Index("ix_neighborhood_geom", "geom", postgresql_using="gist"),
-        Index("ix_neighborhood_geohashes", "geohashes", postgresql_using="gin"),
+        Index("ix_neighborhood_h3_cells", "h3_cells", postgresql_using="gin"),
     )
 
 
@@ -374,7 +374,7 @@ class PointOfInterest(AuditMixin, SQLModel, table=True):
     # Geografía
     latitude: float = Field(nullable=False)
     longitude: float = Field(nullable=False)
-    geohash: str = Field(max_length=12, nullable=False, index=True)  # Precomputado: pygeohash.encode(lat, lon, 7)
+    h3_index: str = Field(max_length=16, nullable=False, index=True)  # Precomputado: h3.latlng_to_cell(lat, lon, res=9)
     geom: Optional[bytes] = Field(
         sa_column=Column(
             Geometry(geometry_type="POINT", srid=4326),
@@ -404,7 +404,7 @@ class PointOfInterest(AuditMixin, SQLModel, table=True):
 
 class FetchZone(AuditMixin, SQLModel, table=True):
     """
-    Registro de celdas geohash-7 (~150m x 150m) ya consultadas al proveedor de POIs.
+    Registro de celdas H3 resolution 9 (~300m) ya consultadas al proveedor de POIs.
 
     Permite saber si una zona ya fue poblada y cuándo, sin recalcular
     aggregates espaciales en cada request. El batch nocturno itera esta
@@ -422,8 +422,8 @@ class FetchZone(AuditMixin, SQLModel, table=True):
         )
     )
 
-    # Geohash precision 7 (~150m x 150m)
-    geohash: str = Field(max_length=12, nullable=False, unique=True, index=True)
+    # H3 resolution 9 (~300m)
+    h3_index: str = Field(max_length=16, nullable=False, unique=True, index=True)
 
     # Métricas de fetch
     poi_count: int = Field(default=0, nullable=False)
