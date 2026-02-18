@@ -35,5 +35,8 @@ class RedisCacheAdapter(CachePort):
     ) -> None:
         await self._client.set_json(key, value, ttl)
 
+    async def set_nx(self, *, key: str, value: str, ttl: int | None = None) -> bool:
+        return await self._client.set_nx(key, value, ttl)
+
     async def delete(self, *, key: str) -> None:
         await self._client.delete(key)

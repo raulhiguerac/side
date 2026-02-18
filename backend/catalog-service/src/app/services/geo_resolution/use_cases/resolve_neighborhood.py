@@ -6,7 +6,7 @@ from app.services.shared.ports.cache import CachePort
 from app.services.geo_resolution.ports.geocoding_gateway import GeocodingGateway
 from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWork
 
-from app.services.geo_resolution.schemas.neighborhood import NeighborhoodInfo
+from app.services.geo_resolution.schemas.neighborhood import NeighborhoodInfo, ResolvedNeighborhood
 
 from app.services.geo_resolution.helpers.cache_keys import cache_key_forward_geocode
 
@@ -25,7 +25,7 @@ class ResolveNeighborhoodUseCase:
         self.cache = cache_client
         self.georef = georef
 
-    async def execute(self, query: str, locality_id: uuid.UUID) -> NeighborhoodInfo:
+    async def execute(self, query: str, locality_id: uuid.UUID) -> ResolvedNeighborhood:
         lat, lon = await self._resolve_coordinates(query, locality_id)
 
         neighborhood = await run_in_threadpool(
@@ -42,7 +42,11 @@ class ResolveNeighborhoodUseCase:
                 locality_id=str(locality_id),
             )
 
-        return NeighborhoodInfo.model_validate(neighborhood)
+        return ResolvedNeighborhood(
+            neighborhood=NeighborhoodInfo.model_validate(neighborhood),
+            latitude=lat,
+            longitude=lon,
+        )
 
     async def _resolve_coordinates(self, query: str, locality_id: uuid.UUID) -> tuple[float, float]:
         cache_key = cache_key_forward_geocode(query=query, locality_id=locality_id)
