@@ -2,7 +2,8 @@ import uuid
 from functools import partial
 from fastapi.concurrency import run_in_threadpool
 
-from app.services.geo_catalog.helpers.cache_keys import cache_key_neighborhood
+from app.services.shared.helpers.cache_keys import cache_key_neighborhood
+from app.services.shared.helpers.geometry import geom_from_geojson, geom_to_geojson
 
 from app.models.location import Neighborhood
 from app.core.exceptions.geo_catalog import NeighborhoodNotFoundError
@@ -26,6 +27,8 @@ class GetNeighborhoodByIdUseCase:
         try:
             cached = await self.cache.get_json(key=cache_key)
             if cached:
+                geom_geojson = cached.pop("geom_geojson", None)
+                cached["geom"] = geom_from_geojson(geom_geojson)
                 return Neighborhood.model_validate(cached)
         except Exception:
             pass
@@ -41,10 +44,12 @@ class GetNeighborhoodByIdUseCase:
             raise NeighborhoodNotFoundError(neighborhood_id=neighborhood_id)
 
         try:
+            cache_dict = neighborhood.model_dump(mode="json", exclude={"geom"})
+            cache_dict["geom_geojson"] = geom_to_geojson(neighborhood.geom)
             await self.cache.set_json(
                 key=cache_key,
-                value=neighborhood.model_dump(mode="json"),
-                ttl=3600 * 24
+                value=cache_dict,
+                ttl=3600 * 24,
             )
         except Exception:
             pass

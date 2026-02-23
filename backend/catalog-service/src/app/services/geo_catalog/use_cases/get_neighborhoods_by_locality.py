@@ -3,7 +3,7 @@ from typing import List
 from functools import partial
 from fastapi.concurrency import run_in_threadpool
 
-from app.services.geo_catalog.helpers.cache_keys import cache_key_neighborhoods
+from app.services.shared.helpers.cache_keys import cache_key_neighborhoods
 
 from app.services.geo_catalog.schemas.neighborhood import NeighborhoodListItem
 

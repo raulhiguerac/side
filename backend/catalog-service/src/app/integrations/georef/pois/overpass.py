@@ -26,6 +26,7 @@ SHOP_TAGS = "|".join([
 ])
 
 QUERY_TEMPLATE = (
+    "[out:json][timeout:30];"
     "("
     '  node["amenity"~"{amenity}"]{bbox};'
     '  node["leisure"~"{leisure}"]{bbox};'
