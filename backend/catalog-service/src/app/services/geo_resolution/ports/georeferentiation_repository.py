@@ -12,3 +12,9 @@ class GeoreferentiationRepository(Protocol):
             lon: float,
             locality_id: uuid.UUID
         ) -> Neighborhood | None: ...
+
+    def get_locality_country_code(
+            self,
+            *,
+            locality_id: uuid.UUID
+        ) -> str | None: ...

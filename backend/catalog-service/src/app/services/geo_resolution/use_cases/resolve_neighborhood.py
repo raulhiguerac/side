@@ -10,7 +10,7 @@ from app.services.geo_resolution.schemas.neighborhood import NeighborhoodInfo, R
 
 from app.services.geo_resolution.helpers.cache_keys import cache_key_forward_geocode
 
-from app.core.exceptions.geo_resolution import NeighborhoodResolutionError
+from app.core.exceptions.geo_resolution import GeoResolutionNotFoundError, NeighborhoodResolutionError
 
 
 class ResolveNeighborhoodUseCase:
@@ -58,7 +58,13 @@ class ResolveNeighborhoodUseCase:
         except Exception:
             pass
 
-        result = await self.georef.forward_geocode(query=query)
+        country_code = await run_in_threadpool(
+            partial(self.uow.georef.get_locality_country_code, locality_id=locality_id)
+        )
+        if not country_code:
+            raise GeoResolutionNotFoundError(address=query)
+
+        result = await self.georef.forward_geocode(query=query, country_code=country_code)
 
         try:
             await self.cache.set_json(
