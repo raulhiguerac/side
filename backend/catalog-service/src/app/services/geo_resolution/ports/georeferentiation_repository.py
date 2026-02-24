@@ -18,3 +18,9 @@ class GeoreferentiationRepository(Protocol):
             *,
             locality_id: uuid.UUID
         ) -> str | None: ...
+
+    def get_locality_coordinates(
+            self,
+            *,
+            locality_id: uuid.UUID
+        ) -> tuple[float, float] | None: ...

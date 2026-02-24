@@ -11,8 +11,8 @@ class GeocodingAdapter(GeocodingGateway):
     def __init__(self, georef_client: GeoreferentiationClient):
         self.client = georef_client
 
-    async def forward_geocode(self, *, query: str, country_code: str) -> GeocodingResult:
-        geojson = await self.client.forward_geocoding(address=query, country_code=country_code)
+    async def forward_geocode(self, *, query: str, country_code: str, proximity: tuple[float, float] | None = None) -> GeocodingResult:
+        geojson = await self.client.forward_geocoding(address=query, country_code=country_code, proximity=proximity)
         features = geojson.get("features", [])
         if not features:
             raise GeoResolutionNotFoundError(address=query)

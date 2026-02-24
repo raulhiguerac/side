@@ -27,21 +27,21 @@ class UpdateCountryUseCase:
         for field, value in request.model_dump(exclude_unset=True).items():
             setattr(db_model, field, value)
 
+        cache_dict = db_model.model_dump(mode="json")
+
         try:
             await self.uow.commit()
         except Exception as exc:
             await self.uow.rollback()
             raise translate_db_error(exc) from exc
 
-        cache_key = cache_key_country(country_id=db_model.id)
-
         try:
             await self.cache_client.set_json(
-                key=cache_key,
-                value=db_model.model_dump(mode="json"),
+                key=cache_key_country(country_id=cache_dict["id"]),
+                value=cache_dict,
                 ttl=3600 * 24 * 30,
             )
         except Exception:
             pass
 
-        return CountryResponse.model_validate(db_model)
+        return CountryResponse.model_validate(cache_dict)

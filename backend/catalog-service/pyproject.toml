@@ -19,6 +19,7 @@ dependencies = [
     "overpass>=0.7.2",
     "h3>=4.4.2",
     "pyjwt[cryptography]>=2.8.0",
+    "cryptography>=46.0.5",
 ]
 
 [project.optional-dependencies]
