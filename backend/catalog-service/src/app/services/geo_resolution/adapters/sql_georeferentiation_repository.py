@@ -22,7 +22,7 @@ class SqlGeoreferentiationRepository(GeoreferentiationRepository):
             .where(Neighborhood.locality_id == locality_id)
             .filter(func.ST_Contains(Neighborhood.geom, pnt))
         )
-        return self.session.exec(stmt).first()
+        return self.session.scalars(stmt).first()
 
     def get_locality_country_code(self, *, locality_id: uuid.UUID) -> str | None:
         stmt = (
@@ -30,4 +30,11 @@ class SqlGeoreferentiationRepository(GeoreferentiationRepository):
             .join(Locality, Locality.country_id == Country.id)
             .where(Locality.id == locality_id)
         )
-        return self.session.exec(stmt).first()
+        return self.session.scalars(stmt).one_or_none()
+
+    def get_locality_coordinates(self, *, locality_id: uuid.UUID) -> tuple[float, float] | None:
+        stmt = select(Locality.latitude, Locality.longitude).where(Locality.id == locality_id)
+        row = self.session.exec(stmt).first()
+        if row is None:
+            return None
+        return row.latitude, row.longitude

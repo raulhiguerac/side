@@ -15,6 +15,7 @@ from app.services.catalog_admin.use_cases.update_country import UpdateCountryUse
 from app.services.catalog_admin.use_cases.update_admin_division import UpdateAdminDivisionUseCase
 from app.services.catalog_admin.use_cases.update_locality import UpdateLocalityUseCase
 from app.services.catalog_admin.use_cases.update_neighborhood import UpdateNeighborhoodUseCase
+from app.services.catalog_admin.use_cases.enrich_neighborhood_geometry import EnrichNeighborhoodGeometryUseCase
 
 
 def get_uow(session: Session = Depends(get_session)) -> CatalogAdminUnitOfWork:
@@ -75,3 +76,10 @@ def update_neighborhood_uc(
     cache: CachePort = Depends(get_cache_port),
 ) -> UpdateNeighborhoodUseCase:
     return UpdateNeighborhoodUseCase(uow=uow, cache_client=cache)
+
+
+def enrich_neighborhood_geometry_uc(
+    uow: CatalogAdminUnitOfWork = Depends(get_uow),
+    cache: CachePort = Depends(get_cache_port),
+) -> EnrichNeighborhoodGeometryUseCase:
+    return EnrichNeighborhoodGeometryUseCase(uow=uow, cache_client=cache)

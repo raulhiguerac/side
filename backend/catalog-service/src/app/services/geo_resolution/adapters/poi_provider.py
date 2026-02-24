@@ -47,35 +47,43 @@ class PoiProviderAdapter(PoiProviderGateway):
         now = datetime.now(timezone.utc)
         pois = []
 
-        for feature in geojson.get("features", []):
-            props = feature.get("properties", {})
-            geom = feature.get("geometry", {})
-            coords = geom.get("coordinates", [None, None])
-            name = props.get("name")
-
-            if not name or len(coords) < 2:
+        for element in geojson.get("elements", []):
+            tags = element.get("tags", {})
+            name = tags.get("name")
+            if not name:
                 continue
 
-            lon, lat = coords[0], coords[1]
-            category, subcategories = _extract_category(props)
+            if element["type"] == "node":
+                lat = element.get("lat")
+                lon = element.get("lon")
+            else:
+                center = element.get("center", {})
+                lat = center.get("lat")
+                lon = center.get("lon")
+
+            if lat is None or lon is None:
+                continue
+
+            category, subcategories = _extract_category(tags)
+            external_id = f"{element['type']}/{element['id']}"
 
             pois.append(PointOfInterest(
                 locality_id=locality_id,
                 neighborhood_id=neighborhood_id,
-                external_id=props.get("@id"),
+                external_id=external_id,
                 source=PoiSource.osm,
-                raw_response=feature,
+                raw_response=element,
                 fetched_at=now,
                 name=name,
                 search_name=_normalize(name),
-                full_address=_build_address(props),
+                full_address=_build_address(tags),
                 category=category,
                 subcategories=subcategories,
                 latitude=lat,
                 longitude=lon,
                 h3_index=h3_index,
-                phone=props.get("phone"),
-                website=props.get("website"),
+                phone=tags.get("phone"),
+                website=tags.get("website"),
             ))
 
         return pois

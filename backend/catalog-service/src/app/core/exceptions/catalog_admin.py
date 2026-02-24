@@ -84,3 +84,12 @@ class NeighborhoodConflictError(BaseError):
             code="NEIGHBORHOOD_CONFLICT",
             context={"field": field, "value": value},
         )
+
+
+class NeighborhoodInvalidGeometryError(BaseError):
+    def __init__(self, *, geometry_type: str):
+        super().__init__(
+            message=f"Invalid geometry type '{geometry_type}'. Expected Polygon or MultiPolygon",
+            code="NEIGHBORHOOD_INVALID_GEOMETRY",
+            context={"geometry_type": geometry_type},
+        )

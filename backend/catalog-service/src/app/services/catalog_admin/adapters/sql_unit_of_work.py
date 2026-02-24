@@ -21,3 +21,6 @@ class SqlCatalogAdminUnitOfWork(CatalogAdminUnitOfWork):
 
     async def rollback(self) -> None:
         await run_in_threadpool(self.session.rollback)
+
+    async def refresh(self, instance: object) -> None:
+        await run_in_threadpool(self.session.refresh, instance)

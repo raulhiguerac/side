@@ -53,10 +53,12 @@ class PoiClient:
             bbox=bbox_str,
         )
 
+        logger.info("overpass_query bbox=%s query=%s", bbox_str, query)
         try:
             response = await asyncio.to_thread(
                 self.api.get, query, build=False,
             )
+            logger.info("overpass_response elements=%d", len(response.get("elements", [])))
         except (ConnectionError, Timeout) as exc:
             logger.error(
                 "overpass_unreachable",

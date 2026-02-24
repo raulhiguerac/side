@@ -5,12 +5,12 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from app.api.deps.geo_resolution import resolve_neighborhood_uc, resolve_poi_uc
 from app.services.geo_resolution.use_cases.resolve_neighborhood import ResolveNeighborhoodUseCase
 from app.services.geo_resolution.use_cases.resolve_poi import ResolvePoiUseCase
-from app.services.geo_resolution.schemas.neighborhood import NeighborhoodInfo
+from app.services.geo_resolution.schemas.neighborhood import ResolvedNeighborhood
 
 router = APIRouter(prefix="/geo-resolution", tags=["geo-resolution"])
 
 
-@router.get("/resolve-neighborhood", response_model=NeighborhoodInfo)
+@router.get("/resolve-neighborhood", response_model=ResolvedNeighborhood)
 async def resolve_neighborhood(
     background_tasks: BackgroundTasks,
     query: str = Query(..., description="Address to geocode"),
@@ -28,4 +28,4 @@ async def resolve_neighborhood(
         neighborhood_id=result.neighborhood.id,
     )
 
-    return result.neighborhood
+    return result

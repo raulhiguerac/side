@@ -34,6 +34,9 @@ class UpdateNeighborhoodUseCase:
             nfkd = unicodedata.normalize("NFKD", data["name"])
             db_model.search_name = "".join(c for c in nfkd if not unicodedata.combining(c)).lower().strip()
 
+        cache_dict = db_model.model_dump(mode="json", exclude={"geom"})
+        cache_dict["geom_geojson"] = geom_to_geojson(db_model.geom)
+
         try:
             await self.uow.commit()
         except Exception as exc:
@@ -41,17 +44,15 @@ class UpdateNeighborhoodUseCase:
             raise translate_db_error(exc) from exc
 
         try:
-            cache_dict = db_model.model_dump(mode="json", exclude={"geom"})
-            cache_dict["geom_geojson"] = geom_to_geojson(db_model.geom)
             await self.cache_client.set_json(
-                key=cache_key_neighborhood(neighborhood_id=db_model.id),
+                key=cache_key_neighborhood(neighborhood_id=cache_dict["id"]),
                 value=cache_dict,
                 ttl=3600 * 24 * 30,
             )
             await self.cache_client.delete(
-                key=cache_key_neighborhoods(locality_id=db_model.locality_id),
+                key=cache_key_neighborhoods(locality_id=cache_dict["locality_id"]),
             )
         except Exception:
             pass
 
-        return NeighborhoodAdminResponse.model_validate(db_model)
+        return NeighborhoodAdminResponse.model_validate(cache_dict)

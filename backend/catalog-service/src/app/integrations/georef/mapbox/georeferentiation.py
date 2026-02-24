@@ -22,10 +22,14 @@ class GeoreferentiationClient:
         if not self.mapbox_token:
             raise GeoResolutionMisconfiguredError(context={"missing": "MAPBOX_API_KEY"})
 
-    async def forward_geocoding(self, *, address: str, country_code: str) -> dict:
+    async def forward_geocoding(self, *, address: str, country_code: str, proximity: tuple[float, float] | None = None) -> dict:
         geocoder = mapbox.Geocoder(access_token=self.mapbox_token)
+        kwargs: dict = {"country": [country_code.lower()]}
+        if proximity is not None:
+            kwargs["lat"] = proximity[0]
+            kwargs["lon"] = proximity[1]
         try:
-            response = await asyncio.to_thread(geocoder.forward, address, country=[country_code])
+            response = await asyncio.to_thread(geocoder.forward, address, **kwargs)
             response.raise_for_status()
         except ValidationError as exc:
             raise GeoResolutionBadRequestError(

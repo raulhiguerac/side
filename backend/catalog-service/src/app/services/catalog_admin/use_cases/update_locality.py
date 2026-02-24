@@ -33,6 +33,8 @@ class UpdateLocalityUseCase:
             nfkd = unicodedata.normalize("NFKD", data["name"])
             db_model.search_name = "".join(c for c in nfkd if not unicodedata.combining(c)).lower().strip()
 
+        cache_dict = db_model.model_dump(mode="json")
+
         try:
             await self.uow.commit()
         except Exception as exc:
@@ -41,14 +43,14 @@ class UpdateLocalityUseCase:
 
         try:
             await self.cache_client.set_json(
-                key=cache_key_locality(locality_id=db_model.id),
-                value=db_model.model_dump(mode="json"),
+                key=cache_key_locality(locality_id=cache_dict["id"]),
+                value=cache_dict,
                 ttl=3600 * 24 * 30,
             )
             await self.cache_client.delete(
-                key=cache_key_localities(country_id=db_model.country_id),
+                key=cache_key_localities(country_id=cache_dict["country_id"]),
             )
         except Exception:
             pass
 
-        return LocalityAdminResponse.model_validate(db_model)
+        return LocalityAdminResponse.model_validate(cache_dict)

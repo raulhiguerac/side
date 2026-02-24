@@ -64,7 +64,11 @@ class ResolveNeighborhoodUseCase:
         if not country_code:
             raise GeoResolutionNotFoundError(address=query)
 
-        result = await self.georef.forward_geocode(query=query, country_code=country_code)
+        proximity = await run_in_threadpool(
+            partial(self.uow.georef.get_locality_coordinates, locality_id=locality_id)
+        )
+
+        result = await self.georef.forward_geocode(query=query, country_code=country_code, proximity=proximity)
 
         try:
             await self.cache.set_json(
