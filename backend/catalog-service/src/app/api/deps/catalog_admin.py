@@ -16,6 +16,7 @@ from app.services.catalog_admin.use_cases.update_admin_division import UpdateAdm
 from app.services.catalog_admin.use_cases.update_locality import UpdateLocalityUseCase
 from app.services.catalog_admin.use_cases.update_neighborhood import UpdateNeighborhoodUseCase
 from app.services.catalog_admin.use_cases.enrich_neighborhood_geometry import EnrichNeighborhoodGeometryUseCase
+from app.services.catalog_admin.use_cases.bulk_create_neighborhoods import BulkCreateNeighborhoodsUseCase
 
 
 def get_uow(session: Session = Depends(get_session)) -> CatalogAdminUnitOfWork:
@@ -83,3 +84,10 @@ def enrich_neighborhood_geometry_uc(
     cache: CachePort = Depends(get_cache_port),
 ) -> EnrichNeighborhoodGeometryUseCase:
     return EnrichNeighborhoodGeometryUseCase(uow=uow, cache_client=cache)
+
+
+def bulk_create_neighborhoods_uc(
+    uow: CatalogAdminUnitOfWork = Depends(get_uow),
+    cache: CachePort = Depends(get_cache_port),
+) -> BulkCreateNeighborhoodsUseCase:
+    return BulkCreateNeighborhoodsUseCase(uow=uow, cache_client=cache)

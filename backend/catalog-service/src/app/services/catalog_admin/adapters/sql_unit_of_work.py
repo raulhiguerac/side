@@ -11,6 +11,7 @@ from app.services.catalog_admin.ports.unit_of_work import CatalogAdminUnitOfWork
 class SqlCatalogAdminUnitOfWork(CatalogAdminUnitOfWork):
     def __init__(self, session: Session) -> None:
         self.session = session
+        self._savepoint = None
         self.countries = SqlCountryRepository(session=session)
         self.admin_divisions = SqlAdminDivisionRepository(session=session)
         self.localities = SqlLocalityAdminRepository(session=session)
@@ -24,3 +25,10 @@ class SqlCatalogAdminUnitOfWork(CatalogAdminUnitOfWork):
 
     async def refresh(self, instance: object) -> None:
         await run_in_threadpool(self.session.refresh, instance)
+
+    async def begin_nested(self) -> None:
+        self._savepoint = await run_in_threadpool(self.session.begin_nested)
+
+    async def rollback_to_savepoint(self) -> None:
+        if self._savepoint is not None:
+            await run_in_threadpool(self._savepoint.rollback)
