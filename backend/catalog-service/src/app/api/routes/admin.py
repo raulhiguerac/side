@@ -2,7 +2,7 @@ import json
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
-from app.api.deps.upload_validation import validate_neighborhood_geometry_upload
+from app.api.deps.upload_validation import validate_neighborhood_geometry_upload, validate_neighborhood_bulk_upload
 
 from app.api.deps.auth import require_admin
 from app.api.deps.catalog_admin import (
@@ -15,6 +15,7 @@ from app.api.deps.catalog_admin import (
     update_locality_uc,
     update_neighborhood_uc,
     enrich_neighborhood_geometry_uc,
+    bulk_create_neighborhoods_uc,
 )
 from app.schemas.principal import Principal
 from app.services.catalog_admin.use_cases.create_country import CreateCountryUseCase
@@ -26,10 +27,12 @@ from app.services.catalog_admin.use_cases.update_admin_division import UpdateAdm
 from app.services.catalog_admin.use_cases.update_locality import UpdateLocalityUseCase
 from app.services.catalog_admin.use_cases.update_neighborhood import UpdateNeighborhoodUseCase
 from app.services.catalog_admin.use_cases.enrich_neighborhood_geometry import EnrichNeighborhoodGeometryUseCase
+from app.services.catalog_admin.use_cases.bulk_create_neighborhoods import BulkCreateNeighborhoodsUseCase
+from app.services.catalog_admin.helpers.file_parser import NeighborhoodFileParser
 from app.services.catalog_admin.schemas.country import CreateCountryRequest, UpdateCountryRequest, CountryResponse
 from app.services.catalog_admin.schemas.admin_division import CreateAdminDivisionRequest, UpdateAdminDivisionRequest, AdminDivisionResponse
 from app.services.catalog_admin.schemas.locality import CreateLocalityRequest, UpdateLocalityRequest, LocalityAdminResponse
-from app.services.catalog_admin.schemas.neighborhood import CreateNeighborhoodRequest, UpdateNeighborhoodRequest, NeighborhoodAdminResponse
+from app.services.catalog_admin.schemas.neighborhood import CreateNeighborhoodRequest, UpdateNeighborhoodRequest, NeighborhoodAdminResponse, BulkCreateNeighborhoodsResult
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -116,6 +119,18 @@ async def update_neighborhood(
     uc: UpdateNeighborhoodUseCase = Depends(update_neighborhood_uc),
 ) -> NeighborhoodAdminResponse:
     return await uc.execute(neighborhood_id=neighborhood_id, request=body)
+
+
+@router.post("/localities/{locality_id}/neighborhoods/bulk", response_model=BulkCreateNeighborhoodsResult, status_code=200)
+async def bulk_create_neighborhoods(
+    locality_id: uuid.UUID,
+    file: UploadFile,
+    _: None = Depends(validate_neighborhood_bulk_upload),
+    uc: BulkCreateNeighborhoodsUseCase = Depends(bulk_create_neighborhoods_uc),
+) -> BulkCreateNeighborhoodsResult:
+    content = await file.read()
+    records = NeighborhoodFileParser().parse(file=content, filename=file.filename)
+    return await uc.execute(locality_id=locality_id, records=records)
 
 
 @router.post("/neighborhoods/{neighborhood_id}/geometry", response_model=NeighborhoodAdminResponse)

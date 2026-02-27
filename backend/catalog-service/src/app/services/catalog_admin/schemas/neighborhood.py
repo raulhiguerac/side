@@ -30,3 +30,14 @@ class NeighborhoodAdminResponse(StrictBase):
     latitude: float
     longitude: float
     is_active: bool
+
+
+class BulkCreateNeighborhoodsResult(StrictBase):
+    created: int
+    errors: list[str]
+
+
+class BulkEnrichNeighborhoodGeometriesResult(StrictBase):
+    matched: int
+    unmatched: list[str]
+    updated: int

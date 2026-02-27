@@ -1,13 +1,11 @@
 from fastapi import UploadFile
 
-from app.core.files.policies import NEIGHBORHOOD_GEOMETRY_UPLOAD_POLICY
+from app.core.files.policies import NEIGHBORHOOD_GEOMETRY_UPLOAD_POLICY, NEIGHBORHOOD_BULK_UPLOAD_POLICY
 from app.core.files.validators import get_file_size, validate_file_extension
 from app.core.exceptions.validation import FileTooLargeError
 
 
-def validate_neighborhood_geometry_upload(file: UploadFile) -> None:
-    policy = NEIGHBORHOOD_GEOMETRY_UPLOAD_POLICY
-
+def _validate_upload(file: UploadFile, policy) -> None:
     try:
         validate_file_extension(file.filename, policy.allowed_extensions)
 
@@ -18,3 +16,11 @@ def validate_neighborhood_geometry_upload(file: UploadFile) -> None:
             )
     finally:
         file.file.seek(0)
+
+
+def validate_neighborhood_geometry_upload(file: UploadFile) -> None:
+    _validate_upload(file, NEIGHBORHOOD_GEOMETRY_UPLOAD_POLICY)
+
+
+def validate_neighborhood_bulk_upload(file: UploadFile) -> None:
+    _validate_upload(file, NEIGHBORHOOD_BULK_UPLOAD_POLICY)
