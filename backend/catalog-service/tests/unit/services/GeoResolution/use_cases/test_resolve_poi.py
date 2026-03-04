@@ -20,7 +20,8 @@ def mock_uow():
     uow = MagicMock()
     uow.fetch_zones.get_by_h3_index.return_value = None
     uow.pois.add_many.return_value = None
-    uow.fetch_zones.add.return_value = None
+    uow.fetch_zones.add_or_update.return_value = None
+    uow.georef.update_neighborhood_h3_cells.return_value = None
     uow.commit = AsyncMock()
     uow.rollback = AsyncMock()
     return uow
@@ -109,6 +110,7 @@ async def test_marks_stale_and_returns_when_zone_expired(
     mock_h3.latlng_to_cell.return_value = H3_INDEX
     stale_zone = MagicMock(spec=FetchZone)
     stale_zone.fetched_at = datetime.now(timezone.utc) - timedelta(days=STALE_THRESHOLD_DAYS + 1)
+    stale_zone.is_stale = False
     mock_run.return_value = stale_zone
 
     await uc.execute(lat=LAT, lon=LON, locality_id=LOCALITY_ID, neighborhood_id=NEIGHBORHOOD_ID)
@@ -116,6 +118,30 @@ async def test_marks_stale_and_returns_when_zone_expired(
     assert stale_zone.is_stale is True
     mock_uow.commit.assert_awaited_once()
     mock_poi_provider.get_pois_by_bbox.assert_not_awaited()
+    mock_cache.delete.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@patch("app.services.geo_resolution.use_cases.resolve_poi.run_in_threadpool")
+@patch("app.services.geo_resolution.use_cases.resolve_poi.h3")
+async def test_refetches_when_zone_already_stale(
+    mock_h3, mock_run, uc, mock_cache, mock_uow, mock_poi_provider
+):
+    """Zona ya marcada is_stale=True debe disparar refetch de Overpass."""
+    mock_h3.latlng_to_cell.return_value = H3_INDEX
+    mock_h3.cell_to_boundary.return_value = [
+        (4.60, -74.09), (4.61, -74.09), (4.61, -74.07), (4.60, -74.07)
+    ]
+    stale_zone = MagicMock(spec=FetchZone)
+    stale_zone.fetched_at = datetime.now(timezone.utc) - timedelta(days=STALE_THRESHOLD_DAYS + 1)
+    stale_zone.is_stale = True
+    mock_run.side_effect = [stale_zone, None, None, None]
+
+    await uc.execute(lat=LAT, lon=LON, locality_id=LOCALITY_ID, neighborhood_id=NEIGHBORHOOD_ID)
+
+    mock_poi_provider.get_pois_by_bbox.assert_awaited_once()
+    mock_uow.commit.assert_awaited_once()
+    mock_cache.set.assert_awaited_once()
     mock_cache.delete.assert_awaited_once()
 
 
@@ -138,8 +164,8 @@ async def test_fetches_pois_and_persists_when_no_zone(
     await uc.execute(lat=LAT, lon=LON, locality_id=LOCALITY_ID, neighborhood_id=NEIGHBORHOOD_ID)
 
     mock_poi_provider.get_pois_by_bbox.assert_awaited_once()
-    # run_in_threadpool llamado para add_many y fetch_zones.add
-    assert mock_run.call_count == 3  # get_by_h3_index + add_many + fetch_zones.add
+    # get_by_h3_index + add_many + add_or_update + update_neighborhood_h3_cells
+    assert mock_run.call_count == 4
     mock_uow.commit.assert_awaited_once()
     mock_cache.set.assert_awaited_once()
     mock_cache.delete.assert_awaited_once()
@@ -159,10 +185,14 @@ async def test_fetch_zone_saved_with_correct_poi_count(
 
     await uc.execute(lat=LAT, lon=LON, locality_id=LOCALITY_ID, neighborhood_id=NEIGHBORHOOD_ID)
 
-    # Extraer el FetchZone pasado al add de fetch_zones
-    add_call = mock_run.call_args_list[2]
-    partial_fn = add_call[0][0]
-    fetch_zone = partial_fn.keywords["fetch_zone"]
+    # Extraer el FetchZone pasado a add_or_update buscando por keyword
+    fetch_zone_calls = [
+        call[0][0].keywords["fetch_zone"]
+        for call in mock_run.call_args_list
+        if hasattr(call[0][0], "keywords") and "fetch_zone" in call[0][0].keywords
+    ]
+    assert len(fetch_zone_calls) == 1
+    fetch_zone = fetch_zone_calls[0]
 
     assert fetch_zone.h3_index == H3_INDEX
     assert fetch_zone.locality_id == LOCALITY_ID

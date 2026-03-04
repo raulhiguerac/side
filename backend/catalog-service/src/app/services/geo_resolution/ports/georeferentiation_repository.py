@@ -13,6 +13,13 @@ class GeoreferentiationRepository(Protocol):
             locality_id: uuid.UUID
         ) -> Neighborhood | None: ...
 
+    def update_neighborhood_h3_cells(
+            self, 
+            *, 
+            neighborhood_id: uuid.UUID, 
+            h3_index: str
+        ) -> None: ...
+
     def get_locality_country_code(
             self,
             *,

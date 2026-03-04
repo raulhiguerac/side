@@ -7,6 +7,7 @@ from app.services.shared.helpers.cache_keys import cache_key_neighborhoods
 
 from app.services.geo_catalog.schemas.neighborhood import NeighborhoodListItem
 
+from app.core.config.settings import settings
 from app.services.shared.ports.cache import CachePort
 from app.services.geo_catalog.ports.unit_of_work import GeoCatalogUnitOfWork
 
@@ -42,7 +43,8 @@ class GetNeighborhoodsByLocalityUseCase:
             await self.cache.set_json(                                                                     
                 key=cache_key,                                                                             
                 value=[item.model_dump(mode="json") for item in result],                                              
-                ttl=3600 * 24                                       
+                ttl=settings.CACHE_TTL_CATALOG_SECONDS
+                                                      
             )                                                                                              
         except Exception:                                                                                  
             pass

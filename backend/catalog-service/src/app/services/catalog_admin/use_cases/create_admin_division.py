@@ -1,3 +1,4 @@
+from app.core.config.settings import settings
 from functools import partial
 from fastapi.concurrency import run_in_threadpool
 
@@ -32,7 +33,7 @@ class CreateAdminDivisionUseCase:
             await self.cache_client.set_json(
                 key=cache_key,
                 value=admin_division.model_dump(mode="json"),
-                ttl=3600 * 24 * 30,
+                ttl=settings.CACHE_TTL_ENTITY_SECONDS,
             )
         except Exception:
             pass

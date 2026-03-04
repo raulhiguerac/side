@@ -13,12 +13,13 @@ from app.services.geo_resolution.helpers.cache_keys import (
     cache_key_fetch_zone,
     lock_key_fetch_zone,
 )
+from app.core.config.settings import settings
 from app.core.logging.logger import get_logger
 
 logger = get_logger(__name__)
 
-STALE_THRESHOLD_DAYS = 30
-LOCK_TTL_SECONDS = 30
+STALE_THRESHOLD_DAYS = settings.POI_STALE_THRESHOLD_DAYS
+LOCK_TTL_SECONDS = settings.POI_LOCK_TTL_SECONDS
 
 
 class ResolvePoiUseCase:
@@ -86,45 +87,77 @@ class ResolvePoiUseCase:
                     await self._set_cache(key=cache_key, ttl=remaining)
                     return
 
+                if fetched_zone.is_stale:
+                    await self._fetch_and_persist(
+                        h3_index=h3_index,
+                        locality_id=locality_id,
+                        neighborhood_id=neighborhood_id,
+                        cache_key=cache_key,
+                    )
+                    return
+
                 logger.info("resolve_poi_stale", extra={"extra": {"h3_index": h3_index}})
                 fetched_zone.is_stale = True
                 await self.uow.commit()
                 return
 
-            bbox = self._h3_to_bbox(h3_index)
-            logger.info("resolve_poi_fetching", extra={"extra": {"h3_index": h3_index, "bbox": bbox}})
-            pois = await self.poi_provider.get_pois_by_bbox(
-                bbox=bbox,
+            await self._fetch_and_persist(
+                h3_index=h3_index,
                 locality_id=locality_id,
                 neighborhood_id=neighborhood_id,
-                h3_index=h3_index,
+                cache_key=cache_key,
             )
-            logger.info("resolve_poi_fetched", extra={"extra": {"h3_index": h3_index, "poi_count": len(pois)}})
-
-            await run_in_threadpool(
-                partial(self.uow.pois.add_many, pois=pois)
-            )
-            await run_in_threadpool(
-                partial(
-                    self.uow.fetch_zones.add,
-                    fetch_zone=FetchZone(
-                        locality_id=locality_id,
-                        h3_index=h3_index,
-                        poi_count=len(pois),
-                        fetched_at=datetime.now(timezone.utc),
-                    ),
-                )
-            )
-
-            await self.uow.commit()
-            logger.info("resolve_poi_persisted", extra={"extra": {"h3_index": h3_index, "poi_count": len(pois)}})
-            await self._set_cache(key=cache_key, ttl=STALE_THRESHOLD_DAYS * 86400)
 
         except Exception as exc:
             logger.error("resolve_poi_error", extra={"extra": {"h3_index": h3_index, "reason": str(exc)}})
             await self.uow.rollback()
         finally:
             await self.cache_client.delete(key=lock_key)
+    
+    async def _fetch_and_persist(
+            self, 
+            *, 
+            h3_index: str, 
+            locality_id: uuid.UUID, 
+            neighborhood_id: uuid.UUID, 
+            cache_key: str
+        ) -> None:
+
+        bbox = self._h3_to_bbox(h3_index)
+        logger.info("resolve_poi_fetching", extra={"extra": {"h3_index": h3_index, "bbox": bbox}})
+        pois = await self.poi_provider.get_pois_by_bbox(
+            bbox=bbox,
+            locality_id=locality_id,
+            neighborhood_id=neighborhood_id,
+            h3_index=h3_index,
+        )
+        logger.info("resolve_poi_fetched", extra={"extra": {"h3_index": h3_index, "poi_count": len(pois)}})
+
+        await run_in_threadpool(partial(self.uow.pois.add_many, pois=pois))
+
+        await run_in_threadpool(
+            partial(
+                self.uow.fetch_zones.add_or_update,
+                fetch_zone=FetchZone(
+                    locality_id=locality_id,
+                    h3_index=h3_index,
+                    poi_count=len(pois),
+                    fetched_at=datetime.now(timezone.utc),
+                ),
+            )
+        )
+
+        await run_in_threadpool(
+            partial(
+                self.uow.georef.update_neighborhood_h3_cells,
+                neighborhood_id=neighborhood_id,
+                h3_index=h3_index,
+            )
+        )
+
+        await self.uow.commit()
+        logger.info("resolve_poi_persisted", extra={"extra": {"h3_index": h3_index, "poi_count": len(pois)}})
+        await self._set_cache(key=cache_key, ttl=STALE_THRESHOLD_DAYS * 86400)
 
     async def _set_cache(self, *, key: str, ttl: int) -> None:
         try:

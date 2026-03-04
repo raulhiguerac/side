@@ -1,14 +1,19 @@
 import uuid
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
+from app.services.geo_catalog.schemas.locality import LocalityListItem, AdminDivisionRef
 from app.services.geo_catalog.use_cases.get_locality_by_id import GetLocalityByIdUseCase
 from app.core.exceptions.geo_catalog import LocalityNotFoundError
 
 LOCALITY_ID = uuid.UUID('86f1f356-e83a-47f4-b50b-0cf7bb5d9ac5')
+ADMIN_DIV_ID = uuid.UUID('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
 
-LOCALITY = MagicMock()
-LOCALITY.model_dump.return_value = {"id": str(LOCALITY_ID), "name": "Bogota"}
+LOCALITY = LocalityListItem(
+    id=LOCALITY_ID,
+    name='Bogota',
+    admin_division=AdminDivisionRef(id=ADMIN_DIV_ID, name='Cundinamarca'),
+)
 
 
 @pytest.fixture
@@ -41,17 +46,14 @@ async def test_returns_from_db_on_cache_miss(uc, mock_uow, mock_cache):
 
 
 @pytest.mark.asyncio
-@patch("app.services.geo_catalog.use_cases.get_locality_by_id.Locality")
-async def test_returns_from_cache_when_available(mock_locality_cls, uc, mock_uow, mock_cache):
-    cached_data = {"id": str(LOCALITY_ID), "name": "Bogota"}
+async def test_returns_from_cache_when_available(uc, mock_uow, mock_cache):
+    cached_data = LOCALITY.model_dump(mode="json")
     mock_cache.get_json.return_value = cached_data
-    mock_locality_cls.model_validate.return_value = LOCALITY
 
     result = await uc.execute(locality_id=LOCALITY_ID)
 
     assert result == LOCALITY
     mock_cache.get_json.assert_awaited_once()
-    mock_locality_cls.model_validate.assert_called_once_with(cached_data)
     mock_uow.localities.get_active_by_id.assert_not_called()
     mock_cache.set_json.assert_not_called()
 

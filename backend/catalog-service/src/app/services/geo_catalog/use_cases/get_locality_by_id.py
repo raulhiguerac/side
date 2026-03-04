@@ -5,6 +5,7 @@ from fastapi.concurrency import run_in_threadpool
 from app.services.shared.helpers.cache_keys import cache_key_locality
 
 from app.core.exceptions.geo_catalog import LocalityNotFoundError
+from app.core.config.settings import settings
 from app.services.geo_catalog.schemas.locality import LocalityListItem
 
 from app.services.shared.ports.cache import CachePort
@@ -45,7 +46,7 @@ class GetLocalityByIdUseCase:
             await self.cache.set_json(
                 key=cache_key,
                 value=result.model_dump(mode="json"),
-                ttl=3600 * 24
+                ttl=settings.CACHE_TTL_CATALOG_SECONDS
             )
         except Exception:
             pass

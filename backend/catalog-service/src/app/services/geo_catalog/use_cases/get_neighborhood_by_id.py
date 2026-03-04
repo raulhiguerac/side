@@ -7,6 +7,7 @@ from app.services.shared.helpers.geometry import geom_from_geojson, geom_to_geoj
 
 from app.models.location import Neighborhood
 from app.core.exceptions.geo_catalog import NeighborhoodNotFoundError
+from app.core.config.settings import settings
 
 from app.services.shared.ports.cache import CachePort
 from app.services.geo_catalog.ports.unit_of_work import GeoCatalogUnitOfWork
@@ -49,7 +50,8 @@ class GetNeighborhoodByIdUseCase:
             await self.cache.set_json(
                 key=cache_key,
                 value=cache_dict,
-                ttl=3600 * 24,
+                ttl=settings.CACHE_TTL_CATALOG_SECONDS
+                
             )
         except Exception:
             pass

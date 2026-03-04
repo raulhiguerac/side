@@ -19,10 +19,10 @@ logger = get_logger(__name__)
 class GeoreferentiationClient:
     def __init__(self):
         self.mapbox_token = os.getenv("MAPBOX_API_KEY")
-        if not self.mapbox_token:
-            raise GeoResolutionMisconfiguredError(context={"missing": "MAPBOX_API_KEY"})
 
     async def forward_geocoding(self, *, address: str, country_code: str, proximity: tuple[float, float] | None = None) -> dict:
+        if not self.mapbox_token:
+            raise GeoResolutionMisconfiguredError(context={"missing": "MAPBOX_API_KEY"})
         geocoder = mapbox.Geocoder(access_token=self.mapbox_token)
         kwargs: dict = {"country": [country_code.lower()]}
         if proximity is not None:
