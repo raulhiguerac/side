@@ -25,6 +25,10 @@ def cache_key_localities(*, country_id: uuid.UUID) -> str:
     return f"catalog:{country_id}:localities"
 
 
+def cache_key_localities_by_admin_division(*, admin_division_id: uuid.UUID) -> str:
+    return f"catalog:admin_division:{admin_division_id}:localities"
+
+
 def cache_key_locality(*, locality_id: uuid.UUID) -> str:
     return f"catalog:locality:{locality_id}"
 

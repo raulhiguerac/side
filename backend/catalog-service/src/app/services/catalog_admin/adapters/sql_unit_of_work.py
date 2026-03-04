@@ -32,3 +32,4 @@ class SqlCatalogAdminUnitOfWork(CatalogAdminUnitOfWork):
     async def rollback_to_savepoint(self) -> None:
         if self._savepoint is not None:
             await run_in_threadpool(self._savepoint.rollback)
+            self._savepoint = None

@@ -1,9 +1,10 @@
+from app.core.config.settings import settings
 import uuid
 import unicodedata
 from functools import partial
 from fastapi.concurrency import run_in_threadpool
 
-from app.services.shared.helpers.cache_keys import cache_key_locality, cache_key_localities
+from app.services.shared.helpers.cache_keys import cache_key_locality, cache_key_localities, cache_key_localities_by_admin_division
 from app.services.shared.ports.cache import CachePort
 
 from app.services.catalog_admin.ports.unit_of_work import CatalogAdminUnitOfWork
@@ -45,10 +46,13 @@ class UpdateLocalityUseCase:
             await self.cache_client.set_json(
                 key=cache_key_locality(locality_id=cache_dict["id"]),
                 value=cache_dict,
-                ttl=3600 * 24 * 30,
+                ttl=settings.CACHE_TTL_ENTITY_SECONDS,
             )
             await self.cache_client.delete(
                 key=cache_key_localities(country_id=cache_dict["country_id"]),
+            )
+            await self.cache_client.delete(
+                key=cache_key_localities_by_admin_division(admin_division_id=cache_dict["admin_division_id"]),
             )
         except Exception:
             pass

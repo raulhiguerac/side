@@ -19,3 +19,11 @@ class NeighborhoodNotFoundError(BaseError):
             cause=cause,
             context={"neighborhood_id": str(neighborhood_id), **(context or {})},
         )
+
+class LocalityFilterRequiredError(BaseError):
+    def __init__(self):
+        super().__init__(
+            message="Provide either 'country_id' or 'admin_division_id'",
+            code="LOCALITY_FILTER_REQUIRED",
+            http_status=400,
+        )

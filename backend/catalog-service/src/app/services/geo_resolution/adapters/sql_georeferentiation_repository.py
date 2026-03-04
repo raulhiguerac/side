@@ -1,6 +1,6 @@
 import uuid
 from sqlmodel import Session
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from geoalchemy2.functions import ST_Point
 from app.models.location import Country, Locality, Neighborhood
 from app.services.geo_resolution.ports.georeferentiation_repository import GeoreferentiationRepository
@@ -23,6 +23,15 @@ class SqlGeoreferentiationRepository(GeoreferentiationRepository):
             .filter(func.ST_Contains(Neighborhood.geom, pnt))
         )
         return self.session.scalars(stmt).first()
+    
+    def update_neighborhood_h3_cells(self, *, neighborhood_id: uuid.UUID, h3_index: str) -> None:
+        stmt = (                                                                                           
+            update(Neighborhood)
+            .where(Neighborhood.id == neighborhood_id)                                                             
+            .values(h3_cells=func.array_append(Neighborhood.h3_cells, h3_index))                        
+        )
+        self.session.execute(stmt)
+        self.session.flush()
 
     def get_locality_country_code(self, *, locality_id: uuid.UUID) -> str | None:
         stmt = (
@@ -34,7 +43,7 @@ class SqlGeoreferentiationRepository(GeoreferentiationRepository):
 
     def get_locality_coordinates(self, *, locality_id: uuid.UUID) -> tuple[float, float] | None:
         stmt = select(Locality.latitude, Locality.longitude).where(Locality.id == locality_id)
-        row = self.session.exec(stmt).first()
+        row = self.session.execute(stmt).first()
         if row is None:
             return None
         return row.latitude, row.longitude

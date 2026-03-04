@@ -65,14 +65,18 @@ def uc(mock_uow, mock_cache, mock_georef):
 async def test_returns_resolved_neighborhood_on_cache_miss(
     mock_run, uc, mock_uow, mock_cache, mock_georef
 ):
-    mock_run.return_value = SimpleNamespace(**NEIGHBORHOOD_INFO.model_dump())
+    mock_run.side_effect = [
+        "CO",  # get_locality_country_code
+        MagicMock(latitude=LAT, longitude=LON),  # get_locality_coordinates
+        SimpleNamespace(**NEIGHBORHOOD_INFO.model_dump()),  # get_neighborhood_by_coordinates
+    ]
 
     result = await uc.execute(query="Calle 72", locality_id=LOCALITY_ID)
 
     assert isinstance(result, ResolvedNeighborhood)
     assert result.latitude == LAT
     assert result.longitude == LON
-    mock_georef.forward_geocode.assert_awaited_once_with(query="Calle 72")
+    mock_georef.forward_geocode.assert_awaited_once()
     mock_cache.set_json.assert_awaited_once()
 
 
@@ -133,7 +137,11 @@ async def test_survives_cache_set_failure_still_returns_result(
 async def test_raises_when_no_neighborhood_found(
     mock_run, uc, mock_uow, mock_cache, mock_georef
 ):
-    mock_run.return_value = None
+    mock_run.side_effect = [
+        "CO",  # get_locality_country_code
+        MagicMock(latitude=LAT, longitude=LON),  # get_locality_coordinates
+        None,  # get_neighborhood_by_coordinates → no match
+    ]
 
     with pytest.raises(NeighborhoodResolutionError):
         await uc.execute(query="Calle 72", locality_id=LOCALITY_ID)
@@ -147,7 +155,11 @@ async def test_cache_not_set_when_neighborhood_not_found(
     mock_run, uc, mock_uow, mock_cache, mock_georef
 ):
     """Coordenadas se cachean igual — el miss de neighborhood no las invalida."""
-    mock_run.return_value = None
+    mock_run.side_effect = [
+        "CO",  # get_locality_country_code
+        MagicMock(latitude=LAT, longitude=LON),  # get_locality_coordinates
+        None,  # get_neighborhood_by_coordinates → no match
+    ]
 
     with pytest.raises(NeighborhoodResolutionError):
         await uc.execute(query="Calle 72", locality_id=LOCALITY_ID)

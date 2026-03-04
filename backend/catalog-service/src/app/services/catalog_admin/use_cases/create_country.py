@@ -1,3 +1,4 @@
+from app.core.config.settings import settings
 from functools import partial
 from fastapi.concurrency import run_in_threadpool
 
@@ -34,7 +35,7 @@ class CreateCountryUseCase:
         cache_key = cache_key_country(country_id=country.id)
 
         try:
-            await self.cache_client.set_json(key=cache_key, value=country.model_dump(mode="json"), ttl=3600 * 24 * 30)
+            await self.cache_client.set_json(key=cache_key, value=country.model_dump(mode="json"), ttl=settings.CACHE_TTL_ENTITY_SECONDS)
         except Exception:
             pass
 

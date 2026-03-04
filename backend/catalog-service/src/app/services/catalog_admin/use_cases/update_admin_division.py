@@ -1,3 +1,4 @@
+from app.core.config.settings import settings
 import uuid
 from functools import partial
 from fastapi.concurrency import run_in_threadpool
@@ -44,7 +45,7 @@ class UpdateAdminDivisionUseCase:
             await self.cache_client.set_json(
                 key=cache_key_admin_division(admin_division_id=cache_dict["id"]),
                 value=cache_dict,
-                ttl=3600 * 24 * 30,
+                ttl=settings.CACHE_TTL_ENTITY_SECONDS,
             )
         except Exception:
             pass

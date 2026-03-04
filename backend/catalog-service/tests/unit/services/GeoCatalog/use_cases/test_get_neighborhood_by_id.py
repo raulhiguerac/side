@@ -8,6 +8,7 @@ from app.core.exceptions.geo_catalog import NeighborhoodNotFoundError
 NEIGHBORHOOD_ID = uuid.UUID('a1b2c3d4-e5f6-7890-abcd-ef1234567890')
 
 NEIGHBORHOOD = MagicMock()
+NEIGHBORHOOD.geom = None
 NEIGHBORHOOD.model_dump.return_value = {"id": str(NEIGHBORHOOD_ID), "name": "Chapinero"}
 
 

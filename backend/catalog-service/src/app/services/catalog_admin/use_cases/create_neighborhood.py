@@ -1,3 +1,4 @@
+from app.core.config.settings import settings
 import unicodedata
 from functools import partial
 from fastapi.concurrency import run_in_threadpool
@@ -32,6 +33,7 @@ class CreateNeighborhoodUseCase:
 
         try:
             await self.uow.commit()
+            await self.uow.refresh(neighborhood)
         except Exception as exc:
             await self.uow.rollback()
             raise translate_db_error(exc) from exc
@@ -44,7 +46,7 @@ class CreateNeighborhoodUseCase:
             await self.cache_client.set_json(
                 key=cache_key,
                 value=cache_dict,
-                ttl=3600 * 24 * 30,
+                ttl=settings.CACHE_TTL_ENTITY_SECONDS,
             )
         except Exception:
             pass

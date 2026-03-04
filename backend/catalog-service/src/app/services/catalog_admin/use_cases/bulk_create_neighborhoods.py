@@ -66,7 +66,7 @@ class BulkCreateNeighborhoodsUseCase:
                 await self.uow.rollback_to_savepoint()
                 logger.warning(
                     "failed to insert neighborhood",
-                    extra={"name": neighborhood.name, "locality_id": str(locality_id)},
+                    extra={"neighborhood_name": neighborhood.name, "locality_id": str(locality_id)},
                     exc_info=exc,
                 )
                 errors.append(neighborhood.name)

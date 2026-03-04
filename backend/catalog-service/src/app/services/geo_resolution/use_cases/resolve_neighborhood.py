@@ -1,3 +1,4 @@
+from app.core.config.settings import settings
 import uuid
 from functools import partial
 from fastapi.concurrency import run_in_threadpool
@@ -74,7 +75,7 @@ class ResolveNeighborhoodUseCase:
             await self.cache.set_json(
                 key=cache_key,
                 value={"lat": result.latitude, "lon": result.longitude},
-                ttl=3600 * 24 * 30,
+                ttl=settings.CACHE_TTL_ENTITY_SECONDS,
             )
         except Exception:
             pass
