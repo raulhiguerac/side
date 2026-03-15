@@ -1,6 +1,8 @@
 import uuid
 from typing import Any, Dict, Optional
+
 from app.core.exceptions.base import BaseError
+
 
 class LocalityNotFoundError(BaseError):
     def __init__(self, *, locality_id: uuid.UUID, cause: Exception | None = None, context: Optional[Dict[str, Any]] = None):

@@ -1,8 +1,12 @@
 from fastapi import UploadFile
 
-from app.core.files.policies import NEIGHBORHOOD_GEOMETRY_UPLOAD_POLICY, NEIGHBORHOOD_BULK_UPLOAD_POLICY, NEIGHBORHOOD_BULK_GEOMETRY_UPLOAD_POLICY
-from app.core.files.validators import get_file_size, validate_file_extension
 from app.core.exceptions.validation import FileTooLargeError
+from app.core.files.policies import (
+    NEIGHBORHOOD_BULK_GEOMETRY_UPLOAD_POLICY,
+    NEIGHBORHOOD_BULK_UPLOAD_POLICY,
+    NEIGHBORHOOD_GEOMETRY_UPLOAD_POLICY,
+)
+from app.core.files.validators import get_file_size, validate_file_extension
 
 
 def _validate_upload(file: UploadFile, policy) -> None:

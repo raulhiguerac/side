@@ -1,17 +1,23 @@
-from app.core.config.settings import settings
 import uuid
 from functools import partial
+
 from fastapi.concurrency import run_in_threadpool
 
+from app.core.config.settings import settings
+from app.core.exceptions.catalog_admin import (
+    NeighborhoodAdminNotFoundError,
+    NeighborhoodInvalidGeometryError,
+)
+from app.services.catalog_admin.helpers.db_error_translator import translate_db_error
 from app.services.catalog_admin.ports.unit_of_work import CatalogAdminUnitOfWork
 from app.services.catalog_admin.schemas.neighborhood import NeighborhoodAdminResponse
+from app.services.shared.helpers.cache_keys import (
+    cache_key_neighborhood,
+    cache_key_neighborhoods,
+)
+from app.services.shared.helpers.geometry import geom_from_geojson, geom_to_geojson
 from app.services.shared.ports.cache import CachePort
 
-from app.services.shared.helpers.cache_keys import cache_key_neighborhood, cache_key_neighborhoods
-
-from app.core.exceptions.catalog_admin import NeighborhoodAdminNotFoundError, NeighborhoodInvalidGeometryError
-from app.services.shared.helpers.geometry import geom_from_geojson
-from app.services.catalog_admin.helpers.db_error_translator import translate_db_error
 
 class EnrichNeighborhoodGeometryUseCase:
     def __init__(self, *, uow: CatalogAdminUnitOfWork, cache_client: CachePort) -> None:
@@ -38,14 +44,13 @@ class EnrichNeighborhoodGeometryUseCase:
 
         try:
             await self.uow.commit()
+            await self.uow.refresh(db_model)
         except Exception as exc:
             await self.uow.rollback()
             raise translate_db_error(exc) from exc
 
-        await self.uow.refresh(db_model)
-
         cache_dict = db_model.model_dump(mode="json", exclude={"geom"})
-        cache_dict["geom_geojson"] = geometry
+        cache_dict["geom_geojson"] = geom_to_geojson(db_model.geom)
 
         try:
             await self.cache_client.set_json(

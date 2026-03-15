@@ -3,9 +3,9 @@ import re
 from sqlalchemy.exc import IntegrityError, OperationalError
 
 from app.core.exceptions.catalog_admin import (
+    AdminDivisionConflictError,
     CatalogAdminDbUnavailableError,
     CountryConflictError,
-    AdminDivisionConflictError,
     LocalityConflictError,
     NeighborhoodConflictError,
 )

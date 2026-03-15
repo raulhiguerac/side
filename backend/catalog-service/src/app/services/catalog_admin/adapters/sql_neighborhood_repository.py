@@ -2,11 +2,13 @@ import uuid
 from typing import Optional
 
 from sqlalchemy import inspect, update
-from sqlmodel import Session, select
 from sqlalchemy.dialects.postgresql import insert
+from sqlmodel import Session, select
 
 from app.models.location import Neighborhood
-from app.services.catalog_admin.ports.neighborhood_repository import NeighborhoodAdminRepository
+from app.services.catalog_admin.ports.neighborhood_repository import (
+    NeighborhoodAdminRepository,
+)
 
 _EXCLUDED_FROM_UPSERT = {"id", "created_at", "updated_at", "geom", "h3_cells"}
 _UPSERT_FIELDS = [

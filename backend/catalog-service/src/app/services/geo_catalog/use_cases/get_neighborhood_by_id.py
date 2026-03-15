@@ -1,16 +1,15 @@
 import uuid
 from functools import partial
+
 from fastapi.concurrency import run_in_threadpool
 
+from app.core.config.settings import settings
+from app.core.exceptions.geo_catalog import NeighborhoodNotFoundError
+from app.models.location import Neighborhood
+from app.services.geo_catalog.ports.unit_of_work import GeoCatalogUnitOfWork
 from app.services.shared.helpers.cache_keys import cache_key_neighborhood
 from app.services.shared.helpers.geometry import geom_from_geojson, geom_to_geojson
-
-from app.models.location import Neighborhood
-from app.core.exceptions.geo_catalog import NeighborhoodNotFoundError
-from app.core.config.settings import settings
-
 from app.services.shared.ports.cache import CachePort
-from app.services.geo_catalog.ports.unit_of_work import GeoCatalogUnitOfWork
 
 
 class GetNeighborhoodByIdUseCase:

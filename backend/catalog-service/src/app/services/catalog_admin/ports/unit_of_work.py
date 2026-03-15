@@ -1,9 +1,13 @@
 from typing import Protocol
 
+from app.services.catalog_admin.ports.admin_division_repository import (
+    AdminDivisionAdminRepository,
+)
 from app.services.catalog_admin.ports.country_repository import CountryAdminRepository
-from app.services.catalog_admin.ports.admin_division_repository import AdminDivisionAdminRepository
 from app.services.catalog_admin.ports.locality_repository import LocalityAdminRepository
-from app.services.catalog_admin.ports.neighborhood_repository import NeighborhoodAdminRepository
+from app.services.catalog_admin.ports.neighborhood_repository import (
+    NeighborhoodAdminRepository,
+)
 
 
 class CatalogAdminUnitOfWork(Protocol):

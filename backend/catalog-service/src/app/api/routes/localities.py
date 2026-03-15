@@ -3,9 +3,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps.geo_catalog import get_localities_uc, get_locality_by_id_uc
+from app.services.geo_catalog.schemas.locality import LocalityListItem
 from app.services.geo_catalog.use_cases.get_locality import GetLocalitiesUseCase
 from app.services.geo_catalog.use_cases.get_locality_by_id import GetLocalityByIdUseCase
-from app.services.geo_catalog.schemas.locality import LocalityListItem
 
 router = APIRouter(prefix="/localities", tags=["localities"])
 

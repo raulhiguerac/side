@@ -2,10 +2,17 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps.geo_catalog import get_neighborhoods_by_locality_uc, get_neighborhood_by_id_uc
-from app.services.geo_catalog.use_cases.get_neighborhoods_by_locality import GetNeighborhoodsByLocalityUseCase
-from app.services.geo_catalog.use_cases.get_neighborhood_by_id import GetNeighborhoodByIdUseCase
+from app.api.deps.geo_catalog import (
+    get_neighborhood_by_id_uc,
+    get_neighborhoods_by_locality_uc,
+)
 from app.services.geo_catalog.schemas.neighborhood import NeighborhoodListItem
+from app.services.geo_catalog.use_cases.get_neighborhood_by_id import (
+    GetNeighborhoodByIdUseCase,
+)
+from app.services.geo_catalog.use_cases.get_neighborhoods_by_locality import (
+    GetNeighborhoodsByLocalityUseCase,
+)
 
 router = APIRouter(prefix="/neighborhoods", tags=["neighborhoods"])
 

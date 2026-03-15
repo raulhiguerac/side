@@ -1,8 +1,11 @@
 from typing import Protocol
 
-from app.services.geo_resolution.ports.poi_repository import PoiRepository
 from app.services.geo_resolution.ports.fetch_zone_repository import FetchZoneRepository
-from app.services.geo_resolution.ports.georeferentiation_repository import GeoreferentiationRepository
+from app.services.geo_resolution.ports.georeferentiation_repository import (
+    GeoreferentiationRepository,
+)
+from app.services.geo_resolution.ports.poi_repository import PoiRepository
+
 
 class GeoResolutionUnitOfWork(Protocol):
     pois: PoiRepository

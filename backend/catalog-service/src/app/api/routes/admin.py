@@ -2,39 +2,74 @@ import json
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
-from app.api.deps.upload_validation import validate_neighborhood_geometry_upload, validate_neighborhood_bulk_upload, validate_neighborhood_bulk_geometry_upload
 
 from app.api.deps.auth import require_admin
 from app.api.deps.catalog_admin import (
-    create_country_uc,
-    create_admin_division_uc,
-    create_locality_uc,
-    create_neighborhood_uc,
-    update_country_uc,
-    update_admin_division_uc,
-    update_locality_uc,
-    update_neighborhood_uc,
-    enrich_neighborhood_geometry_uc,
     bulk_create_neighborhoods_uc,
     bulk_enrich_neighborhood_geometries_uc,
+    create_admin_division_uc,
+    create_country_uc,
+    create_locality_uc,
+    create_neighborhood_uc,
+    enrich_neighborhood_geometry_uc,
+    update_admin_division_uc,
+    update_country_uc,
+    update_locality_uc,
+    update_neighborhood_uc,
 )
-from app.schemas.principal import Principal
-from app.services.catalog_admin.use_cases.create_country import CreateCountryUseCase
-from app.services.catalog_admin.use_cases.create_admin_division import CreateAdminDivisionUseCase
-from app.services.catalog_admin.use_cases.create_locality import CreateLocalityUseCase
-from app.services.catalog_admin.use_cases.create_neighborhood import CreateNeighborhoodUseCase
-from app.services.catalog_admin.use_cases.update_country import UpdateCountryUseCase
-from app.services.catalog_admin.use_cases.update_admin_division import UpdateAdminDivisionUseCase
-from app.services.catalog_admin.use_cases.update_locality import UpdateLocalityUseCase
-from app.services.catalog_admin.use_cases.update_neighborhood import UpdateNeighborhoodUseCase
-from app.services.catalog_admin.use_cases.enrich_neighborhood_geometry import EnrichNeighborhoodGeometryUseCase
-from app.services.catalog_admin.use_cases.bulk_create_neighborhoods import BulkCreateNeighborhoodsUseCase
-from app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries import BulkEnrichNeighborhoodGeometriesUseCase
+from app.api.deps.upload_validation import (
+    validate_neighborhood_bulk_geometry_upload,
+    validate_neighborhood_bulk_upload,
+    validate_neighborhood_geometry_upload,
+)
 from app.services.catalog_admin.helpers.file_parser import NeighborhoodFileParser
-from app.services.catalog_admin.schemas.country import CreateCountryRequest, UpdateCountryRequest, CountryResponse
-from app.services.catalog_admin.schemas.admin_division import CreateAdminDivisionRequest, UpdateAdminDivisionRequest, AdminDivisionResponse
-from app.services.catalog_admin.schemas.locality import CreateLocalityRequest, UpdateLocalityRequest, LocalityAdminResponse
-from app.services.catalog_admin.schemas.neighborhood import CreateNeighborhoodRequest, UpdateNeighborhoodRequest, NeighborhoodAdminResponse, BulkCreateNeighborhoodsResult, BulkEnrichNeighborhoodGeometriesResult
+from app.services.catalog_admin.schemas.admin_division import (
+    AdminDivisionResponse,
+    CreateAdminDivisionRequest,
+    UpdateAdminDivisionRequest,
+)
+from app.services.catalog_admin.schemas.country import (
+    CountryResponse,
+    CreateCountryRequest,
+    UpdateCountryRequest,
+)
+from app.services.catalog_admin.schemas.locality import (
+    CreateLocalityRequest,
+    LocalityAdminResponse,
+    UpdateLocalityRequest,
+)
+from app.services.catalog_admin.schemas.neighborhood import (
+    BulkCreateNeighborhoodsResult,
+    BulkEnrichNeighborhoodGeometriesResult,
+    CreateNeighborhoodRequest,
+    NeighborhoodAdminResponse,
+    UpdateNeighborhoodRequest,
+)
+from app.services.catalog_admin.use_cases.bulk_create_neighborhoods import (
+    BulkCreateNeighborhoodsUseCase,
+)
+from app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries import (
+    BulkEnrichNeighborhoodGeometriesUseCase,
+)
+from app.services.catalog_admin.use_cases.create_admin_division import (
+    CreateAdminDivisionUseCase,
+)
+from app.services.catalog_admin.use_cases.create_country import CreateCountryUseCase
+from app.services.catalog_admin.use_cases.create_locality import CreateLocalityUseCase
+from app.services.catalog_admin.use_cases.create_neighborhood import (
+    CreateNeighborhoodUseCase,
+)
+from app.services.catalog_admin.use_cases.enrich_neighborhood_geometry import (
+    EnrichNeighborhoodGeometryUseCase,
+)
+from app.services.catalog_admin.use_cases.update_admin_division import (
+    UpdateAdminDivisionUseCase,
+)
+from app.services.catalog_admin.use_cases.update_country import UpdateCountryUseCase
+from app.services.catalog_admin.use_cases.update_locality import UpdateLocalityUseCase
+from app.services.catalog_admin.use_cases.update_neighborhood import (
+    UpdateNeighborhoodUseCase,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 

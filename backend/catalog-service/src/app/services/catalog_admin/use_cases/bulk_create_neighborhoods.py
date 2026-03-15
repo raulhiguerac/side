@@ -1,12 +1,16 @@
 import unicodedata
 import uuid
 from functools import partial
+
 from fastapi.concurrency import run_in_threadpool
 
 from app.core.logging.logger import get_logger
 from app.models.location import Neighborhood
 from app.services.catalog_admin.ports.unit_of_work import CatalogAdminUnitOfWork
-from app.services.catalog_admin.schemas.neighborhood import BulkCreateNeighborhoodsResult
+from app.services.catalog_admin.schemas.neighborhood import (
+    BulkCreateNeighborhoodsResult,
+)
+from app.services.shared.helpers.cache_keys import cache_key_neighborhoods
 from app.services.shared.ports.cache import CachePort
 
 logger = get_logger(__name__)
@@ -73,5 +77,7 @@ class BulkCreateNeighborhoodsUseCase:
 
         if ok_count:
             await self.uow.commit()
+        
+        await self.cache_client.delete(key=cache_key_neighborhoods(locality_id=locality_id))
 
         return BulkCreateNeighborhoodsResult(created=ok_count, errors=errors)

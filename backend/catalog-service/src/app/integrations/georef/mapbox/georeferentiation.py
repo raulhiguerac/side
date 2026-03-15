@@ -1,9 +1,9 @@
-import os
 import asyncio
+import os
 
 import mapbox
 from mapbox.errors import ValidationError
-from requests.exceptions import ConnectionError, Timeout, HTTPError
+from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 from app.core.exceptions.geo_resolution import (
     GeoResolutionBadRequestError,

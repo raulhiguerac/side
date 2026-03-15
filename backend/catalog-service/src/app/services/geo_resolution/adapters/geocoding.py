@@ -1,8 +1,7 @@
+from app.core.exceptions.geo_resolution import GeoResolutionNotFoundError
+from app.integrations.georef.mapbox.georeferentiation import GeoreferentiationClient
 from app.services.geo_resolution.ports.geocoding_gateway import GeocodingGateway
 from app.services.geo_resolution.schemas.geocoding import GeocodingResult
-from app.core.exceptions.geo_resolution import GeoResolutionNotFoundError
-
-from app.integrations.georef.mapbox.georeferentiation import GeoreferentiationClient
 
 
 class GeocodingAdapter(GeocodingGateway):
@@ -18,7 +17,10 @@ class GeocodingAdapter(GeocodingGateway):
             raise GeoResolutionNotFoundError(address=query)
 
         feature = features[0]
-        coords = feature["geometry"]["coordinates"]
+        geometry = feature.get("geometry") or {}
+        coords = geometry.get("coordinates")
+        if not coords:
+            raise GeoResolutionNotFoundError(address=query)
 
         return GeocodingResult(
             latitude=coords[1],

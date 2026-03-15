@@ -1,7 +1,8 @@
 import uuid
-from typing import List, Protocol, Optional
+from typing import Protocol
 
 from app.models.location import Locality
+
 
 class LocalityRepository(Protocol):
     def get_active_by_country_id(

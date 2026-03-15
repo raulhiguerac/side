@@ -1,10 +1,12 @@
 import uuid
 from typing import List
-from sqlmodel import Session, select
+
 from sqlalchemy.orm import selectinload
+from sqlmodel import Session, select
 
 from app.models.location import Locality
 from app.services.geo_catalog.ports.locality_repository import LocalityRepository
+
 
 class SqlLocalityRepository(LocalityRepository):
     def __init__(self, session: Session):

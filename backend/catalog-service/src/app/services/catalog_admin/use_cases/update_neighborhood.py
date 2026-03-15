@@ -1,17 +1,23 @@
-from app.core.config.settings import settings
-import uuid
 import unicodedata
+import uuid
 from functools import partial
+
 from fastapi.concurrency import run_in_threadpool
 
-from app.services.shared.helpers.cache_keys import cache_key_neighborhood, cache_key_neighborhoods
-from app.services.shared.ports.cache import CachePort
-
-from app.services.catalog_admin.ports.unit_of_work import CatalogAdminUnitOfWork
-from app.services.catalog_admin.schemas.neighborhood import UpdateNeighborhoodRequest, NeighborhoodAdminResponse
-from app.services.catalog_admin.helpers.db_error_translator import translate_db_error
+from app.core.config.settings import settings
 from app.core.exceptions.catalog_admin import NeighborhoodAdminNotFoundError
+from app.services.catalog_admin.helpers.db_error_translator import translate_db_error
+from app.services.catalog_admin.ports.unit_of_work import CatalogAdminUnitOfWork
+from app.services.catalog_admin.schemas.neighborhood import (
+    NeighborhoodAdminResponse,
+    UpdateNeighborhoodRequest,
+)
+from app.services.shared.helpers.cache_keys import (
+    cache_key_neighborhood,
+    cache_key_neighborhoods,
+)
 from app.services.shared.helpers.geometry import geom_to_geojson
+from app.services.shared.ports.cache import CachePort
 
 
 class UpdateNeighborhoodUseCase:
