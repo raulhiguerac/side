@@ -1,5 +1,7 @@
 import uuid
+
 from app.schemas.base import StrictBase
+
 
 class NeighborhoodListItem(StrictBase):
     id: uuid.UUID

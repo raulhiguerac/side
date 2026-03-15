@@ -1,8 +1,8 @@
 import uuid
 from typing import Optional
 
-from app.schemas.base import StrictBase
 from app.models.location import LocalityType
+from app.schemas.base import StrictBase
 
 
 class CreateLocalityRequest(StrictBase):

@@ -1,15 +1,15 @@
 import uuid
 from functools import partial
+
 from fastapi.concurrency import run_in_threadpool
 
-from app.services.shared.helpers.cache_keys import cache_key_locality
-
-from app.core.exceptions.geo_catalog import LocalityNotFoundError
 from app.core.config.settings import settings
-from app.services.geo_catalog.schemas.locality import LocalityListItem
-
-from app.services.shared.ports.cache import CachePort
+from app.core.exceptions.geo_catalog import LocalityNotFoundError
 from app.services.geo_catalog.ports.unit_of_work import GeoCatalogUnitOfWork
+from app.services.geo_catalog.schemas.locality import LocalityListItem
+from app.services.shared.helpers.cache_keys import cache_key_locality
+from app.services.shared.ports.cache import CachePort
+
 
 class GetLocalityByIdUseCase:
     def __init__(

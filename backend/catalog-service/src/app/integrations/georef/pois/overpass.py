@@ -1,8 +1,9 @@
 import asyncio
 
 import overpass
-from requests.exceptions import ConnectionError, Timeout, HTTPError
+from requests.exceptions import ConnectionError, HTTPError, Timeout
 
+from app.core.config.settings import settings
 from app.core.exceptions.geo_resolution import GeoResolutionUnavailableError
 from app.core.logging.logger import get_logger
 
@@ -26,7 +27,7 @@ SHOP_TAGS = "|".join([
 ])
 
 QUERY_TEMPLATE = (
-    "[out:json][timeout:30];"
+    "[out:json][timeout:{timeout}];"
     "("
     '  node["amenity"~"{amenity}"]{bbox};'
     '  node["leisure"~"{leisure}"]{bbox};'
@@ -42,11 +43,12 @@ QUERY_TEMPLATE = (
 class PoiClient:
 
     def __init__(self):
-        self.api = overpass.API(timeout=30)
+        self.api = overpass.API(timeout=settings.OVERPASS_TIMEOUT_SECONDS)
 
     async def get_pois_by_bbox(self, *, bbox: list[float]) -> dict:
         bbox_str = f"({bbox[0]},{bbox[1]},{bbox[2]},{bbox[3]})"
         query = QUERY_TEMPLATE.format(
+            timeout=settings.OVERPASS_TIMEOUT_SECONDS,
             amenity=AMENITY_TAGS,
             leisure=LEISURE_TAGS,
             shop=SHOP_TAGS,

@@ -1,5 +1,6 @@
-import uuid
 import hashlib
+import uuid
+
 
 def cache_key_forward_geocode(query: str, locality_id: uuid.UUID) -> str:
     raw = f"{query.strip().lower()}:{locality_id}"

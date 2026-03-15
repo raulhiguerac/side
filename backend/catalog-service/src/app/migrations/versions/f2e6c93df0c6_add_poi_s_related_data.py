@@ -7,12 +7,10 @@ Create Date: 2026-02-22 23:37:10.457914
 """
 from typing import Sequence, Union
 
-import sqlmodel
 import geoalchemy2
-
-
-from alembic import op
 import sqlalchemy as sa
+import sqlmodel
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.

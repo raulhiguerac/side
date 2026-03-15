@@ -1,9 +1,14 @@
 import uuid
-from sqlmodel import Session
-from sqlalchemy import select, func, update
+
 from geoalchemy2.functions import ST_Point
+from sqlalchemy import func, select, update
+from sqlmodel import Session
+
 from app.models.location import Country, Locality, Neighborhood
-from app.services.geo_resolution.ports.georeferentiation_repository import GeoreferentiationRepository
+from app.services.geo_resolution.ports.georeferentiation_repository import (
+    GeoreferentiationRepository,
+)
+
 
 class SqlGeoreferentiationRepository(GeoreferentiationRepository):
     def __init__(self, session: Session):

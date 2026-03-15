@@ -1,15 +1,18 @@
 import uuid
-from typing import List
 from functools import partial
+from typing import List
+
 from fastapi.concurrency import run_in_threadpool
 
-from app.services.shared.helpers.cache_keys import cache_key_localities, cache_key_localities_by_admin_division
-from app.services.geo_catalog.schemas.locality import LocalityListItem
-from app.core.exceptions.geo_catalog import LocalityFilterRequiredError
 from app.core.config.settings import settings
-
-from app.services.shared.ports.cache import CachePort
+from app.core.exceptions.geo_catalog import LocalityFilterRequiredError
 from app.services.geo_catalog.ports.unit_of_work import GeoCatalogUnitOfWork
+from app.services.geo_catalog.schemas.locality import LocalityListItem
+from app.services.shared.helpers.cache_keys import (
+    cache_key_localities,
+    cache_key_localities_by_admin_division,
+)
+from app.services.shared.ports.cache import CachePort
 
 
 class GetLocalitiesUseCase:
@@ -49,14 +52,14 @@ class GetLocalitiesUseCase:
         localities = await run_in_threadpool(fetch)
         result = [LocalityListItem.model_validate(loc) for loc in localities]
 
-        try:
-            await self.cache.set_json(
-                key=cache_key,
-                value=[item.model_dump(mode="json") for item in result],
-                ttl=settings.CACHE_TTL_CATALOG_SECONDS
-                
-            )
-        except Exception:
-            pass
+        if result:
+            try:
+                await self.cache.set_json(
+                    key=cache_key,
+                    value=[item.model_dump(mode="json") for item in result],
+                    ttl=settings.CACHE_TTL_CATALOG_SECONDS,
+                )
+            except Exception:
+                pass
 
         return result

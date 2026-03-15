@@ -1,9 +1,13 @@
 import uuid
 from typing import List
+
 from sqlmodel import Session, select
 
 from app.models.location import Neighborhood
-from app.services.geo_catalog.ports.neighborhood_repository import NeighborhoodRepository
+from app.services.geo_catalog.ports.neighborhood_repository import (
+    NeighborhoodRepository,
+)
+
 
 class SqlNeighborhoodRepository(NeighborhoodRepository):
     def __init__(self, session: Session):

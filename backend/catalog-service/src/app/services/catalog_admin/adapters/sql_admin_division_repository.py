@@ -1,10 +1,12 @@
 import uuid
 from typing import Optional
 
-from sqlmodel import select, Session
+from sqlmodel import Session, select
 
 from app.models.location import AdminDivision
-from app.services.catalog_admin.ports.admin_division_repository import AdminDivisionAdminRepository
+from app.services.catalog_admin.ports.admin_division_repository import (
+    AdminDivisionAdminRepository,
+)
 
 
 class SqlAdminDivisionRepository(AdminDivisionAdminRepository):

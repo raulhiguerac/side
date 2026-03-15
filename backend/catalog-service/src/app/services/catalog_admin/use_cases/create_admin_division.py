@@ -1,14 +1,17 @@
-from app.core.config.settings import settings
 from functools import partial
+
 from fastapi.concurrency import run_in_threadpool
 
+from app.core.config.settings import settings
+from app.models.location import AdminDivision
+from app.services.catalog_admin.helpers.db_error_translator import translate_db_error
+from app.services.catalog_admin.ports.unit_of_work import CatalogAdminUnitOfWork
+from app.services.catalog_admin.schemas.admin_division import (
+    AdminDivisionResponse,
+    CreateAdminDivisionRequest,
+)
 from app.services.shared.helpers.cache_keys import cache_key_admin_division
 from app.services.shared.ports.cache import CachePort
-
-from app.models.location import AdminDivision
-from app.services.catalog_admin.ports.unit_of_work import CatalogAdminUnitOfWork
-from app.services.catalog_admin.schemas.admin_division import CreateAdminDivisionRequest, AdminDivisionResponse
-from app.services.catalog_admin.helpers.db_error_translator import translate_db_error
 
 
 class CreateAdminDivisionUseCase:
@@ -23,15 +26,14 @@ class CreateAdminDivisionUseCase:
 
         try:
             await self.uow.commit()
+            await self.uow.refresh(admin_division)
         except Exception as exc:
             await self.uow.rollback()
             raise translate_db_error(exc) from exc
 
-        cache_key = cache_key_admin_division(admin_division_id=admin_division.id)
-
         try:
             await self.cache_client.set_json(
-                key=cache_key,
+                key=cache_key_admin_division(admin_division_id=admin_division.id),
                 value=admin_division.model_dump(mode="json"),
                 ttl=settings.CACHE_TTL_ENTITY_SECONDS,
             )

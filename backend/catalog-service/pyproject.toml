@@ -20,6 +20,7 @@ dependencies = [
     "h3>=4.4.2",
     "pyjwt[cryptography]>=2.8.0",
     "cryptography>=46.0.5",
+    "ruff>=0.15.6",
 ]
 
 [project.optional-dependencies]
@@ -33,3 +34,6 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.ruff.lint]
+ignore = ["E712"]

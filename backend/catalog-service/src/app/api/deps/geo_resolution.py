@@ -5,24 +5,21 @@ from sqlmodel import Session
 
 from app.api.deps.db import get_session
 from app.api.deps.geo_catalog import get_cache_port
-
-from app.services.shared.ports.cache import CachePort
-
-from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWork
-from app.services.geo_resolution.adapters.sql_unit_of_work import SqlGeoResolutionUnitOfWork
-
-from app.services.geo_resolution.ports.geocoding_gateway import GeocodingGateway
-from app.services.geo_resolution.adapters.geocoding import GeocodingAdapter
-
-from app.services.geo_resolution.ports.poi_provider_gateway import PoiProviderGateway
-from app.services.geo_resolution.adapters.poi_provider import PoiProviderAdapter
-
 from app.integrations.georef.mapbox.georeferentiation import GeoreferentiationClient
 from app.integrations.georef.pois.overpass import PoiClient
-
-from app.services.geo_resolution.use_cases.resolve_neighborhood import ResolveNeighborhoodUseCase
+from app.services.geo_resolution.adapters.geocoding import GeocodingAdapter
+from app.services.geo_resolution.adapters.poi_provider import PoiProviderAdapter
+from app.services.geo_resolution.adapters.sql_unit_of_work import (
+    SqlGeoResolutionUnitOfWork,
+)
+from app.services.geo_resolution.ports.geocoding_gateway import GeocodingGateway
+from app.services.geo_resolution.ports.poi_provider_gateway import PoiProviderGateway
+from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWork
+from app.services.geo_resolution.use_cases.resolve_neighborhood import (
+    ResolveNeighborhoodUseCase,
+)
 from app.services.geo_resolution.use_cases.resolve_poi import ResolvePoiUseCase
-
+from app.services.shared.ports.cache import CachePort
 
 # -------------------------------------------------------------------------
 # Providers (stateless → safe to cache)

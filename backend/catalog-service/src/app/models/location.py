@@ -20,17 +20,15 @@ Ejemplos por país:
 """
 
 import uuid
+from datetime import datetime
 from enum import Enum
 from typing import Optional
-from datetime import datetime
 
-from sqlmodel import Field, Relationship, SQLModel
-from sqlalchemy import Column, ForeignKey, Index, UniqueConstraint
-from sqlalchemy.sql import func
-from sqlalchemy import DateTime, JSON
-from sqlalchemy.dialects.postgresql import ARRAY, VARCHAR
 from geoalchemy2 import Geometry
-
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, UniqueConstraint
+from sqlalchemy.dialects.postgresql import ARRAY, VARCHAR
+from sqlalchemy.sql import func
+from sqlmodel import Field, Relationship, SQLModel
 
 # =============================================================================
 # MIXINS

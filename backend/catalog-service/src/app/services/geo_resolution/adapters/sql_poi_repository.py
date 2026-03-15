@@ -1,6 +1,7 @@
 import uuid
-from sqlmodel import select, Session, col
+
 from sqlalchemy.dialects.postgresql import insert
+from sqlmodel import Session, col, select
 
 from app.models.location import PointOfInterest
 from app.services.geo_resolution.ports.poi_repository import PoiRepository

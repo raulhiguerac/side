@@ -99,7 +99,7 @@ async def test_returns_empty_list_when_no_localities(uc, mock_uow, mock_cache):
     result = await uc.execute(country_id=COUNTRY_ID)
 
     assert result == []
-    mock_cache.set_json.assert_awaited_once()
+    mock_cache.set_json.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------

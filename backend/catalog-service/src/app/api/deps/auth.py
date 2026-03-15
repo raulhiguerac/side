@@ -5,7 +5,14 @@ import jwt
 from fastapi import Depends, Request
 from fastapi.concurrency import run_in_threadpool
 from jwt import PyJWKClient, PyJWKClientConnectionError, PyJWKClientError
-from jwt.exceptions import DecodeError, ExpiredSignatureError, InvalidAudienceError, InvalidIssuerError, InvalidSignatureError, InvalidTokenError
+from jwt.exceptions import (
+    DecodeError,
+    ExpiredSignatureError,
+    InvalidAudienceError,
+    InvalidIssuerError,
+    InvalidSignatureError,
+    InvalidTokenError,
+)
 
 from app.core.config.settings import settings
 from app.core.exceptions.base import BaseError

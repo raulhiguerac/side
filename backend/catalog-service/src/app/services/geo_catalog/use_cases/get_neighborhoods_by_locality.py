@@ -1,15 +1,14 @@
 import uuid
-from typing import List
 from functools import partial
+from typing import List
+
 from fastapi.concurrency import run_in_threadpool
 
-from app.services.shared.helpers.cache_keys import cache_key_neighborhoods
-
-from app.services.geo_catalog.schemas.neighborhood import NeighborhoodListItem
-
 from app.core.config.settings import settings
-from app.services.shared.ports.cache import CachePort
 from app.services.geo_catalog.ports.unit_of_work import GeoCatalogUnitOfWork
+from app.services.geo_catalog.schemas.neighborhood import NeighborhoodListItem
+from app.services.shared.helpers.cache_keys import cache_key_neighborhoods
+from app.services.shared.ports.cache import CachePort
 
 
 class GetNeighborhoodsByLocalityUseCase:

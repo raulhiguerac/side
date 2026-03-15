@@ -1,7 +1,8 @@
 import uuid
-from typing import Protocol, List
+from typing import Protocol
 
 from app.models.location import Neighborhood
+
 
 class NeighborhoodRepository(Protocol): 
     def get_active_by_locality_id(

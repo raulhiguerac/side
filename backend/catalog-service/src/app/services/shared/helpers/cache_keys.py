@@ -1,9 +1,12 @@
 import uuid
 
-
 # ---------------------------------------------------------------------------
 # Countries
 # ---------------------------------------------------------------------------
+
+def cache_key_countries() -> str:
+    return "catalog:countries:active"
+
 
 def cache_key_country(*, country_id: uuid.UUID) -> str:
     return f"catalog:country:{country_id}"

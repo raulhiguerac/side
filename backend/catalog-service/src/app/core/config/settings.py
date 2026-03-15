@@ -1,4 +1,5 @@
 import os
+
 from pydantic_settings import BaseSettings
 
 
@@ -20,6 +21,8 @@ class Settings(BaseSettings):
     CACHE_TTL_ENTITY_SECONDS: int = 2592000      # 30 days — entidades admin + geocode
     POI_STALE_THRESHOLD_DAYS: int = 30
     POI_LOCK_TTL_SECONDS: int = 30
+    H3_RESOLUTION: int = 9
+    OVERPASS_TIMEOUT_SECONDS: int = 30
 
     class Config:
         env_file = ".env"

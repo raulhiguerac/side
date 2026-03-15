@@ -1,7 +1,7 @@
 from typing import Any
 
-from shapely.geometry import mapping, shape
 from geoalchemy2.shape import from_shape, to_shape
+from shapely.geometry import mapping, shape
 
 
 def geom_to_geojson(geom) -> dict[str, Any] | None:

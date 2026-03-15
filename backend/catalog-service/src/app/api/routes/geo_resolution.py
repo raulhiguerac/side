@@ -3,9 +3,11 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 
 from app.api.deps.geo_resolution import resolve_neighborhood_uc, resolve_poi_uc
-from app.services.geo_resolution.use_cases.resolve_neighborhood import ResolveNeighborhoodUseCase
-from app.services.geo_resolution.use_cases.resolve_poi import ResolvePoiUseCase
 from app.services.geo_resolution.schemas.neighborhood import ResolvedNeighborhood
+from app.services.geo_resolution.use_cases.resolve_neighborhood import (
+    ResolveNeighborhoodUseCase,
+)
+from app.services.geo_resolution.use_cases.resolve_poi import ResolvePoiUseCase
 
 router = APIRouter(prefix="/geo-resolution", tags=["geo-resolution"])
 

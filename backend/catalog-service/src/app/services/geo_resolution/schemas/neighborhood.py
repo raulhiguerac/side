@@ -1,5 +1,6 @@
 import uuid
 from typing import Optional
+
 from app.schemas.base import StrictBase
 
 

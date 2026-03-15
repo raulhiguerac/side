@@ -5,16 +5,16 @@ from functools import partial
 import h3
 from fastapi.concurrency import run_in_threadpool
 
+from app.core.config.settings import settings
+from app.core.logging.logger import get_logger
 from app.models.location import FetchZone
-from app.services.shared.ports.cache import CachePort
-from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWork
-from app.services.geo_resolution.ports.poi_provider_gateway import PoiProviderGateway
 from app.services.geo_resolution.helpers.cache_keys import (
     cache_key_fetch_zone,
     lock_key_fetch_zone,
 )
-from app.core.config.settings import settings
-from app.core.logging.logger import get_logger
+from app.services.geo_resolution.ports.poi_provider_gateway import PoiProviderGateway
+from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWork
+from app.services.shared.ports.cache import CachePort
 
 logger = get_logger(__name__)
 
@@ -56,7 +56,7 @@ class ResolvePoiUseCase:
         locality_id: uuid.UUID,
         neighborhood_id: uuid.UUID,
     ) -> None:
-        h3_index = h3.latlng_to_cell(lat, lon, res=9)
+        h3_index = h3.latlng_to_cell(lat, lon, res=settings.H3_RESOLUTION)
         logger.info("resolve_poi_start", extra={"extra": {"h3_index": h3_index, "lat": lat, "lon": lon}})
 
         cache_key = cache_key_fetch_zone(h3_index=h3_index)
