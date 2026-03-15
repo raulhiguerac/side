@@ -1,0 +1,201 @@
+import json
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
+
+from app.api.deps.auth import require_admin
+from app.api.deps.catalog_admin import (
+    bulk_create_neighborhoods_uc,
+    bulk_enrich_neighborhood_geometries_uc,
+    create_admin_division_uc,
+    create_country_uc,
+    create_locality_uc,
+    create_neighborhood_uc,
+    enrich_neighborhood_geometry_uc,
+    update_admin_division_uc,
+    update_country_uc,
+    update_locality_uc,
+    update_neighborhood_uc,
+)
+from app.api.deps.upload_validation import (
+    validate_neighborhood_bulk_geometry_upload,
+    validate_neighborhood_bulk_upload,
+    validate_neighborhood_geometry_upload,
+)
+from app.services.catalog_admin.helpers.file_parser import NeighborhoodFileParser
+from app.services.catalog_admin.schemas.admin_division import (
+    AdminDivisionResponse,
+    CreateAdminDivisionRequest,
+    UpdateAdminDivisionRequest,
+)
+from app.services.catalog_admin.schemas.country import (
+    CountryResponse,
+    CreateCountryRequest,
+    UpdateCountryRequest,
+)
+from app.services.catalog_admin.schemas.locality import (
+    CreateLocalityRequest,
+    LocalityAdminResponse,
+    UpdateLocalityRequest,
+)
+from app.services.catalog_admin.schemas.neighborhood import (
+    BulkCreateNeighborhoodsResult,
+    BulkEnrichNeighborhoodGeometriesResult,
+    CreateNeighborhoodRequest,
+    NeighborhoodAdminResponse,
+    UpdateNeighborhoodRequest,
+)
+from app.services.catalog_admin.use_cases.bulk_create_neighborhoods import (
+    BulkCreateNeighborhoodsUseCase,
+)
+from app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries import (
+    BulkEnrichNeighborhoodGeometriesUseCase,
+)
+from app.services.catalog_admin.use_cases.create_admin_division import (
+    CreateAdminDivisionUseCase,
+)
+from app.services.catalog_admin.use_cases.create_country import CreateCountryUseCase
+from app.services.catalog_admin.use_cases.create_locality import CreateLocalityUseCase
+from app.services.catalog_admin.use_cases.create_neighborhood import (
+    CreateNeighborhoodUseCase,
+)
+from app.services.catalog_admin.use_cases.enrich_neighborhood_geometry import (
+    EnrichNeighborhoodGeometryUseCase,
+)
+from app.services.catalog_admin.use_cases.update_admin_division import (
+    UpdateAdminDivisionUseCase,
+)
+from app.services.catalog_admin.use_cases.update_country import UpdateCountryUseCase
+from app.services.catalog_admin.use_cases.update_locality import UpdateLocalityUseCase
+from app.services.catalog_admin.use_cases.update_neighborhood import (
+    UpdateNeighborhoodUseCase,
+)
+
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
+
+
+# -------------------------------------------------------------------------
+# Countries
+# -------------------------------------------------------------------------
+
+@router.post("/countries", response_model=CountryResponse, status_code=201)
+async def create_country(
+    body: CreateCountryRequest,
+    uc: CreateCountryUseCase = Depends(create_country_uc),
+) -> CountryResponse:
+    return await uc.execute(request=body)
+
+
+@router.patch("/countries/{country_id}", response_model=CountryResponse)
+async def update_country(
+    country_id: uuid.UUID,
+    body: UpdateCountryRequest,
+    uc: UpdateCountryUseCase = Depends(update_country_uc),
+) -> CountryResponse:
+    return await uc.execute(country_id=country_id, request=body)
+
+
+# -------------------------------------------------------------------------
+# Admin divisions
+# -------------------------------------------------------------------------
+
+@router.post("/admin-divisions", response_model=AdminDivisionResponse, status_code=201)
+async def create_admin_division(
+    body: CreateAdminDivisionRequest,
+    uc: CreateAdminDivisionUseCase = Depends(create_admin_division_uc),
+) -> AdminDivisionResponse:
+    return await uc.execute(request=body)
+
+
+@router.patch("/admin-divisions/{admin_division_id}", response_model=AdminDivisionResponse)
+async def update_admin_division(
+    admin_division_id: uuid.UUID,
+    body: UpdateAdminDivisionRequest,
+    uc: UpdateAdminDivisionUseCase = Depends(update_admin_division_uc),
+) -> AdminDivisionResponse:
+    return await uc.execute(admin_division_id=admin_division_id, request=body)
+
+
+# -------------------------------------------------------------------------
+# Localities
+# -------------------------------------------------------------------------
+
+@router.post("/localities", response_model=LocalityAdminResponse, status_code=201)
+async def create_locality(
+    body: CreateLocalityRequest,
+    uc: CreateLocalityUseCase = Depends(create_locality_uc),
+) -> LocalityAdminResponse:
+    return await uc.execute(request=body)
+
+
+@router.patch("/localities/{locality_id}", response_model=LocalityAdminResponse)
+async def update_locality(
+    locality_id: uuid.UUID,
+    body: UpdateLocalityRequest,
+    uc: UpdateLocalityUseCase = Depends(update_locality_uc),
+) -> LocalityAdminResponse:
+    return await uc.execute(locality_id=locality_id, request=body)
+
+
+# -------------------------------------------------------------------------
+# Neighborhoods
+# -------------------------------------------------------------------------
+
+@router.post("/neighborhoods", response_model=NeighborhoodAdminResponse, status_code=201)
+async def create_neighborhood(
+    body: CreateNeighborhoodRequest,
+    uc: CreateNeighborhoodUseCase = Depends(create_neighborhood_uc),
+) -> NeighborhoodAdminResponse:
+    return await uc.execute(request=body)
+
+
+@router.patch("/neighborhoods/{neighborhood_id}", response_model=NeighborhoodAdminResponse)
+async def update_neighborhood(
+    neighborhood_id: uuid.UUID,
+    body: UpdateNeighborhoodRequest,
+    uc: UpdateNeighborhoodUseCase = Depends(update_neighborhood_uc),
+) -> NeighborhoodAdminResponse:
+    return await uc.execute(neighborhood_id=neighborhood_id, request=body)
+
+
+@router.post("/localities/{locality_id}/neighborhoods/bulk", response_model=BulkCreateNeighborhoodsResult, status_code=200)
+async def bulk_create_neighborhoods(
+    locality_id: uuid.UUID,
+    file: UploadFile,
+    _: None = Depends(validate_neighborhood_bulk_upload),
+    uc: BulkCreateNeighborhoodsUseCase = Depends(bulk_create_neighborhoods_uc),
+) -> BulkCreateNeighborhoodsResult:
+    content = await file.read()
+    records = NeighborhoodFileParser().parse(file=content, filename=file.filename)
+    return await uc.execute(locality_id=locality_id, records=records)
+
+
+@router.post("/localities/{locality_id}/neighborhoods/bulk/geometry", response_model=BulkEnrichNeighborhoodGeometriesResult)
+async def bulk_enrich_neighborhood_geometries(
+    locality_id: uuid.UUID,
+    file: UploadFile,
+    name_field: str = "name",
+    _: None = Depends(validate_neighborhood_bulk_geometry_upload),
+    uc: BulkEnrichNeighborhoodGeometriesUseCase = Depends(bulk_enrich_neighborhood_geometries_uc),
+) -> BulkEnrichNeighborhoodGeometriesResult:
+    content = await file.read()
+    try:
+        geojson = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=422, detail="Invalid JSON file") from exc
+    return await uc.execute(locality_id=locality_id, geojson=geojson, name_field=name_field)
+
+
+@router.post("/neighborhoods/{neighborhood_id}/geometry", response_model=NeighborhoodAdminResponse)
+async def enrich_neighborhood_geometry(
+    neighborhood_id: uuid.UUID,
+    file: UploadFile,
+    _: None = Depends(validate_neighborhood_geometry_upload),
+    uc: EnrichNeighborhoodGeometryUseCase = Depends(enrich_neighborhood_geometry_uc),
+) -> NeighborhoodAdminResponse:
+    content = await file.read()
+    try:
+        geojson = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=422, detail="Invalid JSON file") from exc
+    return await uc.execute(neighborhood_id=neighborhood_id, geojson=geojson)

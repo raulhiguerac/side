@@ -14,31 +14,31 @@ interface User {
   account_id: string;
   email: string;
   account_type: string;
-  onboarding_step: number;
+  onboarding_step: string;
   is_active: boolean;
 }
 
 interface OnboardingState {
-  onboardingStep: number;
+  onboardingStep: string;
   hasCheckedOnboarding: boolean;
   userDismissedModal: boolean;
 }
 
 export const useUserStore = defineStore("user", {
   state: (): OnboardingState => ({
-    onboardingStep: 0,
+    onboardingStep: "intent",
     hasCheckedOnboarding: false,
     userDismissedModal:
       sessionStorage.getItem("onboarding_dismissed") === "true",
   }),
 
   actions: {
-    async checkOnboardingStep(): Promise<number> {
+    async checkOnboardingStep(): Promise<string> {
       const authStore = useAuthStore();
 
       if (!authStore.isAuthenticated) throw new Error("AUTH_REQUIRED");
 
-      if (this.userDismissedModal) return 0;
+      if (this.userDismissedModal) return "done";
 
       if (this.hasCheckedOnboarding) return this.onboardingStep;
 
@@ -48,7 +48,7 @@ export const useUserStore = defineStore("user", {
           { withCredentials: true }
         );
 
-        this.onboardingStep = data.onboarding_step ?? 1;
+        this.onboardingStep = data.onboarding_step ?? "intent";
         this.hasCheckedOnboarding = true;
 
         return this.onboardingStep;
@@ -61,13 +61,13 @@ export const useUserStore = defineStore("user", {
     dismissModal() {
       this.userDismissedModal = true;
       sessionStorage.setItem("onboarding_dismissed", "true");
-      this.onboardingStep = 0;
+      this.onboardingStep = "done";
     },
 
     logoutReset() {
       this.userDismissedModal = false;
       this.hasCheckedOnboarding = false;
-      this.onboardingStep = 0;
+      this.onboardingStep = "done";
       sessionStorage.removeItem("onboarding_dismissed");
       console.log("✨ Onboarding reseteado para nueva sesión.");
     },

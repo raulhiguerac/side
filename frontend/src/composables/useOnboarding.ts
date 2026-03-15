@@ -4,9 +4,9 @@ import router from "@/router";
 
 import IntentSelector from "@/components/IntentSelector.vue";
 
-const STEP_MAP: Record<number, Component> = {
-  1: IntentSelector,
-  2: IntentSelector,
+const STEP_MAP: Record<string, Component> = {
+  city: IntentSelector,
+  neighborhood: IntentSelector,
 };
 
 export function useOnboarding() {
@@ -25,7 +25,7 @@ export function useOnboarding() {
     try {
       const step = await userStore.checkOnboardingStep();
 
-      if (step > 0 && STEP_MAP[step]) {
+      if (step != "done" && STEP_MAP[step]) {
         activeComponent.value = STEP_MAP[step];
         isModalOpen.value = true;
       }

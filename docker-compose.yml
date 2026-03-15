@@ -26,6 +26,17 @@ services:
       - users-postgres-data:/var/lib/postgresql/data
     networks:
       - dev-net
+  
+  catalog-ms-db:
+    image: postgis/postgis:17-master
+    environment:
+      POSTGRES_DB: catalog_service_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - catalog-postgres-data:/var/lib/postgresql/data
+    networks:
+      - dev-net
 
   keycloak-db:
     image: postgres:17
@@ -111,6 +122,7 @@ volumes:
   redis_data:
   redisinsight_data:
   users-postgres-data:
+  catalog-postgres-data:
   keycloak-postgres-data:
   minio_data:
 
