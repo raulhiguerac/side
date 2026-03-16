@@ -31,6 +31,7 @@ class OnboardingStep(str,Enum):
     intent = "intent"
     city = "city"
     neighborhood = "neighborhood"
+    property_type = "property_type"
     done = "done"
 
 class Account(SQLModel, table=True):

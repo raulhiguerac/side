@@ -1,4 +1,7 @@
 import uuid
+from functools import partial
+
+from fastapi.concurrency import run_in_threadpool
 
 from app.models.account import OnboardingStep
 from app.services.shared.ports.cache import CachePort
@@ -31,9 +34,12 @@ class CompleteOnboardingIntentUseCase:
             account_type=account.account_type,
         )
 
-        first_time = await self.uow.onboarding.mark_completed(
-            account_id=account.account_id,
-            key=OnboardingStep.intent,
+        first_time = await run_in_threadpool(
+            partial(
+                self.uow.onboarding.mark_completed,
+                account_id=account.account_id,
+                key=OnboardingStep.intent,
+            )
         )
 
         if first_time:
