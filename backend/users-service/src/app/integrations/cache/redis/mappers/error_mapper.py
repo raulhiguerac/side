@@ -1,8 +1,8 @@
 from redis.exceptions import (
+    ConnectionError,
+    DataError,
     RedisError,
     ResponseError,
-    DataError,
-    ConnectionError,
     TimeoutError,
 )
 

@@ -1,9 +1,9 @@
 from fastapi import UploadFile
 
+from app.core.exceptions.validation import FileTooLargeError, UnsupportedFileTypeError
 from app.core.files.policies import PROFILE_PHOTO_UPLOAD_POLICY
 from app.core.files.validators import detect_file_mime_type, get_file_size
 
-from app.core.exceptions.validation import FileTooLargeError, UnsupportedFileTypeError
 
 def validate_profile_photo_upload(file: UploadFile) -> str:
     policy = PROFILE_PHOTO_UPLOAD_POLICY

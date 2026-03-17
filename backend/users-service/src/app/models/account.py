@@ -1,13 +1,13 @@
 import uuid
+from datetime import datetime
 from enum import Enum
 from typing import Optional
-from datetime import datetime
-
-from sqlmodel import Field, SQLModel
 
 import sqlalchemy as sa
+from sqlalchemy import Column, ForeignKey
 from sqlalchemy.sql import func
-from sqlalchemy import Column,ForeignKey
+from sqlmodel import Field, SQLModel
+
 
 class AccountType(str,Enum):
     person = "person"

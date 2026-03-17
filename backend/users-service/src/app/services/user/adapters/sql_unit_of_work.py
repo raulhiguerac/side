@@ -2,9 +2,7 @@ from fastapi.concurrency import run_in_threadpool
 from sqlmodel import Session
 
 from app.services.shared.adapters.sql_account_reader import SqlAccountReader
-from app.services.shared.ports.account_reader import AccountReaderPort
 from app.services.shared.db.db_error_translator import DbErrorTranslator
-
 from app.services.user.adapters.sql_account_repository import UserAccountRepository
 from app.services.user.adapters.sql_onborading_completion_repository import (
     SqlOnboardingCompletionRepository,

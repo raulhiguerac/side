@@ -5,37 +5,46 @@ from fastapi import Depends
 from sqlmodel import Session
 
 from app.api.deps.db import get_session
-
-from app.services.shared.ports.cache import CachePort
-from app.services.shared.ports.storage import StoragePort
-from app.services.user.ports.unit_of_work import UserUnitOfWork
-from app.services.shared.ports.email_sender import EmailSenderPort
-
-from app.services.shared.adapters.redis_cache_adapter import RedisCacheAdapter
-from app.services.shared.adapters.minio_storage_adapter import MinioStorageAdapter
-from app.services.user.adapters.sql_unit_of_work import SqlUserUnitOfWork
-from app.services.shared.adapters.brevo_email_sender_adapter import BrevoSenderAdapter
-
+from app.core.exceptions.storage import StorageMisconfiguredError
 from app.integrations.cache.redis.cache import CacheClient
-from app.integrations.storage.minio.storage import StorageClient
 from app.integrations.email.brevo.client import EmailClient
-
+from app.integrations.storage.minio.storage import StorageClient
+from app.services.shared.adapters.brevo_email_sender_adapter import BrevoSenderAdapter
+from app.services.shared.adapters.minio_storage_adapter import MinioStorageAdapter
+from app.services.shared.adapters.redis_cache_adapter import RedisCacheAdapter
+from app.services.shared.ports.cache import CachePort
+from app.services.shared.ports.email_sender import EmailSenderPort
+from app.services.shared.ports.storage import StoragePort
+from app.services.user.adapters.sql_unit_of_work import SqlUserUnitOfWork
 from app.services.user.helpers.current_account_reader import CurrentAccountReader
 from app.services.user.helpers.current_profile_reader import CurrentProfileReader
-
-from app.services.user.services.get_profile_orchestrator import ProfileApplicationService
+from app.services.user.ports.unit_of_work import UserUnitOfWork
+from app.services.user.services.get_profile_orchestrator import (
+    ProfileApplicationService,
+)
 from app.services.user.services.reactivation_mailer import ReactivationMailer
-
-from app.services.user.use_cases.account.get_current_account import GetCurrentAccountUseCase
-from app.services.user.use_cases.account.deactivate_current_account import DeactivateCurrentAccountUseCase
-from app.services.user.use_cases.account.request_account_reactivation import RequestReactivationUseCase
-from app.services.user.use_cases.account.reactivate_current_account import ConfirmReactivationUseCase
-
-from app.services.user.use_cases.profile.get_current_profile import GetCurrentProfileUseCase
-from app.services.user.use_cases.profile.update_current_profile import UpdateCurrentProfileUseCase
-from app.services.user.use_cases.profile.upload_profile_photo import UpdateCurrentProfilePhotoUseCase
-
-from app.core.exceptions.storage import StorageMisconfiguredError
+from app.services.user.use_cases.account.deactivate_current_account import (
+    DeactivateCurrentAccountUseCase,
+)
+from app.services.user.use_cases.account.get_current_account import (
+    GetCurrentAccountUseCase,
+)
+from app.services.user.use_cases.account.get_interests import GetUserInterestsUseCase
+from app.services.user.use_cases.account.reactivate_current_account import (
+    ConfirmReactivationUseCase,
+)
+from app.services.user.use_cases.account.request_account_reactivation import (
+    RequestReactivationUseCase,
+)
+from app.services.user.use_cases.profile.get_current_profile import (
+    GetCurrentProfileUseCase,
+)
+from app.services.user.use_cases.profile.update_current_profile import (
+    UpdateCurrentProfileUseCase,
+)
+from app.services.user.use_cases.profile.upload_profile_photo import (
+    UpdateCurrentProfilePhotoUseCase,
+)
 
 # -------------------------------------------------------------------------
 # Providers (stateless → safe to cache)
@@ -191,3 +200,9 @@ def get_confirm_reactivation_uc(
         uow=uow,
         cache_client=cache,
     )
+
+def get_user_interests_uc(
+    uow: UserUnitOfWork = Depends(get_uow),
+    cache: CachePort = Depends(get_cache_port),
+) -> GetUserInterestsUseCase:
+    return GetUserInterestsUseCase(uow=uow, cache=cache)

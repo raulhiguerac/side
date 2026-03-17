@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional, Protocol, TypedDict
 
+
 class EmailRecipient(TypedDict, total=False):
     email: str
     name: str

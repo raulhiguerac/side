@@ -1,8 +1,10 @@
 import uuid
 from typing import List, Optional
+
 from pydantic import EmailStr
 
 from app.schemas.base import StrictBase
+
 
 class Principal(StrictBase):
     sub: uuid.UUID

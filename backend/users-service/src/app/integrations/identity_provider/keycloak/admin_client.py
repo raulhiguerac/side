@@ -1,18 +1,19 @@
 import os
 import uuid
-from typing import Dict, Any
+from typing import Any, Dict
+
 from keycloak import KeycloakAdmin
 from keycloak.exceptions import KeycloakGetError
 
-from app.core.exceptions.identity_provider import(
+from app.core.exceptions.identity_provider import (
+    IdentityProviderMisconfiguredError,
+    IdentityProviderUnavailableError,
+    KeycloakDeleteAccountError,
     KeycloakRegisterError,
     KeycloakSetPasswordError,
-    KeycloakDeleteAccountError,
-    IdentityProviderUnavailableError,
-    IdentityProviderMisconfiguredError
 )
-
 from app.integrations._utils import get_keycloak_status
+
 
 class KeycloakAdminClient:
     def __init__(self):

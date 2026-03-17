@@ -2,7 +2,8 @@ import uuid
 from typing import Protocol
 
 from app.models.account import OnboardingStep
-from app.models.interests import UserNeighborhoodInterest
+from app.models.interests import UserNeighborhoodInterest, UserPropertyTypeInterest
+
 
 class OnboardingCompletionRepository(Protocol):
 
@@ -11,7 +12,7 @@ class OnboardingCompletionRepository(Protocol):
         *,
         account_id: uuid.UUID,
         locality_id: uuid.UUID,
-    ) -> uuid.UUID: ...
+    ) -> uuid.UUID | None: ...
 
     def mark_completed(
         self,
@@ -31,4 +32,10 @@ class OnboardingCompletionRepository(Protocol):
         self,
         *,
         neighborhoods: list[UserNeighborhoodInterest]
+    ) -> None: ...
+
+    def save_property_type(
+        self,
+        *,
+        properties: list[UserPropertyTypeInterest]
     ) -> None: ...
