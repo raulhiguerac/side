@@ -6,7 +6,11 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import Session, select
 
 from app.models.account import OnboardingStep
-from app.models.interests import UserInterest, UserNeighborhoodInterest
+from app.models.interests import (
+    UserInterest,
+    UserNeighborhoodInterest,
+    UserPropertyTypeInterest,
+)
 from app.models.onboarding import OnboardingCompletions
 from app.services.shared.db.db_error_translator import DbErrorTranslator
 from app.services.user.ports.onboarding_completion_repository import (
@@ -38,7 +42,7 @@ class SqlOnboardingCompletionRepository(OnboardingCompletionRepository):
         except SQLAlchemyError as exc:
             raise self._db_errors.translate_sqlalchemy_error(
                 exc,
-                message="Database error while saving locality interest",
+                message="Database error while fetching city interest",
                 code="ONBOARDING_COMPLETION_DB_ERROR",
             ) from exc
 
@@ -64,10 +68,10 @@ class SqlOnboardingCompletionRepository(OnboardingCompletionRepository):
         except SQLAlchemyError as exc:
             raise self._db_errors.translate_sqlalchemy_error(
                 exc,
-                message="Database error while marking onboarding step completed",
+                message="Database error while marking onboarding step as completed",
                 code="ONBOARDING_COMPLETION_DB_ERROR",
             ) from exc
-    
+
     def save_locality(self, *, account_id: uuid.UUID, locality_id: uuid.UUID) -> None:
         try:
             stmt = (
@@ -88,10 +92,10 @@ class SqlOnboardingCompletionRepository(OnboardingCompletionRepository):
         except SQLAlchemyError as exc:
             raise self._db_errors.translate_sqlalchemy_error(
                 exc,
-                message="Database error while saving locality interest",
+                message="Database error while saving city interest",
                 code="ONBOARDING_COMPLETION_DB_ERROR",
             ) from exc
-        
+
     def save_neighborhoods(self, *, neighborhoods: list[UserNeighborhoodInterest]):
         try:
             stmt = insert(UserNeighborhoodInterest).values([
@@ -107,6 +111,23 @@ class SqlOnboardingCompletionRepository(OnboardingCompletionRepository):
         except SQLAlchemyError as exc:
             raise self._db_errors.translate_sqlalchemy_error(
                 exc,
-                message="Database error while saving locality interest",
+                message="Database error while saving neighborhood interests",
+                code="ONBOARDING_COMPLETION_DB_ERROR",
+            ) from exc
+
+    def save_property_type(self, *, properties: list[UserPropertyTypeInterest]):
+        try:
+            stmt = (
+                insert(UserPropertyTypeInterest)
+                .values([n.model_dump(exclude={"created_at", "updated_at"}) for n in properties])
+                .on_conflict_do_nothing(index_elements=["user_interest_id", "property_type"])
+            )
+            self._session.execute(stmt)
+            self._session.flush()
+
+        except SQLAlchemyError as exc:
+            raise self._db_errors.translate_sqlalchemy_error(
+                exc,
+                message="Database error while saving property type interests",
                 code="ONBOARDING_COMPLETION_DB_ERROR",
             ) from exc

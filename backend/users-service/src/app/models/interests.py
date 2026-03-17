@@ -1,13 +1,13 @@
 import uuid
+from datetime import datetime
 from enum import Enum
 from typing import Optional
-from datetime import datetime
-
-from sqlmodel import Field, SQLModel
 
 import sqlalchemy as sa
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, UniqueConstraint
 from sqlalchemy.sql import func
-from sqlalchemy import Column,UniqueConstraint,Index,CheckConstraint,ForeignKey
+from sqlmodel import Field, SQLModel
+
 
 class UserInterest(SQLModel, table=True):
 
@@ -21,7 +21,7 @@ class UserInterest(SQLModel, table=True):
             index=True,
         )
     )
-    city_id: uuid.UUID = Field(foreign_key="city.id", index=True)
+    city_id: uuid.UUID = Field(index=True)
     is_active: bool = Field(default=True)
     deactivated_at: Optional[datetime] = Field(default=None)
     created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
@@ -47,8 +47,9 @@ class UserNeighborhoodInterest(SQLModel, table=True):
     )
     neighborhood_id: uuid.UUID = Field(
         sa_column=Column(
-            ForeignKey("neighborhood.id", ondelete="RESTRICT"),
-            primary_key=True
+            sa.UUID(as_uuid=True),
+            primary_key=True,
+            nullable=False,
         )
     )
     interest_rank: int = Field(nullable=False)

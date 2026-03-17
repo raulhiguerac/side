@@ -1,7 +1,9 @@
 import uuid
+
 from sqlmodel import Session, select
 
-from app.models.account import UserProfile, CompanyProfile
+from app.models.account import CompanyProfile, UserProfile
+
 
 def get_user_profile_by_account_id(session: Session, account_id: uuid.UUID) -> UserProfile:
     statement = select(UserProfile).where(UserProfile.account_id == account_id)

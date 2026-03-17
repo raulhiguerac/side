@@ -1,17 +1,14 @@
 import asyncio
-from sqlmodel import Session, select
-from datetime import datetime, timedelta
 import random
+from datetime import datetime, timedelta
 
-from keycloak.exceptions import KeycloakGetError
-
-from app.models.kc_tasks import KcCompensationTask, KcTaskStatus
-from app.integrations.identity_provider.keycloak.admin_client import KeycloakAdminClient
+from sqlmodel import Session, select
 
 from app.api.deps.db import engine
-
-
 from app.core.logging.logger import get_logger
+from app.integrations.identity_provider.keycloak.admin_client import KeycloakAdminClient
+from app.models.kc_tasks import KcCompensationTask, KcTaskStatus
+
 logger = get_logger(__name__)
 
 MAX_ATTEMPTS = 5

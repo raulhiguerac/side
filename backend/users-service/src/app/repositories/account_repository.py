@@ -1,8 +1,9 @@
 import uuid
 from typing import TypeVar
+
 from sqlmodel import Session, select
 
-from app.models.account import Account, UserProfile, CompanyProfile
+from app.models.account import Account, CompanyProfile, UserProfile
 
 TProfile = TypeVar("TProfile", UserProfile, CompanyProfile)
 

@@ -1,6 +1,8 @@
 import uuid
 from typing import Optional
+
 from app.core.exceptions.base import BaseError
+
 
 class AccountNotFoundError(BaseError):
     def __init__(self, *, account_id: Optional[uuid.UUID] = None, email: Optional[str] = None):

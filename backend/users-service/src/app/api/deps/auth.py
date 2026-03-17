@@ -5,21 +5,21 @@ from functools import partial
 import jwt
 from fastapi import Request
 from fastapi.concurrency import run_in_threadpool
-from jwt import PyJWKClient, PyJWKClientError, PyJWKClientConnectionError
+from jwt import PyJWKClient, PyJWKClientConnectionError, PyJWKClientError
 from jwt.exceptions import (
+    DecodeError,
     ExpiredSignatureError,
     InvalidAudienceError,
     InvalidIssuerError,
     InvalidSignatureError,
-    DecodeError,
     InvalidTokenError,
 )
 
-from app.core.exceptions.auth import MissingCookieException, InvalidTokenException
+from app.core.exceptions.auth import InvalidTokenException, MissingCookieException
 from app.core.exceptions.identity_provider import IdentityProviderUnavailableError
+from app.core.logging.logger import get_logger
 from app.schemas.common import Principal
 from app.services.auth.schemas.tokens import RefreshToken
-from app.core.logging.logger import get_logger
 
 logger = get_logger(__name__)
 
