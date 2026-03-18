@@ -24,6 +24,12 @@ interface OnboardingState {
   userDismissedModal: boolean;
 }
 
+interface UserLocation {
+  country_name: string;
+  latitude: number;
+  longitude: number;
+}
+
 export const useUserStore = defineStore("user", {
   state: (): OnboardingState => ({
     onboardingStep: "intent",
@@ -35,11 +41,8 @@ export const useUserStore = defineStore("user", {
   actions: {
     async checkOnboardingStep(): Promise<string> {
       const authStore = useAuthStore();
-
       if (!authStore.isAuthenticated) throw new Error("AUTH_REQUIRED");
-
       if (this.userDismissedModal) return "done";
-
       if (this.hasCheckedOnboarding) return this.onboardingStep;
 
       try {
@@ -52,10 +55,20 @@ export const useUserStore = defineStore("user", {
         this.hasCheckedOnboarding = true;
 
         return this.onboardingStep;
-      } catch (error: any) {
-        if (error.response?.status === 401) authStore.logout();
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response?.status === 401)
+          authStore.logout();
         throw error;
       }
+    },
+
+    async detectLocation(): Promise<UserLocation> {
+      const raw = localStorage.getItem("userLocation");
+      if (raw) return JSON.parse(raw) as UserLocation;
+      const { data } = await axios.get("https://ipapi.co/json/");
+      const location: UserLocation = data;
+      localStorage.setItem("userLocation", JSON.stringify(location));
+      return location;
     },
 
     dismissModal() {

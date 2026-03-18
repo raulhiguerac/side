@@ -71,6 +71,13 @@ const routes: Array<RouteRecordRaw> = [
   },
 
   {
+    path: "/dev",
+    name: "dev-playground",
+    component: () => import("../views/DevPlaygroundView.vue"),
+    meta: { requiresAuth: false },
+  },
+
+  {
     path: "/properties",
     name: "my-properties",
     component: () => import("../views/MyPropertiesView.vue"),
