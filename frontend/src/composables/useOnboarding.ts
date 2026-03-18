@@ -3,9 +3,11 @@ import { useUserStore } from "@/stores/user";
 import router from "@/router";
 
 import IntentSelector from "@/components/IntentSelector.vue";
+import LocalitySelector from "@/components/LocalitySelector.vue";
 
 const STEP_MAP: Record<string, Component> = {
-  city: IntentSelector,
+  intent: IntentSelector,
+  city: LocalitySelector,
   neighborhood: IntentSelector,
 };
 
