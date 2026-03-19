@@ -1,24 +1,27 @@
-import { ref, shallowRef, computed, type Component } from "vue";
-import { useUserStore } from "@/stores/user";
-import router from "@/router";
+import { ref, shallowRef, type Component } from "vue";
+import axios from "axios";
 
-import IntentSelector from "@/components/IntentSelector.vue";
-import LocalitySelector from "@/components/LocalitySelector.vue";
+import { API, STORAGE_KEYS } from "@/config";
+import { useUserStore } from "@/stores/user";
+import IntentSelector from "@/components/onboarding/IntentSelector.vue";
+import LocalitySelector from "@/components/onboarding/LocalitySelector.vue";
+import NeighborhoodSelector from "@/components/onboarding/NeighborhoodSelector.vue";
 
 const STEP_MAP: Record<string, Component> = {
   intent: IntentSelector,
   city: LocalitySelector,
-  neighborhood: IntentSelector,
+  neighborhood: NeighborhoodSelector,
 };
+
+const isModalOpen = ref(false);
+const activeComponent = shallowRef<Component | null>(null);
 
 export function useOnboarding() {
   const userStore = useUserStore();
-  const isModalOpen = ref(false);
-  const activeComponent = shallowRef<Component | null>(null);
 
   const startFlow = async () => {
     if (
-      sessionStorage.getItem("onboarding_dismissed") === "true" ||
+      sessionStorage.getItem(STORAGE_KEYS.ONBOARDING_DISMISSED) === "true" ||
       userStore.userDismissedModal
     ) {
       return;
@@ -41,5 +44,19 @@ export function useOnboarding() {
     userStore.dismissModal();
   };
 
-  return { isModalOpen, activeComponent, startFlow, closeFlow };
+  const saveCity = async (ids: string[]) => {
+    try {
+      await axios.post(
+        `${API.USERS_BASE_URL}/v1/onboarding/city`,
+        { locality_ids: ids },
+        { withCredentials: true }
+      );
+      userStore.onboardingStep = "neighborhood";
+      activeComponent.value = STEP_MAP["neighborhood"];
+    } catch (e) {
+      console.error("Onboarding saveCity error", e);
+    }
+  };
+
+  return { isModalOpen, activeComponent, startFlow, closeFlow, saveCity };
 }

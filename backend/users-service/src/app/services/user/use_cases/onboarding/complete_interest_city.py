@@ -22,7 +22,7 @@ class CompleteCityIntentUseCase:
         self.cache = cache
         self.profile_reader = profile_reader
 
-    async def execute(self, *, account_id: uuid.UUID, locality_id: uuid.UUID) -> None:
+    async def execute(self, *, account_id: uuid.UUID, locality_ids: list[uuid.UUID]) -> None:
         account = await self.uow.accounts.get_by_id(account_id=account_id)
 
         if account.onboarding_step == OnboardingStep.city:
@@ -46,7 +46,7 @@ class CompleteCityIntentUseCase:
             partial(
                 self.uow.onboarding.save_locality,
                 account_id=account_id,
-                locality_id=locality_id,
+                locality_ids=locality_ids,
             )
         )
 

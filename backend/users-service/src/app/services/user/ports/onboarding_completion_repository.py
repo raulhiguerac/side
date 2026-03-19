@@ -25,7 +25,7 @@ class OnboardingCompletionRepository(Protocol):
         self,
         *,
         account_id: uuid.UUID,
-        locality_id: uuid.UUID,
+        locality_ids: list[uuid.UUID],
     ) -> None: ...
 
     def save_neighborhoods(

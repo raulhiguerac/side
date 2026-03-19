@@ -249,7 +249,7 @@
  */
 import { ref } from "vue";
 import axios from "axios";
-import router from "../router";
+import router from "@/router";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useAuthStore } from "@/stores/auth";
 

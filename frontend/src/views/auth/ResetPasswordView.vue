@@ -128,7 +128,7 @@
  */
 import { ref } from "vue";
 import axios from "axios";
-import router from "../router";
+import router from "@/router";
 
 // 📝 Datos del formulario (locales, no van al store)
 const user = ref({

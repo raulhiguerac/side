@@ -32,7 +32,7 @@ from app.services.user.use_cases.onboarding.complete_interest_property_type impo
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
 
-@router.post("/intent", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/intent", status_code=status.HTTP_201_CREATED)
 async def select_onboarding_intent(
     req: OnboardingIntent,
     principal: Annotated[Principal, Depends(get_current_principal)],
@@ -41,16 +41,16 @@ async def select_onboarding_intent(
     await uc.execute(account_id=principal.sub, req=req)
 
 
-@router.post("/city", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/city", status_code=status.HTTP_201_CREATED)
 async def select_onboarding_city(
     req: OnboardingCityRequest,
     principal: Annotated[Principal, Depends(get_current_principal)],
     uc: Annotated[CompleteCityIntentUseCase, Depends(get_complete_onboarding_cinterest_city_uc)],
 ) -> None:
-    await uc.execute(account_id=principal.sub, locality_id=req.locality_id)
+    await uc.execute(account_id=principal.sub, locality_ids=req.locality_ids)
 
 
-@router.post("/neighborhood", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/neighborhood", status_code=status.HTTP_201_CREATED)
 async def select_onboarding_neighborhood(
     req: OnboardingNeighborhoodRequest,
     principal: Annotated[Principal, Depends(get_current_principal)],
@@ -63,7 +63,7 @@ async def select_onboarding_neighborhood(
     )
 
 
-@router.post("/property-type", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/property-type", status_code=status.HTTP_201_CREATED)
 async def select_onboarding_property_type(
     req: OnboardingPropertyTypeRequest,
     principal: Annotated[Principal, Depends(get_current_principal)],

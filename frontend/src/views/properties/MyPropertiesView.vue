@@ -212,7 +212,9 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import PropertyCard, { type Property } from "@/components/PropertyCard.vue";
+import PropertyCard, {
+  type Property,
+} from "@/components/properties/PropertyCard.vue";
 import axios from "axios";
 
 const router = useRouter();

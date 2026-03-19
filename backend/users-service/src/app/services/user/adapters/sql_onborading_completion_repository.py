@@ -72,15 +72,20 @@ class SqlOnboardingCompletionRepository(OnboardingCompletionRepository):
                 code="ONBOARDING_COMPLETION_DB_ERROR",
             ) from exc
 
-    def save_locality(self, *, account_id: uuid.UUID, locality_id: uuid.UUID) -> None:
+    def save_locality(self, *, account_id: uuid.UUID, locality_ids: list[uuid.UUID]) -> None:
         try:
             stmt = (
                 insert(UserInterest)
                 .values(
-                    id=uuid.uuid4(),
-                    account_id=account_id,
-                    city_id=locality_id,
-                    is_active=True,
+                    [
+                        {
+                            "id": uuid.uuid4(),
+                            "account_id": account_id,
+                            "city_id": locality_id,
+                            "is_active": True,
+                        }
+                        for locality_id in locality_ids
+                    ]
                 )
                 .on_conflict_do_update(
                     constraint="uq_user_interest_user_city",

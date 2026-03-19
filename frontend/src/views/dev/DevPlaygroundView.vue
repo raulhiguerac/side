@@ -5,5 +5,5 @@
 </template>
 
 <script setup lang="ts">
-import LocalitySelector from "@/components/LocalitySelector.vue";
+import LocalitySelector from "@/components/onboarding/NeighborhoodSelector.vue";
 </script>

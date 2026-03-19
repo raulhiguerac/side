@@ -21,7 +21,7 @@
       @update:modelValue="(val) => !val && closeFlow()"
     >
       <div class="p-4">
-        <div class="mb-6 text-center">
+        <div class="mb-2 text-center">
           <span
             class="block text-brand-primary text-[10px] sm:text-xs font-semibold sm:font-bold uppercase sm:uppercase tracking-[0.06em] sm:tracking-wider text-center mb-2 sm:mb-1"
           >
@@ -59,11 +59,13 @@ import { watch } from "vue";
 import { onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useOnboarding } from "@/composables/useOnboarding";
-import NavBar from "@/components/NavBar.vue";
-import BaseModal from "@/components/BaseModal.vue";
+import NavBar from "@/components/shared/NavBar.vue";
+import BaseModal from "@/components/shared/BaseModal.vue";
 import { useUserStore } from "./stores/user";
 import { ref } from "vue";
-import IntentSelector, { type Intent } from "@/components/IntentSelector.vue";
+import IntentSelector, {
+  type Intent,
+} from "@/components/onboarding/IntentSelector.vue";
 import { computed } from "vue";
 
 const authStore = useAuthStore();
