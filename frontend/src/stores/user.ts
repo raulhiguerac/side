@@ -8,6 +8,7 @@
 
 import { defineStore } from "pinia";
 import axios from "axios";
+import { API, STORAGE_KEYS } from "@/config";
 import { useAuthStore } from "./auth";
 
 interface User {
@@ -35,7 +36,7 @@ export const useUserStore = defineStore("user", {
     onboardingStep: "intent",
     hasCheckedOnboarding: false,
     userDismissedModal:
-      sessionStorage.getItem("onboarding_dismissed") === "true",
+      sessionStorage.getItem(STORAGE_KEYS.ONBOARDING_DISMISSED) === "true",
   }),
 
   actions: {
@@ -47,7 +48,7 @@ export const useUserStore = defineStore("user", {
 
       try {
         const { data } = await axios.get<User>(
-          "http://localhost:8000/v1/users/me/",
+          `${API.USERS_BASE_URL}/v1/users/me/`,
           { withCredentials: true }
         );
 
@@ -63,17 +64,20 @@ export const useUserStore = defineStore("user", {
     },
 
     async detectLocation(): Promise<UserLocation> {
-      const raw = localStorage.getItem("userLocation");
+      const raw = localStorage.getItem(STORAGE_KEYS.USER_LOCATION);
       if (raw) return JSON.parse(raw) as UserLocation;
-      const { data } = await axios.get("https://ipapi.co/json/");
+      const { data } = await axios.get(API.IPAPI_URL);
       const location: UserLocation = data;
-      localStorage.setItem("userLocation", JSON.stringify(location));
+      localStorage.setItem(
+        STORAGE_KEYS.USER_LOCATION,
+        JSON.stringify(location)
+      );
       return location;
     },
 
     dismissModal() {
       this.userDismissedModal = true;
-      sessionStorage.setItem("onboarding_dismissed", "true");
+      sessionStorage.setItem(STORAGE_KEYS.ONBOARDING_DISMISSED, "true");
       this.onboardingStep = "done";
     },
 
@@ -81,7 +85,7 @@ export const useUserStore = defineStore("user", {
       this.userDismissedModal = false;
       this.hasCheckedOnboarding = false;
       this.onboardingStep = "done";
-      sessionStorage.removeItem("onboarding_dismissed");
+      sessionStorage.removeItem(STORAGE_KEYS.ONBOARDING_DISMISSED);
       console.log("✨ Onboarding reseteado para nueva sesión.");
     },
   },

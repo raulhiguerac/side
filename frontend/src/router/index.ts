@@ -1,5 +1,5 @@
 import { createRouter, createWebHashHistory, RouteRecordRaw } from "vue-router";
-import HomeView from "../views/HomeView.vue";
+import HomeView from "../views/public/HomeView.vue";
 import { useAuthStore } from "@/stores/auth";
 
 const routes: Array<RouteRecordRaw> = [
@@ -12,14 +12,14 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: "/about",
     name: "about",
-    component: () => import("../views/AboutView.vue"),
+    component: () => import("../views/public/AboutView.vue"),
     meta: { requiresAuth: false },
   },
 
   {
     path: "/login",
     name: "login",
-    component: () => import("../views/LoginView.vue"),
+    component: () => import("../views/auth/LoginView.vue"),
     meta: {
       hideNavbar: true,
       isLogged: true,
@@ -29,7 +29,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: "/register",
     name: "register",
-    component: () => import("../views/RegisterView.vue"),
+    component: () => import("../views/auth/RegisterView.vue"),
     meta: {
       hideNavbar: true,
       isLogged: true,
@@ -39,7 +39,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: "/forgot-password",
     name: "forgot-password",
-    component: () => import("../views/ResetPasswordView.vue"),
+    component: () => import("../views/auth/ResetPasswordView.vue"),
     meta: { hideNavbar: true },
   },
 
@@ -73,14 +73,14 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: "/dev",
     name: "dev-playground",
-    component: () => import("../views/DevPlaygroundView.vue"),
+    component: () => import("../views/dev/DevPlaygroundView.vue"),
     meta: { requiresAuth: false },
   },
 
   {
     path: "/properties",
     name: "my-properties",
-    component: () => import("../views/MyPropertiesView.vue"),
+    component: () => import("../views/properties/MyPropertiesView.vue"),
     meta: { requiresAuth: true },
   },
 ];

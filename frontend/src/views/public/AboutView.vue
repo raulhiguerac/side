@@ -9,8 +9,8 @@
 </template>
 
 <script lang="ts" setup>
-// import HouseCard from "@/components/HouseCard.vue";
-import MapUser from "@/components/MapUser.vue";
+// import HouseCard from "@/components/properties/HouseCard.vue";
+import MapUser from "@/components/map/MapUser.vue";
 import Properties from "@/types/properties";
 import axios from "axios";
 import { onMounted, ref } from "vue";

@@ -552,7 +552,7 @@
  * 4. Al finalizar → llamamos al store.register()
  */
 import { ref } from "vue";
-import router from "../router";
+import router from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
 // 🔌 Conectamos con el store de autenticación

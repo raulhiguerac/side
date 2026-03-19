@@ -9,7 +9,7 @@ class OnboardingIntent(StrictBase):
 
 
 class OnboardingCityRequest(StrictBase):
-    locality_id: uuid.UUID
+    locality_ids: list[uuid.UUID]
 
 
 class OnboardingNeighborhoodRequest(StrictBase):

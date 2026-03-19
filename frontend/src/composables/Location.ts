@@ -1,17 +1,19 @@
 import axios from "axios";
+import { API, STORAGE_KEYS } from "@/config";
 import { useUserStore } from "@/stores/user";
 
 export async function getCitiesByCountry(id: string) {
   try {
-    const raw = localStorage.getItem(`cities:${id}`);
+    const key = STORAGE_KEYS.CITIES_BY_COUNTRY(id);
+    const raw = localStorage.getItem(key);
     if (raw) return JSON.parse(raw);
     const { data } = await axios.get(
-      "http://localhost:8001/v1/localities/by-country",
+      `${API.CATALOG_BASE_URL}/v1/localities/by-country`,
       {
         params: { country_id: id },
       }
     );
-    localStorage.setItem(`cities:${id}`, JSON.stringify(data));
+    localStorage.setItem(key, JSON.stringify(data));
     return data;
   } catch (error) {
     console.error("Error al obtener las ciudades soportadas:", error);
@@ -24,10 +26,10 @@ export async function locations() {
 
   const countries = async () => {
     try {
-      const raw = localStorage.getItem("countries");
+      const raw = localStorage.getItem(STORAGE_KEYS.COUNTRIES);
       if (raw) return JSON.parse(raw);
-      const { data } = await axios.get("http://localhost:8001/v1/countries");
-      localStorage.setItem("countries", JSON.stringify(data));
+      const { data } = await axios.get(`${API.CATALOG_BASE_URL}/v1/countries`);
+      localStorage.setItem(STORAGE_KEYS.COUNTRIES, JSON.stringify(data));
       return data;
     } catch (error) {
       console.error("Error al obtener los paises soportados:", error);

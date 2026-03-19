@@ -30,7 +30,12 @@
 
       <Multiselect
         v-model="selected"
-        :options="cities"
+        :options="
+          [...cities.entries()].map(([id, name]) => ({
+            value: id,
+            label: name,
+          }))
+        "
         mode="multiple"
         :searchable="true"
         :hide-selected="true"
@@ -43,13 +48,13 @@
 
     <div v-if="selected.length" class="flex flex-wrap gap-2 mt-2 mb-4">
       <span
-        v-for="city in selected"
-        :key="city"
+        v-for="id in selected"
+        :key="id"
         class="inline-flex items-center gap-1 bg-brand-primary-light text-brand-primary text-xs font-semibold px-3 py-1.5 rounded-full"
       >
-        {{ city }}
+        {{ cities.get(id) }}
         <button
-          @click="removeCity(city)"
+          @click="removeCity(id)"
           type="button"
           class="ml-1 hover:text-red-500 font-bold"
         >
@@ -72,17 +77,29 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import Multiselect from "@vueform/multiselect";
+import { useOnboarding } from "@/composables/useOnboarding";
 import { locations, getCitiesByCountry } from "@/composables/Location";
 
+const { saveCity } = useOnboarding();
+
+interface Locality {
+  id: string;
+  name: string;
+  admin_division: {
+    id: string;
+    name: string;
+  };
+}
+
 const countryUser = ref<string | undefined>(undefined);
-const cities = ref<string[]>([]);
+const cities = ref<Map<string, string>>(new Map());
 
 onMounted(async () => {
   const result = await locations();
   countryUser.value = result.countryUser;
   if (result.countryUser) {
     const data = await getCitiesByCountry(result.countryUser);
-    cities.value = data.map((x: any) => x.name);
+    cities.value = new Map(data.map((city: Locality) => [city.id, city.name]));
   }
 });
 
@@ -93,7 +110,7 @@ function removeCity(city: string) {
 }
 
 async function handleNext() {
-  console.log("boton");
+  await saveCity(selected.value);
 }
 </script>
 
