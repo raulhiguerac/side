@@ -23,6 +23,7 @@ class GetUserInterestsUseCase:
                 await self.cache.set_json(
                     key=interests_cache_key(account_id),
                     value=result.model_dump(mode="json"),
+                    ttl=86400,
                 )
             except Exception:
                 pass

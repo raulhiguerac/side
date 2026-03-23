@@ -5,8 +5,8 @@ from app.models.location import Neighborhood
 
 
 class NeighborhoodRepository(Protocol): 
-    def get_active_by_locality_id(
-        self, *, locality_id: uuid.UUID
+    def get_active_by_locality_ids(
+        self, *, locality_ids: list[uuid.UUID]
     ) -> list[Neighborhood]: ...
 
     def get_active_by_id(

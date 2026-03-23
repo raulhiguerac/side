@@ -12,9 +12,13 @@ class OnboardingCityRequest(StrictBase):
     locality_ids: list[uuid.UUID]
 
 
-class OnboardingNeighborhoodRequest(StrictBase):
+class OnboardingNeighborhoodItem(StrictBase):
     locality_id: uuid.UUID
     neighborhoods: dict[int, uuid.UUID]
+
+
+class OnboardingNeighborhoodRequest(StrictBase):
+    localities: list[OnboardingNeighborhoodItem]
 
 
 class OnboardingPropertyTypeRequest(StrictBase):

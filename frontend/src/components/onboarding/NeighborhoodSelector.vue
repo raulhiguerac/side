@@ -99,8 +99,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import Multiselect from "@vueform/multiselect";
+import { useUserStore } from "@/stores/user";
+import { useOnboarding } from "@/composables/useOnboarding";
+import { getNeighborhoodsByLocalities } from "@/composables/Location";
 
 interface Neighborhood {
   id: string;
@@ -113,39 +116,40 @@ interface CityWithNeighborhoods {
   neighborhoods: Neighborhood[];
 }
 
-// TODO: reemplazar con ciudades seleccionadas en el paso anterior
-const cities = ref<CityWithNeighborhoods[]>([
-  {
-    id: "city-bogota",
-    name: "Bogotá D.C.",
-    neighborhoods: [
-      { id: "n-chapinero", name: "Chapinero" },
-      { id: "n-usaquen", name: "Usaquén" },
-      { id: "n-suba", name: "Suba" },
-      { id: "n-kennedy", name: "Kennedy" },
-      { id: "n-teusaquillo", name: "Teusaquillo" },
-    ],
-  },
-  {
-    id: "city-medellin",
-    name: "Medellín",
-    neighborhoods: [
-      { id: "n-laureles", name: "Laureles" },
-      { id: "n-poblado", name: "El Poblado" },
-      { id: "n-envigado", name: "Envigado" },
-      { id: "n-belen", name: "Belén" },
-    ],
-  },
-]);
+const userStore = useUserStore();
+const { saveNeighborhoods } = useOnboarding();
 
-const activeTab = ref(cities.value[0]?.id ?? "");
-const selectedByCity = ref<Record<string, string[]>>(
-  Object.fromEntries(cities.value.map((c) => [c.id, []]))
-);
+const cities = ref<CityWithNeighborhoods[]>([]);
+const activeTab = ref("");
+const selectedByCity = ref<Record<string, string[]>>({});
+
+onMounted(async () => {
+  let localities = userStore.userInterests.localities;
+
+  if (localities.length === 0) {
+    const interests = await userStore.checkInterests();
+    localities = interests.localities;
+  }
+
+  const ids = localities.map((l) => l.id);
+  const neighborhoodsByLocality = await getNeighborhoodsByLocalities(ids);
+
+  cities.value = localities.map((loc) => ({
+    id: loc.id,
+    name: loc.name,
+    neighborhoods: (neighborhoodsByLocality[loc.id] ?? []).map((n: any) => ({
+      id: n.id,
+      name: n.name,
+    })),
+  }));
+
+  selectedByCity.value = Object.fromEntries(ids.map((id) => [id, []]));
+  activeTab.value = ids[0] ?? "";
+});
 
 const allSelected = computed(() =>
   cities.value.flatMap((city) =>
-    (selectedByCity.value[city.id] ?? []).map((neighborhoodId) => ({
+    (selectedByCity.value[city.id] ?? []).map((neighborhoodId, index) => ({
       cityId: city.id,
       cityName: city.name,
       neighborhoodId,
@@ -162,8 +166,14 @@ function removeNeighborhood(cityId: string, neighborhoodId: string) {
 }
 
 async function handleNext() {
-  // TODO: llamar saveNeighborhoods(allSelected.value)
-  console.log("seleccionados:", allSelected.value);
+  const payload = cities.value.map((city) => ({
+    locality_id: city.id,
+    neighborhoods: Object.fromEntries(
+      (selectedByCity.value[city.id] ?? []).map((neighborhoodId, index) => [index + 1, neighborhoodId])
+    ),
+  }));
+
+  await saveNeighborhoods(payload);
 }
 </script>
 
