@@ -58,8 +58,7 @@ async def select_onboarding_neighborhood(
 ) -> None:
     await uc.execute(
         account_id=principal.sub,
-        locality_id=req.locality_id,
-        neighborhoods=req.neighborhoods,
+        localities=[item.model_dump() for item in req.localities],
     )
 
 

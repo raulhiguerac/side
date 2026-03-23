@@ -10,33 +10,15 @@ import { defineStore } from "pinia";
 import axios from "axios";
 import { API, STORAGE_KEYS } from "@/config";
 import { useAuthStore } from "./auth";
-
-interface User {
-  account_id: string;
-  email: string;
-  account_type: string;
-  onboarding_step: string;
-  is_active: boolean;
-}
-
-interface OnboardingState {
-  onboardingStep: string;
-  hasCheckedOnboarding: boolean;
-  userDismissedModal: boolean;
-}
-
-interface UserLocation {
-  country_name: string;
-  latitude: number;
-  longitude: number;
-}
+import type { User, UserLocation, UserInterests, UserState } from "@/types/user";
 
 export const useUserStore = defineStore("user", {
-  state: (): OnboardingState => ({
+  state: (): UserState => ({
     onboardingStep: "intent",
     hasCheckedOnboarding: false,
     userDismissedModal:
       sessionStorage.getItem(STORAGE_KEYS.ONBOARDING_DISMISSED) === "true",
+    userInterests: { localities: [], neighborhoods: {}, properties: {} },
   }),
 
   actions: {
@@ -56,6 +38,24 @@ export const useUserStore = defineStore("user", {
         this.hasCheckedOnboarding = true;
 
         return this.onboardingStep;
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response?.status === 401)
+          authStore.logout();
+        throw error;
+      }
+    },
+
+    async checkInterests(): Promise<UserInterests> {
+      if (this.userInterests.localities.length > 0) return this.userInterests;
+      const authStore = useAuthStore();
+      try {
+        const { data } = await axios.get<UserInterests>(
+          `${API.USERS_BASE_URL}/v1/users/me/interests`,
+          { withCredentials: true }
+        );
+
+        this.userInterests = data
+        return data
       } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 401)
           authStore.logout();

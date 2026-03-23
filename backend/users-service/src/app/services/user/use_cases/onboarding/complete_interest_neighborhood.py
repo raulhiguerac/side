@@ -27,32 +27,43 @@ class CompleteNeighborhoodInterestUseCase:
         self.cache = cache
         self.profile_reader = profile_reader
 
-    async def execute(self, *, account_id: uuid.UUID, locality_id: uuid.UUID, neighborhoods: dict[int, uuid.UUID]) -> None:
+    async def execute(
+        self,
+        *,
+        account_id: uuid.UUID,
+        localities: list[dict],
+    ) -> None:
         account = await self.uow.accounts.get_by_id(account_id=account_id)
 
-        user_interest_id = await run_in_threadpool(
-            partial(
-                self.uow.onboarding.get_interest_by_account_locality,
-                account_id=account.account_id,
-                locality_id=locality_id,
+        neighborhoods_list: list[UserNeighborhoodInterest] = []
+
+        for item in localities:
+            locality_id = item["locality_id"]
+            neighborhoods = item["neighborhoods"]
+
+            user_interest_id = await run_in_threadpool(
+                partial(
+                    self.uow.onboarding.get_interest_by_account_locality,
+                    account_id=account.account_id,
+                    locality_id=locality_id,
+                )
             )
-        )
 
-        if user_interest_id is None:
-            raise OnboardingCityInterestNotFoundError(account_id=account_id, locality_id=locality_id)
+            if user_interest_id is None:
+                raise OnboardingCityInterestNotFoundError(account_id=account_id, locality_id=locality_id)
 
-        for rank in neighborhoods:
-            if not (1 <= rank <= 5):
-                raise NeighborhoodRankOutOfRangeError(rank=rank)
+            for rank in neighborhoods:
+                if not (1 <= rank <= 5):
+                    raise NeighborhoodRankOutOfRangeError(rank=rank)
 
-        neighborhoods_list = [
-            UserNeighborhoodInterest(
-                user_interest_id=user_interest_id,
-                neighborhood_id=neighborhood_id,
-                interest_rank=rank,
+            neighborhoods_list.extend(
+                UserNeighborhoodInterest(
+                    user_interest_id=user_interest_id,
+                    neighborhood_id=neighborhood_id,
+                    interest_rank=rank,
+                )
+                for rank, neighborhood_id in neighborhoods.items()
             )
-            for rank, neighborhood_id in neighborhoods.items()
-        ]
 
         if account.onboarding_step == OnboardingStep.neighborhood:
             profile = await self.profile_reader.get_model(

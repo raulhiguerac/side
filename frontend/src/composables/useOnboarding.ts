@@ -6,11 +6,13 @@ import { useUserStore } from "@/stores/user";
 import IntentSelector from "@/components/onboarding/IntentSelector.vue";
 import LocalitySelector from "@/components/onboarding/LocalitySelector.vue";
 import NeighborhoodSelector from "@/components/onboarding/NeighborhoodSelector.vue";
+import PropertyTypeSelector from "@/components/onboarding/PropertyTypeSelector.vue";
 
 const STEP_MAP: Record<string, Component> = {
   intent: IntentSelector,
   city: LocalitySelector,
   neighborhood: NeighborhoodSelector,
+  property_type: PropertyTypeSelector,
 };
 
 const isModalOpen = ref(false);
@@ -44,13 +46,14 @@ export function useOnboarding() {
     userStore.dismissModal();
   };
 
-  const saveCity = async (ids: string[]) => {
+  const saveCity = async (localities: { id: string; name: string }[]) => {
     try {
       await axios.post(
         `${API.USERS_BASE_URL}/v1/onboarding/city`,
-        { locality_ids: ids },
+        { locality_ids: localities.map((l) => l.id) },
         { withCredentials: true }
       );
+      userStore.userInterests.localities = localities;
       userStore.onboardingStep = "neighborhood";
       activeComponent.value = STEP_MAP["neighborhood"];
     } catch (e) {
@@ -58,5 +61,19 @@ export function useOnboarding() {
     }
   };
 
-  return { isModalOpen, activeComponent, startFlow, closeFlow, saveCity };
+  const saveNeighborhoods = async (localities: { locality_id: string; neighborhoods: Record<number, string> }[]) => {
+    try {
+      await axios.post(
+        `${API.USERS_BASE_URL}/v1/onboarding/neighborhood`,
+        { localities },
+        { withCredentials: true }
+      );
+      userStore.onboardingStep = "property_type";
+      activeComponent.value = STEP_MAP["property_type"];
+    } catch (e) {
+      console.error("Onboarding saveNeighborhoods error", e);
+    }
+  };
+
+  return { isModalOpen, activeComponent, startFlow, closeFlow, saveCity, saveNeighborhoods };
 }
