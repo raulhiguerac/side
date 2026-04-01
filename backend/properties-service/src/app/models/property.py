@@ -75,6 +75,13 @@ class Currency(str, Enum):
     ARS = "ARS"
 
 
+class VerificationStatus(str, Enum):
+    unverified = "unverified"
+    pending = "pending"
+    verified = "verified"
+    rejected = "rejected"
+
+
 # =============================================================================
 # MODELS
 # =============================================================================
@@ -111,6 +118,8 @@ class Property(AuditMixin, SQLModel, table=True):
     condition: PropertyCondition = Field(nullable=False)
     status: ListingStatus = Field(nullable=False, default=ListingStatus.draft)
     currency: Currency = Field(nullable=False)
+    verification_status: VerificationStatus = Field(nullable=False, default=VerificationStatus.unverified)
+    verified_by: Optional[uuid.UUID] = Field(default=None)
 
     # Floors — floor_number: which floor the apt is on; total_floors: how many floors a house has
     floor_number: Optional[int] = Field(default=None)
@@ -126,6 +135,12 @@ class Property(AuditMixin, SQLModel, table=True):
     admin_fee: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(14, 2), nullable=True))
     stratum: Optional[int] = Field(default=None)
     price: Decimal = Field(sa_column=Column(Numeric(14, 2), nullable=False))
+    estimated_price: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(14, 2), nullable=True))
+    estimated_price_updated_at: Optional[datetime] = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),
+        sa_column_kwargs={"nullable": True},
+    )
 
     images: list["PropertyImage"] = Relationship(
         back_populates="property",
