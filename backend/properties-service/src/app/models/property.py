@@ -82,18 +82,24 @@ class VerificationStatus(str, Enum):
     rejected = "rejected"
 
 
+class EstimatedPriceSource(str, Enum):
+    ml_model = "ml_model"
+    admin = "admin"
+
+
 # =============================================================================
 # MODELS
 # =============================================================================
 
 
-class Property(AuditMixin, SQLModel, table=True):
+class Property(AuditMixin, table=True):
 
     __tablename__ = "properties"
 
     __table_args__ = (
         Index("ix_properties_status", "status"),
         Index("ix_properties_price", "price"),
+        Index("ix_properties_owner_id_status", "owner_id", "status"),
         # Apartment must declare which floor it is on
         CheckConstraint(
             "property_type != 'apartment' OR floor_number IS NOT NULL",
@@ -106,7 +112,7 @@ class Property(AuditMixin, SQLModel, table=True):
         ),
         CheckConstraint("area_m2 > 0", name="ck_property_area_m2_positive"),
         CheckConstraint("price > 0", name="ck_property_price_positive"),
-        CheckConstraint("bathrooms > 0", name="ck_property_bathrooms_positive"),
+        CheckConstraint("bathrooms >= 1", name="ck_property_bathrooms_min_one"),
         CheckConstraint("bedrooms > 0", name="ck_property_bedrooms_positive"),
     )
 
@@ -136,6 +142,7 @@ class Property(AuditMixin, SQLModel, table=True):
     stratum: Optional[int] = Field(default=None)
     price: Decimal = Field(sa_column=Column(Numeric(14, 2), nullable=False))
     estimated_price: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(14, 2), nullable=True))
+    estimated_price_source: Optional[EstimatedPriceSource] = Field(default=None)
     estimated_price_updated_at: Optional[datetime] = Field(
         default=None,
         sa_type=DateTime(timezone=True),
@@ -152,7 +159,7 @@ class Property(AuditMixin, SQLModel, table=True):
     )
 
 
-class PropertyLocation(SQLModel, table=True):
+class PropertyLocation(AuditMixin, table=True):
 
     __tablename__ = "property_locations"
 
@@ -181,7 +188,7 @@ class PropertyLocation(SQLModel, table=True):
     property: Optional["Property"] = Relationship(back_populates="location")
 
 
-class PropertyImage(SQLModel, table=True):
+class PropertyImage(AuditMixin, table=True):
 
     __tablename__ = "property_images"
 
@@ -208,18 +215,15 @@ class PropertyImage(SQLModel, table=True):
     is_cover: bool = Field(nullable=False, default=False)
 
     property: Optional["Property"] = Relationship(back_populates="images")
-    created_at: datetime = Field(
-        sa_type=DateTime(timezone=True),
-        sa_column_kwargs={"server_default": func.now(), "nullable": False},
-    )
 
 
-class PromotedListing(AuditMixin, SQLModel, table=True):
+class PromotedListing(AuditMixin, table=True):
 
     __tablename__ = "promoted_listings"
 
     __table_args__ = (
         CheckConstraint("ends_at > starts_at", name="ck_promoted_listing_ends_after_starts"),
+        Index("ix_promoted_listings_property_id_ends_at", "property_id", "ends_at"),
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
@@ -227,7 +231,6 @@ class PromotedListing(AuditMixin, SQLModel, table=True):
         sa_column=Column(
             ForeignKey("properties.id", ondelete="CASCADE"),
             nullable=False,
-            unique=True,
             index=True,
         )
     )
