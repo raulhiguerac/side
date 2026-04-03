@@ -7,13 +7,21 @@ from app.core.logging.logger import get_logger
 logger = get_logger(__name__)
 
 ERROR_CODE_TO_HTTP_STATUS: dict[str, int] = {
-    # Listing
+    # Property CRUD
     "CREATE_PROPERTY_ERROR": 422,
-    "PROPERTY_DB_UNAVAILABLE": 503,
+    "DELETE_PROPERTY_ERROR": 422,
+    "SET_VISIBILITY_ERROR": 422,
+    # Not found / forbidden
+    "PROPERTY_NOT_FOUND": 404,
+    "PROPERTY_FORBIDDEN": 403,
+    # State machine
+    "INVALID_STATUS_TRANSITION": 409,
+    # Location
     "INVALID_LOCATION": 422,
     "INCONSISTENT_LOCATION": 422,
+    # Infrastructure
+    "PROPERTY_DB_UNAVAILABLE": 503,
     "CATALOG_SERVICE_UNAVAILABLE": 503,
-    # Cache
     "CACHE_MISCONFIGURED": 500,
 }
 

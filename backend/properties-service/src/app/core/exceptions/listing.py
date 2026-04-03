@@ -3,6 +3,36 @@ from typing import Any, Optional
 from app.core.exceptions.base import BaseError
 
 
+class SetVisibilityError(BaseError):
+    def __init__(
+        self,
+        *,
+        cause: Optional[Exception] = None,
+        context: Optional[dict[str, Any]] = None,
+    ):
+        super().__init__(
+            message="Error while updating property visibility",
+            code="SET_VISIBILITY_ERROR",
+            cause=cause,
+            context=context,
+        )
+
+
+class DeletePropertyError(BaseError):
+    def __init__(
+        self,
+        *,
+        cause: Optional[Exception] = None,
+        context: Optional[dict[str, Any]] = None,
+    ):
+        super().__init__(
+            message="Error while deleting property",
+            code="DELETE_PROPERTY_ERROR",
+            cause=cause,
+            context=context,
+        )
+
+
 class CreatePropertyError(BaseError):
     def __init__(
         self,
@@ -46,6 +76,33 @@ class InconsistentLocationError(BaseError):
                 "neighborhood_id": str(neighborhood_id),
                 "city_id": str(city_id),
             },
+        )
+
+
+class PropertyForbiddenError(BaseError):
+    def __init__(self, *, property_id: Any = None):
+        super().__init__(
+            message="You do not have permission to modify this property",
+            code="PROPERTY_FORBIDDEN",
+            context={"property_id": str(property_id)} if property_id else {},
+        )
+
+
+class InvalidStatusTransitionError(BaseError):
+    def __init__(self, *, current: str, target: str):
+        super().__init__(
+            message=f"Cannot transition property from '{current}' to '{target}'",
+            code="INVALID_STATUS_TRANSITION",
+            context={"current": current, "target": target},
+        )
+
+
+class PropertyNotFoundError(BaseError):
+    def __init__(self, *, property_id: Any = None):
+        super().__init__(
+            message="Property not found",
+            code="PROPERTY_NOT_FOUND",
+            context={"property_id": str(property_id)} if property_id else {},
         )
 
 
