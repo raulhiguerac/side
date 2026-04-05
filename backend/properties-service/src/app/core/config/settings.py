@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     CACHE_TTL_USER_PROPERTIES_SECONDS: int = 1800  # 30 min
     CACHE_TTL_PROPERTY_SECONDS: int = 21600  # 6 hours
 
+    # Storage
+    BUCKET_PHOTOS_PROPERTIES: str = ""
+    STORAGE_PUBLIC_BASE_URL: str = ""
+    PRESIGNED_URL_TTL_SECONDS: int = 900  # 15 min
+    MAX_IMAGES_PER_PROPERTY: int = 20
+
     class Config:
         env_file = ".env"
 

@@ -113,3 +113,13 @@ class CatalogServiceUnavailableError(BaseError):
             code="CATALOG_SERVICE_UNAVAILABLE",
             cause=cause,
         )
+
+
+class ImageCountExceededError(BaseError):
+    def __init__(self, *, max: int, requested: int):
+        super().__init__(
+            message=f"Requested {requested} images but maximum allowed is {max}",
+            code="IMAGE_COUNT_EXCEEDED",
+            http_status=400,
+            context={"max": max, "requested": requested},
+        )

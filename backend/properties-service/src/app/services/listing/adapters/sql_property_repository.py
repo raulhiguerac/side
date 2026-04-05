@@ -48,7 +48,7 @@ class SqlPropertyRepository(PropertyRepository):
 
         return self.session.exec(stmt).all()
 
-    def get_property(
+    def get_by_id(
             self,
             *,
             property_id: uuid.UUID,
