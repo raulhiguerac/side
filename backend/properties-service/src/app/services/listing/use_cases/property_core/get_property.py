@@ -37,7 +37,7 @@ class GetPropertyUseCase:
 
         try:
             prop = await run_in_threadpool(
-                partial(self.uow.properties.get_property, property_id=property_id)
+                partial(self.uow.properties.get_by_id, property_id=property_id)
             )
         except Exception as exc:
             raise translate_db_error(exc) from exc

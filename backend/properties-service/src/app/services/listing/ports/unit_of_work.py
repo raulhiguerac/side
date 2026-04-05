@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from app.services.listing.ports.property_image_repository import PropertyImageRepository
+from app.services.listing.ports.property_images_repository import PropertyImageRepository
 from app.services.listing.ports.property_location_repository import PropertyLocationRepository
 from app.services.listing.ports.property_repository import PropertyRepository
 
