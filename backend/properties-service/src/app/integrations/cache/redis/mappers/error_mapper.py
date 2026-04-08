@@ -15,7 +15,7 @@ def log_cache_error(
     *,
     exc: Exception,
     operation: str,
-    key: str,
+    key: str | list[str] | None = None,
     payload_type: str | None = None,
 ) -> None:
     """

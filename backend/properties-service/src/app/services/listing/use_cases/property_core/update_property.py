@@ -11,6 +11,7 @@ from app.services.listing.helpers.property_guard import get_owned_property
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork
 from app.services.listing.schemas.listing_schemas import UpdatePropertyRequest
 from app.services.shared.helpers.cache_keys import cache_property, client_properties
+from app.services.shared.helpers.geometry import compute_h3
 from app.services.shared.ports.cache import CachePort
 from app.services.shared.ports.catalog_gateway import CatalogGateway
 
@@ -53,6 +54,7 @@ class UpdatePropertyUseCase:
                     Point(loc_data["longitude"], loc_data["latitude"]), srid=4326
                 )
                 db_model.location.updated_by = principal.sub
+                db_model.h3_r9, db_model.h3_r7 = compute_h3(loc_data["latitude"], loc_data["longitude"])
 
         try:
             await self.uow.commit()
@@ -62,7 +64,9 @@ class UpdatePropertyUseCase:
             raise translate_db_error(exc) from exc
 
         try:
-            await self.cache_client.delete(key=cache_property(property_id=db_model.id))
-            await self.cache_client.delete(key=client_properties(user_id=db_model.owner_id))
+            await self.cache_client.delete(key=[
+                cache_property(property_id=db_model.id),
+                client_properties(user_id=db_model.owner_id),
+            ])
         except Exception:
             pass

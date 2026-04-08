@@ -9,7 +9,7 @@ from app.services.listing.ports.property_location_repository import (
 )
 
 
-class SqlPropertyLocation(PropertyLocationRepository):
+class SqlPropertyLocationRepository(PropertyLocationRepository):
     def __init__(self, session: Session):
         self.session = session
     

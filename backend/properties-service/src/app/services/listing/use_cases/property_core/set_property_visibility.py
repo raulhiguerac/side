@@ -38,6 +38,6 @@ class SetPropertyVisibilityUseCase:
             raise SetVisibilityError(cause=exc, context={"property_id": str(property_id)}) from exc
 
         try:
-            await self.cache.delete(cache_property(property_id=property_id))
+            await self.cache.delete(key=cache_property(property_id=property_id))
         except Exception:
             pass

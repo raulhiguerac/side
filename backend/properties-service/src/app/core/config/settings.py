@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     CACHE_TTL_USER_PROPERTIES_SECONDS: int = 1800  # 30 min
     CACHE_TTL_PROPERTY_SECONDS: int = 21600  # 6 hours
 
+    # Feed
+    FEED_PAGE_SIZE: int = 20
+    FEED_MAX_RESULTS: int = 300
+    FEED_AD_INTERVAL: int = 5  # 1 ad every N organic results
+
     # Storage
     BUCKET_PHOTOS_PROPERTIES: str = ""
     STORAGE_PUBLIC_BASE_URL: str = ""

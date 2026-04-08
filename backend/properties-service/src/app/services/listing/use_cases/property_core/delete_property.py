@@ -15,7 +15,7 @@ class DeletePropertyUseCase:
         self.uow = uow
         self.cache = cache
 
-    async def execute(self, property_id: uuid.UUID, principal: Principal) -> None:
+    async def execute(self, *, property_id: uuid.UUID, principal: Principal) -> None:
         prop = await get_owned_property(uow=self.uow, property_id=property_id, principal=principal)
 
         prop.status = ListingStatus.inactive
@@ -29,7 +29,9 @@ class DeletePropertyUseCase:
             raise DeletePropertyError(cause=exc, context={"property_id": str(property_id)}) from exc
 
         try:
-            await self.cache.delete(cache_property(property_id=property_id))
-            await self.cache.delete(client_properties(user_id=principal.sub))
+            await self.cache.delete(key=[                                                                                    
+                cache_property(property_id=property_id),
+                client_properties(user_id=principal.sub),                                                                       
+            ]) 
         except Exception:
             pass

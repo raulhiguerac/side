@@ -136,6 +136,11 @@ class Property(AuditMixin, table=True):
     bathrooms: Decimal = Field(sa_column=Column(Numeric(3, 1), nullable=False))
     parking_spots: int = Field(nullable=False, default=0)
 
+    # H3 spatial index — populated on create/update from location coordinates
+    # r9 ~300m cells (detail view), r7 ~5km cells (zoomed-out map)
+    h3_r9: Optional[str] = Field(default=None, max_length=16, index=True)
+    h3_r7: Optional[str] = Field(default=None, max_length=16, index=True)
+
     description: Optional[str] = Field(default=None)
     year_built: Optional[int] = Field(default=None)
     admin_fee: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(14, 2), nullable=True))
@@ -156,6 +161,10 @@ class Property(AuditMixin, table=True):
     location: Optional["PropertyLocation"] = Relationship(
         back_populates="property",
         sa_relationship_kwargs={"lazy": "selectin", "uselist": False},
+    )
+    promotions: list["PromotedListing"] = Relationship(
+        back_populates="property",
+        sa_relationship_kwargs={"lazy": "selectin"},
     )
 
 
@@ -234,6 +243,12 @@ class PromotedListing(AuditMixin, table=True):
             index=True,
         )
     )
+
+    property: Optional["Property"] = Relationship(
+        back_populates="promotions",
+        sa_relationship_kwargs={"lazy": "selectin"},
+    )
+
     starts_at: datetime = Field(
         sa_type=DateTime(timezone=True),
         sa_column_kwargs={"nullable": False},

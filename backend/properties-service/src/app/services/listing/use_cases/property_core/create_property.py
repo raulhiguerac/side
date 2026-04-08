@@ -1,19 +1,17 @@
 import uuid
+from functools import partial
 
+from fastapi.concurrency import run_in_threadpool
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 
-from app.models.property import (
-    ListingStatus,
-    Property,
-    PropertyLocation,
-    VerificationStatus,
-)
 from app.core.exceptions.listing import InconsistentLocationError
+from app.models.property import ListingStatus, Property, PropertyLocation, VerificationStatus
 from app.schemas.principal import Principal
 from app.services.listing.helpers.db_error_translator import translate_db_error
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork
 from app.services.listing.schemas.listing_schemas import CreatePropertyRequest
+from app.services.shared.helpers.geometry import compute_h3
 from app.services.shared.ports.catalog_gateway import CatalogGateway
 
 
@@ -22,12 +20,42 @@ class CreatePropertyUseCase:
         self.uow = uow
         self.catalog = catalog
 
+    async def execute(self, *, principal: Principal, property_fields: CreatePropertyRequest) -> None:
+        loc = property_fields.location
+        guard = await self.catalog.get_neighborhood(neighborhood_id=loc.neighborhood_id)
+
+        if guard.locality_id != loc.city_id:
+            raise InconsistentLocationError(
+                neighborhood_id=loc.neighborhood_id,
+                city_id=loc.city_id,
+            )
+
+        h3_r9, h3_r7 = compute_h3(loc.latitude, loc.longitude)
+        prop, location = self.build_models(
+            principal=principal,
+            property_fields=property_fields,
+            h3_r9=h3_r9,
+            h3_r7=h3_r7,
+        )
+
+        try:
+            await run_in_threadpool(partial(self.uow.properties.add, property=prop))
+            await run_in_threadpool(partial(self.uow.property_locations.add, property=location))
+            await self.uow.commit()
+        except Exception as exc:
+            await self.uow.rollback()
+            raise translate_db_error(exc) from exc
+
     @staticmethod
     def build_models(
+        *,
         principal: Principal,
         property_fields: CreatePropertyRequest,
+        h3_r9: str,
+        h3_r7: str,
     ) -> tuple[Property, PropertyLocation]:
         property_id = uuid.uuid4()
+        loc = property_fields.location
 
         prop = Property(
             id=property_id,
@@ -44,6 +72,8 @@ class CreatePropertyUseCase:
             bedrooms=property_fields.bedrooms,
             bathrooms=property_fields.bathrooms,
             parking_spots=property_fields.parking_spots,
+            h3_r9=h3_r9,
+            h3_r7=h3_r7,
             price=property_fields.price,
             admin_fee=property_fields.admin_fee,
             description=property_fields.description,
@@ -53,7 +83,6 @@ class CreatePropertyUseCase:
             updated_by=principal.sub,
         )
 
-        loc = property_fields.location
         location = PropertyLocation(
             property_id=property_id,
             neighborhood_id=loc.neighborhood_id,
@@ -65,22 +94,3 @@ class CreatePropertyUseCase:
         )
 
         return prop, location
-
-    async def execute(self, principal: Principal, property_fields: CreatePropertyRequest) -> None:
-        guard = await self.catalog.get_neighborhood(neighborhood_id=property_fields.location.neighborhood_id)
-
-        if guard.locality_id != property_fields.location.city_id:
-            raise InconsistentLocationError(
-                neighborhood_id=property_fields.location.neighborhood_id,
-                city_id=property_fields.location.city_id,
-            )
-
-        prop, location = self.build_models(principal, property_fields)
-
-        try:
-            await self.uow.properties.add(prop)
-            await self.uow.property_locations.add(location)
-            await self.uow.commit()
-        except Exception as exc:
-            await self.uow.rollback()
-            raise translate_db_error(exc) from exc
