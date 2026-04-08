@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Any
 
 from redis import asyncio as aioredis
 
@@ -30,6 +31,25 @@ class CacheClient:
         except Exception as exc:
             log_cache_error(exc=exc, operation="set", key=key, payload_type=type(value).__name__)
 
+    async def mset(self, data: dict[str, Any]) -> None:
+        try:
+            await self.client.mset(data)
+        except Exception as exc:
+            log_cache_error(exc=exc, operation="mset", key=list(data.keys()))
+
+    async def mset_json(self, data: dict[str, Any], ttl: int | None = None) -> None:
+        try:
+            async with self.client.pipeline(transaction=False) as pipe:
+                for key, value in data.items():
+                    payload = json.dumps(value)
+                    if ttl is not None:
+                        pipe.setex(key, ttl, payload)
+                    else:
+                        pipe.set(key, payload)
+                await pipe.execute()
+        except Exception as exc:
+            log_cache_error(exc=exc, operation="mset_json", key=list(data.keys()))
+
     async def set_json(self, key: str, value: dict | list, ttl: int | None = None) -> None:
         try:
             payload = json.dumps(value)
@@ -46,6 +66,21 @@ class CacheClient:
         except Exception as exc:
             log_cache_error(exc=exc, operation="get", key=key)
             return None
+    
+    async def mget(self, keys: list[str]) -> list[str | None]:
+        try:
+            return await self.client.mget(keys)
+        except Exception as exc:
+            log_cache_error(exc=exc, operation="mget", key=keys)
+            return [None] * len(keys)
+
+    async def mget_json(self, keys: list[str]) -> list[Any | None]:
+        try:
+            values = await self.client.mget(keys)
+            return [json.loads(v) if v is not None else None for v in values]
+        except Exception as exc:
+            log_cache_error(exc=exc, operation="mget_json", key=keys)
+            return [None] * len(keys)
 
     async def get_json(self, key: str) -> dict | list | None:
         try:
@@ -81,8 +116,9 @@ class CacheClient:
             log_cache_error(exc=exc, operation="set_nx", key=key, payload_type=type(value).__name__)
             return False
 
-    async def delete(self, key: str) -> None:
+    async def delete(self, key: str | list[str]) -> None:
         try:
-            await self.client.delete(key)
+            keys = key if isinstance(key, list) else [key]
+            await self.client.delete(*keys)
         except Exception as exc:
             log_cache_error(exc=exc, operation="delete", key=key)

@@ -1,4 +1,7 @@
 import uuid
+from functools import partial
+
+from fastapi.concurrency import run_in_threadpool
 
 from app.core.config.settings import settings
 from app.core.exceptions.storage import StorageMisconfiguredError
@@ -48,14 +51,16 @@ class ConfirmImageUploadsUseCase:
 
         try:
             for image in images:
-                await self.uow.property_images.add(image=image)
+                await run_in_threadpool(partial(self.uow.property_images.add, image=image))
             await self.uow.commit()
         except Exception as exc:
             await self.uow.rollback()
             raise translate_db_error(exc) from exc
 
         try:
-            await self.cache_client.delete(key=cache_property(property_id=property_id))
-            await self.cache_client.delete(key=client_properties(user_id=principal.sub))
+            await self.cache_client.delete(key=[
+                cache_property(property_id=property_id),
+                client_properties(user_id=principal.sub),
+            ])
         except Exception:
             pass
