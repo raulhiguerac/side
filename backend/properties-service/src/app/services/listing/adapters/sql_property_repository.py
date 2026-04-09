@@ -60,3 +60,17 @@ class SqlPropertyRepository(PropertyRepository):
         )
 
         return self.session.exec(stmt).first()
+
+    def get_by_id_for_update(
+            self,
+            *,
+            property_id: uuid.UUID,
+    ) -> Property | None:
+        stmt = (
+            select(Property)
+            .where(Property.id == property_id)
+            .where(Property.deleted_at.is_(None))
+            .with_for_update()
+        )
+
+        return self.session.exec(stmt).first()

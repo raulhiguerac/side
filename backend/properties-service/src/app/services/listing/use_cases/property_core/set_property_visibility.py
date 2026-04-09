@@ -5,7 +5,7 @@ from app.models.property import ListingStatus
 from app.schemas.principal import Principal
 from app.services.listing.helpers.property_guard import get_owned_property
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork
-from app.services.shared.helpers.cache_keys import cache_property
+from app.services.shared.helpers.cache_keys import cache_property, client_properties
 from app.services.shared.ports.cache import CachePort
 
 _ALLOWED_TRANSITIONS = {
@@ -38,6 +38,9 @@ class SetPropertyVisibilityUseCase:
             raise SetVisibilityError(cause=exc, context={"property_id": str(property_id)}) from exc
 
         try:
-            await self.cache.delete(key=cache_property(property_id=property_id))
+            await self.cache.delete(key=[
+                cache_property(property_id=property_id),
+                client_properties(user_id=principal.sub)
+            ])
         except Exception:
             pass

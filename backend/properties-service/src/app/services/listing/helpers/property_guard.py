@@ -30,3 +30,25 @@ async def get_owned_property(
         raise PropertyForbiddenError(property_id=property_id)
 
     return prop
+
+
+async def get_owned_property_for_update(
+    *,
+    uow: ListingUnitOfWork,
+    property_id: uuid.UUID,
+    principal: Principal,
+) -> Property:
+    try:
+        prop = await run_in_threadpool(
+            partial(uow.properties.get_by_id_for_update, property_id=property_id)
+        )
+    except Exception as exc:
+        raise translate_db_error(exc) from exc
+
+    if prop is None:
+        raise PropertyNotFoundError(property_id=property_id)
+
+    if prop.owner_id != principal.sub:
+        raise PropertyForbiddenError(property_id=property_id)
+
+    return prop

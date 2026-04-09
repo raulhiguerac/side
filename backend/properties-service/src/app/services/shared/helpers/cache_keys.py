@@ -19,3 +19,7 @@ def feed_ads_global() -> str:
 
 def map_h3_cell(h3_index: str) -> str:
     return f"map:h3:{h3_index}"
+
+
+def property_image_ids(property_id) -> str:
+    return f"properties:images:{property_id}:ids"
