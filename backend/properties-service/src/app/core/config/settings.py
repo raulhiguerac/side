@@ -21,7 +21,9 @@ class Settings(BaseSettings):
     # Storage
     BUCKET_PHOTOS_PROPERTIES: str = ""
     STORAGE_PUBLIC_BASE_URL: str = ""
-    PRESIGNED_URL_TTL_SECONDS: int = 900  # 15 min
+    PRESIGNED_URL_TTL_SECONDS: int = 300  # 5 min
+    IMAGE_UPLOAD_BATCH_TTL_SECONDS: int = 300  # 5 min
+    PROPERTY_IMAGE_IDS_CACHE_TTL_SECONDS: int = 300  # 5 min
     MAX_IMAGES_PER_PROPERTY: int = 20
 
     class Config:

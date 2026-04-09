@@ -2,6 +2,7 @@ import uuid
 from decimal import Decimal
 from typing import Optional
 
+from app.core.config.settings import settings
 from pydantic import Field, field_validator
 
 from app.models.property import Currency, ListingType, PropertyCondition, PropertyType
@@ -79,3 +80,13 @@ class PresignedUrlItem(StrictBase):
     upload_url: str
     public_url: str
     key: str
+
+
+class PresignedUrlsResponse(StrictBase):
+    batch_id: uuid.UUID
+    items: list[PresignedUrlItem]
+
+
+class PresignedUrlsRequest(StrictBase):
+    property_id: uuid.UUID
+    create_count: int = Field(ge=1, le=settings.MAX_IMAGES_PER_PROPERTY)

@@ -123,3 +123,48 @@ class ImageCountExceededError(BaseError):
             http_status=400,
             context={"max": max, "requested": requested},
         )
+
+
+class ImageNotOwnedError(BaseError):
+    def __init__(self, *, image_ids: list):
+        super().__init__(
+            message="One or more images do not belong to this property",
+            code="IMAGE_NOT_OWNED",
+            context={"image_ids": [str(i) for i in image_ids]},
+        )
+
+
+class BatchNotFoundError(BaseError):
+    def __init__(self, *, batch_id: Any = None):
+        super().__init__(
+            message="Upload batch not found",
+            code="BATCH_NOT_FOUND",
+            context={"batch_id": str(batch_id)} if batch_id else {},
+        )
+
+
+class BatchExpiredError(BaseError):
+    def __init__(self, *, batch_id: Any = None):
+        super().__init__(
+            message="Upload batch has expired",
+            code="BATCH_EXPIRED",
+            context={"batch_id": str(batch_id)} if batch_id else {},
+        )
+
+
+class BatchInvalidStateError(BaseError):
+    def __init__(self, *, batch_id: Any = None, status: str = ""):
+        super().__init__(
+            message=f"Upload batch cannot be confirmed in state '{status}'",
+            code="BATCH_INVALID_STATE",
+            context={"batch_id": str(batch_id) if batch_id else None, "status": status},
+        )
+
+
+class BatchNotConsistentError(BaseError):
+    def __init__(self, *, batch_id: Any = None, expected: int = 0, got: int = 0):
+        super().__init__(
+            message="Batch key count does not match the requested create count",
+            code="BATCH_NOT_CONSISTENT",
+            context={"batch_id": str(batch_id) if batch_id else None, "expected": expected, "got": got},
+        )
