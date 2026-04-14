@@ -140,6 +140,7 @@ class Property(AuditMixin, table=True):
     currency: Currency = Field(nullable=False)
     verification_status: VerificationStatus = Field(nullable=False, default=VerificationStatus.unverified)
     verified_by: Optional[uuid.UUID] = Field(default=None)
+    rejection_reason: Optional[str] = Field(default=None)
 
     # Floors — floor_number: which floor the apt is on; total_floors: how many floors a house has
     floor_number: Optional[int] = Field(default=None)

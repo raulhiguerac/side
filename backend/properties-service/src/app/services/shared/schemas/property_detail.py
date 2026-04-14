@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
 
-from pydantic import ConfigDict, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from app.models.property import (
     Currency,
@@ -67,4 +67,4 @@ class PropertyDetailSchema(StrictBase):
     created_at: datetime
 
     location: Optional[PropertyLocationDetail] = None
-    images: list[PropertyImageCard] = []
+    images: list[PropertyImageCard] = Field(default_factory=list)

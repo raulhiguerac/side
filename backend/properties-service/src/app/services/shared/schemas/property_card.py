@@ -2,7 +2,7 @@ import uuid
 from decimal import Decimal
 from typing import Any, Optional
 
-from pydantic import ConfigDict, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from app.models.property import Currency, ListingStatus, ListingType, PropertyType
 from app.schemas.base import StrictBase
@@ -57,4 +57,4 @@ class PropertyCardSchema(StrictBase):
     parking_spots: int
 
     location: Optional[PropertyLocationCard] = None
-    images: list[PropertyImageCard] = []
+    images: list[PropertyImageCard] = Field(default_factory=list)
