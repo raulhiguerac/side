@@ -56,5 +56,14 @@ class PropertyCardSchema(StrictBase):
     bathrooms: Decimal
     parking_spots: int
 
+    is_promoted: bool = False
+
     location: Optional[PropertyLocationCard] = None
     images: list[PropertyImageCard] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def compute_is_promoted(cls, data: Any) -> Any:
+        if hasattr(data, "promotions"):
+            data.__dict__["is_promoted"] = bool(data.promotions)
+        return data

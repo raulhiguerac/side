@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
@@ -54,7 +54,7 @@ class ConfirmImageUploadsUseCase:
         if batch.property_id != property_id:
             raise BatchNotConsistentError(batch_id=batch_id, expected=0, got=0)
 
-        if datetime.now(UTC) > batch.expires_at:
+        if datetime.now(timezone.utc) > batch.expires_at:
             batch.status = BatchStatus.expired
             try:
                 await self.uow.commit()
@@ -91,7 +91,7 @@ class ConfirmImageUploadsUseCase:
         ]
 
         batch.status = BatchStatus.confirmed
-        batch.confirmed_at = datetime.now(UTC)
+        batch.confirmed_at = datetime.now(timezone.utc)
 
         try:
             for image in new_images:

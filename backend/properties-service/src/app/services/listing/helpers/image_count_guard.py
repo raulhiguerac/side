@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
@@ -44,7 +44,7 @@ async def check_image_count(
         except Exception:
             pass
 
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     open_batches = await run_in_threadpool(
         partial(uow.property_images.get_open_batches, property_id=property_id, now=now, exclude_ids=exclude_batch_ids)
     )

@@ -3,6 +3,45 @@ from typing import Any, Optional
 from app.core.exceptions.base import BaseError
 
 
+class PromotionNotFoundError(BaseError):
+    def __init__(self, *, property_id: Any = None):
+        super().__init__(
+            message="No active promotion found for this property",
+            code="PROMOTION_NOT_FOUND",
+            context={"property_id": str(property_id)} if property_id else {},
+        )
+
+
+class PromotionError(BaseError):
+    def __init__(
+        self,
+        *,
+        cause: Optional[Exception] = None,
+        context: Optional[dict[str, Any]] = None,
+    ):
+        super().__init__(
+            message="Error while creating promotion",
+            code="PROMOTION_ERROR",
+            cause=cause,
+            context=context,
+        )
+
+
+class SetEstimatedPriceError(BaseError):
+    def __init__(
+        self,
+        *,
+        cause: Optional[Exception] = None,
+        context: Optional[dict[str, Any]] = None,
+    ):
+        super().__init__(
+            message="Error while setting estimated price",
+            code="SET_ESTIMATED_PRICE_ERROR",
+            cause=cause,
+            context=context,
+        )
+
+
 class SetVisibilityError(BaseError):
     def __init__(
         self,

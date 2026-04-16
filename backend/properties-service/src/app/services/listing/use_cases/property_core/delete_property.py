@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from app.core.exceptions.listing import DeletePropertyError
 from app.models.property import ListingStatus
@@ -19,7 +19,7 @@ class DeletePropertyUseCase:
         prop = await get_owned_property(uow=self.uow, property_id=property_id, principal=principal)
 
         prop.status = ListingStatus.inactive
-        prop.deleted_at = datetime.now(UTC)
+        prop.deleted_at = datetime.now(timezone.utc)
         prop.deleted_by = principal.sub
 
         try:
