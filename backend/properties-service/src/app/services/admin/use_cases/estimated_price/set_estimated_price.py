@@ -6,8 +6,8 @@ from typing import Optional
 
 from fastapi.concurrency import run_in_threadpool
 
-from app.schemas.principal import Principal
 from app.core.exceptions.listing import PropertyNotFoundError, SetEstimatedPriceError
+from app.schemas.principal import Principal
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork
 
 

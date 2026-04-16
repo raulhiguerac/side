@@ -12,6 +12,26 @@ class PromotionNotFoundError(BaseError):
         )
 
 
+class PropertyNotReadyForPromotionError(BaseError):
+    def __init__(self, *, property_id: Any = None):
+        super().__init__(
+            message="Property must be active before it can be promoted",
+            code="PROPERTY_NOT_READY_FOR_PROMOTION",
+            http_status=409,
+            context={"property_id": str(property_id)} if property_id else {},
+        )
+
+
+class DuplicateActivePromotionError(BaseError):
+    def __init__(self, *, property_id: Any = None):
+        super().__init__(
+            message="Property already has an active promotion",
+            code="DUPLICATE_ACTIVE_PROMOTION",
+            http_status=409,
+            context={"property_id": str(property_id)} if property_id else {},
+        )
+
+
 class PromotionError(BaseError):
     def __init__(
         self,

@@ -3,8 +3,13 @@ from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
 
-from app.core.exceptions.listing import PromotionError, PropertyNotFoundError
-from app.models.property import PromotedListing
+from app.core.exceptions.listing import (
+    DuplicateActivePromotionError,
+    PromotionError,
+    PropertyNotFoundError,
+    PropertyNotReadyForPromotionError,
+)
+from app.models.property import PromotedListing, ListingStatus
 from app.schemas.principal import Principal
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork
 from app.services.admin.schemas.admin_schemas import CreatePromotionRequest
@@ -25,6 +30,16 @@ class CreatePromotionUseCase:
 
         if prop is None:
             raise PropertyNotFoundError(property_id=property_id)
+
+        if prop.status != ListingStatus.active:
+            raise PropertyNotReadyForPromotionError(property_id=property_id)
+
+        existing = await run_in_threadpool(
+            partial(self.uow.promotions.get_active_by_property_id, property_id=property_id)
+        )
+
+        if existing:
+            raise DuplicateActivePromotionError(property_id=property_id)
 
         now = datetime.now(timezone.utc)
         promotion = PromotedListing(
