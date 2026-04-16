@@ -6,6 +6,7 @@ from app.models.property import ListingStatus, Property, VerificationStatus
 
 class AdminPropertyRepository(Protocol):
     def get_by_id(self, *, property_id: uuid.UUID) -> Property | None: ...
+    def get_by_ids(self, *, property_ids: list[uuid.UUID]) -> list[Property]: ...
     def get_all(
         self,
         *,
