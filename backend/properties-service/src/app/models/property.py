@@ -96,10 +96,6 @@ class BatchStatus(str, Enum):
     failed = "failed"
 
 
-class EstimatedPriceSource(str, Enum):
-    ml_model = "ml_model"
-    admin = "admin"
-
 
 # =============================================================================
 # MODELS
@@ -161,9 +157,16 @@ class Property(AuditMixin, table=True):
     admin_fee: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(14, 2), nullable=True))
     stratum: Optional[int] = Field(default=None)
     price: Decimal = Field(sa_column=Column(Numeric(14, 2), nullable=False))
-    estimated_price: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(14, 2), nullable=True))
-    estimated_price_source: Optional[EstimatedPriceSource] = Field(default=None)
-    estimated_price_updated_at: Optional[datetime] = Field(
+
+    # Estimated prices — kept separate to preserve both signals for ML training
+    admin_estimated_price: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(14, 2), nullable=True))
+    admin_estimated_price_at: Optional[datetime] = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),
+        sa_column_kwargs={"nullable": True},
+    )
+    ml_estimated_price: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(14, 2), nullable=True))
+    ml_estimated_price_at: Optional[datetime] = Field(
         default=None,
         sa_type=DateTime(timezone=True),
         sa_column_kwargs={"nullable": True},
@@ -178,8 +181,12 @@ class Property(AuditMixin, table=True):
         sa_relationship_kwargs={"lazy": "selectin", "uselist": False},
     )
     promotions: list["PromotedListing"] = Relationship(
-        back_populates="property",
-        sa_relationship_kwargs={"lazy": "selectin"},
+        sa_relationship_kwargs={
+            "lazy": "selectin",
+            "primaryjoin": "and_(Property.id == foreign(PromotedListing.property_id), PromotedListing.is_active == True)",
+            "viewonly": True,
+            "overlaps": "property",
+        }
     )
 
 
@@ -293,10 +300,13 @@ class PromotedListing(AuditMixin, table=True):
     )
 
     property: Optional["Property"] = Relationship(
-        back_populates="promotions",
-        sa_relationship_kwargs={"lazy": "selectin"},
+        sa_relationship_kwargs={
+            "lazy": "selectin",
+            "overlaps": "promotions",
+        }
     )
 
+    is_active: bool = Field(nullable=False, default=True)
     starts_at: datetime = Field(
         sa_type=DateTime(timezone=True),
         sa_column_kwargs={"nullable": False},

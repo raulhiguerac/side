@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
@@ -53,7 +53,7 @@ class RequestPresignedUrlsUseCase:
             owner_id=principal.sub,
             status=BatchStatus.pending,
             expected_keys=keys,
-            expires_at=datetime.now(UTC) + timedelta(seconds=settings.IMAGE_UPLOAD_BATCH_TTL_SECONDS),
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=settings.IMAGE_UPLOAD_BATCH_TTL_SECONDS),
             created_by=principal.sub,
             updated_by=principal.sub,
         )

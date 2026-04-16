@@ -1,11 +1,9 @@
 import uuid
-from datetime import datetime
-from decimal import Decimal
 from typing import Optional
 
 from pydantic import Field
 
-from app.models.property import EstimatedPriceSource, ListingStatus, VerificationStatus
+from app.models.property import ListingStatus, VerificationStatus
 from app.schemas.base import StrictBase
 
 class VerifyPropertyRequest(StrictBase):
@@ -13,15 +11,10 @@ class VerifyPropertyRequest(StrictBase):
     rejection_reason: Optional[str] = Field(default=None, max_length=500)
 
 
-class SetEstimatedPriceRequest(StrictBase):
-    estimated_price: Decimal = Field(gt=0, decimal_places=2)
-    source: EstimatedPriceSource = EstimatedPriceSource.admin
-
 
 class CreatePromotionRequest(StrictBase):
     property_id: uuid.UUID
-    starts_at: datetime
-    ends_at: datetime
+    promoted_days: int = Field(ge=1)
     priority: int = Field(default=0, ge=0)
 
 

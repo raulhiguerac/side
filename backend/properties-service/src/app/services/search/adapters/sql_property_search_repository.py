@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import tuple_
@@ -70,12 +70,10 @@ class SqlPropertySearchRepository:
             stmt = stmt.where(Property.bedrooms == bedrooms)
 
         if promoted_only:
-            now = datetime.now(UTC)
             stmt = stmt.join(
                 PromotedListing, PromotedListing.property_id == Property.id
             ).where(
-                PromotedListing.starts_at <= now,
-                PromotedListing.ends_at >= now,
+                PromotedListing.is_active == True  # noqa: E712
             ).order_by(PromotedListing.priority.desc(), Property.created_at.desc(), Property.id.desc())
         else:
             stmt = stmt.order_by(Property.created_at.desc(), Property.id.desc())
