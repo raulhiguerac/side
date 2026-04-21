@@ -2,6 +2,7 @@ import uuid
 from typing import Optional
 
 from sqlmodel import Session, select
+from sqlalchemy.dialects.postgresql import insert
 
 from app.models.property import ListingStatus, Property, VerificationStatus
 
@@ -9,6 +10,14 @@ from app.models.property import ListingStatus, Property, VerificationStatus
 class SqlAdminPropertyRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
+
+    def bulk_insert(self, *, porperty: list[Property], location: list[PropertyLocation], images: list[PropertyImage]) -> None:
+        stmt = insert(Property).values([n.model_dump() for n in location])
+        stmt = stmt.on_conflict_do_update(
+            constraint="",
+            set_={k: stmt.excluded[k] for k in _UPSERT_FIELDS},
+        )
+        self.session.flush()
 
     def get_by_id(self, *, property_id: uuid.UUID) -> Property | None:
         stmt = select(Property).where(Property.id == property_id)
