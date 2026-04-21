@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional
 
 from geoalchemy2.functions import ST_Point
 from sqlalchemy import func, select, update
@@ -8,6 +9,7 @@ from app.models.location import Country, Locality, Neighborhood
 from app.services.geo_resolution.ports.georeferentiation_repository import (
     GeoreferentiationRepository,
 )
+from app.services.geo_resolution.schemas.neighborhood import LocationByCoordinates
 
 
 class SqlGeoreferentiationRepository(GeoreferentiationRepository):
@@ -52,3 +54,21 @@ class SqlGeoreferentiationRepository(GeoreferentiationRepository):
         if row is None:
             return None
         return row.latitude, row.longitude
+
+    def get_location_by_point(self, *, lat: float, lon: float) -> Optional[LocationByCoordinates]:
+        pnt = func.ST_SetSRID(ST_Point(lon, lat), 4326)
+        stmt = (
+            select(Neighborhood.id, Neighborhood.locality_id, Locality.country_id)
+            .join(Locality, Locality.id == Neighborhood.locality_id)
+            .where(Neighborhood.geom.isnot(None))
+            .filter(func.ST_Contains(Neighborhood.geom, pnt))
+            .limit(1)
+        )
+        row = self.session.execute(stmt).first()
+        if row is None:
+            return None
+        return LocationByCoordinates(
+            neighborhood_id=row[0],
+            city_id=row[1],
+            country_id=row[2],
+        )

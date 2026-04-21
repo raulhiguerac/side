@@ -10,7 +10,7 @@ def create_app() -> FastAPI:
     setup_logging()
 
     app = FastAPI(
-        title="Service Name",  # TODO: Cambiar
+        title="Properties Service",
         version="0.1.0",
     )
 

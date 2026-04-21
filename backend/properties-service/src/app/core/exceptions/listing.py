@@ -116,6 +116,15 @@ class PropertyDbUnavailableError(BaseError):
         )
 
 
+class LocationNotResolvedError(BaseError):
+    def __init__(self, *, lat: float, lon: float):
+        super().__init__(
+            message="No neighborhood found for the provided coordinates",
+            code="LOCATION_NOT_RESOLVED",
+            context={"lat": lat, "lon": lon},
+        )
+
+
 class InvalidLocationError(BaseError):
     def __init__(self, *, neighborhood_id: Any = None, cause: Optional[Exception] = None):
         super().__init__(

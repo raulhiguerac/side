@@ -7,6 +7,9 @@ from app.core.logging.logger import get_logger
 logger = get_logger(__name__)
 
 ERROR_CODE_TO_HTTP_STATUS: dict[str, int] = {
+    # Auth
+    "UNAUTHORIZED": 401,
+    "FORBIDDEN": 403,
     # Property CRUD
     "CREATE_PROPERTY_ERROR": 422,
     "DELETE_PROPERTY_ERROR": 422,
@@ -24,6 +27,7 @@ ERROR_CODE_TO_HTTP_STATUS: dict[str, int] = {
     # Location
     "INVALID_LOCATION": 422,
     "INCONSISTENT_LOCATION": 422,
+    "LOCATION_NOT_RESOLVED": 404,
     # Images
     "IMAGE_COUNT_EXCEEDED": 400,
     "IMAGE_NOT_OWNED": 403,

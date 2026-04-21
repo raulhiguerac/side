@@ -90,3 +90,12 @@ class PresignedUrlsResponse(StrictBase):
 class PresignedUrlsRequest(StrictBase):
     property_id: uuid.UUID
     create_count: int = Field(ge=1, le=settings.MAX_IMAGES_PER_PROPERTY)
+
+
+class ConfirmImagesRequest(StrictBase):
+    batch_id: uuid.UUID
+    confirmed_keys: list[str]
+
+
+class DeleteImagesRequest(StrictBase):
+    image_ids: list[uuid.UUID]

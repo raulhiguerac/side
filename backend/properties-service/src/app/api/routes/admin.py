@@ -1,0 +1,158 @@
+import uuid
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, status
+
+from app.api.deps.admin import (
+    get_admin_properties_uc,
+    get_admin_property_detail_uc,
+    get_create_promotion_uc,
+    get_delete_promotion_uc,
+    get_list_all_promotions_uc,
+    get_list_promotions_by_property_uc,
+    get_set_estimated_price_uc,
+    get_set_status_uc,
+    get_verify_property_uc,
+)
+from app.api.deps.auth import require_admin
+from app.schemas.principal import Principal
+from app.services.admin.schemas.admin_schemas import (
+    CreatePromotionRequest,
+    GetPropertiesAdminRequest,
+    SetEstimatedPriceRequest,
+    SetStatusRequest,
+    VerifyPropertyRequest,
+)
+from app.services.admin.use_cases.estimated_price.set_estimated_price import SetEstimatedPriceUseCase
+from app.services.admin.use_cases.get_properties import GetPropertiesAdminUseCase
+from app.services.admin.use_cases.get_property_detail import GetPropertyDetailAdminUseCase
+from app.services.admin.use_cases.moderation.set_status import SetPropertyStatusUseCase
+from app.services.admin.use_cases.moderation.verify import VerifyPropertyUseCase
+from app.services.admin.use_cases.promotions.create import CreatePromotionUseCase
+from app.services.admin.use_cases.promotions.delete import DeletePromotionUseCase
+from app.services.admin.use_cases.promotions.list_all import ListAllPromotionsUseCase
+from app.services.admin.use_cases.promotions.list_by_property import ListPromotionsByPropertyUseCase
+from app.services.shared.schemas.property_card import PropertyCardSchema
+from app.services.shared.schemas.property_detail import PropertyDetailSchema
+
+router = APIRouter(
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(require_admin)],
+)
+
+
+# -------------------------------------------------------------------------
+# Properties
+# -------------------------------------------------------------------------
+
+@router.get(
+    "/properties",
+    response_model=list[PropertyCardSchema],
+    status_code=status.HTTP_200_OK,
+)
+async def get_properties(
+    filters: Annotated[GetPropertiesAdminRequest, Depends()],
+    uc: Annotated[GetPropertiesAdminUseCase, Depends(get_admin_properties_uc)],
+) -> list[PropertyCardSchema]:
+    return await uc.execute(request=filters)
+
+
+@router.get(
+    "/properties/{property_id}",
+    response_model=PropertyDetailSchema,
+    status_code=status.HTTP_200_OK,
+)
+async def get_property_detail(
+    property_id: uuid.UUID,
+    uc: Annotated[GetPropertyDetailAdminUseCase, Depends(get_admin_property_detail_uc)],
+) -> PropertyDetailSchema:
+    return await uc.execute(property_id=property_id)
+
+
+@router.patch(
+    "/properties/{property_id}/status",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def set_property_status(
+    property_id: uuid.UUID,
+    req: SetStatusRequest,
+    uc: Annotated[SetPropertyStatusUseCase, Depends(get_set_status_uc)],
+) -> None:
+    await uc.execute(property_id=property_id, target_status=req.status)
+
+
+@router.patch(
+    "/properties/{property_id}/verification",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def verify_property(
+    property_id: uuid.UUID,
+    req: VerifyPropertyRequest,
+    uc: Annotated[VerifyPropertyUseCase, Depends(get_verify_property_uc)],
+) -> None:
+    await uc.execute(property_id=property_id, request=req)
+
+
+@router.post(
+    "/properties/{property_id}/estimated-price",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def set_estimated_price(
+    property_id: uuid.UUID,
+    req: SetEstimatedPriceRequest,
+    principal: Annotated[Principal, Depends(require_admin)],
+    uc: Annotated[SetEstimatedPriceUseCase, Depends(get_set_estimated_price_uc)],
+) -> None:
+    await uc.execute(principal=principal, property_id=property_id, estimated_price=req.estimated_price)
+
+
+# -------------------------------------------------------------------------
+# Promotions
+# -------------------------------------------------------------------------
+
+@router.get(
+    "/promotions",
+    response_model=list[PropertyCardSchema],
+    status_code=status.HTTP_200_OK,
+)
+async def list_all_promotions(
+    uc: Annotated[ListAllPromotionsUseCase, Depends(get_list_all_promotions_uc)],
+) -> list[PropertyCardSchema]:
+    return await uc.execute()
+
+
+@router.get(
+    "/properties/{property_id}/promotions",
+    response_model=list[PropertyCardSchema],
+    status_code=status.HTTP_200_OK,
+)
+async def list_promotions_by_property(
+    property_id: uuid.UUID,
+    uc: Annotated[ListPromotionsByPropertyUseCase, Depends(get_list_promotions_by_property_uc)],
+) -> list[PropertyCardSchema]:
+    return await uc.execute(property_id=property_id)
+
+
+@router.post(
+    "/promotions",
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_promotion(
+    req: CreatePromotionRequest,
+    principal: Annotated[Principal, Depends(require_admin)],
+    uc: Annotated[CreatePromotionUseCase, Depends(get_create_promotion_uc)],
+) -> None:
+    await uc.execute(principal=principal, promotion_request=req)
+
+
+@router.delete(
+    "/properties/{property_id}/promotions",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_promotion(
+    property_id: uuid.UUID,
+    principal: Annotated[Principal, Depends(require_admin)],
+    uc: Annotated[DeletePromotionUseCase, Depends(get_delete_promotion_uc)],
+) -> None:
+    await uc.execute(principal=principal, property_id=property_id)

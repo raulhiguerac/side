@@ -33,3 +33,23 @@ class CatalogClient:
             raise CatalogClientError("Catalog service timed out") from e
         except httpx.RequestError as e:
             raise CatalogClientError("Could not reach catalog service") from e
+
+    async def get_location_info(self, *, lat: float, lon: float) -> dict:
+        url = f"{self.base_url}/v1/geo-resolution/by-coordinates"
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(url, params={"lat": lat, "lon": lon})
+
+            map_response_error(response)
+
+            try:
+                return response.json()
+            except Exception as e:
+                raise CatalogClientError("Catalog service returned invalid JSON") from e
+
+        except CatalogClientError:
+            raise
+        except httpx.TimeoutException as e:
+            raise CatalogClientError("Catalog service timed out") from e
+        except httpx.RequestError as e:
+            raise CatalogClientError("Could not reach catalog service") from e
