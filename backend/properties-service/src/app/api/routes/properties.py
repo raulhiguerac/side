@@ -102,8 +102,8 @@ async def create_property(
     req: CreatePropertyRequest,
     principal: Annotated[Principal, Depends(get_current_principal)],
     uc: Annotated[CreatePropertyUseCase, Depends(get_create_property_uc)],
-) -> None:
-    await uc.execute(principal=principal, property_fields=req)
+) -> uuid.UUID:
+    return await uc.execute(principal=principal, property_fields=req)
 
 
 @router.get(

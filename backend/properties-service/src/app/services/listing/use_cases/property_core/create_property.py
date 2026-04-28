@@ -20,7 +20,7 @@ class CreatePropertyUseCase:
         self.uow = uow
         self.catalog = catalog
 
-    async def execute(self, *, principal: Principal, property_fields: CreatePropertyRequest) -> None:
+    async def execute(self, *, principal: Principal, property_fields: CreatePropertyRequest) -> uuid.UUID:
         loc = property_fields.location
         guard = await self.catalog.get_neighborhood(neighborhood_id=loc.neighborhood_id)
 
@@ -45,6 +45,8 @@ class CreatePropertyUseCase:
         except Exception as exc:
             await self.uow.rollback()
             raise translate_db_error(exc) from exc
+
+        return prop.id
 
     @staticmethod
     def build_models(
