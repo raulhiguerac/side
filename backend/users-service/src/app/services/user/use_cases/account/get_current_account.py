@@ -1,7 +1,9 @@
+import uuid
 
 from app.schemas.common import Principal
-from app.services.user.helpers.current_account_reader import CurrentAccountReader
 from app.services.user.schemas.current import CurrentUserOut
+
+from app.services.user.helpers.current_account_reader import CurrentAccountReader
 
 
 class GetCurrentAccountUseCase:

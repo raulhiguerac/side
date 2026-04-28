@@ -40,7 +40,7 @@
 
 <script lang="ts" setup>
 import { useRoute } from "vue-router";
-import SettingsSidebar from "@/components/settings/SettingsSidebar.vue";
+import SettingsSidebar from "@/components/SettingsSidebar.vue";
 
 const route = useRoute();
 

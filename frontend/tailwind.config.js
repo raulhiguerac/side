@@ -1,12 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    "./public/**/*.html",
-    "./src/**/*.{vue,js,ts,jsx,tsx}",
-    "./vueform.config.js",
-    "./node_modules/@vueform/vueform/themes/tailwind/**/*.vue",
-    "./node_modules/@vueform/vueform/themes/tailwind/**/*.js",
-  ],
+  content: ["./public/**/*.html", "./src/**/*.{vue,js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
@@ -27,5 +21,5 @@ module.exports = {
       },
     },
   },
-  plugins: [require("@vueform/vueform/tailwind")],
+  plugins: [],
 };

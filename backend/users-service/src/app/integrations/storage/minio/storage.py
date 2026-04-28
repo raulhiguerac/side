@@ -4,11 +4,12 @@ from typing import Any, BinaryIO, Dict, Optional
 import boto3
 from botocore.client import Config
 
+from app.services.shared.schemas.storage import UploadResult
+
 from app.core.exceptions.storage import StorageMisconfiguredError
 from app.integrations.storage.minio.mappers.error_mapper import (
     translate_storage_error,
 )
-from app.services.shared.schemas.storage import UploadResult
 
 
 class StorageClient:

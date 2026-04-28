@@ -1,12 +1,13 @@
 import uuid
-from functools import partial
 from typing import Union
+from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
 
-from app.core.exceptions.user import ProfileNotFoundError
-from app.models.account import AccountType, CompanyProfile, UserProfile
+from app.models.account import AccountType, UserProfile, CompanyProfile
 from app.services.user.ports.unit_of_work import UserUnitOfWork
+from app.core.exceptions.user import ProfileNotFoundError
+
 
 ProfileDB = Union[UserProfile, CompanyProfile]
 

@@ -1,12 +1,12 @@
 import uuid
-
 from sqlmodel import Session
 
-from app.models.account import CompanyProfile, UserProfile
-from app.repositories.user_repository import (
-    get_company_profile_by_account_id,
-    get_user_profile_by_account_id,
+from app.models.account import UserProfile, CompanyProfile
+from app.repositories.user_repository import(
+    get_user_profile_by_account_id, 
+    get_company_profile_by_account_id
 )
+
 from app.services.user.ports.user_repository import UserRepository
 
 

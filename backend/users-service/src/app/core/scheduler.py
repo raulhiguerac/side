@@ -1,12 +1,10 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 # En v3 los triggers se importan así o se pasan como string
 from app.workers.keycloak_tasks import run_job
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:

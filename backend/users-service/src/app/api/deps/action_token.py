@@ -1,5 +1,5 @@
 from fastapi import Depends
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 http_bearer = HTTPBearer(auto_error=True)
 

@@ -15,9 +15,6 @@ from app.services.geo_resolution.adapters.sql_unit_of_work import (
 from app.services.geo_resolution.ports.geocoding_gateway import GeocodingGateway
 from app.services.geo_resolution.ports.poi_provider_gateway import PoiProviderGateway
 from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWork
-from app.services.geo_resolution.use_cases.resolve_location_by_coordinates import (
-    ResolveLocationByCoordinatesUseCase,
-)
 from app.services.geo_resolution.use_cases.resolve_neighborhood import (
     ResolveNeighborhoodUseCase,
 )
@@ -74,9 +71,3 @@ def resolve_poi_uc(
     poi_provider: PoiProviderGateway = Depends(get_poi_provider),
 ) -> ResolvePoiUseCase:
     return ResolvePoiUseCase(uow=uow, cache_client=cache, poi_provider=poi_provider)
-
-
-def resolve_location_by_coordinates_uc(
-    uow: GeoResolutionUnitOfWork = Depends(get_uow),
-) -> ResolveLocationByCoordinatesUseCase:
-    return ResolveLocationByCoordinatesUseCase(uow=uow)

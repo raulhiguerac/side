@@ -6,8 +6,8 @@ from sqlmodel import Session, select
 
 from app.models.account import (
     AccountType,
-    CompanyProfile,
     UserProfile,
+    CompanyProfile,
 )
 from app.services.auth.ports.email_recipient_reader import (
     EmailRecipientReaderPort,

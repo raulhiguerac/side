@@ -1,9 +1,8 @@
-from typing import Optional
 from uuid import UUID
+from typing import Optional
 
-from app.models.kc_tasks import KcTaskType
 from app.schemas.base import StrictBase
-
+from app.models.kc_tasks import KcTaskType
 
 class CreateKcCompensationTask(StrictBase):
     kc_user_id: UUID

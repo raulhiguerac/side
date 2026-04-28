@@ -1,6 +1,8 @@
-from app.core.exceptions.auth import EmailAlreadyRegisteredError
 from app.core.logging.logger import get_logger
 from app.core.logging.utils import email_hash
+
+from app.core.exceptions.auth import EmailAlreadyRegisteredError
+
 from app.services.auth.ports.unit_of_work import AuthUnitOfWork
 
 logger = get_logger(__name__)

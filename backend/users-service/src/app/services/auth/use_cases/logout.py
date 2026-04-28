@@ -1,4 +1,5 @@
 from app.core.logging.logger import get_logger
+
 from app.services.auth.ports.authentication_provider import AuthenticationProvider
 
 logger = get_logger(__name__)

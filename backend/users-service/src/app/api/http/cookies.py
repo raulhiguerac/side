@@ -1,5 +1,4 @@
 from fastapi import Response
-
 from app.services.auth.schemas.tokens import AuthTokens
 
 

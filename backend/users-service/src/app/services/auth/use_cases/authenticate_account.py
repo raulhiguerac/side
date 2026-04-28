@@ -1,7 +1,12 @@
 from app.core.logging.logger import get_logger
-from app.services.auth.ports.authentication_provider import AuthenticationProvider
+from app.core.logging.utils import email_hash
+
+from fastapi.concurrency import run_in_threadpool
+
 from app.services.auth.schemas.login import AccountLogin
 from app.services.auth.schemas.tokens import AuthTokens
+
+from app.services.auth.ports.authentication_provider import AuthenticationProvider
 from app.services.shared.policies.active_account_policy import AccountActivePolicy
 
 logger = get_logger(__name__)
