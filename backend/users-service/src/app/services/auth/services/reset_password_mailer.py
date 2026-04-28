@@ -1,6 +1,5 @@
 from app.services.shared.ports.email_sender import EmailSenderPort
 
-
 RESET_PASSWORD_TEMPLATE_ID = 2
 
 

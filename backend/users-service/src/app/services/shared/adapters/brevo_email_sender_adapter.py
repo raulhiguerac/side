@@ -2,8 +2,8 @@ from typing import Dict, List, Optional
 
 from fastapi.concurrency import run_in_threadpool
 
-from app.services.shared.ports.email_sender import EmailSenderPort, EmailRecipient
 from app.integrations.email.brevo.client import EmailClient
+from app.services.shared.ports.email_sender import EmailRecipient, EmailSenderPort
 
 
 class BrevoSenderAdapter(EmailSenderPort):

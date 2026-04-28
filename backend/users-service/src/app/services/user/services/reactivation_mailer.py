@@ -1,5 +1,6 @@
 from app.services.shared.ports.email_sender import EmailSenderPort
 
+
 class ReactivationMailer:
     def __init__(self, email_sender: EmailSenderPort):
         self._email_sender = email_sender

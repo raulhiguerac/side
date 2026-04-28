@@ -1,14 +1,12 @@
 from datetime import datetime
 from typing import Any
 
-from app.services.shared.helpers.security import hash_token
-
 from app.core.exceptions.auth import TokenInvalidOrExpiredError
 from app.models.account import AccountActionActor
-from app.services.user.helpers.cache_keys import reactivation_cache_key
+from app.services.shared.helpers.security import hash_token
 from app.services.shared.ports.cache import CachePort
+from app.services.user.helpers.cache_keys import reactivation_cache_key
 from app.services.user.ports.unit_of_work import UserUnitOfWork
-
 
 TOKEN_INVALID_OR_EXPIRED_MSG = "Token is invalid or expired"
 

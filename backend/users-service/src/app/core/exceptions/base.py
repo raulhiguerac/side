@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional
 
+
 class BaseError(Exception):
     def __init__(
         self,
