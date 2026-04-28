@@ -1,19 +1,16 @@
 import os
 import uuid
-
 from typing import Optional
+
 from pydantic import ValidationError
 
 from app.models.account import AccountType
-
-from app.services.user.schemas.current import CurrentUserProfileOut
-from app.services.user.ports.unit_of_work import UserUnitOfWork
 from app.services.shared.ports.cache import CachePort
-
-from app.services.user.helpers.profile_reader import get_profile_db
 from app.services.user.helpers.cache_keys import profile_cache_key
 from app.services.user.helpers.mapper import map_profile_db_to_schema
-
+from app.services.user.helpers.profile_reader import get_profile_db
+from app.services.user.ports.unit_of_work import UserUnitOfWork
+from app.services.user.schemas.current import CurrentUserProfileOut
 
 PROFILE_CACHE_TTL_SECONDS = int(os.getenv("PROFILE_CACHE_TTL_SECONDS", "600"))
 

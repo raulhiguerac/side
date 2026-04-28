@@ -1,7 +1,9 @@
 # app/core/logging/logger.py
 import logging
 import logging.config
+
 from app.core.logging.formatter import JsonLogFormatter
+
 
 def setup_logging(level: str = "INFO") -> None:
     logging_config = {

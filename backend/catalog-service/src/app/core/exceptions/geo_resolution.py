@@ -49,3 +49,12 @@ class NeighborhoodResolutionError(BaseError):
             code="NEIGHBORHOOD_RESOLUTION_NOT_FOUND",
             context={"latitude": latitude, "longitude": longitude, "locality_id": locality_id, **(context or {})},
         )
+
+
+class CoordinatesResolutionNotFoundError(BaseError):
+    def __init__(self, *, latitude: float, longitude: float):
+        super().__init__(
+            message=f"No neighborhood found for coordinates ({latitude}, {longitude})",
+            code="NEIGHBORHOOD_RESOLUTION_NOT_FOUND",
+            context={"latitude": latitude, "longitude": longitude},
+        )

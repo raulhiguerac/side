@@ -1,10 +1,12 @@
-import uuid 
-from typing import Annotated, Union, Literal, Optional 
-from pydantic import EmailStr, Field 
-from app.schemas.base import StrictBase 
+import uuid
+from typing import Annotated, Literal, Optional, Union
+
+from pydantic import EmailStr, Field
 
 from app.models.account import AccountIntent, OnboardingStep
-    
+from app.schemas.base import StrictBase
+
+
 class CurrentUserPerson(StrictBase): 
     first_name: str 
     last_name: str 
@@ -34,3 +36,9 @@ class CurrentUserOut(StrictBase):
     account_type: Literal["person", "organization"]
     onboarding_step: OnboardingStep
     is_active: bool
+
+
+class UserInterestsResponse(StrictBase):
+    localities: list[uuid.UUID]
+    neighborhoods: dict[str, list[uuid.UUID]]
+    properties: dict[str, list[str]]

@@ -4,7 +4,7 @@
     "module": "esnext",
     "strict": true,
     "jsx": "preserve",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "experimentalDecorators": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -19,7 +19,9 @@
     "paths": {
       "@/*": [
         "src/*"
-      ]
+      ],
+      "@vueform/vueform/locales/*": ["node_modules/@vueform/vueform/locales/*"],
+      "@vueform/vueform/dist/*": ["node_modules/@vueform/vueform/dist/*"]
     },
     "lib": [
       "esnext",

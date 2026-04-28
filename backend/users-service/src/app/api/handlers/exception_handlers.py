@@ -1,10 +1,9 @@
+import psycopg2
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import ProgrammingError
-import psycopg2
 
 from app.core.exceptions.base import BaseError
-
 from app.core.logging.logger import get_logger
 
 logger = get_logger(__name__)
@@ -51,6 +50,10 @@ ERROR_CODE_TO_HTTP_STATUS: dict[str, int] = {
     "PASSWORDS_DO_NOT_MATCH": 400,
 
     "ONBOARDING_COMPLETION_DB_ERROR": 500,
+
+    "CITY_INTEREST_NOT_FOUND": 422,
+    "PROPERTY_TYPE_NOT_ALLOWED": 400,
+    "NEIGHBORHOOD_RANK_OUT_OF_RANGE": 400,
 }
 
 DEFAULT_ERROR_STATUS = 500

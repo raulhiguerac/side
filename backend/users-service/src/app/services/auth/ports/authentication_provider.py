@@ -2,6 +2,7 @@ from typing import Protocol
 
 from app.services.auth.schemas.tokens import AuthTokens
 
+
 class AuthenticationProvider(Protocol):
     async def login(self, *, email: str, password: str) -> AuthTokens: ...
     async def refresh_token(self, *, refresh_token: str) -> AuthTokens: ...

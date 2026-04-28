@@ -1,5 +1,6 @@
 from app.core.exceptions.base import BaseError
 
+
 class EmailAlreadyRegisteredError(BaseError):
     def __init__(self, *, email: str):
         super().__init__(
