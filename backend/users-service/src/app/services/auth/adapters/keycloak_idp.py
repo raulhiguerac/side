@@ -2,9 +2,9 @@ import uuid
 
 from fastapi.concurrency import run_in_threadpool
 
-from app.services.auth.ports.identity_provider import IdentityProvider
-from app.integrations.identity_provider.keycloak.admin_client import KeycloakAdminClient
 from app.core.exceptions.identity_provider import KeycloakDeleteAccountError
+from app.integrations.identity_provider.keycloak.admin_client import KeycloakAdminClient
+from app.services.auth.ports.identity_provider import IdentityProvider
 
 
 class KeycloakIdentityProvider(IdentityProvider):

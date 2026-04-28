@@ -142,7 +142,9 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
-import IntentSelector, { type Intent } from "@/components/IntentSelector.vue";
+import IntentSelector, {
+  type Intent,
+} from "@/components/onboarding/IntentSelector.vue";
 import axios from "axios";
 
 const authStore = useAuthStore();

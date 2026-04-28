@@ -1,8 +1,9 @@
-from typing import Annotated, Union, Literal, Optional 
-from pydantic import Field 
-from app.schemas.base import StrictBase 
+from typing import Annotated, Literal, Optional, Union
+
+from pydantic import Field
 
 from app.models.account import AccountIntent
+from app.schemas.base import StrictBase
 
 
 class UserPersonUpdate(StrictBase):
