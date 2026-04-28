@@ -1,11 +1,11 @@
 import uuid
-
 from fastapi.concurrency import run_in_threadpool
 from sqlmodel import Session
 
 from app.models.account import Account
 from app.services.auth.ports.account_repository import AccountRepository
 from app.services.shared.ports.account_reader import AccountReaderPort
+from app.core.exceptions.account import AccountNotFoundError 
 
 
 class SqlAccountRepository(AccountRepository):

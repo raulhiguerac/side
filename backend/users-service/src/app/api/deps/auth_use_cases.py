@@ -4,10 +4,14 @@ from fastapi import Depends
 from sqlmodel import Session
 
 from app.api.deps.db import get_session
+
 from app.integrations.cache.redis.cache import CacheClient
 from app.integrations.email.brevo.client import EmailClient
 from app.integrations.identity_provider.keycloak.admin_client import KeycloakAdminClient
 from app.integrations.identity_provider.keycloak.auth_client import KeycloakAuthClient
+
+from app.services.shared.db.db_error_translator import DbErrorTranslator
+
 from app.services.auth.adapters.keycloak_auth_provider import (
     KeycloakAuthenticationProvider,
 )
@@ -20,23 +24,19 @@ from app.services.auth.ports.unit_of_work import AuthUnitOfWork
 from app.services.auth.services.reset_password_mailer import ResetPasswordMailer
 from app.services.auth.use_cases.authenticate_account import AuthenticateAccountUseCase
 from app.services.auth.use_cases.change_password import ChangeAccountPasswordUseCase
-from app.services.auth.use_cases.confirm_reset_password import (
-    ConfirmResetPasswordUseCase,
-)
 from app.services.auth.use_cases.logout import LogoutUseCase
 from app.services.auth.use_cases.register_account import RegisterAccountUseCase
-from app.services.auth.use_cases.request_reset_password import (
-    RequestResetPasswordUseCase,
-)
+from app.services.auth.use_cases.request_reset_password import RequestResetPasswordUseCase
 from app.services.shared.adapters.brevo_email_sender_adapter import BrevoSenderAdapter
 from app.services.shared.adapters.redis_cache_adapter import RedisCacheAdapter
-from app.services.shared.db.db_error_translator import DbErrorTranslator
 from app.services.shared.policies.account_email_availability_policy import (
     AccountEmailAvailabilityPolicy,
 )
 from app.services.shared.policies.active_account_policy import AccountActivePolicy
 from app.services.shared.ports.cache import CachePort
 from app.services.shared.ports.email_sender import EmailSenderPort
+
+from app.services.auth.use_cases.confirm_reset_password import ConfirmResetPasswordUseCase
 
 # -----------------------------------------------------------------------------
 # Providers (stateless -> safe to cache)

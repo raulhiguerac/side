@@ -2,7 +2,6 @@ from typing import Any, Dict, Optional
 
 from app.core.exceptions.base import BaseError
 
-
 class BadRequestError(BaseError):
     def __init__(self, detail: str | None = None):
         super().__init__(

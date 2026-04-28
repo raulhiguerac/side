@@ -1,6 +1,5 @@
-import json
 import os
-
+import json
 from redis import asyncio as aioredis
 
 from app.core.exceptions.cache import CacheMisconfiguredError

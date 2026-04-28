@@ -15,6 +15,7 @@ from app.core.exceptions.identity_provider import (
 )
 from app.core.exceptions.validation import BadRequestError
 from app.core.logging.logger import get_logger
+
 from app.integrations._utils import (
     get_keycloak_error_text,
     get_keycloak_status,

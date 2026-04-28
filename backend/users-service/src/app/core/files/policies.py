@@ -1,6 +1,6 @@
 import os
-from dataclasses import dataclass
 from typing import Set
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)

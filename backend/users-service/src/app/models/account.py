@@ -1,13 +1,13 @@
 import uuid
-from datetime import datetime
 from enum import Enum
 from typing import Optional
+from datetime import datetime
 
-import sqlalchemy as sa
-from sqlalchemy import Column, ForeignKey
-from sqlalchemy.sql import func
 from sqlmodel import Field, SQLModel
 
+import sqlalchemy as sa
+from sqlalchemy.sql import func
+from sqlalchemy import Column,ForeignKey
 
 class AccountType(str,Enum):
     person = "person"
@@ -31,7 +31,6 @@ class OnboardingStep(str,Enum):
     intent = "intent"
     city = "city"
     neighborhood = "neighborhood"
-    property_type = "property_type"
     done = "done"
 
 class Account(SQLModel, table=True):

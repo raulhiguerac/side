@@ -1,6 +1,5 @@
 import os
 
-
 class Settings:
     FRONT_BASE_URL: str
     CACHE_REACTIVATION_TTL_SECONDS: int

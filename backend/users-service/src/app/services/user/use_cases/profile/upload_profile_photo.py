@@ -1,16 +1,18 @@
 from typing import IO
 
 from app.schemas.common import Principal
-from app.services.shared.helpers.url_builder import build_public_url
-from app.services.shared.ports.cache import CachePort
-from app.services.shared.ports.storage import StoragePort
-from app.services.user.helpers.cache_keys import profile_cache_key
-from app.services.user.helpers.current_account_reader import CurrentAccountReader
-from app.services.user.helpers.current_profile_reader import CurrentProfileReader
-from app.services.user.helpers.storage_keys import profile_photo_storage_key
-from app.services.user.ports.unit_of_work import UserUnitOfWork
 from app.services.user.schemas.photo import PhotoUploadOut
 
+from app.services.shared.ports.cache import CachePort
+from app.services.shared.ports.storage import StoragePort
+from app.services.user.ports.unit_of_work import UserUnitOfWork
+
+from app.services.shared.helpers.url_builder import build_public_url
+from app.services.user.helpers.cache_keys import profile_cache_key
+from app.services.user.helpers.storage_keys import profile_photo_storage_key
+
+from app.services.user.helpers.current_account_reader import CurrentAccountReader
+from app.services.user.helpers.current_profile_reader import CurrentProfileReader
 
 class UpdateCurrentProfilePhotoUseCase:
     def __init__(

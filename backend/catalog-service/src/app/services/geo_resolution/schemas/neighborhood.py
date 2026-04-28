@@ -15,9 +15,3 @@ class ResolvedNeighborhood(StrictBase):
     neighborhood: NeighborhoodInfo
     latitude: float
     longitude: float
-
-
-class LocationByCoordinates(StrictBase):
-    neighborhood_id: uuid.UUID
-    city_id: uuid.UUID
-    country_id: uuid.UUID

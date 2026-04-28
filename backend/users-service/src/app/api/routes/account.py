@@ -30,14 +30,10 @@ from app.services.auth.schemas.tokens import RefreshToken
 # Use cases
 from app.services.auth.use_cases.authenticate_account import AuthenticateAccountUseCase
 from app.services.auth.use_cases.change_password import ChangeAccountPasswordUseCase
-from app.services.auth.use_cases.confirm_reset_password import (
-    ConfirmResetPasswordUseCase,
-)
+from app.services.auth.use_cases.confirm_reset_password import ConfirmResetPasswordUseCase
 from app.services.auth.use_cases.logout import LogoutUseCase
 from app.services.auth.use_cases.register_account import RegisterAccountUseCase
-from app.services.auth.use_cases.request_reset_password import (
-    RequestResetPasswordUseCase,
-)
+from app.services.auth.use_cases.request_reset_password import RequestResetPasswordUseCase
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
