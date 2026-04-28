@@ -6,22 +6,17 @@ from sqlalchemy.exc import IntegrityError
 from app.core.exceptions.base import BaseError
 from app.core.logging.logger import get_logger
 from app.core.logging.utils import email_hash
-
 from app.models.account import Account, OnboardingStep
 from app.models.kc_tasks import KcTaskType
-
-from app.services.auth.schemas.registration import RegisterRequest
-
-from app.services.auth.schemas.compensation import CreateKcCompensationTask
-
-from app.services.shared.db.db_error_translator import DbErrorTranslator
 from app.services.auth.helpers.profile_factory import ProfileFactory
 from app.services.auth.ports.identity_provider import IdentityProvider
-
+from app.services.auth.ports.unit_of_work import AuthUnitOfWork
+from app.services.auth.schemas.compensation import CreateKcCompensationTask
+from app.services.auth.schemas.registration import RegisterRequest
+from app.services.shared.db.db_error_translator import DbErrorTranslator
 from app.services.shared.policies.account_email_availability_policy import (
     AccountEmailAvailabilityPolicy,
 )
-from app.services.auth.ports.unit_of_work import AuthUnitOfWork
 
 logger = get_logger(__name__)
 

@@ -1,6 +1,7 @@
-from typing import Any, IO, Dict, Optional, Protocol
+from typing import IO, Any, Dict, Optional, Protocol
 
 from app.services.shared.schemas.storage import UploadResult
+
 
 class StoragePort(Protocol):
     async def upload_file(

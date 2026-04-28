@@ -15,5 +15,9 @@ module.exports = defineConfig({
         __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: "false",
       }),
     ],
+    watchOptions: {
+      poll: 1000,
+      ignored: /node_modules/,
+    },
   },
 });

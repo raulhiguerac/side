@@ -1,5 +1,6 @@
 from typing import Any, Protocol
 
+
 class CachePort(Protocol):
     async def get(self, *, key: str) -> str | None: ...
     async def getdel(self, *, key: str) -> str | None: ...

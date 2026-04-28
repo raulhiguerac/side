@@ -17,28 +17,35 @@ from app.api.deps.user_use_cases import (
     get_request_reactivation_uc,
     get_update_current_profile_photo_uc,
     get_update_current_profile_uc,
+    get_user_interests_uc,
 )
-
 from app.schemas.common import Principal
 from app.services.auth.schemas.tokens import RefreshToken
 from app.services.auth.use_cases.logout import LogoutUseCase
-
-from app.services.user.schemas.current import CurrentUserOut, CurrentUserProfileOut
+from app.services.user.schemas.current import (
+    CurrentUserOut,
+    CurrentUserProfileOut,
+    UserInterestsResponse,
+)
 from app.services.user.schemas.photo import PhotoUploadOut
 from app.services.user.schemas.reactivation import RequestReactivationIn
 from app.services.user.schemas.update import UpdateRequest
-
 from app.services.user.use_cases.account.deactivate_current_account import (
     DeactivateCurrentAccountUseCase,
 )
-from app.services.user.use_cases.account.get_current_account import GetCurrentAccountUseCase
+from app.services.user.use_cases.account.get_current_account import (
+    GetCurrentAccountUseCase,
+)
+from app.services.user.use_cases.account.get_interests import GetUserInterestsUseCase
 from app.services.user.use_cases.account.reactivate_current_account import (
     ConfirmReactivationUseCase,
 )
 from app.services.user.use_cases.account.request_account_reactivation import (
     RequestReactivationUseCase,
 )
-from app.services.user.use_cases.profile.get_current_profile import GetCurrentProfileUseCase
+from app.services.user.use_cases.profile.get_current_profile import (
+    GetCurrentProfileUseCase,
+)
 from app.services.user.use_cases.profile.update_current_profile import (
     UpdateCurrentProfileUseCase,
 )
@@ -64,6 +71,23 @@ async def get_current_user(
     uc: Annotated[GetCurrentAccountUseCase, Depends(get_current_account_uc)],
 ) -> CurrentUserOut:
     return await uc.execute(principal=principal)
+
+
+# -------------------------------------------------------------------------
+# Interests
+# -------------------------------------------------------------------------
+
+
+@router.get(
+    "/me/interests",
+    response_model=UserInterestsResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_user_interests(
+    principal: Annotated[Principal, Depends(get_current_principal)],
+    uc: Annotated[GetUserInterestsUseCase, Depends(get_user_interests_uc)],
+) -> UserInterestsResponse:
+    return await uc.execute(account_id=principal.sub)
 
 
 # -------------------------------------------------------------------------

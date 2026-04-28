@@ -2,8 +2,15 @@ from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 
-from app.api.deps.geo_resolution import resolve_neighborhood_uc, resolve_poi_uc
-from app.services.geo_resolution.schemas.neighborhood import ResolvedNeighborhood
+from app.api.deps.geo_resolution import (
+    resolve_location_by_coordinates_uc,
+    resolve_neighborhood_uc,
+    resolve_poi_uc,
+)
+from app.services.geo_resolution.schemas.neighborhood import LocationByCoordinates, ResolvedNeighborhood
+from app.services.geo_resolution.use_cases.resolve_location_by_coordinates import (
+    ResolveLocationByCoordinatesUseCase,
+)
 from app.services.geo_resolution.use_cases.resolve_neighborhood import (
     ResolveNeighborhoodUseCase,
 )
@@ -31,3 +38,12 @@ async def resolve_neighborhood(
     )
 
     return result
+
+
+@router.get("/by-coordinates", response_model=LocationByCoordinates)
+async def resolve_location_by_coordinates(
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
+    uc: ResolveLocationByCoordinatesUseCase = Depends(resolve_location_by_coordinates_uc),
+):
+    return await uc.execute(lat=lat, lon=lon)
