@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, status
 from app.api.deps.admin import (
     get_admin_properties_uc,
     get_admin_property_detail_uc,
+    get_bulk_create_properties_uc,
     get_create_promotion_uc,
     get_delete_promotion_uc,
     get_list_all_promotions_uc,
@@ -17,12 +18,14 @@ from app.api.deps.admin import (
 from app.api.deps.auth import require_admin
 from app.schemas.principal import Principal
 from app.services.admin.schemas.admin_schemas import (
+    BulkCreatePropertiesResult,
     CreatePromotionRequest,
     GetPropertiesAdminRequest,
     SetEstimatedPriceRequest,
     SetStatusRequest,
     VerifyPropertyRequest,
 )
+from app.services.admin.use_cases.bulk_create_properties import BulkCreatePropertiesUseCase
 from app.services.admin.use_cases.estimated_price.set_estimated_price import SetEstimatedPriceUseCase
 from app.services.admin.use_cases.get_properties import GetPropertiesAdminUseCase
 from app.services.admin.use_cases.get_property_detail import GetPropertyDetailAdminUseCase
@@ -45,6 +48,19 @@ router = APIRouter(
 # -------------------------------------------------------------------------
 # Properties
 # -------------------------------------------------------------------------
+
+@router.post(
+    "/properties/bulk",
+    response_model=BulkCreatePropertiesResult,
+    status_code=status.HTTP_201_CREATED,
+)
+async def bulk_create_properties(
+    records: list[dict],
+    principal: Annotated[Principal, Depends(require_admin)],
+    uc: Annotated[BulkCreatePropertiesUseCase, Depends(get_bulk_create_properties_uc)],
+) -> BulkCreatePropertiesResult:
+    return await uc.execute(principal=principal, records=records)
+
 
 @router.get(
     "/properties",

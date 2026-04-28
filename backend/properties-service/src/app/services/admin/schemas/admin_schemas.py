@@ -64,3 +64,8 @@ class BulkCreatePropertyItem(StrictBase):
     country_id: uuid.UUID
 
     image_urls: list[str] = Field(default_factory=list)
+
+
+class BulkCreatePropertiesResult(StrictBase):
+    inserted: int
+    errors: list[str] = Field(default_factory=list)
