@@ -2,9 +2,10 @@ from fastapi import Depends
 from sqlmodel import Session
 
 from app.api.deps.db import get_session
-from app.api.deps.listing import get_cache_port
+from app.api.deps.listing import get_cache_port, get_catalog_gateway
 from app.services.admin.adapters.sql_unit_of_work import SqlAdminUnitOfWork
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork
+from app.services.admin.use_cases.bulk_create_properties import BulkCreatePropertiesUseCase
 from app.services.admin.use_cases.estimated_price.set_estimated_price import SetEstimatedPriceUseCase
 from app.services.admin.use_cases.get_properties import GetPropertiesAdminUseCase
 from app.services.admin.use_cases.get_property_detail import GetPropertyDetailAdminUseCase
@@ -15,6 +16,7 @@ from app.services.admin.use_cases.promotions.delete import DeletePromotionUseCas
 from app.services.admin.use_cases.promotions.list_all import ListAllPromotionsUseCase
 from app.services.admin.use_cases.promotions.list_by_property import ListPromotionsByPropertyUseCase
 from app.services.shared.ports.cache import CachePort
+from app.services.shared.ports.catalog_gateway import CatalogGateway
 
 
 # -------------------------------------------------------------------------
@@ -88,3 +90,10 @@ def get_delete_promotion_uc(
     cache: CachePort = Depends(get_cache_port),
 ) -> DeletePromotionUseCase:
     return DeletePromotionUseCase(uow=uow, cache=cache)
+
+
+def get_bulk_create_properties_uc(
+    uow: AdminUnitOfWork = Depends(get_admin_uow),
+    catalog: CatalogGateway = Depends(get_catalog_gateway),
+) -> BulkCreatePropertiesUseCase:
+    return BulkCreatePropertiesUseCase(uow=uow, catalog=catalog)

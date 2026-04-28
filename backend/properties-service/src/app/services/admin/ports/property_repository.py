@@ -1,7 +1,13 @@
 import uuid
 from typing import Optional, Protocol
 
-from app.models.property import ListingStatus, Property, VerificationStatus
+from app.models.property import (
+    ListingStatus,
+    Property,
+    PropertyImage,
+    PropertyLocation,
+    VerificationStatus,
+)
 
 
 class AdminPropertyRepository(Protocol):
@@ -16,4 +22,5 @@ class AdminPropertyRepository(Protocol):
         offset: int,
         limit: int,
     ) -> list[Property]: ...
-    def hard_delete(self, *, property_id: uuid.UUID) -> None: ...
+    def add(self, *, property: tuple[Property, PropertyLocation, list[PropertyImage]]) -> None: ...
+    def bulk_insert(self, *, properties: list[tuple[Property, PropertyLocation, list[PropertyImage]]]) -> None: ...

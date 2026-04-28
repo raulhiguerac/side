@@ -213,7 +213,7 @@ class PropertyLocation(AuditMixin, table=True):
     country_id: uuid.UUID = Field(nullable=False)
     # SRID 4326 = WGS84 (standard GPS coordinates)
     location: Any = Field(
-        sa_column=Column(Geometry("POINT", srid=4326), nullable=False)
+        sa_column=Column(Geometry("POINT", srid=4326, spatial_index=False), nullable=False)
     )
 
     property: Optional["Property"] = Relationship(back_populates="location")
