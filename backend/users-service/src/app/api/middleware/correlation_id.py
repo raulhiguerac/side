@@ -1,9 +1,6 @@
 import uuid
-
 from fastapi import FastAPI, Request
-
 from app.core.logging.context import request_id_ctx
-
 
 def add_correlation_id(app: FastAPI) -> None:
     @app.middleware("http")

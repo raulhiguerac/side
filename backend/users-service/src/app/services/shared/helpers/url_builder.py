@@ -1,6 +1,5 @@
 from urllib.parse import urlencode, urljoin
 
-
 def build_redirect_url(
     *,
     front_base_url: str,

@@ -1,5 +1,4 @@
-from app.schemas.base import StrictBase
-
+from app.schemas.base import StrictBase 
 
 class UploadResult(StrictBase):
     bucket: str

@@ -1,6 +1,6 @@
-from pydantic import EmailStr
+from pydantic import EmailStr 
+from app.schemas.base import StrictBase 
 
-from app.schemas.base import StrictBase
 
 
 class RequestResetPasswordIn(StrictBase):

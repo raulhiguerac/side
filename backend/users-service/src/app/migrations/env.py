@@ -1,23 +1,33 @@
 import os
-import sys
+
 from logging.config import fileConfig
 
-from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config
+from sqlalchemy import pool
 
-# src/ directory so that `app.*` imports resolve correctly
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from alembic import context
 
 from sqlmodel import SQLModel
+from models.account import (
+    Account,
+    UserProfile,
+    CompanyProfile,
+    AccountConsents
+)
 
-from app.models.account import Account, AccountConsents, CompanyProfile, UserProfile  # noqa: F401
-from app.models.interests import (  # noqa: F401
+from models.location import (
+    Country,
+    City,
+    Neighborhood
+)
+
+from models.interests import (
     UserInterest,
     UserNeighborhoodInterest,
-    UserPropertyTypeInterest,
+    UserPropertyTypeInterest
 )
-from app.models.kc_tasks import KcCompensationTask  # noqa: F401
-from app.models.onboarding import OnboardingCompletions  # noqa: F401
+
+from models.kc_tasks import KcCompensationTask
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

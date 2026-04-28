@@ -8,29 +8,43 @@
 
 import { defineStore } from "pinia";
 import axios from "axios";
-import { API, STORAGE_KEYS } from "@/config";
 import { useAuthStore } from "./auth";
-import type { User, UserLocation, UserInterests, UserState } from "@/types/user";
+
+interface User {
+  account_id: string;
+  email: string;
+  account_type: string;
+  onboarding_step: string;
+  is_active: boolean;
+}
+
+interface OnboardingState {
+  onboardingStep: string;
+  hasCheckedOnboarding: boolean;
+  userDismissedModal: boolean;
+}
 
 export const useUserStore = defineStore("user", {
-  state: (): UserState => ({
+  state: (): OnboardingState => ({
     onboardingStep: "intent",
     hasCheckedOnboarding: false,
     userDismissedModal:
-      sessionStorage.getItem(STORAGE_KEYS.ONBOARDING_DISMISSED) === "true",
-    userInterests: { localities: [], neighborhoods: {}, properties: {} },
+      sessionStorage.getItem("onboarding_dismissed") === "true",
   }),
 
   actions: {
     async checkOnboardingStep(): Promise<string> {
       const authStore = useAuthStore();
+
       if (!authStore.isAuthenticated) throw new Error("AUTH_REQUIRED");
+
       if (this.userDismissedModal) return "done";
+
       if (this.hasCheckedOnboarding) return this.onboardingStep;
 
       try {
         const { data } = await axios.get<User>(
-          `${API.USERS_BASE_URL}/v1/users/me/`,
+          "http://localhost:8000/v1/users/me/",
           { withCredentials: true }
         );
 
@@ -38,46 +52,15 @@ export const useUserStore = defineStore("user", {
         this.hasCheckedOnboarding = true;
 
         return this.onboardingStep;
-      } catch (error) {
-        if (axios.isAxiosError(error) && error.response?.status === 401)
-          authStore.logout();
+      } catch (error: any) {
+        if (error.response?.status === 401) authStore.logout();
         throw error;
       }
-    },
-
-    async checkInterests(): Promise<UserInterests> {
-      if (this.userInterests.localities.length > 0) return this.userInterests;
-      const authStore = useAuthStore();
-      try {
-        const { data } = await axios.get<UserInterests>(
-          `${API.USERS_BASE_URL}/v1/users/me/interests`,
-          { withCredentials: true }
-        );
-
-        this.userInterests = data
-        return data
-      } catch (error) {
-        if (axios.isAxiosError(error) && error.response?.status === 401)
-          authStore.logout();
-        throw error;
-      }
-    },
-
-    async detectLocation(): Promise<UserLocation> {
-      const raw = localStorage.getItem(STORAGE_KEYS.USER_LOCATION);
-      if (raw) return JSON.parse(raw) as UserLocation;
-      const { data } = await axios.get(API.IPAPI_URL);
-      const location: UserLocation = data;
-      localStorage.setItem(
-        STORAGE_KEYS.USER_LOCATION,
-        JSON.stringify(location)
-      );
-      return location;
     },
 
     dismissModal() {
       this.userDismissedModal = true;
-      sessionStorage.setItem(STORAGE_KEYS.ONBOARDING_DISMISSED, "true");
+      sessionStorage.setItem("onboarding_dismissed", "true");
       this.onboardingStep = "done";
     },
 
@@ -85,7 +68,7 @@ export const useUserStore = defineStore("user", {
       this.userDismissedModal = false;
       this.hasCheckedOnboarding = false;
       this.onboardingStep = "done";
-      sessionStorage.removeItem(STORAGE_KEYS.ONBOARDING_DISMISSED);
+      sessionStorage.removeItem("onboarding_dismissed");
       console.log("✨ Onboarding reseteado para nueva sesión.");
     },
   },

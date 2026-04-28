@@ -2,7 +2,6 @@ from typing import Optional
 
 from app.schemas.base import StrictBase
 
-
 class AuthTokens(StrictBase):
     access_token: str
     expires_in: int

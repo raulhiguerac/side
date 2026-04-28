@@ -1,9 +1,8 @@
-from typing import BinaryIO
-
 import filetype
 
-from app.core.exceptions.validation import UnsupportedFileTypeError
+from typing import BinaryIO
 
+from app.core.exceptions.validation import UnsupportedFileTypeError
 
 def get_file_size(file: BinaryIO):
     try:

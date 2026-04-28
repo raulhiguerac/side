@@ -1,8 +1,6 @@
 import uuid
-from typing import Optional, Protocol
-
+from typing import Protocol, Optional
 from app.models.account import AccountType
-
 
 class EmailRecipientReaderPort(Protocol):
     async def get_display_name_by_account_id(

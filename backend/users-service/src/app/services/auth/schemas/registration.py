@@ -1,10 +1,8 @@
 import uuid
-from typing import Annotated, Literal, Union
-
+from typing import Annotated, Union, Literal
 from pydantic import ConfigDict, EmailStr, Field
 
 from app.schemas.base import StrictBase
-
 
 class PersonRegisterIn(StrictBase):
     first_name: str

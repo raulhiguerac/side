@@ -3,8 +3,8 @@ from typing import Optional
 
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from app.core.exceptions.auth import EmailAlreadyRegisteredError
 from app.core.exceptions.base import BaseError
+from app.core.exceptions.auth import EmailAlreadyRegisteredError
 from app.core.logging.utils import email_hash
 
 

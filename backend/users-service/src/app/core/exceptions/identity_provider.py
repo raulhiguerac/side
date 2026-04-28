@@ -1,6 +1,5 @@
 from app.core.exceptions.base import BaseError
 
-
 class IdentityProviderMisconfiguredError(BaseError):
     def __init__(self, *, detail: str | None = None, cause: Exception | None = None):
         super().__init__(

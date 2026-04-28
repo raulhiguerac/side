@@ -3,11 +3,12 @@ import uuid
 
 from pydantic import ValidationError
 
-from app.core.exceptions.user import AccountDisabledError
+from app.services.user.schemas.current import CurrentUserOut
+from app.services.user.ports.unit_of_work import UserUnitOfWork
 from app.services.shared.ports.cache import CachePort
 from app.services.user.helpers.cache_keys import account_cache_key
-from app.services.user.ports.unit_of_work import UserUnitOfWork
-from app.services.user.schemas.current import CurrentUserOut
+
+from app.core.exceptions.user import AccountDisabledError
 
 CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "120"))
 

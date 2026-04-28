@@ -1,6 +1,6 @@
-from app.integrations.cache.redis.cache import CacheClient
 from app.services.shared.ports.cache import CachePort
 
+from app.integrations.cache.redis.cache import CacheClient
 
 class RedisCacheAdapter(CachePort):
     """

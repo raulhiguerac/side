@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.handlers.exception_handlers import register_exception_handlers
 from app.api.main import api_router
@@ -13,13 +12,6 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Catalog ms",
         version="0.1.0",
-    )
-
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_methods=["*"],
-        allow_headers=["*"],
     )
 
     add_correlation_id(app)

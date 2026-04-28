@@ -1,18 +1,18 @@
 import secrets
 
 from app.core.config.settings import settings
-from app.core.exceptions.account import AccountNotFoundError
-from app.models.account import AccountActionActor, AccountType
+
+from app.services.user.helpers.cache_keys import reactivation_cache_key
 from app.services.shared.helpers.security import hash_token
 from app.services.shared.helpers.url_builder import build_redirect_url
-from app.services.shared.ports.cache import CachePort
-from app.services.user.helpers.cache_keys import reactivation_cache_key
-from app.services.user.ports.unit_of_work import UserUnitOfWork
-from app.services.user.services.get_profile_orchestrator import (
-    ProfileApplicationService,
-)
-from app.services.user.services.reactivation_mailer import ReactivationMailer
 
+from app.services.user.services.get_profile_orchestrator import ProfileApplicationService
+from app.services.user.services.reactivation_mailer import ReactivationMailer
+from app.services.shared.ports.cache import CachePort
+from app.services.user.ports.unit_of_work import UserUnitOfWork
+
+from app.models.account import AccountActionActor, AccountType
+from app.core.exceptions.account import AccountNotFoundError
 
 class RequestReactivationUseCase:
     def __init__(

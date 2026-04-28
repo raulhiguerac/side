@@ -7,8 +7,11 @@ Create Date: 2026-02-03 14:22:31.863344
 """
 from typing import Sequence, Union
 
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
+
+import sqlmodel
+
 from sqlalchemy.dialects import postgresql
 
 ENUM_NAME = "onboardingstep"

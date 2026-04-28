@@ -1,8 +1,10 @@
 import uuid
 
-from app.services.user.helpers.current_account_reader import CurrentAccountReader
-from app.services.user.helpers.current_profile_reader import CurrentProfileReader
 from app.services.user.schemas.current import CurrentUserProfileOut
+
+from app.services.user.helpers.current_profile_reader import CurrentProfileReader
+from app.services.user.helpers.current_account_reader import CurrentAccountReader
+
 
 
 class ProfileApplicationService:
