@@ -16,7 +16,8 @@
         "ms-python.vscode-pylance",
         "cweijan.vscode-database-client2",
         "vue.volar",
-        "mariorodeghiero.vue-theme"
+        "mariorodeghiero.vue-theme",
+        "ms-toolsai.jupyter"
       ]
     }
   },
