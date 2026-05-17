@@ -128,6 +128,25 @@ services:
     command: server --console-address ":9001" /data
     networks:
       - dev-net
+  
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.12.0-full
+    container_name: mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlflow
+    environment:
+      TZ: UTC
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --default-artifact-root s3://mlflow-artifacts/
+      --allowed-hosts "*"
+    networks:
+      - dev-net
 
 volumes:
   redis_data:
@@ -137,6 +156,7 @@ volumes:
   properties-postgres-data:
   keycloak-postgres-data:
   minio_data:
+  mlflow_data:
 
 networks:
   dev-net:
