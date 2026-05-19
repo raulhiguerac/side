@@ -7,4 +7,5 @@ class StrictBase(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         str_strip_whitespace=True,
+        from_attributes=True,
     )

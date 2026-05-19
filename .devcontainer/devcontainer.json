@@ -27,5 +27,8 @@
       "UV_LINK_MODE": "copy",
       "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv"
   },
-  "remoteUser": "vscode"
+  "remoteUser": "vscode",
+  "postCreateCommand": {
+    "analytics": "sh /workspace/data/ml/AVM/scripts/setup-analytics-kernel.sh"
+  }
 }
