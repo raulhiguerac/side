@@ -7,6 +7,15 @@ from app.core.logging.logger import get_logger
 logger = get_logger(__name__)
 
 
+ERROR_CODE_TO_HTTP_STATUS: dict[str, int] = {
+    # prediction
+    "PREDICTION_PERSISTENCE_ERROR": 500,
+    # auth
+    "UNAUTHORIZED": 401,
+    "FORBIDDEN": 403,
+}
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(BaseError)
     async def base_error_handler(request: Request, exc: BaseError):

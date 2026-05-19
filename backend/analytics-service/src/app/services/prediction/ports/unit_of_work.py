@@ -1,0 +1,10 @@
+from typing import Protocol
+
+from app.services.prediction.ports.prediction_repository import PredictionRepository
+
+class PredictionUnitOfWork(Protocol):
+    prediction: PredictionRepository
+
+    async def commit(self) -> None: ...
+    async def rollback(self) -> None: ...
+    async def refresh(self, instance: object) -> None: ...

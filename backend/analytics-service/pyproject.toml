@@ -27,6 +27,8 @@ dependencies = [
     "lightgbm>=4.6.0",
     "optuna>=4.8.0",
     "catboost>=1.2.10",
+    "mlflow>=3.12.0",
+    "boto3>=1.43.10",
 ]
 
 [project.optional-dependencies]
