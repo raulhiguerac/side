@@ -4,14 +4,14 @@ status: draft
 last-verified: 2026-05-20
 owners: [analytics-service]
 related: [[analytics-service]], [[analytics-service-architecture]], [[avm-training]], [[adr-mlflow-minio-stack]]
-sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md]
+sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md]
 ---
 
 ## TL;DR
 
 Flujo: abrir el repo en VS Code → "Reopen in Container" → docker-compose levanta toda la infra (Postgres por servicio + Keycloak + Redis + MinIO + MLflow). Después, **a mano**: `cd backend/analytics-service && uv sync && uv run uvicorn app.main:app --reload --port 8000`.
 
-El servicio analytics **no está como service en el compose** — se corre manual dentro del devcontainer. Y hay 7 gaps actuales que bloquean `/predict` end-to-end (ver Known gaps al final).
+El servicio analytics **no está como service en el compose** — se corre manual dentro del devcontainer. Y hay 5 gaps actuales que bloquean `/predict` end-to-end (ver Known gaps al final).
 
 ## Prerequisites
 
@@ -64,7 +64,7 @@ curl http://localhost:8000/v1/health
 
 ## Env vars del servicio
 
-`backend/analytics-service/.env.example` **está incompleto** al 2026-05-20: solo declara `DATABASE_URL` y `REDIS_URL`. Para que `/predict` funcione, el `.env` real necesita además las 5 env vars de MLflow. Set mínimo recomendado para dev local:
+`backend/analytics-service/.env.example` **está incompleto** al 2026-05-20: solo declara `DATABASE_URL` y `REDIS_URL`. Para que `/predict` funcione, el `.env` real necesita además las 5 env vars de MLflow y las 3 de autenticación Keycloak. Set mínimo recomendado para dev local:
 
 ```bash
 # Persistencia
@@ -77,17 +77,32 @@ MLFLOW_S3_ENDPOINT_URL=http://minio:9000
 MLFLOW_MODEL_URI=models:/bogota-avm@production
 AWS_ACCESS_KEY_ID=minioadmin
 AWS_SECRET_ACCESS_KEY=minioadmin
+
+# Auth — Keycloak JWT (ver [[adr-auth-keycloak-jwt]])
+KC_JWKS_URL=http://keycloak:8080/realms/<realm>/protocol/openid-connect/certs
+KC_ISSUER=http://keycloak:8080/realms/<realm>
+OIDC_AUDIENCE=account
+
+# Kafka — consumer listing-created (solo necesario para el worker, no para el web server)
+KAFKA_SERVER=kafka:9092
+KAFKA_GROUP_ID=analytics-listing-consumer
+KAFKA_TOPIC=listing-created
 ```
+
+Reemplazar `<realm>` con el nombre del realm en Keycloak (ver `infra/keycloak/realm.template.json`).
 
 Los nombres de host (`analytics-ms-db`, `mlflow`, `minio`, `redis`) resuelven en la red `dev-net` del compose desde dentro del devcontainer.
 
 ## Verificar `/predict` end-to-end
 
-**Pendiente** — el endpoint `/predict` todavía no está expuesto en `api/main.py` al 2026-05-20. Cuando se exponga, el flujo será:
+El endpoint está expuesto en `POST /v1/predict`. Requiere un JWT válido — el servicio lo lee de la **cookie `access_token`** (HttpOnly, seteada por el gateway). Para tests manuales con curl/Postman usar el header `Cookie: access_token=<jwt>`.
 
 1. Obtener un JWT de Keycloak (Postman collection pendiente, ver [[adr-auth-keycloak-jwt]]).
-2. POST a `http://localhost:8000/v1/predict` con `Authorization: Bearer <jwt>` y body con shape de `PredictionRequest` (rangos en [[analytics-service-prediction]]).
-3. Validar la response y opcionalmente revisar el registro insertado en `predictions`.
+2. POST a `http://localhost:8000/v1/predict` con `Cookie: access_token=<jwt>` y body con shape de `PredictionRequest` (rangos en [[analytics-service-prediction]]).
+3. Validar que la response tenga `id`, `predicted_price`, `model_version`, `created_at`.
+4. Opcionalmente revisar el registro insertado: `psql -h analytics-ms-db -U admin -d analytics_service_db -c "SELECT * FROM predictions ORDER BY created_at DESC LIMIT 1;"`
+
+Bloqueantes previos a poder hacer este test: gaps #1 (DB), #2 (Alembic), #3 (bucket MinIO) y #4 (modelo seed) — ver abajo.
 
 ## Known gaps (2026-05-20)
 
@@ -99,13 +114,14 @@ Estos son blockers para llegar a un `/predict` funcionando en local. Surgieron e
 4. **No hay modelo seed en MLflow.** Para que `/predict` responda, el registry necesita `bogota-avm` con alias `production`. Opciones:
    - Correr `python data/ml/AVM/training/train.py` contra un dataset (CSV en `data/raw/` si existe).
    - Pre-cargar un modelo entrenado (mecanismo pendiente).
-5. **El `.env.example` del servicio está incompleto** — faltan las 5 env vars de MLflow (documentadas arriba).
-6. **La FastAPI dependency de auth no existe** (`api/deps/__init__.py` vacío). Hoy no se puede testear el flujo auth real — se necesita stub o mock hasta que se implemente.
-7. **El route `/predict` no está wireado en `api/main.py`.** Solo `/health` está activo.
+5. **El `.env.example` del servicio está incompleto** — faltan las 5 env vars de MLflow y las 3 de auth Keycloak (documentadas arriba).
+
+~~6. **La FastAPI dependency de auth no existe**.~~ ✓ Implementada en `api/deps/auth.py` (2026-05-20).
+~~7. **El route `/predict` no está wireado en `api/main.py`**.~~ ✓ Expuesto vía `predict.router` incluido en `api/main.py` (2026-05-20).
 
 ## Postman collection (pendiente)
 
-Una collection pública para obtener token de Keycloak + llamar `/predict` se creará cuando el endpoint exista y la dependency de auth esté implementada.
+Una collection pública para obtener token de Keycloak + llamar `/predict` se creará cuando los gaps de infra (#1–#4) estén cerrados y haya un realm de Keycloak con un usuario de prueba configurado.
 
 ## Comandos útiles dentro del devcontainer
 
@@ -137,5 +153,8 @@ docker compose restart keycloak
 - MLflow `--default-artifact-root` apunta a `s3://mlflow-artifacts/`, bucket que **no** está en `MINIO_DEFAULT_BUCKETS` ([docker-compose.yml:127](docker-compose.yml#L127), [docker-compose.yml:146](docker-compose.yml#L146)).
 - El `postCreateCommand` del devcontainer ejecuta `setup-analytics-kernel.sh`, que registra un Jupyter kernel llamado `analytics` ([devcontainer.json:31-33](.devcontainer/devcontainer.json#L31-L33), [setup-analytics-kernel.sh](data/ml/AVM/scripts/setup-analytics-kernel.sh)).
 - El Dockerfile de analytics-service usa `python:3.10-slim` + uv + uvicorn sobre `app.main:app` puerto 8000 ([Dockerfile](backend/analytics-service/Dockerfile)).
-- `backend/analytics-service/.env.example` no incluye las env vars de MLflow al 2026-05-20 ([.env.example](backend/analytics-service/.env.example)).
+- `backend/analytics-service/.env.example` no incluye las env vars de MLflow ni las de auth Keycloak al 2026-05-20 ([.env.example](backend/analytics-service/.env.example)).
+- `api/deps/` tiene tres archivos: `auth.py` (JWT cookie → `get_current_principal`), `db.py` (session), `prediction.py` (model + UoW + UC); `__init__.py` vacío.
+- `UnauthorizedError` y `ForbiddenError` viven en `core/exceptions/auth.py`, no en `api/deps/auth.py` ([core/exceptions/auth.py](backend/analytics-service/src/app/core/exceptions/auth.py)).
+- El endpoint `POST /v1/predict` está activo desde 2026-05-20 — wired en `api/routes/predict.py` e incluido en `api/main.py`.
 - El devcontainer base es Ubuntu 22.04 + Node 20 + uv 0.5.21 + pnpm ([.devcontainer/Dockerfile](.devcontainer/Dockerfile)).

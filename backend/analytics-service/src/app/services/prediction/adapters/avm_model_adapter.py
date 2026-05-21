@@ -11,7 +11,7 @@ class AVMModelAdapter:
         price = self.client.online_predict(record=record.model_dump(mode='json', exclude={'property_id'}))
         return price, version
 
-    # def batch_predict(self, *, records: list[PredictionRequest]) -> tuple[list[float], str]:
-    #     version = self.mlflow_client.get_model_version_by_alias("bogota-avm", "production")
-    #     prices = self.client.batch_predict(records=[r.model_dump(mode='json', exclude={'property_id'}) for r in records])
-    #     return prices, version.version
+    def batch_predict(self, *, records: list[PredictionRequest]) -> tuple[list[float], str]:
+        version = self.client.get_version(model_name="bogota-avm", alias="production")
+        prices = self.client.batch_predict(records=[r.model_dump(mode='json', exclude={'property_id'}) for r in records])
+        return prices, version

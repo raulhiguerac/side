@@ -29,16 +29,16 @@ async def main() -> None:
     uc = OnlinePrediction(uow=build_uow(), model=model)
 
     req = PredictionRequest(
-        area_m2=80.0,
+        area_m2=120.0,
         bedrooms=3,
-        bathrooms=2.0,
-        parking_spots=1,
-        stratum=3,
+        bathrooms=4.0,
+        parking_spots=2,
+        stratum=5,
         property_type="apartment",
-        year_built=2005,
-        lat=4.6097,
-        lon=-74.0817,
-        barrio_ideca="CHAPINERO",
+        year_built=2006,
+        lat=4.6625749,
+        lon=-74.0495009,
+        barrio_ideca="EL NOGAL",
     )
 
     result = await uc.execute(principal=uuid.uuid4(), req=req)

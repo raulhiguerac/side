@@ -1,10 +1,10 @@
 ---
 title: Arquitectura interna de analytics-service
 status: draft
-last-verified: 2026-05-19
+last-verified: 2026-05-20
 owners: [analytics-service]
-related: [[architecture]], [[analytics-service]], [[analytics-service-prediction]], [[analytics-service-mlflow]]
-sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md]
+related: [[architecture]], [[analytics-service]], [[analytics-service-prediction]], [[analytics-service-mlflow]], [[analytics-service-kafka-consumer]]
+sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md, ../../sources/analytics-service/2026-05-20-kafka-consumer-design.md]
 ---
 
 ## TL;DR
@@ -16,18 +16,23 @@ Hex pattern estándar del backend con dos dominios (`prediction` activo, `market
 ```
 src/app/
 ├── api/
-│   ├── deps/                 # dependencies FastAPI (auth, db, model client, UoW)
+│   ├── deps/
+│   │   ├── auth.py           # get_current_principal, PyJWKClient
+│   │   ├── db.py             # get_session (wrapper sobre app.db)
+│   │   └── prediction.py     # lru_cache model/adapter, get_uow, get_online_prediction_uc
 │   ├── handlers/
 │   │   └── exception_handlers.py
 │   ├── middleware/
 │   │   └── correlation_id.py
 │   └── routes/
-│       └── health.py         # único router activo hoy
+│       ├── health.py
+│       └── predict.py        # POST /predict → OnlinePrediction
 ├── core/
-│   ├── config/settings.py    # DATABASE_URL, REDIS_URL
+│   ├── config/settings.py    # DATABASE_URL, REDIS_URL, KC_JWKS_URL, KC_ISSUER, OIDC_AUDIENCE
 │   ├── exceptions/
 │   │   ├── base.py
-│   │   └── prediction.py     # PredictionPersistenceError, etc.
+│   │   ├── auth.py           # UnauthorizedError, ForbiddenError
+│   │   └── prediction.py     # PredictionPersistenceError
 │   └── logging/
 ├── db/                       # session, engine
 ├── integrations/
@@ -57,22 +62,37 @@ Componentes hoy:
 
 | Pieza | Archivo |
 |---|---|
-| UC | [`services/prediction/use_cases/online.py`](backend/analytics-service/src/app/services/prediction/use_cases/online.py) |
+| UC online | [`services/prediction/use_cases/online.py`](backend/analytics-service/src/app/services/prediction/use_cases/online.py) |
+| UC batch | [`services/prediction/use_cases/batch.py`](backend/analytics-service/src/app/services/prediction/use_cases/batch.py) |
+| Helper | `services/prediction/helpers/record_builder.py` — `build_prediction_record` compartido |
 | Port: model gateway | `services/prediction/ports/model_gateway.py` |
 | Port: prediction repo | `services/prediction/ports/prediction_repository.py` |
 | Port: UoW | `services/prediction/ports/unit_of_work.py` |
 | Adapter: model | `services/prediction/adapters/avm_model_adapter.py` |
 | Adapter: SQL repo | `services/prediction/adapters/sql_prediction_repository.py` |
-| Schemas (request/response) | `services/prediction/schemas/prediction.py` |
+| Adapter: SQL UoW | `services/prediction/adapters/sql_prediction_unit_of_work.py` |
+| Schemas | `services/prediction/schemas/prediction.py` |
 | Modelo de BD | `models/prediction.py` (tabla `predictions`) |
 | Error de dominio | `core/exceptions/prediction.py` |
 
 ### Flujo de `OnlinePrediction.execute`
-1. Recibe `PredictionRequest` validado por Pydantic (`StrictBase`) y un `principal: uuid.UUID` (resuelto del JWT por una dependency).
-2. Llama `ModelGateway.online_predict(record=req)` que devuelve `(predicted_price, model_version)`. La llamada está envuelta en `run_in_threadpool` porque la inferencia de MLflow es **sincrónica/bloqueante**.
-3. Construye una entidad `Prediction` con inputs + output + `model_version` + `source=online`.
-4. Persiste vía `UnitOfWork.prediction.add(...)` + `commit()`. Si falla → `rollback()` + `PredictionPersistenceError`.
-5. Devuelve `PredictionResponse(id, predicted_price, model_version, created_at)`.
+1. Recibe `PredictionRequest` y `principal: uuid.UUID` (resuelto del JWT por `get_current_principal`).
+2. `run_in_threadpool(model.online_predict)` → `(predicted_price, model_version)`. Bloqueante — MLflow es sync.
+3. `build_prediction_record(source=online)` → entidad `Prediction`.
+4. `run_in_threadpool(uow.prediction.add)` + `await uow.commit()`. `flush()` dentro de `add` es bloqueante, también va en threadpool.
+5. Si persiste falla → `rollback()` + `PredictionPersistenceError`.
+6. Devuelve `PredictionResponse`.
+
+### Flujo de `BatchPrediction.execute`
+Entrada: `messages: list[tuple[uuid.UUID, PredictionRequest]]` — el consumer arma el objeto, pasa con un ID de correlación.
+
+1. `run_in_threadpool(model.batch_predict)` → `(prices, model_version)`. DataFrame multi-fila.
+2. `build_prediction_record(source=batch)` × N → `db_records`.
+3. **Happy path**: `run_in_threadpool(uow.prediction.batch_add)` con `ON CONFLICT DO NOTHING` + `commit()`.
+4. **Fallback** si falla bulk: `begin_nested()` por fila → `rollback_to_savepoint()` en las que fallan → un solo `commit()` al final.
+5. Devuelve `BatchPredictionResult(predictions=[(id, price)], failed=[(id, req)])`.
+
+`principal` en batch = `SYSTEM_PRINCIPAL_ID` (UUID fijo de settings) — representa a `properties-service` como actor, no a un usuario. Protege la auditoría en `created_by`.
 
 Ver [[analytics-service-prediction]] para detalle del dominio.
 
@@ -100,8 +120,9 @@ Componentes que se usen desde varios dominios (`services/shared/{adapters, db, h
 Falla en init si falta cualquiera.
 
 Métodos:
-- `get_version(model_name, alias)` → consulta el registry y devuelve el version string que apunta el alias.
-- `online_predict(record)` → arma un DataFrame de 1 fila y llama `pyfunc.predict()`.
+- `get_version(model_name, alias)` → version string del alias en el registry.
+- `online_predict(record)` → DataFrame de 1 fila → `pyfunc.predict().iloc[0]`.
+- `batch_predict(records)` → DataFrame multi-fila → `pyfunc.predict().tolist()`.
 
 El adapter `AVMModelAdapter` consume `ModelClient` y traduce entre el schema del dominio (`PredictionRequest`) y el formato dict que MLflow espera. **Hardcodea hoy** `model_name="bogota-avm"` y `alias="production"`.
 
@@ -122,9 +143,9 @@ Alembic está configurado en `pyproject.toml` pero **no hay migraciones aplicada
 
 JWT del usuario llega vía `Authorization: Bearer <token>`. Una FastAPI dependency en `api/deps/` resuelve el token contra Keycloak y entrega un `principal: uuid.UUID` al UC. Los UCs **nunca ven el token** ni hablan con Keycloak — operan sobre el UUID resuelto.
 
-Para el caso server-to-server (consumer async futuro), el `principal` será un **system ID fijo** del servicio que emite el mensaje. Ver `[[adr-auth-keycloak-jwt]]`.
+Para el flujo server-to-server (Kafka), el `principal` es `SYSTEM_PRINCIPAL_ID` (UUID fijo en settings), no el usuario real. Ver `[[adr-auth-keycloak-jwt]]`.
 
-El dependency concreto **no existe en código todavía** — al 2026-05-19 `api/deps/__init__.py` está vacío.
+`api/deps/auth.py` implementa `get_current_principal` — lee cookie `access_token`, valida JWT contra Keycloak vía `PyJWKClient`. `UnauthorizedError` y `ForbiddenError` viven en `core/exceptions/auth.py` (no en el dep).
 
 ## Errores y exception handling
 
@@ -138,19 +159,28 @@ Jerarquía en `core/exceptions/`:
 
 Uno hoy: **correlation_id** ([api/middleware/correlation_id.py](backend/analytics-service/src/app/api/middleware/correlation_id.py)). Genera un UUID por request y lo propaga en logs + response header para trazabilidad. Aplicado vía `add_correlation_id(app)` en `main.py`.
 
-## Workers (anticipado)
+## Workers
 
-`src/app/workers/` existe como scaffold para los consumers async (caso `properties-service` ↔ `analytics-service` descrito en [[architecture]]). **Sin código aún**. Patrón esperado: cada worker en un módulo dentro de `workers/`, reusando los UCs del dominio (no duplicar la lógica de predicción).
+`src/app/workers/listing_created/consumer.py` contiene `ListingCreatedConsumer` — en construcción al 2026-05-20.
+
+Decisiones de diseño acordadas:
+- **confluent-kafka** (no aiokafka) — operaciones bloqueantes envueltas con `run_in_threadpool`, consistente con el resto del servicio.
+- **Cadencia de 15 min** (micro-batch): el consumer drena el topic, llama `BatchPrediction.execute`, publica resultados, duerme 900s. No polling continuo.
+- **Proceso separado long-running** (`workers/listing_created/main.py`) — mantiene el modelo en memoria entre corridas; ciclo de vida independiente del web server.
+- **DLQ** (`listing-created-dlq`) solo para errores de deserialización irrecuperables. Fallos de modelo van de vuelta a `listing-created` vía `BatchPredictionResult.failed`.
+
+Ver [[analytics-service-kafka-consumer]] para el detalle.
 
 ## Claims
 
-- El layout sigue el hex pattern del backend: ports en `services/<domain>/ports/`, adapters en `services/<domain>/adapters/`, UCs en `services/<domain>/use_cases/`.
-- El UC `OnlinePrediction` invoca `ModelGateway.online_predict()` envuelto en `run_in_threadpool` porque la llamada a MLflow es bloqueante ([online.py:45](backend/analytics-service/src/app/services/prediction/use_cases/online.py#L45)).
-- El adapter `AVMModelAdapter` hardcodea `model_name="bogota-avm"` y `alias="production"` ([avm_model_adapter.py:10](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L10)).
+- `api/deps/` tiene tres archivos: `auth.py` (JWT), `db.py` (session), `prediction.py` (model + UoW + UC); `__init__.py` vacío.
+- `ModelClient` y `AVMModelAdapter` se instancian con `@lru_cache(maxsize=1)` en `api/deps/prediction.py` — singletons por proceso.
+- `run_in_threadpool` se aplica tanto a la inferencia (`online_predict`, `batch_predict`) como al repo (`add`, `batch_add`) — ambas son operaciones bloqueantes ([online.py](backend/analytics-service/src/app/services/prediction/use_cases/online.py), [batch.py](backend/analytics-service/src/app/services/prediction/use_cases/batch.py)).
+- `UnauthorizedError` y `ForbiddenError` viven en `core/exceptions/auth.py`, no en el dep ([core/exceptions/auth.py](backend/analytics-service/src/app/core/exceptions/auth.py)).
+- El `api_router` incluye `health.router` y `predict.router` ([api/main.py](backend/analytics-service/src/app/api/main.py)).
+- `core/config/settings.py` declara `DATABASE_URL`, `REDIS_URL`, `KC_JWKS_URL`, `KC_ISSUER`, `OIDC_AUDIENCE`; las env vars de MLflow se leen directamente en `ModelClient.__init__` ([mlflow/model.py:11](backend/analytics-service/src/app/integrations/ml/mlflow/model.py#L11)).
 - `ModelClient` carga el modelo al instanciarse (`__init__`), no on-demand ([mlflow/model.py:29](backend/analytics-service/src/app/integrations/ml/mlflow/model.py#L29)).
-- La factory del FastAPI app está en [main.py:9](backend/analytics-service/src/app/main.py#L9) y registra: logging, correlation_id middleware, exception handlers, y el `api_router` bajo prefix `/v1`.
-- El `api_router` solo incluye `health.router` al 2026-05-19 — `predict` no está expuesto ([api/main.py:6](backend/analytics-service/src/app/api/main.py#L6)).
-- `api/deps/__init__.py` está vacío al 2026-05-19 — la dependency de auth aún no existe en código.
-- `core/config/settings.py` solo declara `DATABASE_URL` y `REDIS_URL`; las env vars de MLflow se leen directamente en `ModelClient.__init__`, no via Settings ([settings.py:6](backend/analytics-service/src/app/core/config/settings.py#L6), [mlflow/model.py:11](backend/analytics-service/src/app/integrations/ml/mlflow/model.py#L11)).
-- No hay migraciones de Alembic aplicadas al 2026-05-19 (sin archivos en `migrations/versions/`).
-- Existe un script provisional [scripts/smoke_online_predict.py](backend/analytics-service/scripts/smoke_online_predict.py) que NO se documenta — provisional según directiva del autor.
+- `SqlPredictionUnitOfWork` implementa `begin_nested()` y `rollback_to_savepoint()` — necesarios para el fallback row-by-row del UC batch ([sql_prediction_unit_of_work.py](backend/analytics-service/src/app/services/prediction/adapters/sql_prediction_unit_of_work.py)).
+- No hay migraciones de Alembic aplicadas al 2026-05-20 (sin archivos en `migrations/versions/`).
+- `workers/listing_created/consumer.py` define `ListingCreatedConsumer(uc, producer, settings)` con método `consume_batch()` — en construcción al 2026-05-20.
+- El consumer usa confluent-kafka; las llamadas bloqueantes se envuelven con `run_in_threadpool` igual que en los UCs.

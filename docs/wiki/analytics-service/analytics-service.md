@@ -1,10 +1,10 @@
 ---
 title: analytics-service
 status: draft
-last-verified: 2026-05-19
+last-verified: 2026-05-20
 owners: [analytics-service]
 related: [[architecture]], [[analytics-service-architecture]], [[analytics-service-prediction]], [[avm-training]]
-sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md]
+sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md]
 ---
 
 ## TL;DR
@@ -35,23 +35,23 @@ Cada dominio sigue el [[glossary#hex-pattern-arquitectura-hexagonal]] estándar 
 ### `/predict` sincrónico (HTTP REST)
 - Hoy: usuarios registrados (JWT obligatorio resuelto a [[glossary#principal]]).
 - Futuro: posible público sin login con rate limit (~2 calls/IP rolling 2h, vía Redis) para SEO/traffic driver.
-- **Estado actual:** el UC `OnlinePrediction` está implementado pero la **route no está expuesta** en `api/main.py` — pendiente de wiring.
+- **Estado actual (2026-05-20):** UC `OnlinePrediction` implementado y route **expuesta** en `api/main.py`. Auth dep implementada en `api/deps/auth.py`.
 
-### Consumer async (en definición)
+### Consumer async (`listing-created`)
 Server-to-server con `properties-service` para enriquecer `estimated_price` de listings recién creados:
 
 ```
 properties-service crea listing
     → publica en topic "listing-created"
-        → analytics-service consume
-            → predict
+        → analytics-service consume (batch, cada 15 min)
+            → BatchPrediction.execute
                 → publica en topic "price-predicted"
                     → properties-service consume y actualiza estimated_price
 ```
 
 En este flujo el [[glossary#principal]] del UC es un **system ID** (no el usuario que creó el listing), porque es feedback al modelo, no acción del usuario.
 
-Mecanismo de mensajería (Kafka u otro) **aún sin decidir**. Ver diagrama completo en [[architecture]].
+Decisiones de diseño acordadas (2026-05-20): **confluent-kafka**, micro-batch de 15 min, proceso separado long-running (mantiene el modelo en memoria), DLQ acotado a errores de deserialización. Ver [[analytics-service-kafka-consumer]].
 
 ## Boundaries — lo que analytics-service **NO** hace
 
@@ -74,9 +74,10 @@ Stack declarado en [pyproject.toml](backend/analytics-service/pyproject.toml). E
 
 ## Roadmap inmediato
 
-- [ ] Exponer route `/predict` en `api/main.py` (UC ya implementado en `OnlinePrediction`)
-- [ ] Dependency FastAPI para resolver JWT → `principal` (hoy `api/deps/` vacío)
+- [x] Exponer route `/predict` en `api/main.py` ✓ 2026-05-20
+- [x] Dependency FastAPI para resolver JWT → `principal` (`api/deps/auth.py`) ✓ 2026-05-20
 - [ ] Migración Alembic para crear tabla `predictions`
+- [ ] `analytics-ms-db` en `docker-compose.yml`
 - [ ] Implementar consumer del topic `listing-created` (workers/)
 - [ ] Endpoint de feedback de satisfacción post-predicción (alimenta campo `feedback`)
 - [ ] Primer job batch del dominio `market` (heatmap)
@@ -93,7 +94,7 @@ Stack declarado en [pyproject.toml](backend/analytics-service/pyproject.toml). E
 
 - `analytics-service` contiene dos dominios scaffoldeados en `src/app/services/`: `prediction` y `market` ([services/](backend/analytics-service/src/app/services)).
 - El dominio `market` está scaffoldeado pero los archivos de UCs/adapters/ports están vacíos al 2026-05-19.
-- El UC `OnlinePrediction` existe en código pero **no está expuesto** vía HTTP route — `api/main.py` solo incluye el health router ([api/main.py:6](backend/analytics-service/src/app/api/main.py#L6)).
+- El UC `OnlinePrediction` está expuesto en `POST /v1/predict` desde 2026-05-20 — `api/main.py` incluye `health.router` y `predict.router` ([api/main.py](backend/analytics-service/src/app/api/main.py)).
 - La tabla `predictions` persiste los inputs del request + `predicted_price` + `model_version` + un campo `feedback` opcional ([models/prediction.py:46](backend/analytics-service/src/app/models/prediction.py#L46)).
 - No hay consumer async implementado al 2026-05-19 — solo el scaffolding vacío `src/app/workers/__init__.py`.
 - Redis está declarado en dependencies pero no se usa en código todavía.

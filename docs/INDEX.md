@@ -31,8 +31,14 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - _mlflow_ — _pendiente Día 5_
 - _minio_ — _pendiente Día 5_
 
+### integrations/
+- [analytics-service-mlflow](wiki/analytics-service/analytics-service-mlflow.md) — ModelClient, AVMModelAdapter, env vars MLflow, stack docker-compose
+
+### workers/
+- [analytics-service-kafka-consumer](wiki/analytics-service/workers/analytics-service-kafka-consumer.md) — ListingCreatedConsumer, diseño micro-batch 15 min, DLQ, group.id y scaling
+
 ### runbook/
-- [analytics-service-local-dev](wiki/analytics-service/runbook/analytics-service-local-dev.md) — devcontainer first, infra del compose, env vars completas, 7 known gaps actuales
+- [analytics-service-local-dev](wiki/analytics-service/runbook/analytics-service-local-dev.md) — devcontainer first, infra del compose, env vars completas, 5 known gaps actuales
 
 ### adrs/
 - [ADR-0001 — MLflow + MinIO como stack ML](wiki/analytics-service/adrs/adr-mlflow-minio-stack.md)

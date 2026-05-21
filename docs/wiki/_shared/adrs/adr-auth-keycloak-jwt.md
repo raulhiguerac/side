@@ -1,10 +1,10 @@
 ---
 title: ADR-0001 — Auth vía Keycloak JWT
 status: stable
-last-verified: 2026-05-19
+last-verified: 2026-05-20
 owners: [_shared]
 related: [[architecture]], [[analytics-service-architecture]]
-sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md]
+sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md]
 decision-date: 2026-05-19
 decision-status: accepted
 ---
@@ -40,4 +40,5 @@ Para flujos server-to-server (consumer async de analytics), el `principal` es un
 
 - Cada microservicio backend tiene un `api/deps/` que resuelve el JWT a un `principal`.
 - Los UCs reciben `principal: uuid.UUID`, nunca el token.
-- Keycloak está planeado pero la dependency aún no existe en código al 2026-05-19 — `api/deps/__init__.py` está vacío en `analytics-service`.
+- En `analytics-service`, la dependency existe desde 2026-05-20 en `api/deps/auth.py` (`get_current_principal`). Lee la cookie `access_token`, valida JWT vía `PyJWKClient`, retorna `Principal`. Errores en `core/exceptions/auth.py` (no en el dep).
+- `api/deps/__init__.py` está vacío — cada responsabilidad en su propio archivo (`auth.py`, `db.py`, `prediction.py`).

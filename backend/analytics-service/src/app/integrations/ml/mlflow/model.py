@@ -34,3 +34,7 @@ class ModelClient:
     def online_predict(self, *, record: dict[str, Any]) -> float:
         df = pd.DataFrame([record])
         return self._model.predict(df).iloc[0]
+    
+    def batch_predict(self, *, records: list[dict[str, Any]]) -> list[float]:
+        df = pd.DataFrame(records)
+        return self._model.predict(df).tolist()

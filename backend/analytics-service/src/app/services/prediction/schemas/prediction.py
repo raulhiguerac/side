@@ -29,5 +29,10 @@ class PredictionResponse(StrictBase):
     created_at: datetime
 
 
+class BatchPredictionResult(StrictBase):
+    predictions: list[tuple[uuid.UUID, float]]          # (property_id, predicted_price) — publicar al topic
+    failed: list[tuple[uuid.UUID, PredictionRequest]]   # (property_id, req) — re-encolar
+
+
 # class FeedbackRequest(StrictBase):
 #     feedback: Feedback

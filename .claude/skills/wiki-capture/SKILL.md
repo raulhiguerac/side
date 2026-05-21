@@ -43,7 +43,9 @@ You will distill a conversation or text into a wiki source. **Never store litera
 
 4. **Write** to `docs/sources/<service>/YYYY-MM-DD-<descriptor>.md`. Use today's date.
 
-5. **Show the user** the generated content and the path. Then **offer** to run `/wiki-ingest` on the new file to propagate the findings into the curated wiki.
+5. **Show the user** the generated content and the path.
+
+6. **Immediately run `/wiki-ingest`** on the new file — do not wait for the user to ask. Invoke the wiki-ingest skill with the path of the file just created.
 
 ## Rules
 

@@ -1,15 +1,15 @@
 ---
 title: Dominio prediction (analytics-service)
 status: draft
-last-verified: 2026-05-19
+last-verified: 2026-05-20
 owners: [analytics-service]
 related: [[analytics-service]], [[analytics-service-architecture]], [[avm-training]], [[analytics-service-mlflow]]
-sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md]
+sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md]
 ---
 
 ## TL;DR
 
-Dominio que sirve predicciones de precio de propiedades vía el modelo AVM cargado al startup desde MLflow. El UC sincrónico `OnlinePrediction` es el único caso de uso implementado hoy. Persiste cada predicción para auditoría + futuro feedback al modelo.
+Dominio que sirve predicciones de precio de propiedades vía el modelo AVM cargado al startup desde MLflow. Dos UCs: `OnlinePrediction` (HTTP `/predict`) y `BatchPrediction` (Kafka `listing-created`). Ambos persisten cada predicción para auditoría + futuro feedback al modelo.
 
 ## Public surface
 
@@ -76,12 +76,29 @@ Entidad SQLModel `Prediction`:
 - `model: ModelGateway` — inferencia (port)
 
 ### Flujo de `execute(principal, req)`
-1. Llama `self.model.online_predict(record=req)` envuelto en `run_in_threadpool` (MLflow es bloqueante).
-2. Recibe `(predicted_price: float, model_version: str)`.
-3. Construye `Prediction` con inputs + output + `source=online` + `created_by=principal`.
-4. `self.uow.prediction.add(record=db_record)` + `await self.uow.commit()`.
-5. Si falla cualquier paso de persistencia: `await self.uow.rollback()` + `raise PredictionPersistenceError(cause=exc)`.
-6. Devuelve `PredictionResponse(id, predicted_price, model_version, created_at)`.
+1. `run_in_threadpool(model.online_predict)` → `(predicted_price, model_version)`.
+2. `build_prediction_record(source=online)` → `Prediction` (helper compartido con batch).
+3. `run_in_threadpool(uow.prediction.add)` — `flush()` es bloqueante, va en threadpool.
+4. `await uow.commit()`. Si falla → `rollback()` + `PredictionPersistenceError`.
+5. Devuelve `PredictionResponse`.
+
+## Use case: `BatchPrediction`
+
+Archivo: [batch.py](backend/analytics-service/src/app/services/prediction/use_cases/batch.py). Consumido por el worker Kafka del topic `listing-created`.
+
+### Firma
+- **Entrada**: `messages: list[tuple[uuid.UUID, PredictionRequest]]` — ID de correlación + objeto armado por el consumer.
+- **Salida**: `BatchPredictionResult(predictions: list[tuple[uuid.UUID, float]], failed: list[tuple[uuid.UUID, PredictionRequest]])`.
+
+`principal` = `SYSTEM_PRINCIPAL_ID` (UUID fijo de settings), no un usuario real.
+
+### Flujo de `execute(principal, messages)`
+1. `run_in_threadpool(model.batch_predict)` → `(prices, model_version)`. Si falla, propaga — el consumer re-encola el batch entero.
+2. `build_prediction_record(source=batch)` × N.
+3. **Happy path**: `run_in_threadpool(uow.prediction.batch_add)` con `ON CONFLICT DO NOTHING` + `commit()`.
+   - `ON CONFLICT DO NOTHING` protege contra re-entrega at-least-once de Kafka.
+4. **Fallback** si bulk falla: `begin_nested()` por fila → `rollback_to_savepoint()` en las que fallan → un solo `commit()` al final.
+5. Devuelve `BatchPredictionResult` — el consumer publica `predictions` al topic `price-predicted` y re-encola `failed` a `listing-created`.
 
 ## Ports
 
@@ -91,8 +108,7 @@ class ModelGateway(Protocol):
     def online_predict(self, *, record: PredictionRequest) -> tuple[float, str]: ...
     def batch_predict(self, *, records: list[PredictionRequest]) -> tuple[list[float], str]: ...
 ```
-- `online_predict` está implementado en `AVMModelAdapter`.
-- `batch_predict` está declarado pero **no implementado** en el adapter (comentado). Será necesario al implementar el consumer async.
+- `online_predict` y `batch_predict` implementados en `AVMModelAdapter`.
 
 ### `PredictionRepository` ([prediction_repository.py](backend/analytics-service/src/app/services/prediction/ports/prediction_repository.py))
 ```python
@@ -108,6 +124,8 @@ class PredictionUnitOfWork(Protocol):
     async def commit(self) -> None: ...
     async def rollback(self) -> None: ...
     async def refresh(self, instance: object) -> None: ...
+    async def begin_nested(self) -> None: ...
+    async def rollback_to_savepoint(self) -> None: ...
 ```
 
 ## Adapters
@@ -125,7 +143,11 @@ Para cada `online_predict`:
 4. Devuelve `(price, version)`.
 
 ### `SqlPredictionRepository`
-Implementa `PredictionRepository` contra Postgres vía SQLModel. Detalles en `[[analytics-service-architecture]]` y en el archivo `sql_prediction_repository.py`.
+- `add`: `session.add(record)` + `session.flush()` — sync, llamado vía `run_in_threadpool`.
+- `batch_add`: `insert(Prediction).values([...]).on_conflict_do_nothing()` + `session.execute()` directo — sin `flush()` posterior.
+
+### `build_prediction_record` ([helpers/record_builder.py](backend/analytics-service/src/app/services/prediction/helpers/record_builder.py))
+Helper compartido entre `OnlinePrediction` y `BatchPrediction`. Acepta `source: SourceType` para distinguir origen.
 
 ## Errores
 
@@ -136,19 +158,17 @@ Implementa `PredictionRepository` contra Postgres vía SQLModel. Detalles en `[[
 
 ## Boundaries — lo que prediction **NO** hace
 
-- **No expone HTTP routes** — el wiring de `/predict` está pendiente en `api/routes/`.
 - **No autentica** — el `principal` llega ya resuelto al UC vía dependency en `api/deps/`.
 - **No carga el modelo** — `ModelClient.__init__` lo hace una sola vez al startup del proceso.
 - **No promueve modelos** — el alias `production` lo setea el data team. Ver `[[adr-model-promotion-external-to-service]]`.
 - **No entrena** — ver [[avm-training]].
-- **No procesa lotes hoy** — `batch_predict` declarado pero no implementado.
 
 ## Open items
 
-- Exponer route `/predict` en `api/main.py` (dependency de auth + handler de excepción).
-- Endpoint de feedback de satisfacción que llene `feedback` + `feedback_comment` por `prediction.id`.
-- Implementar `batch_predict` en el adapter (descomentar + ajustar) cuando se cree el consumer del topic `listing-created`.
 - Migración Alembic de la tabla `predictions`.
+- Agregar `SYSTEM_PRINCIPAL_ID: uuid.UUID` a `settings.py`.
+- Implementar el consumer Kafka en `workers/` que llame `BatchPrediction.execute`.
+- Endpoint de feedback de satisfacción que llene `feedback` + `feedback_comment` por `prediction.id`.
 
 ## Claims
 
@@ -156,7 +176,7 @@ Implementa `PredictionRepository` contra Postgres vía SQLModel. Detalles en `[[
 - `AVMModelAdapter` hardcodea `model_name="bogota-avm"` y `alias="production"` ([avm_model_adapter.py:10](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L10)).
 - `property_id` se excluye del payload enviado a MLflow ([avm_model_adapter.py:11](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L11)).
 - `PredictionPersistenceError` mapea a HTTP 500 con code `PREDICTION_PERSISTENCE_ERROR` ([core/exceptions/prediction.py:13](backend/analytics-service/src/app/core/exceptions/prediction.py#L13)).
-- `ModelGateway.batch_predict` está declarado en el port pero comentado en el adapter — no implementado ([avm_model_adapter.py:14-17](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L14-L17)).
-- El enum `SourceType` tiene valor `batch` reservado pero no se usa en runtime al 2026-05-19.
+- `AVMModelAdapter.batch_predict` está implementado: obtiene `version`, llama `client.batch_predict(records=[...])` y retorna `tuple[list[float], str]` ([avm_model_adapter.py:14-17](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L14-L17)).
+- El enum `SourceType.batch` se usa en `BatchPrediction.execute` vía `build_prediction_record(source=SourceType.batch)` desde 2026-05-20.
 - La tabla `predictions` tiene índices en `model_version` y `created_at` ([models/prediction.py:50-52](backend/analytics-service/src/app/models/prediction.py#L50-L52)).
 - `PredictionRequest.barrio_ideca` solo valida `min_length=1`; no se chequea contra ningún catálogo en este servicio ([schemas/prediction.py:21](backend/analytics-service/src/app/services/prediction/schemas/prediction.py#L21)).
