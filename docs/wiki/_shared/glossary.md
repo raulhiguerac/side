@@ -19,11 +19,23 @@ Modelo estadístico/ML que estima el valor de mercado de una propiedad a partir 
 ### barrio_ideca
 Identificador normalizado del barrio de Bogotá según el estándar [[#ideca]]. Aparece como campo de request en `/predict` y como columna en la tabla `predictions`. Su valor lo resuelve `properties-service` al crear el listing (geocoding desde `lat/lon`), nunca lo resuelve `analytics-service`. Ver `[[adr-geo-enrichment-at-write-time]]`.
 
+### Cache-aside
+Patrón en el que la app intenta resolver primero leyendo de un caché (ej: Redis); si miss, consulta el storage persistente (ej: Postgres); si miss también, llama al provider externo. Cada hop popula el nivel anterior. En `side`, `catalog-service` usa cache-aside de 3 niveles para POIs: Redis → Postgres → Overpass.
+
 ### Devcontainer
 Container de desarrollo definido en `.devcontainer/` que aloja todo el entorno local (Python, Node, deps, herramientas). Se levanta vía `docker-compose.yml` en el root del monorepo. Los microservicios corren **dentro del devcontainer** para no instalar nada en el host del desarrollador.
 
 ### estimated_price
 Campo de un listing en `properties-service` que contiene el precio sugerido por el modelo AVM. Lo escribe `properties-service` después de recibir la predicción async desde [[analytics-service]] — analytics nunca escribe directo en la BD de properties.
+
+### forward geocoding
+Operación que toma una dirección textual ("Calle 100 #15-20, Bogotá") y devuelve coordenadas (lat, lon). En `side` lo hace el **frontend** vía Mapbox SDK, no el backend — el usuario ve el punto en el mapa antes de publicar. Ver [[#reverse-geocoding]] para el camino inverso.
+
+### GeoJSON
+Formato estándar (RFC 7946) para representar geometrías y features geográficas en JSON (Point, MultiPolygon, FeatureCollection, etc.). En `side` lo usa `catalog-service` para uploads de polígonos de barrios — los archivos IDECA llegan como FeatureCollection.
+
+### h3
+Sistema de indexación espacial jerárquico de Uber (https://h3geo.org/). Divide la Tierra en celdas hexagonales en 16 resoluciones (0 = mundial, 15 = ~m²). En `side` se usa en dos lados: `analytics-service` features de training (resoluciones 6/7/8), `catalog-service` indexación de polígonos de barrios + registro de zonas fetcheadas (resolución 9, ~300 m).
 
 ### Hex pattern / Arquitectura hexagonal
 Patrón de diseño que separa los **use cases** del dominio de los **adapters** (DB, HTTP clients, etc.) vía **ports** (interfaces `typing.Protocol`). Cada microservicio del backend usa este patrón: `services/<domain>/{use_cases, ports, adapters, schemas}`. Ver [[architecture]] para el layout completo.
@@ -46,11 +58,20 @@ Estructura del repo: un único repositorio Git que aloja `backend/`, `frontend/`
 ### POI (Point of Interest)
 Punto geográfico con atributos categorizables (escuela, parque, hospital, transporte). Usados como features del AVM (distancia a POIs cercanos). Hoy se generan desde un CSV manual extraído de OpenStreetMap; futuro: tabla poblada por `catalog-service` desde Overpass, eventualmente DWH.
 
+### point-in-polygon
+Operación espacial que determina si un punto (lat, lon) cae dentro de un polígono. En `catalog-service` se ejecuta como `ST_Contains(neighborhoods.geom, point)` de [[#postgis]], acelerado por un pre-filtro con [[#h3]] (`h3_cells` array indexed via GIN).
+
+### PostGIS
+Extensión de PostgreSQL que agrega tipos geométricos (Point, Polygon, MultiPolygon) y operaciones espaciales (ST_Contains, ST_Distance, etc.). En `side` lo usa `catalog-service` (image `postgis/postgis:17-master`) con `geoalchemy2` como cliente SQLAlchemy. Los Postgres de `users-service` y `keycloak-db` van sin PostGIS.
+
 ### principal
 UUID que identifica al actor que origina una request — usualmente un usuario, pero también puede ser un sistema (system ID) en flujos server-to-server (ej: el consumer Kafka de `analytics-service`). Se obtiene resolviendo el JWT vía una FastAPI dependency. Los use cases reciben el `principal` ya resuelto, nunca el token.
 
 ### `production` (alias MLflow)
 Alias en el [[#mlflow]] registry que apunta al model version actualmente en producción. `analytics-service` siempre lee del alias, nunca de una versión hardcodeada. La promoción de un modelo a `production` es responsabilidad del data team — analytics no decide qué modelo sirve. Ver `[[adr-model-promotion-external-to-service]]`.
+
+### reverse geocoding
+Operación que toma coordenadas (lat, lon) y devuelve información geográfica derivada (barrio, ciudad). En `side` la implementa `catalog-service` vía endpoint `/geo-resolution` haciendo [[#point-in-polygon]] contra los polígonos IDECA almacenados localmente — **no** usa provider externo para esto. Ver [[#forward-geocoding]] para el camino inverso.
 
 ### Reverse ETL
 Patrón de mover datos **desde** un data store analítico **hacia** sistemas operacionales (BD transaccional, caché, herramientas SaaS). En `side`, los jobs batch del dominio `market` (heatmap, neighborhood reports) computan agregados y los publican a Redis + BD para que la app los consuma en tiempo de request sin recomputar.

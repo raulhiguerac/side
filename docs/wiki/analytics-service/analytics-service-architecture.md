@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna de analytics-service
 status: draft
-last-verified: 2026-05-20
+last-verified: 2026-05-22
 owners: [analytics-service]
 related: [[architecture]], [[analytics-service]], [[analytics-service-prediction]], [[analytics-service-mlflow]], [[analytics-service-kafka-consumer]]
 sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md, ../../sources/analytics-service/2026-05-20-kafka-consumer-design.md]
@@ -161,13 +161,13 @@ Uno hoy: **correlation_id** ([api/middleware/correlation_id.py](backend/analytic
 
 ## Workers
 
-`src/app/workers/listing_created/consumer.py` contiene `ListingCreatedConsumer` — en construcción al 2026-05-20.
+`src/app/workers/listing_created/consumer.py` contiene `ListingConsumer` — implementado al 2026-05-22.
 
 Decisiones de diseño acordadas:
 - **confluent-kafka** (no aiokafka) — operaciones bloqueantes envueltas con `run_in_threadpool`, consistente con el resto del servicio.
-- **Cadencia de 15 min** (micro-batch): el consumer drena el topic, llama `BatchPrediction.execute`, publica resultados, duerme 900s. No polling continuo.
-- **Proceso separado long-running** (`workers/listing_created/main.py`) — mantiene el modelo en memoria entre corridas; ciclo de vida independiente del web server.
-- **DLQ** (`listing-created-dlq`) solo para errores de deserialización irrecuperables. Fallos de modelo van de vuelta a `listing-created` vía `BatchPredictionResult.failed`.
+- **Proceso separado long-running** — mantiene el modelo en memoria entre corridas; ciclo de vida independiente del web server.
+- **`enable.auto.commit: False`** — commit manual al final de cada batch (at-least-once).
+- **DLQ** (`KAFKA_DLQ_TOPIC`) para errores de deserialización irrecuperables y mensajes con `attempts > 3`. Fallos de modelo van de vuelta a `KAFKA_TOPIC` vía `BatchPredictionResult.failed` con `attempts + 1`.
 
 Ver [[analytics-service-kafka-consumer]] para el detalle.
 
@@ -182,5 +182,5 @@ Ver [[analytics-service-kafka-consumer]] para el detalle.
 - `ModelClient` carga el modelo al instanciarse (`__init__`), no on-demand ([mlflow/model.py:29](backend/analytics-service/src/app/integrations/ml/mlflow/model.py#L29)).
 - `SqlPredictionUnitOfWork` implementa `begin_nested()` y `rollback_to_savepoint()` — necesarios para el fallback row-by-row del UC batch ([sql_prediction_unit_of_work.py](backend/analytics-service/src/app/services/prediction/adapters/sql_prediction_unit_of_work.py)).
 - No hay migraciones de Alembic aplicadas al 2026-05-20 (sin archivos en `migrations/versions/`).
-- `workers/listing_created/consumer.py` define `ListingCreatedConsumer(uc, producer, settings)` con método `consume_batch()` — en construcción al 2026-05-20.
+- `workers/listing_created/consumer.py` define `ListingConsumer(uc: BatchPrediction)` — producer se crea internamente, no se inyecta ([consumer.py](backend/analytics-service/src/app/workers/listing_created/consumer.py)).
 - El consumer usa confluent-kafka; las llamadas bloqueantes se envuelven con `run_in_threadpool` igual que en los UCs.
