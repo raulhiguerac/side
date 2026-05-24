@@ -1,12 +1,13 @@
 ---
 title: Kafka consumer — listing-created (analytics-service)
 status: draft
-last-verified: 2026-05-22
+last-verified: 2026-05-23
 owners: [analytics-service]
 related: [[analytics-service]], [[analytics-service-architecture]], [[analytics-service-prediction]]
 sources:
   - ../../../sources/analytics-service/2026-05-20-kafka-consumer-design.md
   - ../../../sources/analytics-service/2026-05-22-listing-consumer-worker-design.md
+  - ../../../sources/analytics-service/2026-05-23-worker-runner-kafka-idempotency.md
 ---
 
 ## TL;DR
@@ -19,11 +20,23 @@ Worker que consume el topic `listing-created`, valida mensajes con schema + circ
 workers/
 └── listing_created/
     ├── consumer.py        # ListingConsumer
+    ├── runner.py          # ListingWorkerRunner + build_consumer factory
     └── helpers/
-        └── types.py       # WorkerMessage TypedDict
+        └── types.py       # WorkerMessage (Pydantic StrictBase)
 ```
 
-`main.py` (entry point + loop) está pendiente.
+## `WorkerMessage`
+
+Pydantic `StrictBase` en `helpers/types.py`. Es el schema del envelope Kafka — valida el mensaje completo antes de pasarlo al UC:
+
+```python
+class WorkerMessage(StrictBase):
+    id: uuid.UUID
+    attempts: int = Field(default=1, ge=1, strict=True)
+    model: PredictionRequest
+```
+
+`WorkerMessage.model_validate(data)` reemplaza la validación manual anterior (no hay `WorkerEnvelope` separado en consumer.py).
 
 ## `ListingConsumer`
 
@@ -32,18 +45,12 @@ class ListingConsumer:
     def __init__(self, uc: BatchPrediction) -> None: ...
     def close(self) -> None: ...
     def __enter__(self) / __exit__(self, *_): ...   # context manager
-    def _poll_batch(self) -> list[str]: ...
+    def _poll_batch(self) -> tuple[list[str], list[str]]: ...  # (mensajes, rejected)
     async def consume_batch(self) -> None: ...
 
     @staticmethod def delivery_report(err, msg) -> None: ...
     @staticmethod def serialize(messages: list) -> list[str]: ...
     @staticmethod def produce(producer, topic, messages, callback) -> None: ...
-```
-
-Uso con context manager:
-```python
-with ListingConsumer(uc=uc) as consumer:
-    await consumer.consume_batch()
 ```
 
 ### Mensaje de entrada
@@ -56,15 +63,46 @@ with ListingConsumer(uc=uc) as consumer:
 
 ### Flujo de `consume_batch`
 
-1. **`_poll_batch()`** — drena el topic con `poll(1.0)` hasta `msg is None`. `msg.error()` → log + continue. `UnicodeDecodeError` → log + skip.
-2. **Validación por mensaje**: `json.loads` → si falla `JSONDecodeError` → DLQ. Luego `attempts > 3` → DLQ. Luego `PredictionRequest.model_validate(data["model"])` + `uuid.UUID(data["id"])` → si falla `(ValidationError, KeyError, ValueError)` → DLQ.
-3. **`valid_messages: dict[UUID, WorkerMessage]`** — keyed por UUID para O(1) lookup en el paso de retry.
-4. **`BatchPrediction.execute`** recibe `list[tuple[UUID, PredictionRequest]]` extraída del dict.
-5. **Produces** vía `partial(_emit)` con producer y callback vinculados una sola vez:
+1. **`_poll_batch()`** — devuelve `(messages, rejected_messages)`. Drena el topic con `poll(1.0)` hasta `msg is None`. `msg.error()` → log + continue. `UnicodeDecodeError` → serializa el raw como JSON base64 con `topic/partition/offset` y lo agrega a `rejected_messages`.
+2. Si no hay mensajes ni rechazados → return temprano sin llamar al UC.
+3. `rejected_messages` se extienden directamente al `dlq` (ya son strings JSON).
+4. **Validación por mensaje**: `json.loads` → `WorkerMessage.model_validate(data)`. Si falla `JSONDecodeError` o `ValidationError` → DLQ. Luego `attempts > 3` → DLQ.
+5. **`valid_messages: dict[UUID, WorkerMessage]`** — almacena el objeto `WorkerMessage` completo; acceso por atributo (`.id`, `.model`, `.attempts`).
+6. Si solo hay DLQ y no `domain_messages` → publica DLQ, commitea y retorna.
+7. **`BatchPrediction.execute`** recibe `list[tuple[UUID, PredictionRequest]]` extraída de `valid_messages`.
+8. **Produces** vía `partial(_emit)`:
    - `topic_predictions` ← `serialize(result.predictions)`
    - `topic` (mismo de entrada) ← `serialize(retry_messages)` con `attempts + 1` — solo si `result.failed`
-   - `topic_dlq` ← `dlq` directo (ya son strings) — solo si hubo malformados
-6. **`self.consumer.commit()`** — commit manual al final del batch.
+   - `topic_dlq` ← `dlq` — solo si hubo malformados/rechazados
+9. **`self.consumer.commit()`** — commit manual al final del batch.
+
+### `produce` y `WorkerDeliveryError`
+
+`produce()` colecta errores de delivery vía callback interno y verifica `flush()` pending. Si cualquiera falla lanza `WorkerDeliveryError(topic, errors, pending)`, lo que bloquea el `commit()` y garantiza re-proceso en el próximo ciclo.
+
+## `ListingWorkerRunner`
+
+Proceso long-running en `runner.py`. Orquesta el DI manual (sin FastAPI `Depends`) y el loop:
+
+```python
+class ListingWorkerRunner:
+    def __init__(self) -> None:
+        model_client = ModelClient()              # singleton — carga modelo al startup
+        self.model = AVMModelAdapter(client=model_client)
+
+    async def run(self) -> None:
+        with Session(engine) as session:          # sesión vive todo el ciclo del worker
+            uow = SqlPredictionUnitOfWork(session=session)
+            uc = BatchPrediction(uow=uow, model=self.model)
+            kafka_consumer = ListingConsumer(uc=uc)
+
+            with kafka_consumer:                  # garantiza close() al salir
+                while True:
+                    await kafka_consumer.consume_batch()
+                    await asyncio.sleep(900)      # batch cada 15 min
+```
+
+Arranque: `asyncio.run(ListingWorkerRunner().run())` — en CMD separado del Dockerfile (misma imagen, distinto entrypoint que uvicorn).
 
 ### `serialize`
 
@@ -83,7 +121,7 @@ Usado para `result.predictions` (`list[tuple[UUID, float]]`) y `retry_messages` 
 ## Decisiones de diseño
 
 ### confluent-kafka sobre aiokafka
-confluent-kafka es más production-grade (librdkafka bajo el capó). Llamadas bloqueantes se envuelven con `run_in_threadpool` — patrón ya establecido en el servicio para MLflow y SQLAlchemy.
+confluent-kafka es más production-grade (librdkafka bajo el capó). Llamadas bloqueantes (poll, flush) son síncronas pero están contenidas en métodos que se llaman desde el loop async del runner.
 
 ### `enable.auto.commit: False` + commit manual
 El offset solo se commitea si el batch completo procesó (predictions emitidas, retries re-encolados, DLQ publicado). Garantiza at-least-once: si el proceso muere a mitad de batch, el próximo arranque re-procesa desde el último offset commiteado.
@@ -95,7 +133,10 @@ El offset solo se commitea si el batch completo procesó (predictions emitidas, 
 Los mensajes fallidos del UC se re-encolan al mismo `KAFKA_TOPIC` (listing-created) con `attempts + 1`. No hace falta un topic de retry separado — el mismo consumer los recogerá en el próximo batch con el contador actualizado.
 
 ### Proceso separado, no APScheduler dentro de FastAPI
-`ModelClient` carga el modelo al `__init__` — un cron que reinicia el proceso cada ciclo recargaría el modelo (caro). Un proceso long-running mantiene el modelo en memoria.
+`ModelClient` carga el modelo en `ListingWorkerRunner.__init__` — un cron que reinicia el proceso cada ciclo recargaría el modelo (caro). El proceso long-running mantiene el modelo en memoria entre ciclos.
+
+### Idempotencia — sin constraint único para MVP
+Múltiples predicciones por `property_id` son datos válidos de negocio (evolución del precio estimado). `on_conflict_do_nothing()` en `batch_add` actúa como red de seguridad para redeliveries manuales. Kafka at-least-once duplicados son raros a escala MVP. Decisión revisable cuando haya DWH con SCD2.
 
 ### `group.id` y escalado
 `group.id = "analytics-listing-consumer"` fijo en todos los pods. Kafka distribuye particiones entre instancias del grupo — el paralelismo real está limitado por el número de particiones de `listing-created`.
@@ -113,16 +154,17 @@ Los mensajes fallidos del UC se re-encolan al mismo `KAFKA_TOPIC` (listing-creat
 
 `WorkerConfigurationError` se lanza al inicio si alguna de las primeras 5 falta.
 
-## Estado al 2026-05-22
-
-`consumer.py` implementado con poll, validación, UC call, tres produces y commit manual. `helpers/types.py` con `WorkerMessage`. `core/exceptions/worker.py` con `WorkerConfigurationError`. Pendiente: `main.py` (entry point + loop).
-
 ## Claims
 
 - Clase se llama `ListingConsumer` (no `ListingCreatedConsumer`) ([consumer.py](backend/analytics-service/src/app/workers/listing_created/consumer.py)).
 - `enable.auto.commit: False` configurado en el consumer — offset se commitea manualmente al final de `consume_batch` ([consumer.py:41](backend/analytics-service/src/app/workers/listing_created/consumer.py#L41)).
-- `WorkerMessage` TypedDict tiene campos `id: UUID`, `attempts: int`, `request: PredictionRequest` ([helpers/types.py](backend/analytics-service/src/app/workers/listing_created/helpers/types.py)).
+- `WorkerMessage` es un Pydantic `StrictBase` con campos `id: UUID`, `attempts: int = Field(ge=1, strict=True)`, `model: PredictionRequest` ([helpers/types.py](backend/analytics-service/src/app/workers/listing_created/helpers/types.py)).
+- No hay `WorkerEnvelope` en consumer.py — `WorkerMessage.model_validate(data)` valida el envelope completo.
+- `_poll_batch()` devuelve `tuple[list[str], list[str]]` — decode failures van como JSON base64 en la segunda lista ([consumer.py](backend/analytics-service/src/app/workers/listing_created/consumer.py)).
+- `produce()` lanza `WorkerDeliveryError` si el callback reporta errores o `flush()` deja mensajes pendientes — bloquea el commit de offsets.
 - `WorkerConfigurationError` hereda `BaseError` y recibe `missing: list[str]` ([core/exceptions/worker.py](backend/analytics-service/src/app/core/exceptions/worker.py)).
 - Topic de retry es el mismo `KAFKA_TOPIC` — no hay env var separada para retry.
-- DLQ no pasa por `serialize` — son strings raw del poll, se producen directamente.
+- DLQ no pasa por `serialize` — son strings JSON ya formateados.
 - Context manager implementado: `__exit__` llama `self.consumer.close()` ([consumer.py](backend/analytics-service/src/app/workers/listing_created/consumer.py)).
+- `ListingWorkerRunner.__init__` crea `ModelClient` y `AVMModelAdapter` como singletons; `Session(engine)` se abre dentro de `run()` para que viva todo el ciclo ([runner.py](backend/analytics-service/src/app/workers/listing_created/runner.py)).
+- El loop duerme `asyncio.sleep(900)` entre ciclos — batch cada 15 minutos.

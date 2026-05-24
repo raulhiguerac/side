@@ -1,10 +1,14 @@
 ---
 title: Arquitectura interna de analytics-service
 status: draft
-last-verified: 2026-05-22
+last-verified: 2026-05-23
 owners: [analytics-service]
 related: [[architecture]], [[analytics-service]], [[analytics-service-prediction]], [[analytics-service-mlflow]], [[analytics-service-kafka-consumer]]
-sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md, ../../sources/analytics-service/2026-05-20-kafka-consumer-design.md]
+sources:
+  - ../../sources/analytics-service/2026-05-19-foundational-qa.md
+  - ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md
+  - ../../sources/analytics-service/2026-05-20-kafka-consumer-design.md
+  - ../../sources/analytics-service/2026-05-23-worker-runner-kafka-idempotency.md
 ---
 
 ## TL;DR
@@ -161,20 +165,27 @@ Uno hoy: **correlation_id** ([api/middleware/correlation_id.py](backend/analytic
 
 ## Workers
 
-`src/app/workers/listing_created/consumer.py` contiene `ListingConsumer` — implementado al 2026-05-22.
+Dos archivos activos en `src/app/workers/listing_created/`:
 
-Decisiones de diseño acordadas:
-- **confluent-kafka** (no aiokafka) — operaciones bloqueantes envueltas con `run_in_threadpool`, consistente con el resto del servicio.
-- **Proceso separado long-running** — mantiene el modelo en memoria entre corridas; ciclo de vida independiente del web server.
+- **`consumer.py`** — `ListingConsumer`: poll Kafka, validación con `WorkerMessage`, call al UC, tres produces (predictions / retry / DLQ), commit manual de offsets.
+- **`runner.py`** — `ListingWorkerRunner`: orquesta el DI manual y el loop `while True / sleep(900)`.
+
+El DI del worker es manual (no hay FastAPI `Depends`). `ModelClient` y `AVMModelAdapter` se crean en `__init__` como singletons — el modelo se carga una sola vez al startup. La `Session(engine)` se abre dentro de `run()` para que viva durante todo el ciclo del proceso.
+
+Decisiones de diseño:
+- **confluent-kafka** (no aiokafka) — librdkafka bajo el capó.
+- **Proceso separado long-running** — mantiene el modelo en memoria entre ciclos; ciclo de vida independiente del web server.
 - **`enable.auto.commit: False`** — commit manual al final de cada batch (at-least-once).
-- **DLQ** (`KAFKA_DLQ_TOPIC`) para errores de deserialización irrecuperables y mensajes con `attempts > 3`. Fallos de modelo van de vuelta a `KAFKA_TOPIC` vía `BatchPredictionResult.failed` con `attempts + 1`.
+- **DLQ** (`KAFKA_DLQ_TOPIC`) para decode failures (base64 JSON con metadata), errores de validación y `attempts > 3`. Fallos de modelo van de vuelta a `KAFKA_TOPIC` vía `BatchPredictionResult.failed` con `attempts + 1`.
+- **Sin constraint único en `predictions.property_id`** — múltiples predicciones por listing son válidas como histórico. `on_conflict_do_nothing` en `batch_add` como red de seguridad.
 
 Ver [[analytics-service-kafka-consumer]] para el detalle.
 
 ## Claims
 
 - `api/deps/` tiene tres archivos: `auth.py` (JWT), `db.py` (session), `prediction.py` (model + UoW + UC); `__init__.py` vacío.
-- `ModelClient` y `AVMModelAdapter` se instancian con `@lru_cache(maxsize=1)` en `api/deps/prediction.py` — singletons por proceso.
+- En el path HTTP, `ModelClient` y `AVMModelAdapter` se instancian con `@lru_cache(maxsize=1)` en `api/deps/prediction.py` — singleton por proceso uvicorn ([deps/prediction.py](backend/analytics-service/src/app/api/deps/prediction.py)).
+- En el worker, `ModelClient` y `AVMModelAdapter` se instancian directamente en `ListingWorkerRunner.__init__` — singleton por proceso worker, independiente del anterior ([runner.py](backend/analytics-service/src/app/workers/listing_created/runner.py)).
 - `run_in_threadpool` se aplica tanto a la inferencia (`online_predict`, `batch_predict`) como al repo (`add`, `batch_add`) — ambas son operaciones bloqueantes ([online.py](backend/analytics-service/src/app/services/prediction/use_cases/online.py), [batch.py](backend/analytics-service/src/app/services/prediction/use_cases/batch.py)).
 - `UnauthorizedError` y `ForbiddenError` viven en `core/exceptions/auth.py`, no en el dep ([core/exceptions/auth.py](backend/analytics-service/src/app/core/exceptions/auth.py)).
 - El `api_router` incluye `health.router` y `predict.router` ([api/main.py](backend/analytics-service/src/app/api/main.py)).
@@ -183,4 +194,5 @@ Ver [[analytics-service-kafka-consumer]] para el detalle.
 - `SqlPredictionUnitOfWork` implementa `begin_nested()` y `rollback_to_savepoint()` — necesarios para el fallback row-by-row del UC batch ([sql_prediction_unit_of_work.py](backend/analytics-service/src/app/services/prediction/adapters/sql_prediction_unit_of_work.py)).
 - No hay migraciones de Alembic aplicadas al 2026-05-20 (sin archivos en `migrations/versions/`).
 - `workers/listing_created/consumer.py` define `ListingConsumer(uc: BatchPrediction)` — producer se crea internamente, no se inyecta ([consumer.py](backend/analytics-service/src/app/workers/listing_created/consumer.py)).
-- El consumer usa confluent-kafka; las llamadas bloqueantes se envuelven con `run_in_threadpool` igual que en los UCs.
+- `workers/listing_created/runner.py` define `ListingWorkerRunner` — singletons en `__init__`, sesión en `run()`, loop `while True / asyncio.sleep(900)` ([runner.py](backend/analytics-service/src/app/workers/listing_created/runner.py)).
+- `WorkerMessage` en `helpers/types.py` es Pydantic `StrictBase`, no TypedDict — valida el envelope Kafka completo incluyendo `attempts: int = Field(ge=1, strict=True)`.

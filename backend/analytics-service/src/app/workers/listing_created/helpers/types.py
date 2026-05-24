@@ -1,8 +1,12 @@
 import uuid
-from typing import TypedDict
+
+from pydantic import Field
+
+from app.schemas.base import StrictBase
 from app.services.prediction.schemas.prediction import PredictionRequest
 
-class WorkerMessage(TypedDict):
+
+class WorkerMessage(StrictBase):
     id: uuid.UUID
-    attempts: int
-    request: PredictionRequest
+    attempts: int = Field(default=1, ge=1, strict=True)
+    model: PredictionRequest

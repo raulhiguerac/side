@@ -1,17 +1,16 @@
 import os
 import uuid
 import json
+import base64
 from functools import partial
 from typing import Callable
 
 from pydantic import ValidationError
 from confluent_kafka import Consumer, Producer
 
-from app.core.exceptions.worker import WorkerConfigurationError
+from app.core.exceptions.worker import WorkerConfigurationError, WorkerDeliveryError
 from app.core.logging.logger import get_logger
 from app.services.prediction.use_cases.batch import BatchPrediction
-from app.services.prediction.schemas.prediction import PredictionRequest
-
 from app.workers.listing_created.helpers.types import WorkerMessage
 
 logger = get_logger(__name__)
@@ -79,12 +78,23 @@ class ListingConsumer:
 
     @staticmethod
     def produce(producer: Producer, topic: str, messages: list[str], callback: Callable) -> None:
+        delivery_errors: list[str] = []
+
+        def _delivery_report(err, msg) -> None:
+            callback(err, msg)
+            if err is not None:
+                delivery_errors.append(str(err))
+
         for msg in messages:
-            producer.produce(topic, value=msg.encode("utf-8"), on_delivery=callback)
-        producer.flush()
-    
-    def _poll_batch(self) -> list[str]:
+            producer.produce(topic, value=msg.encode("utf-8"), on_delivery=_delivery_report)
+
+        pending = producer.flush()
+        if pending or delivery_errors:
+            raise WorkerDeliveryError(topic=topic, errors=delivery_errors, pending=pending)
+
+    def _poll_batch(self) -> tuple[list[str], list[str]]:
         messages = []
+        rejected_messages = []
 
         while True:
             msg = self.consumer.poll(1.0)
@@ -100,47 +110,63 @@ class ListingConsumer:
                 messages.append(msg.value().decode("utf-8"))
             except UnicodeDecodeError as exc:
                 logger.error("message_decode_failed", exc_info=exc)
-        return messages
+                raw_value = msg.value() or b""
+                rejected_messages.append(json.dumps({
+                    "reason": "MESSAGE_DECODE_FAILED",
+                    "encoding": "base64",
+                    "value": base64.b64encode(raw_value).decode("ascii"),
+                    "topic": msg.topic(),
+                    "partition": msg.partition(),
+                    "offset": msg.offset(),
+                }))
+        return messages, rejected_messages
 
     async def consume_batch(self) -> None:
         valid_messages: dict[uuid.UUID, WorkerMessage] = {}
         dlq: list[str] = []
+        _emit = partial(self.produce, producer=self.producer, callback=self.delivery_report)
 
-        for raw in self._poll_batch():
+        raw_messages, rejected_messages = self._poll_batch()
+
+        if rejected_messages:
+            dlq.extend(rejected_messages)
+
+        if not raw_messages and not rejected_messages:
+            return
+
+        for raw in raw_messages:
             try:
                 data = json.loads(raw)
-            except json.JSONDecodeError:
+                message = WorkerMessage.model_validate(data)
+            except (json.JSONDecodeError, ValidationError):
                 dlq.append(raw)
                 continue
-            try:
-                attempts = data.get("attempts", 1)
-                if attempts > 3:
-                    dlq.append(raw)
-                    continue
-                request = PredictionRequest.model_validate(data["model"])
-                message_id = uuid.UUID(data["id"])
-                valid_messages[message_id] = {
-                    "attempts": attempts,
-                    "id": message_id,
-                    "request": request
-                }
-            except (ValidationError, KeyError, ValueError):
+
+            if message.attempts > 3:
                 dlq.append(raw)
-        
+                continue
+
+            valid_messages[message.id] = message
+
         domain_messages = [
-            (msg["id"], msg["request"])
+            (msg.id, msg.model)
             for msg in valid_messages.values()
         ]
 
+        if not domain_messages:
+            if dlq:
+                _emit(topic=self.topic_dlq, messages=dlq)
+            self.consumer.commit()
+            return
+
         result = await self.uc.execute(principal=self.principal,messages=domain_messages)
 
-        _emit = partial(self.produce,producer=self.producer,callback=self.delivery_report)
-
         # predictions
-        _emit(
-            topic=self.topic_predictions,
-            messages=self.serialize(result.predictions)
-        )
+        if result.predictions:
+            _emit(
+                topic=self.topic_predictions,
+                messages=self.serialize(result.predictions)
+            )
 
         # retries
         if result.failed:
@@ -153,7 +179,7 @@ class ListingConsumer:
                     continue
                 retry_messages.append({
                     "id": str(msg_id),
-                    "attempts": msg["attempts"] + 1,
+                    "attempts": msg.attempts + 1,
                     "model": req,
                 })
 
@@ -169,8 +195,3 @@ class ListingConsumer:
 
         # commit offsets
         self.consumer.commit()
-
-            
-
-
-

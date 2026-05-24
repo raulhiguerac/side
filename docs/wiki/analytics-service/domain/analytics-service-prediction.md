@@ -1,7 +1,7 @@
 ---
 title: Dominio prediction (analytics-service)
 status: draft
-last-verified: 2026-05-20
+last-verified: 2026-05-23
 owners: [analytics-service]
 related: [[analytics-service]], [[analytics-service-architecture]], [[avm-training]], [[analytics-service-mlflow]]
 sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md]
@@ -64,7 +64,7 @@ Entidad SQLModel `Prediction`:
 | Enum | Valores |
 |---|---|
 | `PropertyType` | `apartment`, `house` |
-| `SourceType` | `online`, `batch` (batch reservado para el consumer async, sin UC todavía) |
+| `SourceType` | `online`, `batch` |
 | `PredictionFeedback` | `muy_mal`, `mal`, `regular`, `bien`, `muy_bien` |
 
 ## Use case: `OnlinePrediction`
@@ -166,8 +166,7 @@ Helper compartido entre `OnlinePrediction` y `BatchPrediction`. Acepta `source: 
 ## Open items
 
 - Migración Alembic de la tabla `predictions`.
-- Agregar `SYSTEM_PRINCIPAL_ID: uuid.UUID` a `settings.py`.
-- Implementar el consumer Kafka en `workers/` que llame `BatchPrediction.execute`.
+- `principal` en batch llega como `str | None` desde `os.getenv('WORKER_PRINCIPAL')` — no castea a `uuid.UUID` ni viene de `settings`. Pendiente normalizar.
 - Endpoint de feedback de satisfacción que llene `feedback` + `feedback_comment` por `prediction.id`.
 
 ## Claims

@@ -2,7 +2,7 @@
 name: wiki-ingest
 description: Process a source file in docs/sources/, propose updates to 1-5 wiki pages under docs/wiki/, and apply the approved changes following docs/CONVENTIONS.md (front-matter, atomic claims, [[slug]] links).
 argument-hint: relative path to docs/sources/<service>/<file>.md
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 You will ingest a new source into the wiki.

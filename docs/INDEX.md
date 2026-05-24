@@ -10,6 +10,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 
 - [glossary](wiki/_shared/glossary.md) — términos cross-cutting (AVM, IDECA, habímetro, Keycloak, MLflow, hex pattern, principal, POI, etc.)
 - [architecture](wiki/_shared/architecture.md) — visión global del monorepo, hex pattern, patrones de comunicación (sync HTTP + async messaging), decisiones cross-cutting
+- [dev-workflow](wiki/_shared/dev-workflow.md) — reglas de trabajo: discuss-before-code (CLAUDE.md) + pre-commit hook de wiki staleness
 - _shared/adrs/_:
   - [ADR-0001 — Auth vía Keycloak JWT](wiki/_shared/adrs/adr-auth-keycloak-jwt.md)
   - [ADR-0002 — Geo-enrichment at write time](wiki/_shared/adrs/adr-geo-enrichment-at-write-time.md)

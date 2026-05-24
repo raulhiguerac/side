@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: wiki-staleness-check
+        name: Wiki staleness check
+        language: system
+        entry: bash scripts/wiki-lint-hook.sh
+        pass_filenames: false
+        always_run: false

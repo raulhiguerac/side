@@ -29,6 +29,7 @@
   },
   "remoteUser": "vscode",
   "postCreateCommand": {
-    "analytics": "sh /workspace/data/ml/AVM/scripts/setup-analytics-kernel.sh"
+    "analytics": "sh /workspace/data/ml/AVM/scripts/setup-analytics-kernel.sh",
+    "pre-commit": "uv tool install pre-commit && pre-commit install"
   }
 }
