@@ -21,6 +21,7 @@ _ENV_VARS = (
     'KAFKA_TOPIC',
     'KAFKA_PREDICTIONS_TOPIC',
     'KAFKA_DLQ_TOPIC',
+    'WORKER_PRINCIPAL'
 )
 
 
@@ -31,13 +32,18 @@ class ListingConsumer:
         if missing:
             raise WorkerConfigurationError(missing=missing)
 
-        server_principal = os.getenv('WORKER_PRINCIPAL')
+        raw = env['WORKER_PRINCIPAL']
+        try:
+            server_principal = uuid.UUID(raw)
+        except ValueError as exc:
+            raise WorkerConfigurationError(missing=[f"WORKER_PRINCIPAL (invalid UUID: {raw})"]) from exc
 
         consumer = Consumer({
             'bootstrap.servers': env['KAFKA_SERVER'],
             'group.id': env['KAFKA_GROUP_ID'],
             'auto.offset.reset': 'earliest',
-            'enable.auto.commit': False
+            'enable.auto.commit': False,
+            'max.poll.interval.ms': 1200000,
         })
 
         producer = Producer({'bootstrap.servers': env['KAFKA_SERVER']})
@@ -138,6 +144,7 @@ class ListingConsumer:
             try:
                 data = json.loads(raw)
                 message = WorkerMessage.model_validate(data)
+                message.model.property_id = message.id
             except (json.JSONDecodeError, ValidationError):
                 dlq.append(raw)
                 continue
@@ -165,7 +172,10 @@ class ListingConsumer:
         if result.predictions:
             _emit(
                 topic=self.topic_predictions,
-                messages=self.serialize(result.predictions)
+                messages=self.serialize([
+                    {"property_id": msg_id, "predicted_price": price}
+                    for msg_id, price in result.predictions
+                ])
             )
 
         # retries

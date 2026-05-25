@@ -4,11 +4,14 @@ from functools import partial
 from fastapi.concurrency import run_in_threadpool
 
 from app.core.exceptions.prediction import PredictionPersistenceError
+from app.core.logging.logger import get_logger
 from app.models.prediction import SourceType
 from app.services.prediction.helpers.record_builder import build_prediction_record
 from app.services.prediction.ports.model_gateway import ModelGateway
 from app.services.prediction.ports.unit_of_work import PredictionUnitOfWork
 from app.services.prediction.schemas.prediction import PredictionRequest, PredictionResponse
+
+logger = get_logger(__name__)
 
 
 class OnlinePrediction:
@@ -34,6 +37,7 @@ class OnlinePrediction:
             await self.uow.commit()
         except Exception as exc:
             await self.uow.rollback()
+            logger.error("prediction_persistence_failed", exc_info=exc)
             raise PredictionPersistenceError(cause=exc) from exc
 
         return PredictionResponse(

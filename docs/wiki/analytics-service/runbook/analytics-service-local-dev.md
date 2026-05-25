@@ -1,17 +1,20 @@
 ---
 title: Runbook — analytics-service local dev
-status: draft
-last-verified: 2026-05-20
+status: stable
+last-verified: 2026-05-25
 owners: [analytics-service]
 related: [[analytics-service]], [[analytics-service-architecture]], [[avm-training]], [[adr-mlflow-minio-stack]]
-sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md]
+sources:
+  - ../../../sources/analytics-service/2026-05-19-foundational-qa.md
+  - ../../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md
+  - ../../../sources/analytics-service/2026-05-25-worker-wiring-fixes.md
 ---
 
 ## TL;DR
 
-Flujo: abrir el repo en VS Code → "Reopen in Container" → docker-compose levanta toda la infra (Postgres por servicio + Keycloak + Redis + MinIO + MLflow). Después, **a mano**: `cd backend/analytics-service && uv sync && uv run uvicorn app.main:app --reload --port 8000`.
+Flujo: abrir el repo en VS Code → "Reopen in Container" → docker-compose levanta toda la infra (Postgres por servicio + Keycloak + Redis + MinIO + MLflow). Después, **a mano**: `cd backend/analytics-service && uv sync && PYTHONPATH=src uv run uvicorn app.main:app --reload --port 8000`.
 
-El servicio analytics **no está como service en el compose** — se corre manual dentro del devcontainer. Y hay 5 gaps actuales que bloquean `/predict` end-to-end (ver Known gaps al final).
+El servicio analytics **no está como service en el compose** — se corre manual dentro del devcontainer.
 
 ## Prerequisites
 
@@ -54,8 +57,15 @@ Dentro del devcontainer:
 cd /workspace/backend/analytics-service
 uv sync
 # crear .env del servicio — ver siguiente sección
-uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# API web
+PYTHONPATH=src uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Worker Kafka (proceso separado)
+PYTHONPATH=src uv run python src/app/workers/listing_created/runner.py
 ```
+
+`PYTHONPATH=src` es obligatorio para el src-layout — sin esto `import app` falla. El Dockerfile lo setea como `ENV PYTHONPATH=/app/src`.
 
 Health check:
 ```bash
@@ -84,9 +94,12 @@ KC_ISSUER=http://keycloak:8080/realms/<realm>
 OIDC_AUDIENCE=account
 
 # Kafka — consumer listing-created (solo necesario para el worker, no para el web server)
-KAFKA_SERVER=kafka:9092
+KAFKA_SERVER=broker:29092
 KAFKA_GROUP_ID=analytics-listing-consumer
 KAFKA_TOPIC=listing-created
+KAFKA_PREDICTIONS_TOPIC=price-predicted
+KAFKA_DLQ_TOPIC=listing-created-dlq
+WORKER_PRINCIPAL=<uuid-del-principal-de-sistema>
 ```
 
 Reemplazar `<realm>` con el nombre del realm en Keycloak (ver `infra/keycloak/realm.template.json`).
@@ -104,18 +117,13 @@ El endpoint está expuesto en `POST /v1/predict`. Requiere un JWT válido — el
 
 Bloqueantes previos a poder hacer este test: gaps #1 (DB), #2 (Alembic), #3 (bucket MinIO) y #4 (modelo seed) — ver abajo.
 
-## Known gaps (2026-05-20)
+## Known gaps
 
-Estos son blockers para llegar a un `/predict` funcionando en local. Surgieron escribiendo este runbook; ningún issue creado todavía.
-
-1. **No hay `analytics-ms-db` en `docker-compose.yml`.** Los otros servicios tienen Postgres dedicado, analytics no. Agregar un block análogo a `properties-ms-db`.
-2. **No hay migraciones Alembic aplicadas.** La tabla `predictions` está modelada pero no se ha generado migración. Antes de levantar: `alembic revision --autogenerate -m "create predictions"` + `alembic upgrade head`.
-3. **El bucket `mlflow-artifacts` no se crea automáticamente en MinIO.** MLflow está configurado con `--default-artifact-root s3://mlflow-artifacts/`, pero MinIO solo crea `mi-casa-en-minutos` por default. Crear el bucket manualmente desde la console (http://localhost:9001) o ajustar la config del compose.
-4. **No hay modelo seed en MLflow.** Para que `/predict` responda, el registry necesita `bogota-avm` con alias `production`. Opciones:
-   - Correr `python data/ml/AVM/training/train.py` contra un dataset (CSV en `data/raw/` si existe).
-   - Pre-cargar un modelo entrenado (mecanismo pendiente).
-5. **El `.env.example` del servicio está incompleto** — faltan las 5 env vars de MLflow y las 3 de auth Keycloak (documentadas arriba).
-
+~~1. **No hay `analytics-ms-db` en `docker-compose.yml`**.~~ ✓ Resuelto — DB y migraciones corriendo (2026-05-25).
+~~2. **No hay migraciones Alembic aplicadas**.~~ ✓ `alembic upgrade head` aplicado, tabla `predictions` activa (2026-05-25).
+~~3. **El bucket `mlflow-artifacts` no se crea automáticamente en MinIO**.~~ ✓ Resuelto (2026-05-25).
+~~4. **No hay modelo seed en MLflow**.~~ ✓ `bogota-avm` con alias `production` disponible — `/predict` y worker batch funcionando end-to-end (2026-05-25).
+~~5. **El `.env.example` del servicio está incompleto**.~~ ✓ Env vars MLflow, auth y Kafka documentadas arriba (2026-05-25).
 ~~6. **La FastAPI dependency de auth no existe**.~~ ✓ Implementada en `api/deps/auth.py` (2026-05-20).
 ~~7. **El route `/predict` no está wireado en `api/main.py`**.~~ ✓ Expuesto vía `predict.router` incluido en `api/main.py` (2026-05-20).
 
@@ -152,7 +160,8 @@ docker compose restart keycloak
 - MLflow en host port 5000 con SQLite como backend store en `/mlflow/mlflow.db` ([docker-compose.yml:142-147](docker-compose.yml#L142-L147)).
 - MLflow `--default-artifact-root` apunta a `s3://mlflow-artifacts/`, bucket que **no** está en `MINIO_DEFAULT_BUCKETS` ([docker-compose.yml:127](docker-compose.yml#L127), [docker-compose.yml:146](docker-compose.yml#L146)).
 - El `postCreateCommand` del devcontainer ejecuta `setup-analytics-kernel.sh`, que registra un Jupyter kernel llamado `analytics` ([devcontainer.json:31-33](.devcontainer/devcontainer.json#L31-L33), [setup-analytics-kernel.sh](data/ml/AVM/scripts/setup-analytics-kernel.sh)).
-- El Dockerfile de analytics-service usa `python:3.10-slim` + uv + uvicorn sobre `app.main:app` puerto 8000 ([Dockerfile](backend/analytics-service/Dockerfile)).
+- El Dockerfile de analytics-service usa `python:3.10-slim` + uv + `ENV PYTHONPATH=/app/src` + uvicorn sobre `app.main:app` puerto 8000 ([Dockerfile](backend/analytics-service/Dockerfile)).
+- `PYTHONPATH=src` es obligatorio para correr el web server o el worker localmente — sin esto `import app` falla con `ModuleNotFoundError`.
 - `backend/analytics-service/.env.example` no incluye las env vars de MLflow ni las de auth Keycloak al 2026-05-20 ([.env.example](backend/analytics-service/.env.example)).
 - `api/deps/` tiene tres archivos: `auth.py` (JWT cookie → `get_current_principal`), `db.py` (session), `prediction.py` (model + UoW + UC); `__init__.py` vacío.
 - `UnauthorizedError` y `ForbiddenError` viven en `core/exceptions/auth.py`, no en `api/deps/auth.py` ([core/exceptions/auth.py](backend/analytics-service/src/app/core/exceptions/auth.py)).

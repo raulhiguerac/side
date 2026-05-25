@@ -59,7 +59,7 @@ Implementa `ModelGateway`. Wrappea `ModelClient` y traduce entre `PredictionRequ
 | `mlflow` | mlflow:v3.12.0-full | 5000 | Backend store: SQLite en `/mlflow/mlflow.db` |
 | `minio` | minio:RELEASE.2025-09-07 | 9000 (API), 9001 (console) | Artifact store S3-compatible |
 
-`mlflow` usa `--default-artifact-root s3://mlflow-artifacts/` — el bucket **no** se crea automáticamente en MinIO. Crearlo manualmente desde http://localhost:9001 en dev local (ver [[analytics-service-local-dev]] gap #3).
+`mlflow` usa `--default-artifact-root s3://mlflow-artifacts/` — el bucket no está en `MINIO_DEFAULT_BUCKETS` y debe crearse manualmente desde http://localhost:9001 antes del primer training run.
 
 ## Relación con el pipeline de training
 
@@ -74,5 +74,5 @@ El shape de features que MLflow espera coincide con `PredictionRequest` excluyen
 - `online_predict` usa `.iloc[0]` (scalar), `batch_predict` usa `.tolist()` (lista) ([mlflow/model.py:36-40](backend/analytics-service/src/app/integrations/ml/mlflow/model.py#L36-L40)).
 - `AVMModelAdapter` hardcodea `model_name="bogota-avm"` y `alias="production"` ([avm_model_adapter.py:9](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L9)).
 - `property_id` se excluye del dict enviado a MLflow vía `exclude={'property_id'}` ([avm_model_adapter.py:11](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L11)).
-- El bucket `mlflow-artifacts` no está en `MINIO_DEFAULT_BUCKETS` — no se crea automáticamente ([docker-compose.yml:127](docker-compose.yml#L127)).
+- El bucket `mlflow-artifacts` no está en `MINIO_DEFAULT_BUCKETS` — debe crearse manualmente antes del primer training run ([docker-compose.yml:127](docker-compose.yml#L127)).
 - MLflow usa SQLite como backend store en `/mlflow/mlflow.db` dentro del container ([docker-compose.yml:146](docker-compose.yml#L146)).

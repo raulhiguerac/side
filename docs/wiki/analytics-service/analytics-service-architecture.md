@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna de analytics-service
 status: draft
-last-verified: 2026-05-23
+last-verified: 2026-05-25
 owners: [analytics-service]
 related: [[architecture]], [[analytics-service]], [[analytics-service-prediction]], [[analytics-service-mlflow]], [[analytics-service-kafka-consumer]]
 sources:
@@ -32,7 +32,7 @@ src/app/
 │       ├── health.py
 │       └── predict.py        # POST /predict → OnlinePrediction
 ├── core/
-│   ├── config/settings.py    # DATABASE_URL, REDIS_URL, KC_JWKS_URL, KC_ISSUER, OIDC_AUDIENCE
+│   ├── config/settings.py    # DATABASE_ANALYTICS_URL, REDIS_URL, KC_JWKS_URL, KC_ISSUER, OIDC_AUDIENCE
 │   ├── exceptions/
 │   │   ├── base.py
 │   │   ├── auth.py           # UnauthorizedError, ForbiddenError
@@ -189,10 +189,10 @@ Ver [[analytics-service-kafka-consumer]] para el detalle.
 - `run_in_threadpool` se aplica tanto a la inferencia (`online_predict`, `batch_predict`) como al repo (`add`, `batch_add`) — ambas son operaciones bloqueantes ([online.py](backend/analytics-service/src/app/services/prediction/use_cases/online.py), [batch.py](backend/analytics-service/src/app/services/prediction/use_cases/batch.py)).
 - `UnauthorizedError` y `ForbiddenError` viven en `core/exceptions/auth.py`, no en el dep ([core/exceptions/auth.py](backend/analytics-service/src/app/core/exceptions/auth.py)).
 - El `api_router` incluye `health.router` y `predict.router` ([api/main.py](backend/analytics-service/src/app/api/main.py)).
-- `core/config/settings.py` declara `DATABASE_URL`, `REDIS_URL`, `KC_JWKS_URL`, `KC_ISSUER`, `OIDC_AUDIENCE`; las env vars de MLflow se leen directamente en `ModelClient.__init__` ([mlflow/model.py:11](backend/analytics-service/src/app/integrations/ml/mlflow/model.py#L11)).
+- `core/config/settings.py` declara `DATABASE_ANALYTICS_URL`, `REDIS_URL`, `KC_JWKS_URL`, `KC_ISSUER`, `OIDC_AUDIENCE`; las env vars de MLflow se leen directamente en `ModelClient.__init__` ([mlflow/model.py:11](backend/analytics-service/src/app/integrations/ml/mlflow/model.py#L11)).
 - `ModelClient` carga el modelo al instanciarse (`__init__`), no on-demand ([mlflow/model.py:29](backend/analytics-service/src/app/integrations/ml/mlflow/model.py#L29)).
 - `SqlPredictionUnitOfWork` implementa `begin_nested()` y `rollback_to_savepoint()` — necesarios para el fallback row-by-row del UC batch ([sql_prediction_unit_of_work.py](backend/analytics-service/src/app/services/prediction/adapters/sql_prediction_unit_of_work.py)).
-- No hay migraciones de Alembic aplicadas al 2026-05-20 (sin archivos en `migrations/versions/`).
+- Migración Alembic aplicada al 2026-05-25 — tabla `predictions` activa en `migrations/versions/` ([migrations/versions/](backend/analytics-service/src/app/migrations/versions/)).
 - `workers/listing_created/consumer.py` define `ListingConsumer(uc: BatchPrediction)` — producer se crea internamente, no se inyecta ([consumer.py](backend/analytics-service/src/app/workers/listing_created/consumer.py)).
 - `workers/listing_created/runner.py` define `ListingWorkerRunner` — singletons en `__init__`, sesión en `run()`, loop `while True / asyncio.sleep(900)` ([runner.py](backend/analytics-service/src/app/workers/listing_created/runner.py)).
 - `WorkerMessage` en `helpers/types.py` es Pydantic `StrictBase`, no TypedDict — valida el envelope Kafka completo incluyendo `attempts: int = Field(ge=1, strict=True)`.
