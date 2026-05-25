@@ -8,6 +8,7 @@ sources:
   - ../../../sources/analytics-service/2026-05-19-foundational-qa.md
   - ../../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md
   - ../../../sources/analytics-service/2026-05-25-worker-wiring-fixes.md
+  - ../../../sources/analytics-service/2026-05-25-unit-test-suite.md
 ---
 
 ## TL;DR
@@ -137,8 +138,11 @@ Una collection pública para obtener token de Keycloak + llamar `/predict` se cr
 # Re-sync deps después de cambios en pyproject.toml
 uv sync
 
-# Correr tests
-uv run pytest
+# Instalar deps de test (solo la primera vez, o si cambia pyproject.toml)
+uv sync --extra dev
+
+# Correr tests unitarios
+uv run python -m pytest tests/unit/
 
 # Conectarse a la DB (postgres-client viene preinstalado vía devcontainer feature)
 psql -h analytics-ms-db -U admin -d analytics_service_db

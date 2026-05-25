@@ -40,6 +40,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 
 ### runbook/
 - [analytics-service-local-dev](wiki/analytics-service/runbook/analytics-service-local-dev.md) — devcontainer first, infra del compose, env vars completas, 5 known gaps actuales
+- [analytics-service-testing](wiki/analytics-service/runbook/analytics-service-testing.md) — 63 unit tests, setup con `uv sync --extra dev`, patrones de mock (fake_threadpool, AsyncMock/MagicMock, consumer fixture)
 
 ### adrs/
 - [ADR-0001 — MLflow + MinIO como stack ML](wiki/analytics-service/adrs/adr-mlflow-minio-stack.md)
