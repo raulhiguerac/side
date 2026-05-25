@@ -1,0 +1,31 @@
+{
+  "version": "1.0.0",
+  "target": "price_log",
+  "features": [
+    "area_m2_log", "cuartos", "banios", "parqueaderos", "estrato",
+    "bedroom_m2", "bathroom_bedroom", "tipo_propiedad", "antiguedad",
+    "h3_r6", "h3_r7", "h3_r8", "barrio_ideca",
+    "poi_300m_adult", "poi_300m_auto", "poi_300m_commerce", "poi_300m_education",
+    "poi_300m_electronics", "poi_300m_fashion", "poi_300m_finance", "poi_300m_food",
+    "poi_300m_health", "poi_300m_home", "poi_300m_leisure", "poi_300m_recreation",
+    "poi_300m_services", "poi_300m_transport", "poi_300m_worship",
+    "poi_800m_adult", "poi_800m_auto", "poi_800m_commerce", "poi_800m_education",
+    "poi_800m_electronics", "poi_800m_fashion", "poi_800m_finance", "poi_800m_food",
+    "poi_800m_health", "poi_800m_home", "poi_800m_leisure", "poi_800m_recreation",
+    "poi_800m_services", "poi_800m_transport", "poi_800m_worship",
+    "poi_1200m_adult", "poi_1200m_auto", "poi_1200m_commerce", "poi_1200m_education",
+    "poi_1200m_electronics", "poi_1200m_fashion", "poi_1200m_finance", "poi_1200m_food",
+    "poi_1200m_health", "poi_1200m_home", "poi_1200m_leisure", "poi_1200m_recreation",
+    "poi_1200m_services", "poi_1200m_transport", "poi_1200m_worship",
+    "dist_andino", "dist_gran_estacion", "dist_titan_plaza",
+    "dist_portal_norte_tm", "dist_portal_sur_tm", "dist_portal_80_tm",
+    "dist_universidad_andes", "dist_universidad_nacional", "dist_centro_internacional",
+    "dist_parque_simon_bolivar", "dist_parque_virrey", "dist_aeropuerto_eldorado"
+  ],
+  "cat_cols": ["h3_r6", "h3_r7", "h3_r8", "barrio_ideca", "antiguedad"],
+  "validations": {
+    "estrato": {"min": 1, "max": 6},
+    "area_m2_log": {"min_exclusive": 0},
+    "number_cols": 71
+  }
+}

@@ -48,6 +48,17 @@ services:
       - properties-postgres-data:/var/lib/postgresql/data
     networks:
       - dev-net
+  
+  analytics-ms-db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: analytics-ms-db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - analytics-postgres-data:/var/lib/postgresql/data
+    networks:
+      - dev-net
 
   keycloak-db:
     image: postgres:17
@@ -128,6 +139,65 @@ services:
     command: server --console-address ":9001" /data
     networks:
       - dev-net
+  
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.12.0-full
+    container_name: mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlflow
+    environment:
+      TZ: UTC
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --default-artifact-root s3://mlflow-artifacts/
+      --allowed-hosts "*"
+    networks:
+      - dev-net
+  
+  kafka-broker:
+    image: apache/kafka:latest
+    hostname: broker
+    container_name: broker
+    ports:
+      - 9092:9092
+    environment:
+      TZ: America/Bogota
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@broker:29093
+      KAFKA_LISTENERS: PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    networks:
+      - dev-net
+
+  topic-init:
+    image: apache/kafka:latest
+    depends_on:
+      - kafka-broker
+    entrypoint: [ 
+      "sh", "-c",
+      "sleep 10 && \
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server broker:29092 --create --if-not-exists --topic listing-created --partitions 1 --replication-factor 1 && \
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server broker:29092 --create --if-not-exists --topic price-predicted --partitions 1 --replication-factor 1 && \
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server broker:29092 --create --if-not-exists --topic listing-created-dlq --partitions 1 --replication-factor 1"
+    ]
+    networks:
+      - dev-net
 
 volumes:
   redis_data:
@@ -135,8 +205,10 @@ volumes:
   users-postgres-data:
   catalog-postgres-data:
   properties-postgres-data:
+  analytics-postgres-data:
   keycloak-postgres-data:
   minio_data:
+  mlflow_data:
 
 networks:
   dev-net:

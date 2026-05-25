@@ -16,7 +16,9 @@
         "ms-python.vscode-pylance",
         "cweijan.vscode-database-client2",
         "vue.volar",
-        "mariorodeghiero.vue-theme"
+        "mariorodeghiero.vue-theme",
+        "ms-toolsai.jupyter",
+        "dbcode.dbcode"
       ]
     }
   },
@@ -26,5 +28,9 @@
       "UV_LINK_MODE": "copy",
       "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv"
   },
-  "remoteUser": "vscode"
+  "remoteUser": "vscode",
+  "postCreateCommand": {
+    "analytics": "sh /workspace/data/ml/AVM/scripts/setup-analytics-kernel.sh",
+    "pre-commit": "uv tool install pre-commit && pre-commit install"
+  }
 }
