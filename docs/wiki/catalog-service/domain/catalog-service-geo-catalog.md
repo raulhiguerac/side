@@ -21,7 +21,7 @@ Todos públicos (sin auth), bajo `/v1/`:
 | GET | `/localities/by-country?country_id` | `GetLocalitiesUseCase` (filter) | `cache_key_localities(country_id)` |
 | GET | `/localities/by-admin-division?admin_division_id` | `GetLocalitiesUseCase` (filter) | (sin cache hoy) |
 | GET | `/localities/by-id?locality_id` | `GetLocalityByIdUseCase` | `cache_key_locality(locality_id)` |
-| GET | `/neighborhoods/by-locality?locality_id` (acepta múltiples) | `GetNeighborhoodsByLocalityUseCase` | `cache_key_neighborhoods(locality_id)` |
+| GET | `/neighborhoods/by-localities?locality_ids` (acepta múltiples) | `GetNeighborhoodsByLocalityUseCase` | `cache_key_neighborhoods(locality_id)` |
 | GET | `/neighborhoods/by-id?neighborhood_id` | `GetNeighborhoodByIdUseCase` | `cache_key_neighborhood(neighborhood_id)` |
 
 ## Componentes

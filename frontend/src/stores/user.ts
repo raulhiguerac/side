@@ -10,7 +10,12 @@ import { defineStore } from "pinia";
 import axios from "axios";
 import { API, STORAGE_KEYS } from "@/config";
 import { useAuthStore } from "./auth";
-import type { User, UserLocation, UserInterests, UserState } from "@/types/user";
+import type {
+  User,
+  UserLocation,
+  UserInterests,
+  UserState,
+} from "@/types/user";
 
 export const useUserStore = defineStore("user", {
   state: (): UserState => ({
@@ -54,8 +59,8 @@ export const useUserStore = defineStore("user", {
           { withCredentials: true }
         );
 
-        this.userInterests = data
-        return data
+        this.userInterests = data;
+        return data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 401)
           authStore.logout();

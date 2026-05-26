@@ -17,12 +17,12 @@ from app.services.geo_catalog.use_cases.get_neighborhoods_by_locality import (
 router = APIRouter(prefix="/neighborhoods", tags=["neighborhoods"])
 
 
-@router.get("/by-locality", response_model=NeighborhoodsByLocalityResponse)
+@router.get("/by-localities", response_model=NeighborhoodsByLocalityResponse)
 async def get_neighborhoods_by_locality(
-    locality_id: list[UUID] = Query(..., description="Filter by one or more localities"),
+    locality_ids: list[UUID] = Query(..., description="Filter by one or more localities"),
     uc: GetNeighborhoodsByLocalityUseCase = Depends(get_neighborhoods_by_locality_uc),
 ):
-    return await uc.execute(locality_ids=locality_id)
+    return await uc.execute(locality_ids=locality_ids)
 
 
 @router.get("/by-id", response_model=NeighborhoodListItem)

@@ -110,7 +110,10 @@ function removeCity(city: string) {
 }
 
 async function handleNext() {
-  const localities = selected.value.map((id) => ({ id, name: cities.value.get(id) ?? "" }));
+  const localities = selected.value.map((id) => ({
+    id,
+    name: cities.value.get(id) ?? "",
+  }));
   await saveCity(localities);
 }
 </script>

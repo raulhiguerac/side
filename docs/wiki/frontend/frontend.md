@@ -90,7 +90,6 @@ Detalle de cada patrón en [[frontend-architecture]].
 
 - [ ] **Remover Firebase** — imports en `LoginView.vue`, dep `firebase` del `package.json`, eventual cleanup del endpoint backend (`/v1/auth/login/google` si solo lo usaba esta integración).
 - [ ] **Centralizar axios** — instance única con `baseURL` y `withCredentials`, interceptor 401 → logout. Eliminar URLs hardcoded en `auth.ts`.
-- [ ] **Onboarding refactor en users-service** — acoplar a catalog como source-of-truth de localities/neighborhoods.
 - [ ] **Vite migration** — post-cierre de todos los microservicios backend.
 - [ ] **Cerrar CORS** en backends pre-producción — hoy `allow_origins=["*"]` en catalog.
 - [ ] **Implementar `/v1/properties/mine`** en properties-service para activar `/properties` end-to-end.

@@ -82,7 +82,7 @@ Reads para frontend / consumers read-only:
 | `GetCountriesUseCase` | `GET /countries` |
 | `GetLocalitiesUseCase` | `GET /localities/by-country`, `/by-admin-division` |
 | `GetLocalityByIdUseCase` | `GET /localities/by-id` |
-| `GetNeighborhoodsByLocalityUseCase` | `GET /neighborhoods/by-locality` (acepta múltiples `locality_id`) |
+| `GetNeighborhoodsByLocalityUseCase` | `GET /neighborhoods/by-localities` (acepta múltiples `locality_ids`) |
 | `GetNeighborhoodByIdUseCase` | `GET /neighborhoods/by-id` |
 
 Ports y adapters separados de `catalog_admin` (distintos repos read-optimized). Helpers: `cache_keys.py` con constructores de keys de Redis. Ver [[catalog-service-geo-catalog]].

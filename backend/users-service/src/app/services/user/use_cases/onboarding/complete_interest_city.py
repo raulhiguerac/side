@@ -31,7 +31,7 @@ class CompleteCityIntentUseCase:
                 account_type=account.account_type,
             )
 
-            await run_in_threadpool(
+            first_time = await run_in_threadpool(
                 partial(
                     self.uow.onboarding.mark_completed,
                     account_id=account.account_id,
@@ -39,8 +39,9 @@ class CompleteCityIntentUseCase:
                 )
             )
 
-            account.onboarding_step = OnboardingStep.neighborhood
-            profile.profile_score += 10
+            if first_time:
+                account.onboarding_step = OnboardingStep.neighborhood
+                profile.profile_score += 10
             
         await run_in_threadpool(
             partial(

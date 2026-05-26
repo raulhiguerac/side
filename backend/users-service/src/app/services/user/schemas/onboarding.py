@@ -1,11 +1,11 @@
 import uuid
 
-from app.models.account import OnboardingStep
+from app.models.account import AccountIntent
 from app.schemas.base import StrictBase
 
 
 class OnboardingIntent(StrictBase):
-    intent: OnboardingStep
+    intent: AccountIntent
 
 
 class OnboardingCityRequest(StrictBase):

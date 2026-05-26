@@ -1,10 +1,10 @@
 ---
 title: Dominio prediction (analytics-service)
 status: draft
-last-verified: 2026-05-23
+last-verified: 2026-05-26
 owners: [analytics-service]
 related: [[analytics-service]], [[analytics-service-architecture]], [[avm-training]], [[analytics-service-mlflow]]
-sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md]
+sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md, ../../../sources/analytics-service/2026-05-26-predict-endpoint-form-design.md]
 ---
 
 ## TL;DR
@@ -32,7 +32,7 @@ Dos schemas Pydantic (`StrictBase`) en [services/prediction/schemas/prediction.p
 | `property_id` | UUID? | opcional, identificador del listing si se asocia a uno existente |
 
 Notas:
-- `barrio_ideca` viene ya resuelto en el request por `properties-service` — ver [[glossary#barrio-ideca]]. Analytics no hace geocoding.
+- `barrio_ideca` viene ya resuelto antes de llegar a este servicio: desde `properties-service` en el flujo batch, o desde el chain frontend (Mapbox → `GET /v1/geo-resolution/by-coordinates` en catalog-ms) en el flujo online. Analytics no hace geocoding — ver [[glossary#barrio-ideca]].
 - `property_id` opcional → permite predicciones "anónimas" (usuario explorando antes de publicar).
 - Validaciones inspiradas en el rango sano de propiedades de Bogotá; estrato 1-6 es la nomenclatura oficial.
 
@@ -165,7 +165,7 @@ Helper compartido entre `OnlinePrediction` y `BatchPrediction`. Acepta `source: 
 
 ## Open items
 
-- Migración Alembic de la tabla `predictions`.
+- Agregar campo `address: Optional[str]` a `PredictionRequest` + columna correspondiente en nueva migración Alembic. Acordado 2026-05-26 para habilitar historial de avalúos — excluir del `model_dump` enviado a MLflow.
 - `principal` en batch llega como `str | None` desde `os.getenv('WORKER_PRINCIPAL')` — no castea a `uuid.UUID` ni viene de `settings`. Pendiente normalizar.
 - Endpoint de feedback de satisfacción que llene `feedback` + `feedback_comment` por `prediction.id`.
 
@@ -179,3 +179,5 @@ Helper compartido entre `OnlinePrediction` y `BatchPrediction`. Acepta `source: 
 - El enum `SourceType.batch` se usa en `BatchPrediction.execute` vía `build_prediction_record(source=SourceType.batch)` desde 2026-05-20.
 - La tabla `predictions` tiene índices en `model_version` y `created_at` ([models/prediction.py:50-52](backend/analytics-service/src/app/models/prediction.py#L50-L52)).
 - `PredictionRequest.barrio_ideca` solo valida `min_length=1`; no se chequea contra ningún catálogo en este servicio ([schemas/prediction.py:21](backend/analytics-service/src/app/services/prediction/schemas/prediction.py#L21)).
+- La migración Alembic de la tabla `predictions` existe: `976082b7f322_first_migration_including_predictions_.py` ([migrations/versions/](backend/analytics-service/src/app/migrations/versions/)).
+- El endpoint `POST /v1/predict` está completamente wired al 2026-05-26: router, DI (`deps/prediction.py`), `OnlinePrediction` UC y `AVMModelAdapter` ([api/main.py](backend/analytics-service/src/app/api/main.py), [deps/prediction.py](backend/analytics-service/src/app/api/deps/prediction.py)).

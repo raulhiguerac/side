@@ -46,6 +46,11 @@ export function useOnboarding() {
     userStore.dismissModal();
   };
 
+  const advanceToCity = () => {
+    userStore.onboardingStep = "city";
+    activeComponent.value = STEP_MAP["city"];
+  };
+
   const saveCity = async (localities: { id: string; name: string }[]) => {
     try {
       await axios.post(
@@ -53,7 +58,7 @@ export function useOnboarding() {
         { locality_ids: localities.map((l) => l.id) },
         { withCredentials: true }
       );
-      userStore.userInterests.localities = localities;
+      userStore.userInterests.localities = localities.map((l) => l.id);
       userStore.onboardingStep = "neighborhood";
       activeComponent.value = STEP_MAP["neighborhood"];
     } catch (e) {
@@ -61,7 +66,9 @@ export function useOnboarding() {
     }
   };
 
-  const saveNeighborhoods = async (localities: { locality_id: string; neighborhoods: Record<number, string> }[]) => {
+  const saveNeighborhoods = async (
+    localities: { locality_id: string; neighborhoods: Record<number, string> }[]
+  ) => {
     try {
       await axios.post(
         `${API.USERS_BASE_URL}/v1/onboarding/neighborhood`,
@@ -75,5 +82,31 @@ export function useOnboarding() {
     }
   };
 
-  return { isModalOpen, activeComponent, startFlow, closeFlow, saveCity, saveNeighborhoods };
+  const savePropertyTypes = async (selections: Record<string, string[]>) => {
+    try {
+      await Promise.all(
+        Object.entries(selections).map(([locality_id, property_type]) =>
+          axios.post(
+            `${API.USERS_BASE_URL}/v1/onboarding/property-type`,
+            { locality_id, property_type },
+            { withCredentials: true }
+          )
+        )
+      );
+      closeFlow();
+    } catch (e) {
+      console.error("Onboarding savePropertyTypes error", e);
+    }
+  };
+
+  return {
+    isModalOpen,
+    activeComponent,
+    startFlow,
+    closeFlow,
+    advanceToCity,
+    saveCity,
+    saveNeighborhoods,
+    savePropertyTypes,
+  };
 }

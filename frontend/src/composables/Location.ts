@@ -25,7 +25,9 @@ export async function getNeighborhoodsByLocalities(localityIds: string[]) {
   const missing: string[] = [];
 
   for (const id of localityIds) {
-    const raw = sessionStorage.getItem(STORAGE_KEYS.NEIGHBORHOODS_BY_LOCALITY(id));
+    const raw = sessionStorage.getItem(
+      STORAGE_KEYS.NEIGHBORHOODS_BY_LOCALITY(id)
+    );
     if (raw) {
       cached[id] = JSON.parse(raw);
     } else {
@@ -38,16 +40,16 @@ export async function getNeighborhoodsByLocalities(localityIds: string[]) {
   try {
     const { data } = await axios.get(
       `${API.CATALOG_BASE_URL}/v1/neighborhoods/by-localities`,
-      { params: { locality_ids: missing } }
+      { params: new URLSearchParams(missing.map((id) => ["locality_ids", id])) }
     );
 
-    for (const neighborhood of data) {
-      const lid = neighborhood.locality_id;
-      if (!cached[lid]) cached[lid] = [];
-      cached[lid].push(neighborhood);
+    for (const [lid, neighborhoods] of Object.entries(
+      data.neighborhoods as Record<string, any[]>
+    )) {
+      cached[lid] = neighborhoods;
       sessionStorage.setItem(
         STORAGE_KEYS.NEIGHBORHOODS_BY_LOCALITY(lid),
-        JSON.stringify(cached[lid])
+        JSON.stringify(neighborhoods)
       );
     }
   } catch (error) {

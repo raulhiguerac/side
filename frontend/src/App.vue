@@ -1,16 +1,12 @@
 <template>
-  <div
-    class="flex flex-col min-h-screen xl:h-screen xl:overflow-hidden bg-gray-50"
-  >
+  <div class="flex flex-col min-h-screen bg-gray-50">
     <NavBar
       v-if="!$route.meta.hideNavbar"
       :links="navigationLinks"
       class="flex-none shadow-sm z-10"
     />
 
-    <main
-      class="flex flex-col flex-1 min-h-0 overflow-y-auto xl:overflow-hidden"
-    >
+    <main class="flex flex-col flex-1">
       <router-view v-slot="{ Component }">
         <component :is="Component" class="flex-1" />
       </router-view>
@@ -70,7 +66,8 @@ import { computed } from "vue";
 
 const authStore = useAuthStore();
 const userStore = useUserStore();
-const { activeComponent, isModalOpen, startFlow, closeFlow } = useOnboarding();
+const { activeComponent, isModalOpen, startFlow, closeFlow, advanceToCity } =
+  useOnboarding();
 
 const navigationLinks = [
   { names: "Home", router: "/" },
@@ -103,7 +100,7 @@ const dynamicProps = computed(() => {
     return {
       modelValue: intent.value,
       "onUpdate:modelValue": (val: Intent) => (intent.value = val),
-      onSaved: closeFlow,
+      onSaved: advanceToCity,
     };
   }
   return {};

@@ -24,7 +24,7 @@ Tres jobs distintos:
 | Dominio | Estado | Qué hace |
 |---|---|---|
 | `catalog_admin` | implementado | CRUD + bulk uploads (CSV de barrios, GeoJSON de polígonos). Protegido con `require_admin`. |
-| `geo_catalog` | implementado | Reads para frontend: countries, localities (by-country / by-admin-division / by-id), neighborhoods (by-locality / by-id). |
+| `geo_catalog` | implementado | Reads para frontend: countries, localities (by-country / by-admin-division / by-id), neighborhoods (by-localities / by-id). |
 | `geo_resolution` | implementado | Resolución `(lat, lon) → barrio` y población lazy de POIs vía Overpass. |
 
 `services/shared/` aloja el `CachePort` + `RedisCacheAdapter` reutilizados por los 3 dominios.
@@ -38,7 +38,7 @@ Tres jobs distintos:
 | GET | `/v1/localities/by-country?country_id` | frontend | público |
 | GET | `/v1/localities/by-admin-division?admin_division_id` | frontend | público |
 | GET | `/v1/localities/by-id?locality_id` | frontend, otros services | público |
-| GET | `/v1/neighborhoods/by-locality?locality_id` (multi) | frontend | público |
+| GET | `/v1/neighborhoods/by-localities?locality_ids` (multi) | frontend | público |
 | GET | `/v1/neighborhoods/by-id?neighborhood_id` | frontend, otros services | público |
 | GET | `/v1/geo-resolution/resolve-neighborhood?query&locality_id` | frontend (legacy — refactor pendiente) | público |
 | GET | `/v1/geo-resolution/by-coordinates?lat&lon` | frontend / properties-service | público |

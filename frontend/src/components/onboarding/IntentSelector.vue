@@ -91,6 +91,7 @@
 import { ref, computed, h, watch } from "vue";
 import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
+import { API } from "@/config";
 
 export type Intent = "buyer" | "seller" | "renter" | "explorer";
 
@@ -239,8 +240,8 @@ const saveIntent = async () => {
 
   isLoading.value = true;
   try {
-    await axios.patch(
-      "http://localhost:8000/v1/users/me/profile",
+    await axios.post(
+      `${API.USERS_BASE_URL}/v1/onboarding/intent`,
       { intent: props.modelValue },
       { withCredentials: true }
     );

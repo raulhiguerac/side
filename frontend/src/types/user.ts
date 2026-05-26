@@ -13,7 +13,7 @@ export interface UserLocation {
 }
 
 export interface UserInterests {
-  localities: { id: string; name: string }[];
+  localities: string[];
   neighborhoods: Record<string, string[]>;
   properties: Record<string, string[]>;
 }

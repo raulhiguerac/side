@@ -8,6 +8,6 @@ export const STORAGE_KEYS = {
   USER_LOCATION: "userLocation",
   COUNTRIES: "countries",
   CITIES_BY_COUNTRY: (id: string) => `cities:${id}`,
-  NEIGHBORHOODS_BY_LOCALITY: (id: string) => `neighborhoods:${id}`,  // sessionStorage
+  NEIGHBORHOODS_BY_LOCALITY: (id: string) => `neighborhoods:${id}`, // sessionStorage
   ONBOARDING_DISMISSED: "onboarding_dismissed",
 };

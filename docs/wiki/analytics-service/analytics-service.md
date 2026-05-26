@@ -1,10 +1,10 @@
 ---
 title: analytics-service
 status: draft
-last-verified: 2026-05-20
+last-verified: 2026-05-26
 owners: [analytics-service]
 related: [[architecture]], [[analytics-service-architecture]], [[analytics-service-prediction]], [[avm-training]]
-sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md]
+sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md, ../../sources/analytics-service/2026-05-26-predict-endpoint-form-design.md]
 ---
 
 ## TL;DR
@@ -35,7 +35,7 @@ Cada dominio sigue el [[glossary#hex-pattern-arquitectura-hexagonal]] estándar 
 ### `/predict` sincrónico (HTTP REST)
 - Hoy: usuarios registrados (JWT obligatorio resuelto a [[glossary#principal]]).
 - Futuro: posible público sin login con rate limit (~2 calls/IP rolling 2h, vía Redis) para SEO/traffic driver.
-- **Estado actual (2026-05-20):** UC `OnlinePrediction` implementado y route **expuesta** en `api/main.py`. Auth dep implementada en `api/deps/auth.py`.
+- **Estado actual (2026-05-26):** UC `OnlinePrediction` implementado, route expuesta, DI completamente wired (`deps/prediction.py`), migración Alembic aplicada. Listo para consumir.
 
 ### Consumer async (`listing-created`)
 Server-to-server con `properties-service` para enriquecer `estimated_price` de listings recién creados:
@@ -76,9 +76,11 @@ Stack declarado en [pyproject.toml](backend/analytics-service/pyproject.toml). E
 
 - [x] Exponer route `/predict` en `api/main.py` ✓ 2026-05-20
 - [x] Dependency FastAPI para resolver JWT → `principal` (`api/deps/auth.py`) ✓ 2026-05-20
-- [ ] Migración Alembic para crear tabla `predictions`
+- [x] Migración Alembic para crear tabla `predictions` ✓ 2026-05-25
+- [x] Implementar consumer del topic `listing-created` (workers/) ✓ 2026-05-22
 - [ ] `analytics-ms-db` en `docker-compose.yml`
-- [ ] Implementar consumer del topic `listing-created` (workers/)
+- [ ] Form frontend AVM: Mapbox autocomplete → catalog geo-resolution → `POST /predict`
+- [ ] Agregar campo `address` a `PredictionRequest` + migración
 - [ ] Endpoint de feedback de satisfacción post-predicción (alimenta campo `feedback`)
 - [ ] Primer job batch del dominio `market` (heatmap)
 
@@ -96,6 +98,7 @@ Stack declarado en [pyproject.toml](backend/analytics-service/pyproject.toml). E
 - El dominio `market` está scaffoldeado pero los archivos de UCs/adapters/ports están vacíos al 2026-05-19.
 - El UC `OnlinePrediction` está expuesto en `POST /v1/predict` desde 2026-05-20 — `api/main.py` incluye `health.router` y `predict.router` ([api/main.py](backend/analytics-service/src/app/api/main.py)).
 - La tabla `predictions` persiste los inputs del request + `predicted_price` + `model_version` + un campo `feedback` opcional ([models/prediction.py:46](backend/analytics-service/src/app/models/prediction.py#L46)).
-- No hay consumer async implementado al 2026-05-19 — solo el scaffolding vacío `src/app/workers/__init__.py`.
+- El consumer async `listing-created` está implementado en `workers/listing_created/` con `ListingConsumer` y `ListingWorkerRunner` al 2026-05-22.
 - Redis está declarado en dependencies pero no se usa en código todavía.
 - analytics-service no resuelve `(lat, lon) → barrio_ideca`; lo recibe ya resuelto en `PredictionRequest` ([schemas/prediction.py:21](backend/analytics-service/src/app/services/prediction/schemas/prediction.py#L21)).
+- La migración Alembic de `predictions` existe al 2026-05-25: `976082b7f322_first_migration_including_predictions_.py`.

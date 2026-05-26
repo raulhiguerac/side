@@ -63,16 +63,15 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def base_error_handler(request: Request, exc: BaseError):
         status_code = ERROR_CODE_TO_HTTP_STATUS.get(exc.code, DEFAULT_ERROR_STATUS)
 
-        logger.warning(
-            "business_error",
-            extra={
-                "extra": {
-                    "error_code": exc.code,
-                    "http_status": status_code,
-                    "path": request.url.path,
-                }
-            },
-        )
+        log_extra: dict = {
+            "error_code": exc.code,
+            "http_status": status_code,
+            "path": request.url.path,
+        }
+        if exc.cause is not None:
+            log_extra["cause"] = repr(exc.cause)
+
+        logger.warning("business_error", extra={"extra": log_extra})
 
         return JSONResponse(
             status_code=status_code,
