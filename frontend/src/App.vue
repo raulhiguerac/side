@@ -12,6 +12,8 @@
       </router-view>
     </main>
 
+    <AppFooter />
+
     <BaseModal
       v-model="isModalOpen"
       @update:modelValue="(val) => !val && closeFlow()"
@@ -57,6 +59,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useOnboarding } from "@/composables/useOnboarding";
 import NavBar from "@/components/shared/NavBar.vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
+import AppFooter from "@/components/shared/AppFooter.vue";
 import { useUserStore } from "./stores/user";
 import { ref } from "vue";
 import IntentSelector, {

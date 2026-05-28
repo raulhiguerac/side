@@ -89,6 +89,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0002 — Hash history para deployment en bucket estático](wiki/frontend/adrs/adr-hash-history-static-hosting.md)
 - [ADR-0003 — Mapbox solo para geocoding, Leaflet+D3 para render](wiki/frontend/adrs/adr-mapbox-geocoding-leaflet-rendering.md)
 - [ADR-0004 — Remover Firebase del frontend](wiki/frontend/adrs/adr-firebase-removal.md)
+- [ADR-0005 — Google Maps Places API (New) para geocoding](wiki/frontend/adrs/adr-gmaps-places-geocoding.md)
 
 ## Servicios pendientes (post-piloto)
 

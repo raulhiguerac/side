@@ -1,10 +1,10 @@
 ---
 title: frontend
 status: draft
-last-verified: 2026-05-21
+last-verified: 2026-05-27
 owners: [frontend]
 related: [[architecture]], [[frontend-architecture]], [[frontend-onboarding-flow]], [[frontend-local-dev]]
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md]
 ---
 
 ## TL;DR
@@ -42,7 +42,7 @@ Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con pro
 - **Tailwind 3** + **Vueform** (forms complejos) + **Vuelidate** (validación)
 - **Axios** (sin instance central hoy — ver [[frontend-architecture]])
 - **Mapa**: `leaflet` + `@vue-leaflet/vue-leaflet` + **D3.js** para overlays — ver [[adr-mapbox-geocoding-leaflet-rendering]]
-- **Forward geocoding**: Mapbox SDK + `vue-google-autocomplete` (este último probablemente residual)
+- **Forward geocoding**: Google Maps Places API (New) — `PlaceAutocompleteElement` web component, key en `.env.local`. Ver [[adr-gmaps-places-geocoding]].
 
 ### A remover (tracked)
 - **Firebase 10** + Google sign-in: spike-out, no funcionó. Ver [[adr-firebase-removal]].
@@ -68,7 +68,7 @@ Guard global en `router.beforeEach`: si la ruta `requiresAuth` y `_authChecked =
 - **users-service** (`API.USERS_BASE_URL` default `localhost:8000`): auth, profile, settings, onboarding endpoints.
 - **catalog-service** (`API.CATALOG_BASE_URL` default `localhost:8001`): countries, localities by-country, neighborhoods by-locality.
 - **properties-service**: planeado, ningún consumo activo.
-- **analytics-service**: planeado (badge de precio, habímetro), ningún consumo activo.
+- **analytics-service**: form AVM en `DevPlaygroundView` — mock funcional con `PlaceAutocompleteElement` + GSAP. Chain completo (`lat/lon → catalog → /predict`) pendiente de conectar.
 
 ## Patrones — resumen alto nivel
 
@@ -99,7 +99,7 @@ Detalle de cada patrón en [[frontend-architecture]].
 
 - **No autentica directamente** — Keycloak vía users-service, frontend solo recibe cookie.
 - **No persiste datos críticos en el cliente** — solo cachea catálogos read-only (countries/cities/neighborhoods). Estado de usuario y onboarding vive en backend.
-- **No resuelve barrio_ideca por sí solo** — usa Mapbox SDK para `address → lat/lon`, después pasa el `(lat, lon)` a properties-service o catalog-service para el reverse.
+- **No resuelve barrio_ideca por sí solo** — usa Google Maps Places API para `address → lat/lon`, después pasa el `(lat, lon)` a catalog-service para el reverse por coordenadas. Ver [[adr-gmaps-places-geocoding]].
 - **No hostea POIs ni geometrías** — los consume vía catalog-service.
 
 ## Related
@@ -108,7 +108,7 @@ Detalle de cada patrón en [[frontend-architecture]].
 - [[frontend-architecture]] — layout interno, stores, composables, routing, axios
 - [[frontend-onboarding-flow]] — modal-based wizard, 4 pasos
 - [[frontend-local-dev]] — runbook
-- [[adr-vue-cli-deferred-vite-migration]], [[adr-hash-history-static-hosting]], [[adr-mapbox-geocoding-leaflet-rendering]], [[adr-firebase-removal]]
+- [[adr-vue-cli-deferred-vite-migration]], [[adr-hash-history-static-hosting]], [[adr-mapbox-geocoding-leaflet-rendering]], [[adr-gmaps-places-geocoding]], [[adr-firebase-removal]]
 - [[adr-mapbox-frontend-only]] (cross-service, vive en catalog-service)
 
 ## Claims

@@ -1,13 +1,15 @@
 ---
 title: ADR-0003 — Mapbox solo para geocoding, Leaflet+D3 para render
 status: stable
-last-verified: 2026-05-21
+last-verified: 2026-05-27
 owners: [frontend]
-related: [[frontend]], [[frontend-architecture]], [[adr-mapbox-frontend-only]]
-sources: [../../../sources/frontend/2026-05-21-foundational-qa.md]
+related: [[frontend]], [[frontend-architecture]], [[adr-mapbox-frontend-only]], [[adr-gmaps-places-geocoding]]
+sources: [../../../sources/frontend/2026-05-21-foundational-qa.md, ../../../sources/frontend/2026-05-27-gmaps-places-avm-form.md]
 decision-date: 2026-05-21
-decision-status: accepted
+decision-status: superseded-partial
 ---
+
+> ⚠️ **Supersedida parcialmente por [[adr-gmaps-places-geocoding]] (2026-05-27)**: la mitad de geocoding (Mapbox → `address→lat/lon`) fue reemplazada por Google Maps Places API (New). La mitad de rendering (Leaflet+D3) sigue vigente.
 
 # ADR-0003 — Mapbox solo para geocoding, Leaflet+D3 para render
 
