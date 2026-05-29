@@ -1,10 +1,10 @@
 ---
 title: ADR-0003 — Mapbox solo para geocoding, Leaflet+D3 para render
 status: stable
-last-verified: 2026-05-27
+last-verified: 2026-05-28
 owners: [frontend]
-related: [[frontend]], [[frontend-architecture]], [[adr-mapbox-frontend-only]], [[adr-gmaps-places-geocoding]]
-sources: [../../../sources/frontend/2026-05-21-foundational-qa.md, ../../../sources/frontend/2026-05-27-gmaps-places-avm-form.md]
+related: [[frontend]], [[frontend-architecture]], [[frontend-map-component]], [[adr-mapbox-frontend-only]], [[adr-gmaps-places-geocoding]]
+sources: [../../../sources/frontend/2026-05-21-foundational-qa.md, ../../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md]
 decision-date: 2026-05-21
 decision-status: superseded-partial
 ---
@@ -55,10 +55,20 @@ Los proveedores tienen trade-offs distintos para cada uno:
 - ❌ **Tiles**: Leaflet necesita un tile provider. Default OSM funciona pero las tiles no son las mejores estéticamente. Cuando importe la estética, evaluar Mapbox tiles vía Leaflet plugin (vuelve a costo pero acotado).
 - ❌ **D3 + Leaflet**: integrar D3 con Leaflet requiere truco específico (D3 dibuja en SVG layer pero hay que sincronizar projection). Curva de aprendizaje.
 
+## Integration pattern D3 ↔ Leaflet (definido 2026-05-28)
+
+D3 sobre el mapa va como **capa plug-and-play**, no dentro del componente de mapa ni en la view:
+- El componente de mapa ([[frontend-map-component]]) es dumb y **expone su instancia Leaflet** (vía `@ready`/`defineExpose`).
+- Un componente/composable D3 **dedicado** consume esa instancia y posee la mecánica (proyectar con `latLngToLayerPoint`, pane SVG, redibujar en `zoomend`/`moveend`).
+- La **data** a visualizar baja desde la view por props (data-driven, igual que los markers).
+- El mapa no importa D3 → solo entra al bundle donde se use la capa. Markers (capa Leaflet) y overlay D3 (pane SVG) conviven sin pisarse.
+
+Iconos de marker: SVGs en `public/icons/<imageType>.svg` (no `src/assets/`, porque un `:src` dinámico no resuelve por el bundler). Detalle en [[frontend-map-component]].
+
 ## Estado en código
 
 - `leaflet` y `@vue-leaflet/vue-leaflet` están en **devDependencies** del `package.json` — **probable bug**, deberían estar en `dependencies` si se usan en runtime. Verificar al refactorear.
-- `MapUser.vue` es el componente de mapa actual (no leído en detalle).
+- `MapUser.vue` es el componente de mapa actual — dumb/reusable, documentado en [[frontend-map-component]].
 - Mapbox SDK no está en `dependencies` del `package.json` al 2026-05-21 — habrá que agregarlo cuando se implemente el autocomplete de address.
 - `vue-google-autocomplete` está en deps — **probable zombie** de cuando se evaluó Google Maps; se eliminará en cleanup.
 
@@ -67,7 +77,7 @@ Los proveedores tienen trade-offs distintos para cada uno:
 - Mover `leaflet`/`@vue-leaflet/vue-leaflet` a `dependencies`.
 - Eliminar `vue-google-autocomplete` si no se usa.
 - Decidir tile provider en producción (OSM gratis vs Mapbox vía Leaflet plugin).
-- Documentar el integration pattern D3 ↔ Leaflet cuando se implemente el primer heatmap.
+- Pattern D3 ↔ Leaflet **definido** (ver sección arriba); falta **implementarlo** en el primer heatmap real.
 
 ## Claims
 

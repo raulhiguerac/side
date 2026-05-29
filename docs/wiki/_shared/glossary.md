@@ -1,7 +1,7 @@
 ---
 title: Glosario compartido
 status: draft
-last-verified: 2026-05-19
+last-verified: 2026-05-28
 owners: [_shared]
 related: [[architecture]]
 sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md]
@@ -35,7 +35,17 @@ Operación que toma una dirección textual ("Calle 100 #15-20, Bogotá") y devue
 Formato estándar (RFC 7946) para representar geometrías y features geográficas en JSON (Point, MultiPolygon, FeatureCollection, etc.). En `side` lo usa `catalog-service` para uploads de polígonos de barrios — los archivos IDECA llegan como FeatureCollection.
 
 ### h3
-Sistema de indexación espacial jerárquico de Uber (https://h3geo.org/). Divide la Tierra en celdas hexagonales en 16 resoluciones (0 = mundial, 15 = ~m²). En `side` se usa en dos lados: `analytics-service` features de training (resoluciones 6/7/8), `catalog-service` indexación de polígonos de barrios + registro de zonas fetcheadas (resolución 9, ~300 m).
+Sistema de indexación espacial jerárquico de Uber (https://h3geo.org/). Divide la Tierra en celdas hexagonales en 16 resoluciones (0 = mundial, 15 = ~m²). En `side` se usa con **resoluciones distintas a propósito según el caso de uso**:
+
+| Dónde | Resoluciones | Para qué |
+|---|---|---|
+| `properties-service` | r9 (~300 m), r7 (~5 km) | bucketing del feed-mapa por bbox — query indexada que devuelve la lista de listings de cada celda |
+| `catalog-service` | r9 (~300 m) | indexación de polígonos de barrios + registro de zonas fetcheadas de POIs |
+| AVM (modelo) | r6, r7, r8 | features del modelo (`h3_r6/r7/r8`) |
+
+**Por qué divergen** (decisión intencional): en un servicio, H3 es una **clave de lookup espacial** — r9 conviene porque es granular y la query indexada sobre la celda devuelve una lista acotada. En el modelo, H3 es un **feature en el vector** — r9 sería demasiado granular (cada celda casi única → ruido / overfitting), por eso el AVM usa resoluciones más gruesas (6/7/8) que agrupan zonas con señal de precio compartida.
+
+**Caveat**: las celdas **no se cruzan entre fronteras**. El modelo computa sus propias celdas r6/r7/r8 desde `lat/lon` en inferencia; **no** consume las celdas r9/r7 que almacenan los servicios. Si a futuro se alimenta el feature store desde un MS al modelo, hay que recomputar la resolución correcta, no reusar la celda almacenada. Decisión completa en [[adr-h3-resolution-per-use-case]]; ver también [[adr-h3-dual-resolution-map]] (lado servicio) y [[adr-geospatial-feature-engineering]] (lado modelo).
 
 ### Hex pattern / Arquitectura hexagonal
 Patrón de diseño que separa los **use cases** del dominio de los **adapters** (DB, HTTP clients, etc.) vía **ports** (interfaces `typing.Protocol`). Cada microservicio del backend usa este patrón: `services/<domain>/{use_cases, ports, adapters, schemas}`. Ver [[architecture]] para el layout completo.
@@ -62,7 +72,7 @@ Punto geográfico con atributos categorizables (escuela, parque, hospital, trans
 Operación espacial que determina si un punto (lat, lon) cae dentro de un polígono. En `catalog-service` se ejecuta como `ST_Contains(neighborhoods.geom, point)` de [[#postgis]], acelerado por un pre-filtro con [[#h3]] (`h3_cells` array indexed via GIN).
 
 ### PostGIS
-Extensión de PostgreSQL que agrega tipos geométricos (Point, Polygon, MultiPolygon) y operaciones espaciales (ST_Contains, ST_Distance, etc.). En `side` lo usa `catalog-service` (image `postgis/postgis:17-master`) con `geoalchemy2` como cliente SQLAlchemy. Los Postgres de `users-service` y `keycloak-db` van sin PostGIS.
+Extensión de PostgreSQL que agrega tipos geométricos (Point, Polygon, MultiPolygon) y operaciones espaciales (ST_Contains, ST_Distance, etc.). En `side` lo usan `catalog-service` y `properties-service` (image `postgis/postgis:17-master`) con `geoalchemy2` como cliente SQLAlchemy. Los Postgres de `users-service` y `keycloak-db` van sin PostGIS.
 
 ### principal
 UUID que identifica al actor que origina una request — usualmente un usuario, pero también puede ser un sistema (system ID) en flujos server-to-server (ej: el consumer Kafka de `analytics-service`). Se obtiene resolviendo el JWT vía una FastAPI dependency. Los use cases reciben el `principal` ya resuelto, nunca el token.

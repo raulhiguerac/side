@@ -25,4 +25,4 @@ Viven en `.claude/skills/`. Se invocan con `/<nombre>`.
 
 ## Estado del piloto
 
-El wiki vive en piloto sobre `wiki/analytics-service/`. No extender el patrón a otros microservicios (`properties-service`, `catalog-service`, `users-service`, `frontend`) hasta haberlo usado **al menos 2-3 semanas** y haber iterado la estructura. Decisión registrada el 2026-05-19.
+El piloto arrancó sobre `wiki/analytics-service/` (2026-05-19). Tras validar el patrón, se extendió a `catalog-service`, `frontend`, `properties-service` y `users-service` (este último par el 2026-05-28). Todos los microservicios del backend + el frontend + el workload `avm` están documentados. La estructura (overview, architecture, domain/, integrations/, runbook/, adrs/) se considera estable; mantenerla para nuevas páginas.

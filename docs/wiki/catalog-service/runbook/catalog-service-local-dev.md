@@ -1,7 +1,7 @@
 ---
 title: Runbook — catalog-service local dev
 status: draft
-last-verified: 2026-05-21
+last-verified: 2026-05-28
 owners: [catalog-service]
 related: [[catalog-service]], [[catalog-service-architecture]], [[analytics-service-local-dev]]
 sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
@@ -33,7 +33,7 @@ Subset del compose que necesita catalog-service:
 | Servicio | Imagen | Host port | Para qué | Credenciales |
 |---|---|---|---|---|
 | `develop` | build local | 8000, 5173, 8080 | El devcontainer (tu shell) | n/a |
-| `catalog-ms-db` | **`postgis/postgis:17-master`** | (interno) | DB de catalog (único con PostGIS) | admin / admin |
+| `catalog-ms-db` | **`postgis/postgis:17-master`** | (interno) | DB de catalog (PostGIS; properties-ms-db también lo usa) | admin / admin |
 | `keycloak-db` | postgres:17 | (interno) | DB de Keycloak | keycloak / password |
 | `keycloak` | keycloak:26.4.7 | **8180** | IdP — admin UI en http://localhost:8180 | admin / admin |
 | `redis` | redis:latest | 6379 | Cache forward geocode + lock + FetchZone short-circuit | n/a |
@@ -195,7 +195,7 @@ docker logs $(docker ps -qf name=keycloak) -f
 
 ## Claims
 
-- catalog-service usa `postgis/postgis:17-master` (único service que usa esta imagen) ([docker-compose.yml:31](docker-compose.yml#L31)).
+- catalog-service usa `postgis/postgis:17-master`; properties-service también la usa para su DB ([docker-compose.yml:31](docker-compose.yml#L31), [docker-compose.yml:42](docker-compose.yml#L42)).
 - El servicio lee la connection string desde `DATABASE_CATALOG_URL` (no `DATABASE_URL`) ([core/config/settings.py:8](backend/catalog-service/src/app/core/config/settings.py#L8)).
 - Auth lee JWT desde la cookie `access_token`, no del header `Authorization` ([api/deps/auth.py:45](backend/catalog-service/src/app/api/deps/auth.py#L45)).
 - El `.env.example` del servicio solo declara `DATABASE_URL` y `REDIS_URL`, falta el resto ([backend/catalog-service/.env.example](backend/catalog-service/.env.example)).

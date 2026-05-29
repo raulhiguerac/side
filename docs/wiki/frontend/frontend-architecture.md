@@ -1,10 +1,10 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-05-21
+last-verified: 2026-05-28
 owners: [frontend]
-related: [[architecture]], [[frontend]], [[frontend-onboarding-flow]]
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md]
+related: [[architecture]], [[frontend]], [[frontend-onboarding-flow]], [[frontend-map-component]]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md]
 ---
 
 ## TL;DR
@@ -177,7 +177,8 @@ Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. No hay invalidación
 | `onboarding/` | 4 selectors (Intent, Locality, Neighborhood, PropertyType) — usados desde el modal. |
 | `properties/` | PropertyCard, HouseCard — cards para feed/listing views (HouseCard probable duplicado o variante de PropertyCard). |
 | `settings/` | SettingsSidebar — navegación lateral del SettingsLayout. |
-| `map/` | MapUser — visualización con Leaflet + D3 (ver [[adr-mapbox-geocoding-leaflet-rendering]]). |
+| `map/` | MapUser — componente de mapa dumb/reusable (vue-leaflet declarativo, markers-prop + slot). Ver [[frontend-map-component]]. |
+| `avm/` | AvmForm / AvmResult / AvmMap — form del avalúo (split del dev playground). `AvmForm` consume `composables/useAvmForm`. |
 
 ## Estilos: Tailwind + diseño tokens
 
@@ -203,10 +204,11 @@ Ver [[adr-mapbox-geocoding-leaflet-rendering]] para el detalle. Resumen:
 - **Forward geocoding** (address → lat/lon): Mapbox SDK directamente en el frontend, sin pasar por el backend. Alinea con [[adr-mapbox-frontend-only]] de catalog.
 - **Reverse geocoding** (lat/lon → barrio): el frontend pasa el `(lat, lon)` al backend (catalog-service `/by-coordinates`).
 
-Componente `MapUser.vue` (no leído en detalle) probablemente integra Leaflet + el JWT cookie para identificar al usuario.
+El render lo encapsula `MapUser.vue` — un componente **dumb/reusable**: props in (`center`, `markers` tipados, `zoom` vía `v-model`/`defineModel`) + un `<slot>` para capas extra; los iconos de marker son data-driven (`public/icons/<imageType>.svg`). No tiene lógica de negocio ni de auth. Detalle completo en [[frontend-map-component]].
 
-## Build & deploy
+## Build & tooling
 
+- **Vue 3.2.13** hoy. **Upgrade a Vue 3.5 decidido** (planeado 2026-05-29) — habilita `defineModel` y `useTemplateRef`, que ya se usan en [[frontend-map-component]]. Es **independiente** de la migración a Vite, que sigue diferida (ver [[adr-vue-cli-deferred-vite-migration]]): primero el bump de versión (bajo riesgo, dentro de Vue CLI), Vite como sprint aparte.
 - **Build**: `npm run build` (vue-cli-service) → `dist/` estático.
 - **Deploy planeado**: bucket público (probable S3 / MinIO / GCS) sirviendo `index.html` + assets. Hash history evita necesidad de rewrites en el bucket.
 - **Sin SSR** — pura SPA client-side.
@@ -221,5 +223,8 @@ Componente `MapUser.vue` (no leído en detalle) probablemente integra Leaflet + 
 - El guard del router llama `checkAuth()` solo si `_authChecked === false` ([router/index.ts:104-110](frontend/src/router/index.ts#L104-L110)).
 - `useOnboarding` mantiene `activeComponent` como `shallowRef<Component | null>` — `shallowRef` porque los componentes Vue son reactivos por sí solos ([composables/useOnboarding.ts:19](frontend/src/composables/useOnboarding.ts#L19)).
 - Las 3 variantes de cómo se arma la URL de axios coexisten en `auth.ts` (hardcoded), `user.ts` (template literal con config) y `Location.ts` (template literal con config).
-- `leaflet` y `@vue-leaflet/vue-leaflet` están declarados en `devDependencies` del `package.json` — probablemente debería ser `dependencies` si se usa en runtime ([package.json:32-33](frontend/package.json#L32-L33), [package.json:43](frontend/package.json#L43)).
+- `leaflet` (^1.9.4) y `@vue-leaflet/vue-leaflet` (^0.10.1) están en `devDependencies`, pero **se usan en runtime** en `MapUser.vue` — deberían moverse a `dependencies` ([package.json:35](frontend/package.json#L35), [package.json:46](frontend/package.json#L46), [components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - Firebase NO se inicializa en `main.ts` — el `initializeApp(firebaseConfig)` está comentado ([main.ts:14](frontend/src/main.ts#L14)).
+- `MapUser.vue` es un componente de mapa dumb (vue-leaflet declarativo, props + `<slot>`, `defineModel` para zoom) — ver [[frontend-map-component]] ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- El form del avalúo está partido en `components/avm/` (`AvmForm`, `AvmResult`, `AvmMap`) con la lógica en `composables/useAvmForm.ts` ([components/avm/](frontend/src/components/avm), [composables/useAvmForm.ts](frontend/src/composables/useAvmForm.ts)).
+- Vue está en `^3.2.13`; upgrade a 3.5 decidido y pendiente ([package.json:23](frontend/package.json#L23)).

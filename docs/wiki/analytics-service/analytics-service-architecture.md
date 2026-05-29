@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna de analytics-service
 status: draft
-last-verified: 2026-05-25
+last-verified: 2026-05-28
 owners: [analytics-service]
 related: [[architecture]], [[analytics-service]], [[analytics-service-prediction]], [[analytics-service-mlflow]], [[analytics-service-kafka-consumer]]
 sources:
@@ -145,7 +145,7 @@ Alembic está configurado en `pyproject.toml` pero **no hay migraciones aplicada
 
 ## Auth en el servicio
 
-JWT del usuario llega vía `Authorization: Bearer <token>`. Una FastAPI dependency en `api/deps/` resuelve el token contra Keycloak y entrega un `principal: uuid.UUID` al UC. Los UCs **nunca ven el token** ni hablan con Keycloak — operan sobre el UUID resuelto.
+JWT del usuario llega vía la cookie `access_token` (mismo patrón que catalog/properties/users). Una FastAPI dependency en `api/deps/` resuelve el token contra Keycloak y entrega un `principal: uuid.UUID` al UC. Los UCs **nunca ven el token** ni hablan con Keycloak — operan sobre el UUID resuelto.
 
 Para el flujo server-to-server (Kafka), el `principal` es `SYSTEM_PRINCIPAL_ID` (UUID fijo en settings), no el usuario real. Ver `[[adr-auth-keycloak-jwt]]`.
 

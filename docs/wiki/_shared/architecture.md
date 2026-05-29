@@ -1,7 +1,7 @@
 ---
 title: Arquitectura del monorepo
 status: draft
-last-verified: 2026-05-19
+last-verified: 2026-05-28
 owners: [_shared]
 related: [[glossary]], [[dev-workflow]], [[adr-auth-keycloak-jwt]], [[adr-geo-enrichment-at-write-time]]
 sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md]
@@ -79,7 +79,7 @@ src/app/
 ## Patrones de comunicación
 
 ### Síncrono (HTTP REST) — default
-Casi todas las llamadas entre servicios son HTTP REST hoy. El JWT del usuario se propaga en el header `Authorization`. Ejemplos:
+Casi todas las llamadas entre servicios son HTTP REST hoy. El JWT del usuario se propaga en la cookie `access_token` (todos los servicios la leen de la cookie, no del header `Authorization`). Ejemplos:
 - frontend → cualquier microservicio
 - properties-service → users-service para validar permisos
 - properties-service → catalog-service para resolver geo

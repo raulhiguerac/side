@@ -3,7 +3,7 @@ title: Pipeline de training del AVM
 status: draft
 last-verified: 2026-05-19
 owners: [data]
-related: [[analytics-service]], [[analytics-service-prediction]], [[analytics-service-mlflow]], [[architecture]]
+related: [[analytics-service]], [[analytics-service-prediction]], [[analytics-service-mlflow]], [[architecture]], [[adr-lightgbm-log-target]], [[adr-optuna-hpo-reproducibility]], [[adr-geospatial-feature-engineering]]
 sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md]
 ---
 
@@ -205,6 +205,12 @@ El `input_example` del run de MLflow:
 - **No se redespliega** — `analytics-service` lo consume vía MLflow, no se republica el container.
 - **No procesa requests live** — eso pasa por el adapter de MLflow en analytics-service, sin HTTP layer aquí.
 - **No tiene CI hoy** — se corre manualmente. Futuro: Airflow u otro orchestrator.
+
+## Decisiones registradas (ADRs)
+
+- [[adr-lightgbm-log-target]] — LightGBM, target `log10(price)`, categóricas nativas sin one-hot.
+- [[adr-optuna-hpo-reproducibility]] — Optuna TPE 400 trials, seeds fijas, refit train+val.
+- [[adr-geospatial-feature-engineering]] — H3 multi-res + POIs por radio + distancias a landmarks, schema-driven.
 
 ## Open items
 

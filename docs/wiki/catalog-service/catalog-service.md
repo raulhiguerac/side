@@ -1,7 +1,7 @@
 ---
 title: catalog-service
 status: draft
-last-verified: 2026-05-21
+last-verified: 2026-05-28
 owners: [catalog-service]
 related: [[architecture]], [[catalog-service-architecture]], [[catalog-service-catalog-admin]], [[catalog-service-geo-catalog]], [[catalog-service-poi-lifecycle]]
 sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md]
@@ -106,5 +106,5 @@ Beneficios: menos latencia, sin costo Mapbox en backend, sin cache de forward ge
 - `require_admin` chequea `settings.ADMIN_ROLE in principal.roles` con `roles` extraídos de `realm_access.roles` del JWT ([api/deps/auth.py:99-104](backend/catalog-service/src/app/api/deps/auth.py#L99-L104)).
 - `/geo-resolution/resolve-neighborhood` dispara la población de POIs vía `BackgroundTasks.add_task(poi_uc.execute, ...)` fire-and-forget ([api/routes/geo_resolution.py:32-38](backend/catalog-service/src/app/api/routes/geo_resolution.py#L32-L38)).
 - `/geo-resolution/by-coordinates` **no** dispara el background task de POIs al 2026-05-21 — gap para el refactor planeado.
-- catalog-service es el único microservicio que usa la imagen `postgis/postgis:17-master` en el `docker-compose.yml`; los demás Postgres son `postgres:17` plano.
+- catalog-service y properties-service usan la imagen `postgis/postgis:17-master` en el `docker-compose.yml`; los Postgres de users-service y keycloak son `postgres:17` plano.
 - 6 routers, ~15 endpoints en total al 2026-05-21.

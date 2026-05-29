@@ -1,7 +1,7 @@
 ---
 title: ADR-0001 — PostGIS + h3 híbrido para spatial queries
 status: stable
-last-verified: 2026-05-21
+last-verified: 2026-05-28
 owners: [catalog-service]
 related: [[catalog-service-architecture]], [[catalog-service-poi-lifecycle]], [[glossary]]
 sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
@@ -50,4 +50,4 @@ Diseño híbrido:
 - `PointOfInterest.h3_index` se precomputa con `h3.latlng_to_cell(lat, lon, res=settings.H3_RESOLUTION)` y se persiste indexed ([models/location.py:375](backend/catalog-service/src/app/models/location.py#L375)).
 - `settings.H3_RESOLUTION = 9` (~300 m por celda) ([core/config/settings.py:24](backend/catalog-service/src/app/core/config/settings.py#L24)).
 - Los queries actuales de reverse geocoding hacen `ST_Contains` directo sin pre-filter por h3 ([sql_georeferentiation_repository.py:19-32](backend/catalog-service/src/app/services/geo_resolution/adapters/sql_georeferentiation_repository.py#L19-L32)).
-- catalog-service es el único microservicio que usa la imagen `postgis/postgis:17-master` ([docker-compose.yml:31](docker-compose.yml#L31)).
+- catalog-service usa la imagen `postgis/postgis:17-master`; properties-service también la usa para su DB ([docker-compose.yml:31](docker-compose.yml#L31), [docker-compose.yml:42](docker-compose.yml#L42)).
