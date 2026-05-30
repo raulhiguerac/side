@@ -54,4 +54,4 @@ Triggers para revisar esta decisión:
 - `vue-router` se crea con `createWebHashHistory()` ([router/index.ts:1](frontend/src/router/index.ts#L1), [router/index.ts:89](frontend/src/router/index.ts#L89)).
 - URLs visibles en el browser tienen el patrón `<base>/#/<path>` (ej. `http://localhost:8080/#/login`).
 - Deploy planificado: bucket público estático con build compilado (per autor, 2026-05-21).
-- SEO marcado como "no prioridad MVP" en este ADR; aparece como diferenciador futuro en [[project_roadmap_2026]] pero no en scope inmediato.
+- SEO marcado como "no prioridad MVP" en este ADR; diferenciador futuro en [[project-roadmap-2026]] pero no en scope inmediato.

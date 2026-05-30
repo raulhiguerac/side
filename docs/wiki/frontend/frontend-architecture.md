@@ -1,10 +1,10 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-05-28
+last-verified: 2026-05-29
 owners: [frontend]
 related: [[architecture]], [[frontend]], [[frontend-onboarding-flow]], [[frontend-map-component]]
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md]
 ---
 
 ## TL;DR
@@ -22,7 +22,7 @@ frontend/
 │   ├── shims-vue.d.ts            # types para imports .vue
 │   ├── assets/                   # tailwind.css, logo, etc.
 │   ├── config/
-│   │   └── index.ts              # API.USERS_BASE_URL, CATALOG_BASE_URL, STORAGE_KEYS
+│   │   └── index.ts              # API.USERS_BASE_URL, CATALOG_BASE_URL, AVM_BASE_URL (port 8002), STORAGE_KEYS
 │   ├── router/
 │   │   └── index.ts              # routes + beforeEach guard
 │   ├── stores/                   # Pinia
@@ -52,7 +52,7 @@ frontend/
 ├── vueform.config.ts
 ├── postcss.config.js
 ├── tsconfig.json
-└── .env / .env.example           # VUE_APP_USERS_URL, VUE_APP_CATALOG_URL, VUE_APP_IPAPI_URL
+└── .env / .env.example           # VUE_APP_USERS_URL, VUE_APP_CATALOG_URL, VUE_APP_AVM_URL, VUE_APP_IPAPI_URL
 ```
 
 ## Bootstrap (`main.ts`)
@@ -133,6 +133,7 @@ Funciones puras (no es composable Vue strictly hablando, son helpers que aceptan
 - `getCitiesByCountry(id)`: GET `/v1/localities/by-country` → cachea por country en `sessionStorage`.
 - `getNeighborhoodsByLocalities(localityIds)`: GET `/v1/neighborhoods/by-localities` con dedup de cached vs missing. Cachea por locality en `sessionStorage`.
 - `locations()`: combina `detectLocation` (ipapi) + `countries` (catalog) → devuelve `(countryDetected, countryUser)`.
+- `getNeighborhood(lat, lon)`: dos requests en cadena — GET `/v1/geo-resolution/by-coordinates` → `neighborhood_id`, luego GET `/v1/neighborhoods/by-id` → retorna `name` (string). Usado por `useAvmForm` para mostrar el barrio detectado al seleccionar dirección.
 
 ## Router con guard global
 
@@ -154,6 +155,8 @@ Tres patrones coexisten en código:
 3. **Constante directa**: `detectLocation` usa `API.IPAPI_URL` (third-party).
 
 Todas las calls llevan `withCredentials: true` para que la cookie viaje.
+
+> ⚠ **CORS + `withCredentials`**: `allow_origins=["*"]` en el backend es incompatible con `withCredentials: true` — el browser bloquea la respuesta (la spec prohíbe wildcard origin con credenciales). Cada backend debe usar `allow_origins=["http://localhost:8080"]` + `allow_credentials=True`. El analytics-service tiene este fix en `src/app/main.py`.
 
 **Plan** (open item): un único `apiClient.ts` con axios instance configurada (`baseURL`, `withCredentials`, interceptor 401 → `authStore.logout()`). Eliminar las 3 variantes.
 
@@ -178,7 +181,7 @@ Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. No hay invalidación
 | `properties/` | PropertyCard, HouseCard — cards para feed/listing views (HouseCard probable duplicado o variante de PropertyCard). |
 | `settings/` | SettingsSidebar — navegación lateral del SettingsLayout. |
 | `map/` | MapUser — componente de mapa dumb/reusable (vue-leaflet declarativo, markers-prop + slot). Ver [[frontend-map-component]]. |
-| `avm/` | AvmForm / AvmResult / AvmMap — form del avalúo (split del dev playground). `AvmForm` consume `composables/useAvmForm`. |
+| `avm/` | AvmForm / AvmResult — form del avalúo multi-step. `AvmForm` consume `composables/useAvmForm` (expone `AvmFormPayload`, `AvmPredictRequest`, `SelectedPlace`). Emite `place-selected` (marker en tiempo real) y `submit` (payload + place + neighborhood resuelto). `DevPlaygroundView` orquesta: recibe `place-selected` → actualiza `center` y `marker` reactivos → pasa al mapa. |
 
 ## Estilos: Tailwind + diseño tokens
 
@@ -201,14 +204,15 @@ Coexistencia es deuda — pendiente decidir si todo va a Vueform (con considerac
 Ver [[adr-mapbox-geocoding-leaflet-rendering]] para el detalle. Resumen:
 
 - **Render del mapa**: Leaflet + `@vue-leaflet/vue-leaflet` (wrapper Vue) + **D3.js** para overlays/data visualization.
-- **Forward geocoding** (address → lat/lon): Mapbox SDK directamente en el frontend, sin pasar por el backend. Alinea con [[adr-mapbox-frontend-only]] de catalog.
+- **Forward geocoding** (address → lat/lon): **Google Maps Places API (New)** — `PlaceAutocompleteElement` en el frontend, sin pasar por el backend. Reemplazó a Mapbox (calidad insuficiente en Colombia). Ver [[adr-gmaps-places-geocoding]].
 - **Reverse geocoding** (lat/lon → barrio): el frontend pasa el `(lat, lon)` al backend (catalog-service `/by-coordinates`).
 
 El render lo encapsula `MapUser.vue` — un componente **dumb/reusable**: props in (`center`, `markers` tipados, `zoom` vía `v-model`/`defineModel`) + un `<slot>` para capas extra; los iconos de marker son data-driven (`public/icons/<imageType>.svg`). No tiene lógica de negocio ni de auth. Detalle completo en [[frontend-map-component]].
 
 ## Build & tooling
 
-- **Vue 3.2.13** hoy. **Upgrade a Vue 3.5 decidido** (planeado 2026-05-29) — habilita `defineModel` y `useTemplateRef`, que ya se usan en [[frontend-map-component]]. Es **independiente** de la migración a Vite, que sigue diferida (ver [[adr-vue-cli-deferred-vite-migration]]): primero el bump de versión (bajo riesgo, dentro de Vue CLI), Vite como sprint aparte.
+- **Vue 3.5.35** (upgrade completado 2026-05-29) — habilita `defineModel` y `useTemplateRef`. Es **independiente** de la migración a Vite, que sigue diferida (ver [[adr-vue-cli-deferred-vite-migration]]).
+- **`useTemplateRef`** (Vue 3.5): reemplaza `ref<HTMLElement>(null)` para refs de template. Sintaxis: `useTemplateRef<HTMLDivElement>('refName')` — el template usa `ref="refName"` (string, no binding dinámico).
 - **Build**: `npm run build` (vue-cli-service) → `dist/` estático.
 - **Deploy planeado**: bucket público (probable S3 / MinIO / GCS) sirviendo `index.html` + assets. Hash history evita necesidad de rewrites en el bucket.
 - **Sin SSR** — pura SPA client-side.
@@ -227,4 +231,9 @@ El render lo encapsula `MapUser.vue` — un componente **dumb/reusable**: props 
 - Firebase NO se inicializa en `main.ts` — el `initializeApp(firebaseConfig)` está comentado ([main.ts:14](frontend/src/main.ts#L14)).
 - `MapUser.vue` es un componente de mapa dumb (vue-leaflet declarativo, props + `<slot>`, `defineModel` para zoom) — ver [[frontend-map-component]] ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - El form del avalúo está partido en `components/avm/` (`AvmForm`, `AvmResult`, `AvmMap`) con la lógica en `composables/useAvmForm.ts` ([components/avm/](frontend/src/components/avm), [composables/useAvmForm.ts](frontend/src/composables/useAvmForm.ts)).
-- Vue está en `^3.2.13`; upgrade a 3.5 decidido y pendiente ([package.json:23](frontend/package.json#L23)).
+- Vue está en `^3.5.35`; upgrade completado 2026-05-29 ([package.json:23](frontend/package.json#L23)).
+- `useTemplateRef<T>('refName')` es el patrón Vue 3.5 para refs de template — requiere `ref="refName"` (string) en el template, no binding dinámico ([components/avm/AvmForm.vue](frontend/src/components/avm/AvmForm.vue)).
+- `getNeighborhood(lat, lon)` en `Location.ts` hace dos requests en cadena: `/geo-resolution/by-coordinates` → `neighborhood_id`, luego `/neighborhoods/by-id` → nombre del barrio ([composables/Location.ts](frontend/src/composables/Location.ts)).
+- `AvmPredictRequest` extiende `AvmFormPayload` con `lat`, `lon`, `barrio_ideca` — vive en `composables/useAvmForm.ts` y es el shape del body de `POST /v1/predict` ([composables/useAvmForm.ts](frontend/src/composables/useAvmForm.ts)).
+- `fetchPredict` es una función local en `DevPlaygroundView` (no composable) porque es una sola call sin estado compartido — patrón: `axios.post(AVM_BASE_URL/v1/predict, payload, { withCredentials: true })` → retorna `res.data.predicted_price` ([views/dev/DevPlaygroundView.vue](frontend/src/views/dev/DevPlaygroundView.vue)).
+- `allow_origins=["*"]` es incompatible con `withCredentials: true` — el analytics-service usa `allow_origins=["http://localhost:8080"]` + `allow_credentials=True` ([analytics-service/src/app/main.py](backend/analytics-service/src/app/main.py)).

@@ -12,6 +12,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [architecture](wiki/_shared/architecture.md) — visión global del monorepo, hex pattern, patrones de comunicación (sync HTTP + async messaging), decisiones cross-cutting
 - [dev-workflow](wiki/_shared/dev-workflow.md) — reglas de trabajo: discuss-before-code (CLAUDE.md) + pre-commit hook de wiki staleness
 - [open-items](wiki/_shared/open-items.md) — backlog vivo de gaps y deuda técnica cross-service (checklist marcable entre sesiones)
+- [project-roadmap-2026](wiki/_shared/project-roadmap-2026.md) — fases del producto: completado (catálogo, users, AVM), en progreso (properties), pendiente (infra K3s, heatmap DWH, notifications-ms, payments-ms)
 - _shared/adrs/_:
   - [ADR-0001 — Auth vía Keycloak JWT](wiki/_shared/adrs/adr-auth-keycloak-jwt.md)
   - [ADR-0002 — Geo-enrichment at write time](wiki/_shared/adrs/adr-geo-enrichment-at-write-time.md)

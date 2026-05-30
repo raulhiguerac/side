@@ -255,6 +255,7 @@
 
           <!-- Barrio detectado (mock) -->
           <div
+            v-if="neighborhood"
             class="flex items-center gap-3 p-4 rounded-2xl bg-brand-primary-light border border-brand-primary/20"
           >
             <div
@@ -277,7 +278,7 @@
                 Barrio detectado
               </p>
               <p class="text-sm font-bold text-brand-text">
-                EL NOGAL <span class="text-brand-primary">✓</span>
+                {{ neighborhood }} <span class="text-brand-primary">✓</span>
               </p>
             </div>
           </div>
@@ -330,18 +331,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, useTemplateRef, watch } from "vue";
 import {
   useAvmForm,
   type AvmFormPayload,
   type SelectedPlace,
 } from "@/composables/useAvmForm";
+import { getNeighborhood } from "@/composables/Location";
 
 const emit = defineEmits<{
-  submit: [data: { payload: AvmFormPayload; place: SelectedPlace }];
+  submit: [
+    data: {
+      payload: AvmFormPayload;
+      place: SelectedPlace;
+      neighborhood: string;
+    }
+  ];
+  "place-selected": [data: { place: SelectedPlace }];
 }>();
 
-const autocompleteContainer = ref<HTMLDivElement | null>(null);
+const autocompleteContainer = useTemplateRef<HTMLDivElement>(
+  "autocompleteContainer"
+);
+
+const neighborhood = ref<string | null>(null);
 
 const {
   step,
@@ -356,9 +369,20 @@ const {
   toPayload,
 } = useAvmForm(autocompleteContainer);
 
+watch(place, async (val) => {
+  if (!val) return;
+  emit("place-selected", { place: val });
+  neighborhood.value = await getNeighborhood(val.latitude, val.longitude);
+});
+
 function onSubmit() {
   const payload = toPayload();
-  if (payload && place.value) emit("submit", { payload, place: place.value });
+  if (payload && place.value && neighborhood.value)
+    emit("submit", {
+      payload,
+      place: place.value,
+      neighborhood: neighborhood.value,
+    });
 }
 </script>
 

@@ -83,3 +83,23 @@ export async function locations() {
 
   return { countryDetected, countryUser };
 }
+
+export async function getNeighborhood(
+  lat: number,
+  lon: number
+): Promise<string | undefined> {
+  try {
+    const neighborhood = await axios.get(
+      `${API.CATALOG_BASE_URL}/v1/geo-resolution/by-coordinates`,
+      { params: { lat, lon } }
+    );
+    const neighborhood_name = await axios.get(
+      `${API.CATALOG_BASE_URL}/v1/neighborhoods/by-id`,
+      { params: { neighborhood_id: neighborhood.data.neighborhood_id } }
+    );
+
+    return neighborhood_name.data.name;
+  } catch (error) {
+    console.error("Error al obtener los barrios:", error);
+  }
+}

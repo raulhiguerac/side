@@ -38,7 +38,12 @@
               />
 
               <!-- FORM -->
-              <AvmForm v-else key="form" @submit="onSubmit" />
+              <AvmForm
+                v-else
+                key="form"
+                @submit="onSubmit"
+                @place-selected="onPlaceSelected"
+              />
             </Transition>
           </div>
         </div>
@@ -46,58 +51,13 @@
         <!-- RIGHT: map mock -->
         <div class="w-full md:w-1/2 md:pl-[5%]">
           <div
-            class="rounded-3xl bg-brand-dark h-full min-h-[360px] relative overflow-hidden flex flex-col items-center justify-center"
+            class="rounded-3xl h-full min-h-[360px] relative overflow-hidden flex flex-col items-center justify-center"
           >
-            <!-- dot grid -->
-            <div
-              class="absolute inset-0 opacity-10"
-              style="
-                background-image: radial-gradient(
-                  circle,
-                  #22c55e 1px,
-                  transparent 1px
-                );
-                background-size: 24px 24px;
-              "
+            <MapUser
+              :zoom="17"
+              :center="center"
+              :markers="marker ? [marker] : []"
             />
-
-            <!-- pin placeholder -->
-            <div
-              class="relative z-10 flex flex-col items-center gap-3 text-center"
-            >
-              <div
-                class="w-14 h-14 rounded-full bg-brand-primary/20 border border-brand-primary/30 flex items-center justify-center"
-              >
-                <svg
-                  class="w-7 h-7 text-brand-primary"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
-                  />
-                </svg>
-              </div>
-              <div class="flex flex-col gap-0.5">
-                <p
-                  class="text-white/50 text-xs font-semibold uppercase tracking-widest"
-                >
-                  Mapa interactivo
-                </p>
-                <p class="text-white/25 text-xs">Leaflet · aquí va el mapa</p>
-              </div>
-            </div>
-
-            <!-- coords bar -->
-            <div class="absolute bottom-5 left-5 right-5">
-              <div
-                class="bg-white/5 border border-white/10 rounded-2xl px-5 py-3"
-              >
-                <p class="text-white/35 text-xs font-mono">
-                  4.6625749, -74.0495009 · EL NOGAL
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -110,20 +70,75 @@ import { ref } from "vue";
 
 import AvmForm from "@/components/avm/AvmForm.vue";
 import AvmResult from "@/components/avm/AvmResult.vue";
-import type { AvmFormPayload, SelectedPlace } from "@/composables/useAvmForm";
+import MapUser from "@/components/map/MapUser.vue";
+import type {
+  AvmPredictRequest,
+  AvmFormPayload,
+  SelectedPlace,
+} from "@/composables/useAvmForm";
+import type { MarkerData } from "@/types/maps";
+import axios from "axios";
+import { API } from "@/config";
 
 const showResult = ref(false);
 const price = ref(0);
 const barrio = ref("");
 const estrato = ref(0);
 
-function onSubmit(data: { payload: AvmFormPayload; place: SelectedPlace }) {
+const center = ref<[number, number]>([4.681414, -74.046864]);
+const marker = ref<MarkerData | null>(null);
+
+function onPlaceSelected(data: { place: SelectedPlace }) {
+  center.value = [data.place.latitude, data.place.longitude];
+  marker.value = {
+    id: "123abc",
+    lat: data.place.latitude,
+    lon: data.place.longitude,
+    imageType: "house",
+  };
+}
+
+async function onSubmit(data: {
+  payload: AvmFormPayload;
+  place: SelectedPlace;
+  neighborhood: string;
+}) {
   // TODO (#6): chain catalog by-coords (place.lat/lon → barrio) + POST /predict
-  console.log("avm submit", data);
+  console.log(data.payload);
+  console.log(data.place);
+  const avmPayload: AvmPredictRequest = {
+    area_m2: data.payload.area_m2,
+    bedrooms: data.payload.bedrooms,
+    bathrooms: data.payload.bathrooms,
+    parking_spots: data.payload.parking_spots,
+    stratum: data.payload.stratum,
+    property_type: data.payload.property_type,
+    year_built: data.payload.year_built,
+    lat: data.place.latitude,
+    lon: data.place.longitude,
+    barrio_ideca: data.neighborhood,
+  };
+
   estrato.value = data.payload.stratum;
-  barrio.value = "EL NOGAL"; // placeholder: vendrá de catalog by-coords
-  price.value = 580_000_000; // placeholder hasta cablear /predict
-  showResult.value = true;
+  barrio.value = data.neighborhood;
+  try {
+    price.value = await fetchPredict(avmPayload);
+    showResult.value = true;
+  } catch (error) {
+    console.error("Error al obtener los barrios:", error);
+  }
+}
+
+async function fetchPredict(payload: AvmPredictRequest): Promise<number> {
+  try {
+    const price = await axios.post(`${API.AVM_BASE_URL}/v1/predict`, payload, {
+      withCredentials: true,
+    });
+    return price.data.predicted_price;
+  } catch (error) {
+    console.error("Error al obtener los barrios:", error);
+    throw error;
+  }
 }
 
 function reset() {

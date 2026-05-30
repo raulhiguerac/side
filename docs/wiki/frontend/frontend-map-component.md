@@ -1,10 +1,10 @@
 ---
 title: Componente de mapa reusable (MapUser)
 status: draft
-last-verified: 2026-05-28
+last-verified: 2026-05-29
 owners: [frontend]
 related: [[frontend]], [[frontend-architecture]], [[adr-mapbox-geocoding-leaflet-rendering]], [[adr-gmaps-places-geocoding]]
-sources: [../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md]
+sources: [../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md]
 ---
 
 ## TL;DR
@@ -59,9 +59,17 @@ export interface MarkerData {
 ```
 
 - **`subject`** = el inmueble que se está avaluando (marker propio, diferenciado de los comparables `house`/`apartment` y de los POIs `food`/`education`...).
-- En el `<l-icon>` el `:src` se arma con template literal: `` `/icons/${marker.imageType}.svg` ``.
-- **Los SVG viven en `public/icons/`** con `filename === valor del union` (`subject.svg`, `house.svg`, ...). Un `:src` dinámico **solo resuelve para assets en `public/`** — en `src/assets/` el bundler no resuelve strings dinámicos (habría que usar `new URL(..., import.meta.url)` en Vite o `require()` en Vue CLI).
+- Los iconos son **componentes Lucide** (no SVGs en `public/icons/`). El mapeo `MarkerImageType → Component` vive en `constants/markerIcons.ts` como `Record<MarkerImageType, Component>` — p.ej. `house: MapPinHouse`, `apartment: Building`, `food: ChefHat`, `education: NotebookPen`.
+- En el template: `<component :is="markerIconMap[marker.imageType]" :size="24" color="#22C55E" />` dentro del `<l-icon>`.
 - `MarkerData`/`MarkerImageType` son **una sola fuente de verdad** importada tanto por `MapUser` como por el padre que arma los markers.
+
+### Gotchas de `l-icon` con componentes Vue
+
+`<l-icon>` genera un `div` con estilos Leaflet visibles (borde, sombra, fondo). Para iconos Lucide (no pins tradicionales):
+
+- Limpiar el contenedor: `class-name="!bg-transparent !border-0 !shadow-none"` en `<l-icon>`.
+- **Anchor correcto**: `[16, 16]` (centro del icono) — no `[16, 32]` que es para pins con punta abajo.
+- El componente Lucide necesita `color` explícito — dentro del div de Leaflet `currentColor` no resuelve a ningún color visible.
 
 ## D3 como capa plug-and-play
 
@@ -72,16 +80,20 @@ D3 sobre el mapa (heatmaps, densidad, choropleth) **no va en la view ni dentro d
 
 Ver [[adr-mapbox-geocoding-leaflet-rendering]] para la decisión de stack (Leaflet+D3).
 
-## Estado (2026-05-28)
+## Estado (2026-05-29)
 
-- Escrito con `defineModel` → **corre recién post-upgrade a Vue 3.5** (planeado 2026-05-29).
-- Faltan los SVG en `public/icons/` y cablear el padre (`DevPlaygroundView` → marker `subject` desde el autocomplete).
+- Vue 3.5 upgrade completado — `defineModel` y `useTemplateRef` funcionan.
+- Iconos migrados a Lucide (`markerIconMap` en `constants/markerIcons.ts`).
+- Marker y center cableados en `DevPlaygroundView`: el evento `place-selected` de `AvmForm` actualiza `marker = ref<MarkerData | null>(null)` y `center = ref<[number, number]>([...])` reactivamente. El mapa refleja la selección del autocomplete en tiempo real.
 
 ## Claims
 
 - `MapUser.vue` usa `@vue-leaflet/vue-leaflet` (`LMap`, `LTileLayer`, `LMarker`, `LIcon`) ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- El padre debe pasar `:markers="marker ? [marker] : []"` cuando el marker puede ser `null` — evita pasar `null` dentro del array tipado `MarkerData[]` ([views/dev/DevPlaygroundView.vue](frontend/src/views/dev/DevPlaygroundView.vue)).
+- `center` es one-way (`:center`); el padre pasa un `ref<[number, number]>` reactivo que se actualiza al recibir `place-selected` de `AvmForm` — el mapa se recentra sin remont ([views/dev/DevPlaygroundView.vue](frontend/src/views/dev/DevPlaygroundView.vue)).
 - El zoom es two-way vía `defineModel<number>("zoom", { default: 15 })` + `v-model:zoom` en `<l-map>` — requiere Vue 3.4+ ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - `MapUser` expone una prop `markers: MarkerData[]` (v-for de `<l-marker>`) **y** un `<slot>` para capas extra ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
-- El ícono de cada marker se arma con `` `/icons/${marker.imageType}.svg` `` dentro de un `<l-icon>` ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- Los iconos de marker son componentes Lucide resueltos por `markerIconMap` (`Record<MarkerImageType, Component>` en `constants/markerIcons.ts`) — renderizados con `<component :is="markerIconMap[marker.imageType]">` ([constants/markerIcons.ts](frontend/src/constants/markerIcons.ts)).
+- `<l-icon>` requiere `class-name="!bg-transparent !border-0 !shadow-none"` y `icon-anchor="[16, 16]"` para iconos cuadrados (Lucide) — sin esto el contenedor Leaflet es visible y el anchor queda desplazado ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - `MarkerData` y `MarkerImageType` viven en `types/maps.ts`, exportados; `MarkerImageType` incluye `subject` (el inmueble avaluado) + comparables + POIs ([types/maps.ts](frontend/src/types/maps.ts)).
 - El CSS de Leaflet se carga vía `<link>` en `public/index.html`, no por import ([public/index.html:11](frontend/public/index.html#L11)).
