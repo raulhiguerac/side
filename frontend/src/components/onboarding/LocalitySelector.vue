@@ -77,8 +77,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import Multiselect from "@vueform/multiselect";
-import { useOnboarding } from "@/composables/useOnboarding";
-import { locations, getCitiesByCountry } from "@/composables/Location";
+import { useOnboarding } from "@/composables/onboarding/useOnboarding";
+import {
+  locations,
+  getCitiesByCountry,
+} from "@/composables/catalog/useLocation";
 
 const { saveCity } = useOnboarding();
 

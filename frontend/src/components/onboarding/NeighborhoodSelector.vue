@@ -148,9 +148,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import Multiselect from "@vueform/multiselect";
-import { useOnboarding } from "@/composables/useOnboarding";
-import { getNeighborhoodsByLocalities } from "@/composables/Location";
-import { useLocalitiesWithNames } from "@/composables/useLocalitiesWithNames";
+import { useOnboarding } from "@/composables/onboarding/useOnboarding";
+import { getNeighborhoodsByLocalities } from "@/composables/catalog/useLocation";
+import { useLocalitiesWithNames } from "@/composables/catalog/useLocalitiesWithNames";
 
 interface Neighborhood {
   id: string;

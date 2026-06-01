@@ -4,7 +4,10 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    DATABASE_PROPERTIES_URL: str = os.getenv("DATABASE_PROPERTIES_URL", "")
+
+    # Catalog service
+    CATALOG_URL: str = os.getenv("CATALOG_URL", "http://localhost:8001")
 
     # Auth (Keycloak)
     KC_JWKS_URL: str = os.getenv("KC_JWKS_URL", "")

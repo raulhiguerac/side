@@ -10,6 +10,9 @@ ERROR_CODE_TO_HTTP_STATUS: dict[str, int] = {
     # Auth
     "UNAUTHORIZED": 401,
     "FORBIDDEN": 403,
+    # Upload validation
+    "FILE_TOO_LARGE": 413,
+    "UNSUPPORTED_FILE_TYPE": 415,
     # Property CRUD
     "CREATE_PROPERTY_ERROR": 422,
     "DELETE_PROPERTY_ERROR": 422,

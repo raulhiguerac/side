@@ -1,5 +1,8 @@
 import { useUserStore } from "@/stores/user";
-import { locations, getCitiesByCountry } from "@/composables/Location";
+import {
+  locations,
+  getCitiesByCountry,
+} from "@/composables/catalog/useLocation";
 
 export interface LocalityWithName {
   id: string;

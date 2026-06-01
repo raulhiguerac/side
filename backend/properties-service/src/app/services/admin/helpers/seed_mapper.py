@@ -153,6 +153,9 @@ def row_to_item(
     except (KeyError, ValueError, InvalidOperation):
         return None
 
+    if bedrooms < 1 or area_m2 <= 0 or price <= 0:
+        return None
+
     return BulkCreatePropertyItem(
         property_type=property_type,
         listing_type=listing_type,

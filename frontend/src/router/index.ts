@@ -71,9 +71,9 @@ const routes: Array<RouteRecordRaw> = [
   },
 
   {
-    path: "/dev",
-    name: "dev-playground",
-    component: () => import("../views/dev/DevPlaygroundView.vue"),
+    path: "/avm",
+    name: "avm",
+    component: () => import("../views/avm/AvmView.vue"),
     meta: { requiresAuth: false },
   },
 
@@ -82,6 +82,12 @@ const routes: Array<RouteRecordRaw> = [
     name: "my-properties",
     component: () => import("../views/properties/MyPropertiesView.vue"),
     meta: { requiresAuth: true },
+  },
+  {
+    path: "/feed",
+    name: "feed",
+    component: () => import("../views/properties/FeedView.vue"),
+    meta: { requiresAuth: false },
   },
 ];
 

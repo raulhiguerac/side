@@ -1,10 +1,10 @@
 ---
 title: Dominio search — properties-service
 status: draft
-last-verified: 2026-05-28
+last-verified: 2026-05-31
 owners: [properties-service]
 related: [[properties-service]], [[properties-service-architecture]], [[adr-feed-ads-organic-injection]], [[adr-h3-dual-resolution-map]]
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md]
+sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md]
 ---
 
 ## TL;DR
@@ -68,6 +68,15 @@ Resolución elegida por el cliente vía query `resolution` (7–9): r9 (~300m) p
 - `FeedCursor` — `created_at`, `id`, `position`.
 
 Output uniforme: `list[PropertyCardSchema]`.
+
+## Evolución planeada del feed
+
+El feed hoy filtra por **preferencias declaradas** (onboarding: barrios, ciudades, tipo de propiedad). La evolución planeada tiene dos capas:
+
+1. **Señales implícitas de comportamiento** — impresiones (qué listings vio el usuario), tiempo de vista y retorno. Se capturarían como evento Kafka `listing.impressed` consumido por analytics-ms para alimentar un recomendador colaborativo o content-based que mejore el ranking orgánico.
+2. **Señal geoespacial del mapa** — el bbox del mapa estilo Airbnb revela la zona de interés sin acción explícita; puede alimentar el recomendador directamente.
+
+El promoted targeting también evoluciona: hoy los ads son globales o por ciudad; con historial de impresiones se pueden dirigir a perfiles con mayor probabilidad de conversión. Ver [[open-items]] para los ítems pendientes.
 
 ## Claims
 

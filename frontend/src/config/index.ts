@@ -2,6 +2,8 @@ export const API = {
   USERS_BASE_URL: process.env.VUE_APP_USERS_URL ?? "http://localhost:8000",
   CATALOG_BASE_URL: process.env.VUE_APP_CATALOG_URL ?? "http://localhost:8001",
   AVM_BASE_URL: process.env.VUE_APP_AVM_URL ?? "http://localhost:8002",
+  PROPERTIES_BASE_URL:
+    process.env.VUE_APP_PROPERTIES_URL ?? "http://localhost:8003",
   IPAPI_URL: process.env.VUE_APP_IPAPI_URL ?? "https://ipapi.co/json/",
 };
 

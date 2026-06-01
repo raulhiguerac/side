@@ -1,10 +1,10 @@
 ---
 title: Project roadmap 2026
 status: draft
-last-verified: 2026-05-29
+last-verified: 2026-05-31
 owners: [_shared]
 related: [[architecture]], [[open-items]], [[analytics-service]], [[properties-service]], [[frontend]], [[avm-training]]
-sources: [../../sources/_shared/2026-05-29-project-roadmap.md]
+sources: [../../sources/_shared/2026-05-29-project-roadmap.md, ../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md]
 ---
 
 ## TL;DR
@@ -55,6 +55,20 @@ Ver [[analytics-service]], [[avm-training]], [[analytics-service-mlflow]], [[fro
 - Mapa de calor de precios por zona geográfica sobre el feed.
 - La DB OLTP del analytics-ms no es apta para queries analíticos pesados → requiere DWH separado.
 - Stack a decidir: BigQuery (managed, pay-per-query) vs DuckDB sobre MinIO (self-hosted, sin egress cost).
+
+### Impresiones y personalización del feed (draft)
+- Registrar impresiones por listing como evento Kafka `listing.impressed` consumido por analytics-ms.
+- Con historial de impresiones: recomendador de promoted listings (mostrarlos a perfiles con mayor probabilidad de conversión, no al azar).
+- Feed evoluciona de preferencias declaradas (onboarding) → comportamiento (views, tiempo, retorno) → recomendador colaborativo/content-based.
+- El bbox del mapa estilo Airbnb es señal implícita de zona de interés sin acción explícita del usuario.
+- Open: diseño del evento `listing.impressed` — ¿anónimo con fingerprint o solo usuarios autenticados?
+
+### Estrategia de supply para lanzamiento
+- Riesgo principal no es técnico: es conseguir listings verificados iniciales.
+- Plan: acercarse a propietarios que ya tienen listings en otros portales llegando con el MVP funcionando.
+- Pitch: *"Tu listing en Metrocuadrado es uno entre miles sin contexto de precio. Acá el comprador llega ya filtrado por sus preferencias y con un estimado de mercado para comparar."*
+- El AVM les da valor inmediato antes de publicar: saben si su precio está bien puesto.
+- Open: ¿los listings iniciales son venta, arriendo o los dos?
 
 ### notifications-ms (draft)
 - Notificaciones push/email: matching de propiedades, cambios de precio, alertas de barrio.

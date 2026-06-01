@@ -26,9 +26,10 @@ class BulkCreatePropertiesUseCase:
         errors: list[str] = []
         orm_objects = []
 
-        for result in results:
+        for i, result in enumerate(results):
             if isinstance(result, Exception):
-                errors.append(str(result))
+                row_ref = f"row[{i}] lat={records[i].get('lat', '?')} lon={records[i].get('lon', '?')}"
+                errors.append(f"{row_ref}: {result}")
                 continue
 
             raw_urls = result.get("image_urls", [])

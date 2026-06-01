@@ -336,8 +336,8 @@ import {
   useAvmForm,
   type AvmFormPayload,
   type SelectedPlace,
-} from "@/composables/useAvmForm";
-import { getNeighborhood } from "@/composables/Location";
+} from "@/composables/avm/useAvmForm";
+import { getNeighborhood } from "@/composables/catalog/useLocation";
 
 const emit = defineEmits<{
   submit: [

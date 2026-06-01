@@ -56,7 +56,7 @@
 import { watch } from "vue";
 import { onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
-import { useOnboarding } from "@/composables/useOnboarding";
+import { useOnboarding } from "@/composables/onboarding/useOnboarding";
 import NavBar from "@/components/shared/NavBar.vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
 import AppFooter from "@/components/shared/AppFooter.vue";
@@ -81,12 +81,16 @@ const navigationLinks = [
 
 onMounted(async () => {
   await authStore.checkAuth();
+  if (authStore.isAuthenticated) {
+    await userStore.checkInterests();
+  }
 });
 
 watch(
   () => authStore.isAuthenticated,
-  (isLogged) => {
+  async (isLogged) => {
     if (!isLogged) return;
+    await userStore.checkInterests();
     const manualCheck =
       sessionStorage.getItem("onboarding_dismissed") === "true";
 

@@ -121,8 +121,8 @@
 import { ref, onMounted } from "vue";
 import houseIcon from "@/assets/house.svg";
 import apartmentIcon from "@/assets/apartment.svg";
-import { useOnboarding } from "@/composables/useOnboarding";
-import { useLocalitiesWithNames } from "@/composables/useLocalitiesWithNames";
+import { useOnboarding } from "@/composables/onboarding/useOnboarding";
+import { useLocalitiesWithNames } from "@/composables/catalog/useLocalitiesWithNames";
 
 interface City {
   id: string;
