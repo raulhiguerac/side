@@ -1,10 +1,10 @@
 ---
 title: frontend
 status: draft
-last-verified: 2026-05-27
+last-verified: 2026-06-03
 owners: [frontend]
 related: [[architecture]], [[frontend-architecture]], [[frontend-onboarding-flow]], [[frontend-local-dev]]
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md]
 ---
 
 ## TL;DR
@@ -29,7 +29,7 @@ Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con pro
 | `/forgot-password` | ⚠ scaffolded | desconocido |
 | `/settings/{profile,security,account}` | ✅ con UCs en users-service | users-service (wiki pendiente) |
 | `/about`, `/` (home) | ⚠ scaffolded — sin data dinámica | n/a |
-| `/properties` (`my-properties`) | ⚠ ruta existe, sin endpoint | properties-service `/v1/properties/mine` **no existe** |
+| `/properties` (feed) | ✅ feed funcional — sidebar filtros + neighborhood lookup | properties-service `GET /v1/search/feed` |
 | `/dev` (DevPlayground) | sandbox interno | n/a — no es producto |
 | Onboarding modal (4 pasos) | ⚠ front completo, backend pausado | users-service `/v1/onboarding/{city,neighborhood}` — pausado |
 
@@ -67,8 +67,8 @@ Guard global en `router.beforeEach`: si la ruta `requiresAuth` y `_authChecked =
 
 - **users-service** (`API.USERS_BASE_URL` default `localhost:8000`): auth, profile, settings, onboarding endpoints.
 - **catalog-service** (`API.CATALOG_BASE_URL` default `localhost:8001`): countries, localities by-country, neighborhoods by-locality.
-- **properties-service**: planeado, ningún consumo activo.
-- **analytics-service**: form AVM en `DevPlaygroundView` — mock funcional con `PlaceAutocompleteElement` + GSAP. Chain completo (`lat/lon → catalog → /predict`) pendiente de conectar.
+- **properties-service** (`API.PROPERTIES_BASE_URL` default `localhost:8003`): `GET /v1/search/feed` consumido desde `composables/feed/useFeed.ts` — feed personalizado con preferencias y filtros.
+- **analytics-service**: form AVM en `DevPlaygroundView` — `PlaceAutocompleteElement` + `POST /v1/predict` cableado end-to-end.
 
 ## Patrones — resumen alto nivel
 
@@ -121,5 +121,5 @@ Detalle de cada patrón en [[frontend-architecture]].
 - `leaflet` + `@vue-leaflet/vue-leaflet` están en **devDependencies** del package.json (probablemente debería ser dependencies si se usa en runtime) ([package.json:32-33](frontend/package.json#L32-L33), [package.json:43](frontend/package.json#L43)).
 - `vue.config.js` reconoce que Vue CLI está en maintenance ("Vue CLI is in maintenance mode") ([vue.config.js:13](frontend/vue.config.js#L13)).
 - Onboarding tiene 4 pasos definidos en `useOnboarding.ts` (`STEP_MAP`): intent, city, neighborhood, property_type ([composables/useOnboarding.ts:11-16](frontend/src/composables/useOnboarding.ts#L11-L16)).
-- Endpoint `/v1/properties/mine` **no existe** en properties-service al 2026-05-21 (per autor).
 - CORS del backend hoy está `allow_origins=["*"]` (catalog-service), temporal pre-producción ([backend/catalog-service/src/app/main.py:18-23](backend/catalog-service/src/app/main.py#L18-L23)).
+- El feed de propiedades en `/properties` consume `GET /v1/search/feed` (properties-service puerto 8003) con `paramsSerializer: { indexes: null }` para evitar bracket notation que FastAPI no parsea ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).

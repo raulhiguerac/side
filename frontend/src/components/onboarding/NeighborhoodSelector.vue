@@ -146,68 +146,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import Multiselect from "@vueform/multiselect";
 import { useOnboarding } from "@/composables/onboarding/useOnboarding";
-import { getNeighborhoodsByLocalities } from "@/composables/catalog/useLocation";
 import { useLocalitiesWithNames } from "@/composables/catalog/useLocalitiesWithNames";
-
-interface Neighborhood {
-  id: string;
-  name: string;
-}
-
-interface CityWithNeighborhoods {
-  id: string;
-  name: string;
-  neighborhoods: Neighborhood[];
-}
+import { useNeighborhoodMultiselect } from "@/composables/shared/useMultiselect";
 
 const { saveNeighborhoods } = useOnboarding();
 const { load: loadLocalities } = useLocalitiesWithNames();
+const { cities, selectedByCity, allSelected, removeNeighborhood, load } =
+  useNeighborhoodMultiselect();
 
-const cities = ref<CityWithNeighborhoods[]>([]);
 const activeTab = ref("");
-const selectedByCity = ref<Record<string, string[]>>({});
 const isLoading = ref(true);
 const isSaving = ref(false);
 
 onMounted(async () => {
   const enrichedLocalities = await loadLocalities();
-  const ids = enrichedLocalities.map((l) => l.id);
-  const neighborhoodsByLocality = await getNeighborhoodsByLocalities(ids);
-
-  cities.value = enrichedLocalities.map((loc) => ({
-    id: loc.id,
-    name: loc.name,
-    neighborhoods: (neighborhoodsByLocality[loc.id] ?? []).map((n: any) => ({
-      id: n.id,
-      name: n.name,
-    })),
-  }));
-
-  selectedByCity.value = Object.fromEntries(ids.map((id) => [id, []]));
-  activeTab.value = ids[0] ?? "";
+  await load(enrichedLocalities);
+  activeTab.value = cities.value[0]?.id ?? "";
   isLoading.value = false;
 });
-
-const allSelected = computed(() =>
-  cities.value.flatMap((city) =>
-    (selectedByCity.value[city.id] ?? []).map((neighborhoodId, index) => ({
-      cityId: city.id,
-      cityName: city.name,
-      neighborhoodId,
-      neighborhoodName:
-        city.neighborhoods.find((n) => n.id === neighborhoodId)?.name ?? "",
-    }))
-  )
-);
-
-function removeNeighborhood(cityId: string, neighborhoodId: string) {
-  selectedByCity.value[cityId] = selectedByCity.value[cityId].filter(
-    (id) => id !== neighborhoodId
-  );
-}
 
 async function handleNext() {
   isSaving.value = true;

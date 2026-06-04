@@ -372,7 +372,8 @@ const {
 watch(place, async (val) => {
   if (!val) return;
   emit("place-selected", { place: val });
-  neighborhood.value = await getNeighborhood(val.latitude, val.longitude);
+  neighborhood.value =
+    (await getNeighborhood(val.latitude, val.longitude)) ?? null;
 });
 
 function onSubmit() {

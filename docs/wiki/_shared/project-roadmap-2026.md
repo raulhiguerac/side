@@ -56,6 +56,11 @@ Ver [[analytics-service]], [[avm-training]], [[analytics-service-mlflow]], [[fro
 - La DB OLTP del analytics-ms no es apta para queries analíticos pesados → requiere DWH separado.
 - Stack a decidir: BigQuery (managed, pay-per-query) vs DuckDB sobre MinIO (self-hosted, sin egress cost).
 
+### Búsqueda con lenguaje natural en el feed (draft)
+- Usar un LLM con tool use para traducir lenguaje natural del usuario a la estructura de parámetros del endpoint `GET /v1/search/feed` (`FeedPreferences` + `FeedFilters`).
+- El LLM recibe el texto libre del usuario y llama una tool que construye el payload tipado.
+- Elimina la necesidad de que el usuario interactúe con el panel de filtros explícito para búsquedas simples ("quiero un apartamento de 2 hab en Chapinero por menos de 500M").
+
 ### Impresiones y personalización del feed (draft)
 - Registrar impresiones por listing como evento Kafka `listing.impressed` consumido por analytics-ms.
 - Con historial de impresiones: recomendador de promoted listings (mostrarlos a perfiles con mayor probabilidad de conversión, no al azar).

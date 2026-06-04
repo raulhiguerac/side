@@ -1,10 +1,10 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-05-29
+last-verified: 2026-06-03
 owners: [frontend]
 related: [[architecture]], [[frontend]], [[frontend-onboarding-flow]], [[frontend-map-component]]
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md]
 ---
 
 ## TL;DR
@@ -114,7 +114,45 @@ Actions clave:
 
 ## Composables
 
-### `useOnboarding` ([composables/useOnboarding.ts](frontend/src/composables/useOnboarding.ts))
+### `useFeed` ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts))
+
+Gestiona el feed de propiedades:
+- `data: ref<PropertyCard[]>` — resultados crudos del backend.
+- `neighborhoodLookup: ref<Record<string, string>>` — mapa `neighborhood_id → name` construido tras cada fetch.
+- `load()`: lee preferencias del `userStore` en el momento de la llamada (no al inicializar el composable), llama `GET /v1/search/feed`, extrae `city_id`s únicos de los resultados → llama `buildNeighborhoodMap` → popula `neighborhoodLookup`.
+- **Bug histórico**: axios serializa arrays como `key[]=v` (bracket notation). FastAPI **no** parsea `key[]` como el parámetro `key` — lo trata como parámetro desconocido y usa el default vacío, haciendo que `parse_feed_preferences` retorne `None` y el feed ignore los filtros. Fix: `paramsSerializer: { indexes: null }` → serializa como `key=v1&key=v2`.
+
+### `useNeighborhoodLookup` ([composables/catalog/useNeighborhoodLookup.ts](frontend/src/composables/catalog/useNeighborhoodLookup.ts))
+
+```ts
+export async function buildNeighborhoodMap(
+  localityIds: string[]
+): Promise<Record<string, string>>
+```
+
+Llama `getNeighborhoodsByLocalities`, aplana con `Object.values(result).flat()`, reduce a `id → name`. Lookup O(1) para resolver nombres en `toCard`.
+
+### `useCities` ([composables/catalog/useCities.ts](frontend/src/composables/catalog/useCities.ts))
+
+Singleton de módulo (no instancia por componente):
+- `export const cities: Ref<Map<string, string>>` — mapa `id → name` de localidades del país del usuario.
+- `export async function load()` — detecta país por IP → `getCitiesByCountry` → popula `cities`.
+
+Patrón singleton correcto aquí porque las ciudades son las mismas para todos los componentes que las consuman en la misma sesión.
+
+### `useMultiselect` ([composables/shared/useMultiselect.ts](frontend/src/composables/shared/useMultiselect.ts))
+
+Dos factory functions con estado por instancia (no singleton):
+
+- **`useCityMultiselect()`** → `{ selected: Ref<string[]>, removeCity(id) }`.
+- **`useNeighborhoodMultiselect()`** → `{ cities, selectedByCity, allSelected, allNeighborhoodOptions, removeNeighborhood, load(localities) }`.
+  - `load(localities: {id, name}[])`: llama `getNeighborhoodsByLocalities`, popula `cities` con barrios, inicializa `selectedByCity`.
+  - `allNeighborhoodOptions`: computed flat `{value, label}[]` para multiselect sin tabs.
+  - `allSelected`: computed flat de todos los barrios seleccionados en todas las localidades.
+
+Usado en `NeighborhoodSelector` (tabbed, por localidad) y `FeedFilters` (flat, todos los barrios de ciudades seleccionadas).
+
+### `useOnboarding` ([composables/onboarding/useOnboarding.ts](frontend/src/composables/onboarding/useOnboarding.ts))
 
 Orquesta el modal de onboarding:
 - `STEP_MAP`: `{ intent, city, neighborhood, property_type }` → componente Vue.
@@ -167,6 +205,7 @@ Todas las calls llevan `withCredentials: true` para que la cookie viaje.
 | Countries | `localStorage` | Permanente hasta clear cache |
 | Cities by country | `sessionStorage` | Por sesión del browser |
 | Neighborhoods by locality | `sessionStorage` | Por sesión |
+| Neighborhood lookup (`id → name`) | en memoria (`ref`) | Por instancia de `useFeed` — se reconstruye en cada `load()` |
 | User location (IP) | `localStorage` | Permanente hasta clear |
 | `onboarding_dismissed` | `sessionStorage` | Por sesión |
 
@@ -178,7 +217,7 @@ Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. No hay invalidación
 |---|---|
 | `shared/` | NavBar, NavGuest (no-logged), NavUser (logged), BaseModal — reusables transversales. |
 | `onboarding/` | 4 selectors (Intent, Locality, Neighborhood, PropertyType) — usados desde el modal. |
-| `properties/` | PropertyCard, HouseCard — cards para feed/listing views (HouseCard probable duplicado o variante de PropertyCard). |
+| `properties/` | `PropertyCard`, `HouseCard` — cards para feed. `FeedFilters` — sidebar de filtros con secciones Preferencias (ciudad, barrio, tipo) y Filtros (precio, área, habitaciones, baños); se pre-pobla con ciudades de `useCities`, barrios cargados dinámicamente al seleccionar ciudad vía `watch`. |
 | `settings/` | SettingsSidebar — navegación lateral del SettingsLayout. |
 | `map/` | MapUser — componente de mapa dumb/reusable (vue-leaflet declarativo, markers-prop + slot). Ver [[frontend-map-component]]. |
 | `avm/` | AvmForm / AvmResult — form del avalúo multi-step. `AvmForm` consume `composables/useAvmForm` (expone `AvmFormPayload`, `AvmPredictRequest`, `SelectedPlace`). Emite `place-selected` (marker en tiempo real) y `submit` (payload + place + neighborhood resuelto). `DevPlaygroundView` orquesta: recibe `place-selected` → actualiza `center` y `marker` reactivos → pasa al mapa. |
@@ -237,3 +276,8 @@ El render lo encapsula `MapUser.vue` — un componente **dumb/reusable**: props 
 - `AvmPredictRequest` extiende `AvmFormPayload` con `lat`, `lon`, `barrio_ideca` — vive en `composables/useAvmForm.ts` y es el shape del body de `POST /v1/predict` ([composables/useAvmForm.ts](frontend/src/composables/useAvmForm.ts)).
 - `fetchPredict` es una función local en `DevPlaygroundView` (no composable) porque es una sola call sin estado compartido — patrón: `axios.post(AVM_BASE_URL/v1/predict, payload, { withCredentials: true })` → retorna `res.data.predicted_price` ([views/dev/DevPlaygroundView.vue](frontend/src/views/dev/DevPlaygroundView.vue)).
 - `allow_origins=["*"]` es incompatible con `withCredentials: true` — el analytics-service usa `allow_origins=["http://localhost:8080"]` + `allow_credentials=True` ([analytics-service/src/app/main.py](backend/analytics-service/src/app/main.py)).
+- `useFeed.load()` lee `userStore.userInterests` dentro del cuerpo de `load()`, no al inicializar el composable — garantiza que los datos del store estén frescos tras login ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
+- axios serializa arrays como `key[]=v` (bracket notation) por defecto; FastAPI no parsea `key[]` como el parámetro `key` — fix: `paramsSerializer: { indexes: null }` en el request de `useFeed` ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
+- `buildNeighborhoodMap` aplana `Object.values(getNeighborhoodsByLocalities(ids)).flat()` y reduce a `Record<neighborhoodId, name>` — lookup O(1) usado en `toCard` de `FeedView` ([composables/catalog/useNeighborhoodLookup.ts](frontend/src/composables/catalog/useNeighborhoodLookup.ts)).
+- `useCities` es un singleton de módulo (`export const cities`) — estado compartido entre todos los componentes que lo importen en la misma sesión ([composables/catalog/useCities.ts](frontend/src/composables/catalog/useCities.ts)).
+- `FeedFilters` carga barrios dinámicamente via `watch(selected, ...)` sobre las ciudades seleccionadas — llama `useNeighborhoodMultiselect.load(localities)` y resetea `selectedNeighborhoods` al cambiar ciudades ([components/properties/FeedFilters.vue](frontend/src/components/properties/FeedFilters.vue)).
