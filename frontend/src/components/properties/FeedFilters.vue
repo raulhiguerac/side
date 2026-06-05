@@ -97,12 +97,24 @@
           </label>
           <div class="flex gap-2">
             <button
-              class="flex-1 py-2 rounded-xl border border-brand-border text-sm text-brand-text hover:border-brand-primary transition-colors"
+              @click="toggleType('house')"
+              :class="
+                selectedTypes.includes('house')
+                  ? 'bg-brand-primary border-brand-primary text-white'
+                  : 'border-brand-border text-brand-text hover:border-brand-primary'
+              "
+              class="flex-1 py-2 rounded-xl border text-sm transition-colors"
             >
               Casa
             </button>
             <button
-              class="flex-1 py-2 rounded-xl border border-brand-border text-sm text-brand-text hover:border-brand-primary transition-colors"
+              @click="toggleType('apartment')"
+              :class="
+                selectedTypes.includes('apartment')
+                  ? 'bg-brand-primary border-brand-primary text-white'
+                  : 'border-brand-border text-brand-text hover:border-brand-primary'
+              "
+              class="flex-1 py-2 rounded-xl border text-sm transition-colors"
             >
               Apartamento
             </button>
@@ -125,11 +137,13 @@
           </label>
           <div class="flex gap-2">
             <input
+              v-model.number="filters.min_price"
               type="number"
               placeholder="Mín"
               class="w-1/2 px-3 py-2 text-sm rounded-xl border border-brand-border focus:outline-none focus:border-brand-primary"
             />
             <input
+              v-model.number="filters.max_price"
               type="number"
               placeholder="Máx"
               class="w-1/2 px-3 py-2 text-sm rounded-xl border border-brand-border focus:outline-none focus:border-brand-primary"
@@ -146,11 +160,13 @@
           </label>
           <div class="flex gap-2">
             <input
+              v-model.number="filters.min_area_m2"
               type="number"
               placeholder="Mín"
               class="w-1/2 px-3 py-2 text-sm rounded-xl border border-brand-border focus:outline-none focus:border-brand-primary"
             />
             <input
+              v-model.number="filters.max_area_m2"
               type="number"
               placeholder="Máx"
               class="w-1/2 px-3 py-2 text-sm rounded-xl border border-brand-border focus:outline-none focus:border-brand-primary"
@@ -166,6 +182,7 @@
             Habitaciones
           </label>
           <input
+            v-model.number="filters.bedrooms"
             type="number"
             placeholder="Ej. 3"
             min="1"
@@ -181,6 +198,7 @@
             Baños (mín)
           </label>
           <input
+            v-model.number="filters.min_bathrooms"
             type="number"
             placeholder="Ej. 2"
             min="1"
@@ -190,6 +208,7 @@
 
         <!-- apply button -->
         <button
+          @click="onSubmit"
           class="w-full mt-2 py-2.5 rounded-xl bg-brand-primary text-white text-sm font-semibold hover:bg-green-600 transition-colors"
         >
           Aplicar filtros
@@ -207,12 +226,24 @@ import {
   useCityMultiselect,
   useNeighborhoodMultiselect,
 } from "@/composables/shared/useMultiselect";
+import { FeedPreferences, FeedFilters } from "@/types/feed";
 
 const { selected, removeCity } = useCityMultiselect();
 const { allNeighborhoodOptions, load: loadNeighborhoods } =
   useNeighborhoodMultiselect();
 
+const filters = ref<FeedFilters>({});
+const selectedTypes = ref<Array<string>>([]);
 const selectedNeighborhoods = ref<string[]>([]);
+
+const emit = defineEmits<{
+  submit: [
+    data: {
+      preferences: FeedPreferences;
+      filters: FeedFilters;
+    }
+  ];
+}>();
 
 onMounted(() => load());
 
@@ -224,4 +255,25 @@ watch(selected, async (cityIds) => {
   selectedNeighborhoods.value = [];
   await loadNeighborhoods(localities);
 });
+
+function toggleType(element: string) {
+  if (selectedTypes.value.includes(element)) {
+    selectedTypes.value = selectedTypes.value.filter(
+      (active) => active !== element
+    );
+  } else {
+    selectedTypes.value.push(element);
+  }
+}
+
+function onSubmit() {
+  emit("submit", {
+    preferences: {
+      city_ids: selected.value,
+      neighborhood_ids: selectedNeighborhoods.value,
+      property_types: selectedTypes.value,
+    },
+    filters: filters.value,
+  });
+}
 </script>

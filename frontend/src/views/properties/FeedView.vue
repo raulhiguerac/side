@@ -17,7 +17,7 @@
       <aside
         class="hidden lg:block lg:w-1/4 shrink-0 sticky top-8 bg-white border border-brand-divider rounded-2xl p-5"
       >
-        <FeedFilters />
+        <FeedFilters @submit="onSubmit" />
       </aside>
 
       <!-- feed cards -->
@@ -81,4 +81,11 @@ function toCard(p: FeedCard): Property {
 }
 
 const cards = computed(() => data.value.map(toCard));
+
+async function onSubmit(params: {
+  preferences: FeedPreferences;
+  filters: FeedFilters;
+}) {
+  await load(params.preferences, params.filters);
+}
 </script>

@@ -1,10 +1,10 @@
 ---
 title: Dominio search — properties-service
 status: draft
-last-verified: 2026-05-31
+last-verified: 2026-06-04
 owners: [properties-service]
-related: [[properties-service]], [[properties-service-architecture]], [[adr-feed-ads-organic-injection]], [[adr-h3-dual-resolution-map]]
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md]
+related: [[properties-service]], [[properties-service-architecture]], [[adr-feed-ads-organic-injection]], [[adr-h3-dual-resolution-map]], [[frontend-architecture]], [[open-items]]
+sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../../sources/frontend/2026-06-04-feed-filters-contract.md]
 ---
 
 ## TL;DR
@@ -54,6 +54,9 @@ Sin preferencias → una sola fase sin filtros geográficos.
 ## Feed mapa (`GetFeedMap`)
 
 1. `bbox.to_polygon()` → `H3Shape`; `h3shape_to_cells(polygon, resolution, contain="center")` → lista de celdas.
+
+> ⚠ **Bug latente**: `to_polygon()` instancia `h3.H3Shape(...)`, que es la clase abstracta padre de `LatLngPoly`/`LatLngMultiPoly` y no es instanciable — `GetFeedMapUseCase` crashea en runtime. Fix: `h3.LatLngPoly(...)`. Ver [[open-items]].
+
 2. **Cache-aside por celda**: `mget_json([map:h3:<cell>])`; las celdas hit se devuelven, las miss se acumulan.
 3. Celdas miss → `properties.get_by_bbox(h3_indexes, resolution)` en Postgres.
 4. Se cachean los resultados agrupados por celda (`mset_json`, TTL 5 min) y se devuelven `cached + fresh`.
@@ -68,6 +71,8 @@ Resolución elegida por el cliente vía query `resolution` (7–9): r9 (~300m) p
 - `FeedCursor` — `created_at`, `id`, `position`.
 
 Output uniforme: `list[PropertyCardSchema]`.
+
+`FeedPreferences` y `FeedFilters` son ambos opcionales: los deps `parse_feed_preferences` / `parse_feed_filters` devuelven `None` si no llega nada. En el repo, `get_properties` aplica **cada filtro de forma independiente** con un `if x is not None` separado, así que filtros parciales funcionan — mandar solo `max_price` agrega solo `WHERE price <= max_price` sin tocar el resto. Sin preferencias ni filtros, el feed no aplica ningún `WHERE` adicional (más allá de `active` + no borrado).
 
 ## Evolución planeada del feed
 
@@ -88,3 +93,5 @@ El promoted targeting también evoluciona: hoy los ads son globales o por ciudad
 - La resolución del mapa está acotada a `[7, 9]` por el query param ([search.py:45](backend/properties-service/src/app/api/routes/search.py#L45)).
 - El cache del mapa usa TTL de 5 minutos ([get_feed_map.py:14](backend/properties-service/src/app/services/search/use_cases/get_feed_map.py#L14)).
 - El feed y el mapa son públicos — no hay dependency de auth en las rutas `/search/*` ([search.py:20-48](backend/properties-service/src/app/api/routes/search.py#L20-L48)).
+- `get_properties` aplica cada filtro (`min_price`, `max_price`, `min_area_m2`, `max_area_m2`, `min_bathrooms`, `bedrooms`) con un `if x is not None` independiente, por lo que los filtros parciales son válidos ([sql_property_search_repository.py:54-70](backend/properties-service/src/app/services/search/adapters/sql_property_search_repository.py#L54-L70)).
+- `BoundingBox.to_polygon()` instancia `h3.H3Shape(...)`, una clase abstracta no instanciable — el feed-mapa tiene un bug latente hasta migrar a `h3.LatLngPoly(...)` ([feed_schemas.py:31-32](backend/properties-service/src/app/services/search/schemas/feed_schemas.py#L31-L32)).

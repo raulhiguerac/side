@@ -2,17 +2,18 @@ import axios from "axios";
 import { ref } from "vue";
 import { useUserStore } from "@/stores/user";
 import { API } from "@/config";
-import type { FeedPreferences, PropertyCard } from "@/types/feed";
+import type { FeedPreferences, FeedFilters, PropertyCard } from "@/types/feed";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
 
 async function fetchFeed(
-  preferences: FeedPreferences
+  preferences: FeedPreferences,
+  filters?: FeedFilters
 ): Promise<PropertyCard[]> {
   try {
     const { data } = await axios.get(
       `${API.PROPERTIES_BASE_URL}/v1/search/feed`,
       {
-        params: { ...preferences },
+        params: { ...preferences, ...filters },
         paramsSerializer: { indexes: null },
       }
     );
@@ -29,12 +30,13 @@ export function useFeed() {
   const userStore = useUserStore();
   const neighborhoodLookup = ref<Record<string, string>>({});
 
-  async function load() {
+  async function load(preferences?: FeedPreferences, filters?: FeedFilters) {
     try {
       loading.value = true;
 
-      const preferences: FeedPreferences =
-        userStore.userInterests.localities.length > 0
+      const resolvedPreferences =
+        preferences ??
+        (userStore.userInterests.localities.length > 0
           ? {
               city_ids: userStore.userInterests.localities,
               neighborhood_ids: Object.values(
@@ -44,9 +46,9 @@ export function useFeed() {
                 userStore.userInterests.properties
               ).flat(),
             }
-          : {};
+          : {});
 
-      const properties = await fetchFeed(preferences);
+      const properties = await fetchFeed(resolvedPreferences, filters);
       const locations = new Set(
         properties.map((obj) => obj.location?.city_id).filter(Boolean)
       );

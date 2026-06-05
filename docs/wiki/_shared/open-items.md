@@ -1,10 +1,10 @@
 ---
 title: Open items — gaps y deuda técnica cross-service
 status: draft
-last-verified: 2026-05-29
+last-verified: 2026-06-04
 owners: [_shared]
-related: [[architecture]], [[properties-service]], [[users-service]], [[catalog-service]], [[avm-training]], [[adr-estimated-price-dual-signal]], [[adr-gmaps-places-geocoding]]
-sources: [../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-05-28-foundational-exploration.md]
+related: [[architecture]], [[properties-service]], [[properties-service-search]], [[users-service]], [[catalog-service]], [[avm-training]], [[adr-estimated-price-dual-signal]], [[adr-gmaps-places-geocoding]]
+sources: [../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md]
 ---
 
 ## TL;DR
@@ -34,18 +34,20 @@ Backlog vivo de gaps detectados al documentar la wiki (2026-05-28): cosas que el
 
 ## Impresiones, analytics de comportamiento y feed personalizado
 
-- [ ] **Tracking de impresiones por listing.** Registrar cuántas veces fue visto cada listing (impression) y por quién (si está autenticado). Candidato a evento Kafka `listing.impressed` consumido por analytics-ms. Sin esto, el propietario no puede saber el alcance de su publicación. Ver [[properties-service]], [[analytics-service]].
+- [ ] **Tracking de impresiones por listing.** Registrar cuántas veces fue visto cada listing (impression) y por quién (si está autenticado). Candidato a evento Kafka `listing.impressed` consumido por analytics-ms. Sin esto, el propietario no puede saber el alcance de su publicación. El enfoque (beacon de cliente → collector tonto → Kafka → consumer en analytics) está fijado en [[adr-impressions-beacon-pipeline]]. Ver [[properties-service]], [[analytics-service]].
 - [ ] **Modelo de recomendación de promociones.** Con el historial de impresiones se puede entrenar un modelo que identifique qué listings promocionados tienen mayor probabilidad de conversión para cada perfil de usuario. Input: intereses del usuario + historial de views + features del listing. Ver [[analytics-service]], [[adr-estimated-price-dual-signal]].
 - [ ] **Feed personalizado por comportamiento.** Hoy el feed filtra por preferencias declaradas (onboarding). Con tracking de comportamiento (qué vio, cuánto tiempo, si volvió) se puede alimentar un recomendador colaborativo o content-based que mejore el ranking. El bbox del mapa estilo Airbnb ya da señal de zona de interés implícita. Ver [[frontend-architecture]], [[analytics-service]].
 - [ ] **Targeting de listings promocionados.** Cruzar perfil del usuario (barrios, tipo de propiedad) con historial de comportamiento para mostrar los promoted listings a las personas con mayor probabilidad de conversión — no al azar. Depende de los dos ítems anteriores.
 
 ## frontend — deuda pequeña
 
+- [ ] **Vista contenedora feed/mapa con toggle.** Crear una view que orqueste y, vía `v-if` (estado local) o nested route (URL bookmarkeable), alterne entre la subview/componente de **feed** (cards) y la de **mapa** — para que el usuario cambie de modo fácilmente desde un solo lugar. La view padre mantiene la UI compartida (`FeedFilters`, header) alrededor del slot que monta feed o mapa. Decisión `v-if` vs nested route pendiente: router si el modo debe reflejarse/compartirse en la URL, `v-if` si es solo preferencia de sesión. Conecta con el bug de `to_polygon()` (el modo mapa depende de `GetFeedMapUseCase`). Ver [[frontend-architecture]], [[properties-service-search]].
 - [ ] **`checkAuth` siempre loguea 401 en consola para usuarios no autenticados.** El catch no filtra el 401 esperado — aparece como error visual en devtools aunque el flujo es correcto. Fix: `if (axios.isAxiosError(error) && error.response?.status !== 401)` antes de loguear. Natural hacerlo junto con la centralización del axios instance. Ver `stores/auth.ts:87`.
 
 ## properties-service — deuda pequeña
 
 - [ ] **Errores de bulk create sin identificador de row.** `BulkCreatePropertiesUseCase` captura excepciones de `_enrich_location` como `str(exception)` sin referencia al row original. Refactor pendiente: incluir lat/lon o índice del row en el mensaje de error para facilitar debugging del seed. Ver `bulk_create_properties.py`.
+- [ ] **`BoundingBox.to_polygon()` instancia una clase abstracta de h3.** `feed_schemas.py` hace `h3.H3Shape(outer=[...])`, pero `H3Shape` es la clase abstracta padre de `LatLngPoly`/`LatLngMultiPoly` y no es instanciable → `GetFeedMapUseCase` crashea en runtime al construir el polígono. Fix: `h3.LatLngPoly(...)` y actualizar el return type. Bloquea el map view (bbox del front → celdas H3 → `get_by_bbox`). Ver [[properties-service-search]].
 
 ## Observabilidad y telemetría
 
@@ -89,3 +91,4 @@ Los tres pilares están ausentes hoy. Sin los tres juntos es imposible diagnosti
 - El `api_router` de users-service no incluye el health router ([api/main.py:3-8](backend/users-service/src/app/api/main.py#L3-L8)).
 - Los `.env.example` de catalog y properties solo declaran `DATABASE_URL` y `REDIS_URL` ([backend/catalog-service/.env.example](backend/catalog-service/.env.example), [backend/properties-service/.env.example](backend/properties-service/.env.example)).
 - El flujo async properties↔analytics figura como "en definición" en la arquitectura cross-service ([architecture.md](docs/wiki/_shared/architecture.md)).
+- `BoundingBox.to_polygon()` instancia `h3.H3Shape(...)`, clase abstracta no instanciable — el feed-mapa no puede construir el polígono ([feed_schemas.py:31-32](backend/properties-service/src/app/services/search/schemas/feed_schemas.py#L31-L32)).

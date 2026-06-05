@@ -1,10 +1,10 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-06-03
+last-verified: 2026-06-04
 owners: [frontend]
-related: [[architecture]], [[frontend]], [[frontend-onboarding-flow]], [[frontend-map-component]]
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md]
+related: [[architecture]], [[frontend]], [[frontend-onboarding-flow]], [[frontend-map-component]], [[properties-service-search]]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md]
 ---
 
 ## TL;DR
@@ -119,8 +119,11 @@ Actions clave:
 Gestiona el feed de propiedades:
 - `data: ref<PropertyCard[]>` — resultados crudos del backend.
 - `neighborhoodLookup: ref<Record<string, string>>` — mapa `neighborhood_id → name` construido tras cada fetch.
-- `load()`: lee preferencias del `userStore` en el momento de la llamada (no al inicializar el composable), llama `GET /v1/search/feed`, extrae `city_id`s únicos de los resultados → llama `buildNeighborhoodMap` → popula `neighborhoodLookup`.
+- `load(preferences?: FeedPreferences, filters?: FeedFilters)`: si llegan args los usa; si no, hace fallback a `userStore.userInterests` (resuelto con `preferences ?? (ternario del store)` — los paréntesis son obligatorios por la precedencia de `??` vs `?:`). Llama `fetchFeed`, extrae `city_id`s únicos de los resultados → `buildNeighborhoodMap` → popula `neighborhoodLookup`. Retorna `void` y muta `data.value` internamente — la view solo hace `await load(...)`, no asigna el resultado.
+- `fetchFeed(preferences, filters?)`: `GET /v1/search/feed` con `params: { ...preferences, ...filters }` (spread de ambos) — así filtros parciales (solo `max_price`, etc.) viajan sin tocar el resto.
 - **Bug histórico**: axios serializa arrays como `key[]=v` (bracket notation). FastAPI **no** parsea `key[]` como el parámetro `key` — lo trata como parámetro desconocido y usa el default vacío, haciendo que `parse_feed_preferences` retorne `None` y el feed ignore los filtros. Fix: `paramsSerializer: { indexes: null }` → serializa como `key=v1&key=v2`.
+
+La view padre del feed orquesta: recibe el evento `submit` de `FeedFilters` y hace `await load(params.preferences, params.filters)` — el componente no llama al backend, solo emite hacia arriba.
 
 ### `useNeighborhoodLookup` ([composables/catalog/useNeighborhoodLookup.ts](frontend/src/composables/catalog/useNeighborhoodLookup.ts))
 
@@ -217,7 +220,7 @@ Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. No hay invalidación
 |---|---|
 | `shared/` | NavBar, NavGuest (no-logged), NavUser (logged), BaseModal — reusables transversales. |
 | `onboarding/` | 4 selectors (Intent, Locality, Neighborhood, PropertyType) — usados desde el modal. |
-| `properties/` | `PropertyCard`, `HouseCard` — cards para feed. `FeedFilters` — sidebar de filtros con secciones Preferencias (ciudad, barrio, tipo) y Filtros (precio, área, habitaciones, baños); se pre-pobla con ciudades de `useCities`, barrios cargados dinámicamente al seleccionar ciudad vía `watch`. |
+| `properties/` | `PropertyCard`, `HouseCard` — cards para feed. `FeedFilters` — sidebar de filtros con secciones Preferencias (ciudad, barrio, tipo) y Filtros (precio, área, habitaciones, baños); se pre-pobla con ciudades de `useCities`, barrios cargados dinámicamente al seleccionar ciudad vía `watch`. Mantiene estado local (`selected`, `selectedNeighborhoods`, `selectedTypes`, `filters: ref<FeedFilters>({})` con `v-model.number`); `property_types` se togglea con `toggleType(type)` (push/filter sobre el array). **Emite un solo `submit` con `{preferences, filters}` al click en "Aplicar"** — no reactivo con `watch`, decisión para evitar una petición por cada cambio de campo. El objeto `preferences` se arma en `onSubmit` leyendo los refs (`selected.value`, etc.), sin ref `preferences` duplicado. |
 | `settings/` | SettingsSidebar — navegación lateral del SettingsLayout. |
 | `map/` | MapUser — componente de mapa dumb/reusable (vue-leaflet declarativo, markers-prop + slot). Ver [[frontend-map-component]]. |
 | `avm/` | AvmForm / AvmResult — form del avalúo multi-step. `AvmForm` consume `composables/useAvmForm` (expone `AvmFormPayload`, `AvmPredictRequest`, `SelectedPlace`). Emite `place-selected` (marker en tiempo real) y `submit` (payload + place + neighborhood resuelto). `DevPlaygroundView` orquesta: recibe `place-selected` → actualiza `center` y `marker` reactivos → pasa al mapa. |
@@ -281,3 +284,7 @@ El render lo encapsula `MapUser.vue` — un componente **dumb/reusable**: props 
 - `buildNeighborhoodMap` aplana `Object.values(getNeighborhoodsByLocalities(ids)).flat()` y reduce a `Record<neighborhoodId, name>` — lookup O(1) usado en `toCard` de `FeedView` ([composables/catalog/useNeighborhoodLookup.ts](frontend/src/composables/catalog/useNeighborhoodLookup.ts)).
 - `useCities` es un singleton de módulo (`export const cities`) — estado compartido entre todos los componentes que lo importen en la misma sesión ([composables/catalog/useCities.ts](frontend/src/composables/catalog/useCities.ts)).
 - `FeedFilters` carga barrios dinámicamente via `watch(selected, ...)` sobre las ciudades seleccionadas — llama `useNeighborhoodMultiselect.load(localities)` y resetea `selectedNeighborhoods` al cambiar ciudades ([components/properties/FeedFilters.vue](frontend/src/components/properties/FeedFilters.vue)).
+- `FeedFilters` emite un único evento `submit` con `{ preferences, filters }` desde `onSubmit` al click en "Aplicar" — no es reactivo con `watch`; el componente no llama al backend ([components/properties/FeedFilters.vue:269-278](frontend/src/components/properties/FeedFilters.vue#L269-L278)).
+- `toggleType(type)` en `FeedFilters` quita el tipo con `filter` si ya está en `selectedTypes` o lo agrega con `push` si no ([components/properties/FeedFilters.vue:259-267](frontend/src/components/properties/FeedFilters.vue#L259-L267)).
+- `useFeed.load(preferences?, filters?)` usa los args si llegan y cae a `userStore.userInterests` con `preferences ?? (ternario)` si no; `fetchFeed` hace spread `{ ...preferences, ...filters }` en los params ([composables/feed/useFeed.ts:33-51](frontend/src/composables/feed/useFeed.ts#L33-L51)).
+- El interface `FeedFilters` (campos opcionales/nullable: `min/max_price`, `min/max_area_m2`, `min_bathrooms`, `bedrooms`) vive en `types/feed.ts` junto a `FeedPreferences` ([types/feed.ts:1](frontend/src/types/feed.ts#L1)).

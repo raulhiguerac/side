@@ -17,6 +17,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
   - [ADR-0001 — Auth vía Keycloak JWT](wiki/_shared/adrs/adr-auth-keycloak-jwt.md)
   - [ADR-0002 — Geo-enrichment at write time](wiki/_shared/adrs/adr-geo-enrichment-at-write-time.md)
   - [ADR-0003 — Resolución H3 por caso de uso, celdas no reusables entre fronteras](wiki/_shared/adrs/adr-h3-resolution-per-use-case.md)
+  - [ADR-0004 — Impresiones y clicks vía beacon de cliente + collector + Kafka](wiki/_shared/adrs/adr-impressions-beacon-pipeline.md)
 
 ## analytics-service (piloto)
 
