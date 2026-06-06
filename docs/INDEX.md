@@ -117,6 +117,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0002 — Feed orgánico + ads con fallback de preferencias](wiki/properties-service/adrs/adr-feed-ads-organic-injection.md)
 - [ADR-0003 — Precio estimado dual (admin vs ML)](wiki/properties-service/adrs/adr-estimated-price-dual-signal.md)
 - [ADR-0004 — H3 dual-resolution para el feed-mapa](wiki/properties-service/adrs/adr-h3-dual-resolution-map.md)
+- [ADR-0005 — Cursor de paginación opaco (base64url)](wiki/properties-service/adrs/adr-feed-opaque-cursor.md)
 
 ## users-service
 

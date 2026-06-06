@@ -4,10 +4,11 @@ from app.core.config.settings import settings
 from app.services.search.helpers.feed.ads import get_ads
 from app.services.search.helpers.feed.organic import get_organic
 from app.services.search.ports.unit_of_work import SearchUnitOfWork
-from app.services.search.schemas.feed_schemas import FeedCursor, FeedFilters, FeedPreferences
+from app.services.search.schemas.feed_schemas import FeedCursor, FeedFilters, FeedPreferences, FeedPage
 from app.services.shared.ports.cache import CachePort
 from app.services.shared.schemas.property_card import PropertyCardSchema
 
+from app.services.search.helpers.feed.encoding import encode_cursor, decode_cursor
 
 class GetFeedUseCase:
     def __init__(self, *, uow: SearchUnitOfWork, cache: CachePort) -> None:
@@ -19,10 +20,14 @@ class GetFeedUseCase:
         *,
         preferences: Optional[FeedPreferences],
         filters: Optional[FeedFilters],
-        cursor: Optional[FeedCursor],
-    ) -> list[PropertyCardSchema]:
-        if cursor and cursor.position >= settings.FEED_MAX_RESULTS:
-            return []
+        cursor_str: Optional[str],
+    ) -> FeedPage:
+        
+        cursor = None
+        if cursor_str:
+            cursor = decode_cursor(cursor_str)
+            if cursor.position >= settings.FEED_MAX_RESULTS:
+                return FeedPage(items= [], next_cursor= None)
 
         page_size = settings.FEED_PAGE_SIZE
         ad_interval = settings.FEED_AD_INTERVAL
@@ -40,15 +45,31 @@ class GetFeedUseCase:
             count=organic_count,
         )
 
-        if not ads:
-            return organic
+        cards, last = organic
+        if last:
+            last_created, last_id = last
+        else:
+            return FeedPage(items=[],next_cursor=None)
 
-        position = cursor.position if cursor else 0
-        ad_start = (position // ad_interval) % len(ads)
-
-        return self._inject_ads(
-            organic=organic, ads=ads, ad_interval=ad_interval, ad_start=ad_start
+        new_position = cursor.position if cursor else 0
+        next_cursor = encode_cursor(
+            FeedCursor(
+                created_at=last_created,
+                id=last_id,
+                position=new_position + len(cards)
+            )
         )
+
+        if not ads:
+            return FeedPage(items=cards,next_cursor=next_cursor)
+
+        ad_start = (new_position // ad_interval) % len(ads)
+
+        cards_ads = self._inject_ads(
+            organic=cards, ads=ads, ad_interval=ad_interval, ad_start=ad_start
+        )
+
+        return FeedPage(items=cards_ads,next_cursor=next_cursor)
 
     @staticmethod
     def _inject_ads(

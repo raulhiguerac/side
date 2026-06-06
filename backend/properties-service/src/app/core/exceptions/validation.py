@@ -19,3 +19,12 @@ class UnsupportedFileTypeError(BaseError):
             code="UNSUPPORTED_FILE_TYPE",
             context=context,
         )
+
+
+class InvalidCursorError(BaseError):
+    def __init__(self, *, context: Optional[Dict[str, Any]] = None):
+        super().__init__(
+            message="Invalid or malformed pagination cursor",
+            code="INVALID_CURSOR",
+            context=context,
+        )

@@ -1,7 +1,7 @@
 ---
 title: Open items — gaps y deuda técnica cross-service
 status: draft
-last-verified: 2026-06-04
+last-verified: 2026-06-05
 owners: [_shared]
 related: [[architecture]], [[properties-service]], [[properties-service-search]], [[users-service]], [[catalog-service]], [[avm-training]], [[adr-estimated-price-dual-signal]], [[adr-gmaps-places-geocoding]]
 sources: [../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md]
@@ -30,6 +30,7 @@ Backlog vivo de gaps detectados al documentar la wiki (2026-05-28): cosas que el
 
 - [ ] **Conciliar tag set de POIs.** El del training del AVM (~15 categorías) diverge del que extrae catalog vía Overpass; el feature store de catalog aún NO alimenta el modelo. Ver [[adr-geospatial-feature-engineering]], [[catalog-service-overpass]].
 - [ ] **Resolución H3 al cablear feature store desde un MS (caveat, no bug).** Los servicios indexan en r9 (lookup espacial granular) y el AVM usa r6/r7/r8 (feature del vector; r9 mete ruido). Hoy NO rompe nada porque el modelo recomputa sus celdas desde `lat/lon` en inferencia y no consume las celdas de los MS. Cuando se conecte el feature store desde un MS al modelo, **recomputar la resolución del modelo, no reusar la celda r9 almacenada**. Decisión en [[adr-h3-resolution-per-use-case]]; documentado en [[glossary#h3]].
+- [ ] **`GET /v1/geo-resolution/reachable-pois` en catalog-service.** Nuevo UC en el dominio `geo_resolution`: dado lat/lon + minutes + mode, llama ORS para obtener el polígono de isocrona → `h3shape_to_cells(polygon, r9)` → cache lookup por celdas (key = hash del sorted set de H3 cells) → miss: `SELECT * FROM poi WHERE h3_index IN (cells)` → cachea + devuelve. Edge case de borde: usar `contain="center"` (centroide de la celda dentro del polígono) en lugar de intersección parcial. Responsabilidad completa en catalog-service — el caller (properties-service, front) solo ve `list[PoiSchema]`. No mezcla con analytics-service. Motor de routing recomendado: ORS (self-hosted o tier gratis), descarta Mapbox por cobertura en Colombia. Ver [[catalog-service]], [[catalog-service-poi-lifecycle]], [[adr-impressions-beacon-pipeline]].
 - [ ] **CI + promoción del training AVM.** Automatizar el run (orchestrator tipo Airflow) y formalizar la promoción del alias `production` (hoy manual). Ver [[avm-training]], [[adr-model-promotion-external-to-service]].
 
 ## Impresiones, analytics de comportamiento y feed personalizado
@@ -38,6 +39,13 @@ Backlog vivo de gaps detectados al documentar la wiki (2026-05-28): cosas que el
 - [ ] **Modelo de recomendación de promociones.** Con el historial de impresiones se puede entrenar un modelo que identifique qué listings promocionados tienen mayor probabilidad de conversión para cada perfil de usuario. Input: intereses del usuario + historial de views + features del listing. Ver [[analytics-service]], [[adr-estimated-price-dual-signal]].
 - [ ] **Feed personalizado por comportamiento.** Hoy el feed filtra por preferencias declaradas (onboarding). Con tracking de comportamiento (qué vio, cuánto tiempo, si volvió) se puede alimentar un recomendador colaborativo o content-based que mejore el ranking. El bbox del mapa estilo Airbnb ya da señal de zona de interés implícita. Ver [[frontend-architecture]], [[analytics-service]].
 - [ ] **Targeting de listings promocionados.** Cruzar perfil del usuario (barrios, tipo de propiedad) con historial de comportamiento para mostrar los promoted listings a las personas con mayor probabilidad de conversión — no al azar. Depende de los dos ítems anteriores.
+
+## Producto — diferenciadores y gaps de mercado
+
+- [ ] **Score de oportunidad de inversión inline en el feed.** Calcular `(precio_listado - precio_estimado) / precio_estimado` y exponerlo en `PropertyCardSchema` como campo numérico + badge visual en cada card. Diferenciador directo vs FincaRaíz/Metrocuadrado (sin AVM); supera a Cerouno (calculadora manual vs automático en cada card del feed). Depende del worker AVM → listing (`ml_estimated_price` poblado). Ver [[adr-estimated-price-dual-signal]], [[properties-service-search]].
+- [ ] **Alertas de oportunidad de precio.** Notificación push/email cuando se lista una propiedad X% por debajo del precio estimado en la zona de interés del usuario. Alta conversión para perfiles de inversión — nadie en el mercado colombiano lo tiene automático. Requiere: AVM funcionando + sistema de notificaciones + preferencias de zona ya capturadas en onboarding. Fase 3. Ver [[adr-estimated-price-dual-signal]], [[users-service]].
+- [ ] **Búsqueda con lenguaje natural.** LLM con tool use que traduce una query en lenguaje natural a la estructura `preferences + filters` del endpoint `/v1/search/feed`. Cerouno ya la tiene → brecha competitiva activa. El endpoint de búsqueda ya soporta todos los parámetros necesarios; falta la capa de traducción. Ver [[properties-service-search]], [[frontend-architecture]].
+- [ ] **Estrato socioeconómico en el modelo de propiedad.** Agregar campo `stratum` (1–6) a la tabla de propiedades. En Colombia el estrato predice precio, servicios públicos y entorno — feature de alto valor para el AVM y para filtros del feed. Habi lo expone en cada card; FincaRaíz y Metrocuadrado también lo tienen. Sin él, el AVM pierde una de las variables más predictivas del mercado colombiano. Ver [[properties-service-admin]], [[avm-training]].
 
 ## frontend — deuda pequeña
 
@@ -76,7 +84,7 @@ Los tres pilares están ausentes hoy. Sin los tres juntos es imposible diagnosti
 ## Consistencia / wiki
 
 - [ ] **Divergencia de patrones de worker** (proceso separado en analytics vs APScheduler in-process en users). Documentada en [[adr-apscheduler-in-process-worker]]; revisar al escalar (N réplicas → N schedulers).
-- [ ] **Huérfanos del wiki.** Agregar `[[links]]` entrantes a [[catalog-service-mapbox]], [[adr-admin-division-single-level]], [[adr-geojson-upload-pattern]], [[analytics-service-testing]] (hoy solo alcanzables desde INDEX).
+- [ ] **Huérfanos del wiki.** Agregar *links* entrantes a [[catalog-service-mapbox]], [[adr-admin-division-single-level]], [[adr-geojson-upload-pattern]], [[analytics-service-testing]] (hoy solo alcanzables desde INDEX).
 
 ## Cerrados
 

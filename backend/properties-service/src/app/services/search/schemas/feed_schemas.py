@@ -9,6 +9,7 @@ from pydantic import Field
 from app.models.property import PropertyType
 from app.schemas.base import StrictBase
 
+from app.services.shared.schemas.property_card import PropertyCardSchema
 
 class FeedCursor(StrictBase):
     created_at: datetime
@@ -20,6 +21,10 @@ class FeedPreferences(StrictBase):
     city_ids: list[uuid.UUID]
     neighborhood_ids: list[uuid.UUID]
     property_types: list[PropertyType]
+
+class FeedPage(StrictBase):
+    items: list[PropertyCardSchema]
+    next_cursor: str | None = None
 
 
 class BoundingBox(StrictBase):

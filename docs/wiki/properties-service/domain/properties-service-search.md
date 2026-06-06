@@ -1,10 +1,10 @@
 ---
 title: Dominio search — properties-service
-status: draft
-last-verified: 2026-06-04
+status: stable
+last-verified: 2026-06-05
 owners: [properties-service]
-related: [[properties-service]], [[properties-service-architecture]], [[adr-feed-ads-organic-injection]], [[adr-h3-dual-resolution-map]], [[frontend-architecture]], [[open-items]]
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../../sources/frontend/2026-06-04-feed-filters-contract.md]
+related: [[properties-service]], [[properties-service-architecture]], [[adr-feed-ads-organic-injection]], [[adr-feed-opaque-cursor]], [[adr-h3-dual-resolution-map]], [[frontend-architecture]], [[open-items]]
+sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../../sources/properties-service/2026-06-05-feed-cursor-pagination.md]
 ---
 
 ## TL;DR
@@ -29,7 +29,7 @@ Composición de cada página (`FEED_PAGE_SIZE` = 20 por default):
 3. `get_organic(...)` — trae los orgánicos faltantes.
 4. `_inject_ads` — intercala un ad cada `FEED_AD_INTERVAL` (default 5) posiciones orgánicas; el ad de arranque rota según la posición del cursor.
 
-Corte duro: si `cursor.position >= FEED_MAX_RESULTS` (300) → devuelve `[]`.
+Corte duro: si `cursor.position >= FEED_MAX_RESULTS` (300) → devuelve `FeedPage(items=[], next_cursor=None)`.
 
 ### Orgánico con fallback de fases
 
@@ -49,7 +49,13 @@ Sin preferencias → una sola fase sin filtros geográficos.
 
 ### Paginación por cursor
 
-`FeedCursor = (created_at, id, position)`. El repo usa `(cursor_created_at, cursor_id)` como keyset; `position` controla la rotación de ads y el corte de `FEED_MAX_RESULTS`.
+El cursor es **opaco**: `FeedCursor(created_at, id, position)` se serializa como `JSON → UTF-8 → base64url` y se devuelve al cliente como `next_cursor: str | None` dentro de `FeedPage`. El cliente lo reenvía como `?cursor=<token>` sin conocer su estructura interna. Ver [[adr-feed-opaque-cursor]].
+
+- El repo usa `(cursor_created_at, cursor_id)` como keyset (`created_at < last_seen`), garantizando estabilidad aunque entren propiedades nuevas al top del feed.
+- `position` cuenta solo orgánicos (no ads) y sirve para el corte `FEED_MAX_RESULTS` y la rotación de ads.
+- Cuando no hay más resultados, el UC devuelve `FeedPage(items=[], next_cursor=None)`.
+- El cursor se decodifica en el UC (`decode_cursor`); un token corrupto lanza `InvalidCursorError` → HTTP 400.
+- `parse_feed_cursor` (dep de 3 params separados) fue eliminado; el endpoint recibe `cursor: Optional[str] = Query(default=None)` directamente.
 
 ## Feed mapa (`GetFeedMap`)
 
@@ -68,9 +74,10 @@ Resolución elegida por el cliente vía query `resolution` (7–9): r9 (~300m) p
 - `FeedPreferences` — `city_ids`, `neighborhood_ids`, `property_types`.
 - `FeedFilters` — rangos de precio/área, `min_bathrooms`, `bedrooms`.
 - `BoundingBox` — `min/max lat/lon`, con `to_polygon()`.
-- `FeedCursor` — `created_at`, `id`, `position`.
+- `FeedCursor` — `created_at`, `id`, `position`. Opaco para el cliente (base64url).
+- `FeedPage` — `items: list[PropertyCardSchema]`, `next_cursor: str | None = None`. Respuesta del feed.
 
-Output uniforme: `list[PropertyCardSchema]`.
+`get_organic` retorna `tuple[list[PropertyCardSchema], tuple[datetime, UUID] | None]`; el segundo elemento es `(last.created_at, last.id)` del último resultado ORM antes de validar, o `None` si no hay resultados.
 
 `FeedPreferences` y `FeedFilters` son ambos opcionales: los deps `parse_feed_preferences` / `parse_feed_filters` devuelven `None` si no llega nada. En el repo, `get_properties` aplica **cada filtro de forma independiente** con un `if x is not None` separado, así que filtros parciales funcionan — mandar solo `max_price` agrega solo `WHERE price <= max_price` sin tocar el resto. Sin preferencias ni filtros, el feed no aplica ningún `WHERE` adicional (más allá de `active` + no borrado).
 
@@ -86,8 +93,13 @@ El promoted targeting también evoluciona: hoy los ads son globales o por ciudad
 ## Claims
 
 - Cada página del feed son `FEED_PAGE_SIZE` resultados (default 20) con un ad cada `FEED_AD_INTERVAL` (default 5) ([settings.py:23-25](backend/properties-service/src/app/core/config/settings.py#L23-L25)).
-- El feed corta y devuelve `[]` si `cursor.position >= FEED_MAX_RESULTS` (300) ([get_feed.py:24-25](backend/properties-service/src/app/services/search/use_cases/get_feed.py#L24-L25)).
-- El orgánico degrada preferencias en 3 fases y devuelve la primera no vacía ([organic.py:32-41](backend/properties-service/src/app/services/search/helpers/feed/organic.py#L32-L41)).
+- El feed devuelve `FeedPage(items=[], next_cursor=None)` si `cursor.position >= FEED_MAX_RESULTS` (300) ([get_feed.py:29-30](backend/properties-service/src/app/services/search/use_cases/get_feed.py#L29-L30)).
+- El endpoint `/search/feed` devuelve `FeedPage` (`items` + `next_cursor: str | None`); ya no devuelve `list[PropertyCardSchema]` ([search.py:21](backend/properties-service/src/app/api/routes/search.py#L21)).
+- El cursor se transporta como un único query param `?cursor=<base64url>` en lugar de tres params separados ([search.py:28](backend/properties-service/src/app/api/routes/search.py#L28)).
+- `decode_cursor` lanza `InvalidCursorError` (HTTP 400) ante cualquier fallo de decodificación o validación ([encoding.py:12-18](backend/properties-service/src/app/services/search/helpers/feed/encoding.py#L12-L18)).
+- `get_organic` retorna `(cards, (last.created_at, last.id))` o `([], None)` si no hay resultados ([organic.py:40-45](backend/properties-service/src/app/services/search/helpers/feed/organic.py#L40-L45)).
+- `position` en el cursor cuenta solo orgánicos; los ads inyectados no se suman ([get_feed.py:58-60](backend/properties-service/src/app/services/search/use_cases/get_feed.py#L58-L60)).
+- El orgánico degrada preferencias en 3 fases y devuelve la primera no vacía ([organic.py:32-45](backend/properties-service/src/app/services/search/helpers/feed/organic.py#L32-L45)).
 - Los ads se cachean por ciudad (`feed:ads:<city_id>`) o globalmente (`feed:ads:global`) con TTL de 1h ([ads.py:12](backend/properties-service/src/app/services/search/helpers/feed/ads.py#L12), [cache_keys.py:12-17](backend/properties-service/src/app/services/shared/helpers/cache_keys.py#L12-L17)).
 - El feed-mapa traduce el bbox a celdas H3 y aplica cache-aside por celda con clave `map:h3:<index>` ([get_feed_map.py:28-47](backend/properties-service/src/app/services/search/use_cases/get_feed_map.py#L28-L47)).
 - La resolución del mapa está acotada a `[7, 9]` por el query param ([search.py:45](backend/properties-service/src/app/api/routes/search.py#L45)).

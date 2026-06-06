@@ -1,3 +1,5 @@
+import uuid
+from  datetime import datetime
 from functools import partial
 from typing import Optional
 
@@ -15,7 +17,7 @@ async def get_organic(
     filters: FeedFilters,
     cursor: Optional[FeedCursor],
     count: int,
-) -> list[PropertyCardSchema]:
+) -> tuple[list[PropertyCardSchema], tuple[datetime, uuid.UUID] | None]:
     base_kwargs: dict = dict(
         min_price=filters.min_price,
         max_price=filters.max_price,
@@ -36,10 +38,11 @@ async def get_organic(
             partial(uow.properties.get_properties, **base_kwargs, **phase)
         )
         if raw:
-            return [PropertyCardSchema.model_validate(p) for p in raw]
+            cards = [PropertyCardSchema.model_validate(p) for p in raw]
+            last_created, last_id = raw[-1].created_at, raw[-1].id
+            return (cards,(last_created,last_id))
 
-    return []
-
+    return ([], None)
 
 def _build_phases(preferences: Optional[FeedPreferences]) -> list[dict]:
     if preferences is None:
