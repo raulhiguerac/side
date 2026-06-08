@@ -1,17 +1,5 @@
 <template>
-  <div class="w-full px-[5%] sm:px-[8%] lg:px-[10%] py-8">
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-brand-text">
-        Las escogimos pensando en ti
-      </h1>
-      <p v-if="isAuthenticated" class="text-sm text-brand-muted mt-1">
-        Sin filtros, directo al grano — justo lo que nos contaste que buscabas
-      </p>
-      <p v-else class="text-sm text-brand-muted mt-1">
-        Cuéntanos qué buscas y las afinamos para ti
-      </p>
-    </div>
-
+  <div class="w-full px-[5%] sm:px-[8%] lg:px-[10%] pb-8">
     <div class="flex flex-col lg:flex-row gap-6 items-start">
       <!-- sidebar filters — hidden on mobile, shown on lg+ -->
       <aside
@@ -43,6 +31,28 @@
         <div v-else class="text-center text-brand-muted py-20">
           No encontramos propiedades para tus preferencias.
         </div>
+
+        <!-- pagination -->
+        <div class="flex justify-center items-center gap-4 mt-10">
+          <button
+            :class="[
+              'px-5 py-2 rounded-xl border border-brand-border text-sm font-medium text-brand-text transition hover:bg-brand-primary-light',
+              isFirstPage ? 'invisible' : '',
+            ]"
+            @click="loadPrev"
+          >
+            ← Anterior
+          </button>
+          <button
+            :class="[
+              'px-5 py-2 rounded-xl border border-brand-border text-sm font-medium text-brand-text transition hover:bg-brand-primary-light',
+              !nextCursor ? 'invisible' : '',
+            ]"
+            @click="() => loadNext(nextCursor!)"
+          >
+            Siguiente →
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -54,13 +64,23 @@ import PropertyCard, {
   type Property,
 } from "@/components/properties/PropertyCard.vue";
 import { useFeed } from "@/composables/feed/useFeed";
-import { useAuthStore } from "@/stores/auth";
-import type { PropertyCard as FeedCard } from "@/types/feed";
+import type {
+  PropertyCard as FeedCard,
+  FeedPreferences,
+  FeedFilters as FeedFiltersParams,
+} from "@/types/feed";
 import FeedFilters from "@/components/properties/FeedFilters.vue";
 
-const { isAuthenticated } = useAuthStore();
-
-const { data, loading, load, neighborhoodLookup } = useFeed();
+const {
+  data,
+  loading,
+  load,
+  neighborhoodLookup,
+  nextCursor,
+  isFirstPage,
+  loadNext,
+  loadPrev,
+} = useFeed();
 
 onMounted(() => load());
 
@@ -84,7 +104,7 @@ const cards = computed(() => data.value.map(toCard));
 
 async function onSubmit(params: {
   preferences: FeedPreferences;
-  filters: FeedFilters;
+  filters: FeedFiltersParams;
 }) {
   await load(params.preferences, params.filters);
 }

@@ -38,3 +38,14 @@ Then **confirm activation** back to the user: state the scope and a one-line rem
 
 - This mode is the explicit, in-session form of the preference recorded in memory (`collaboration-learning-mode`). Honoring that memory does **not** require this skill; the skill is just a clean way for the user to switch the mode on/off deliberately.
 - If the user asks you to implement something clearly inside the active scope, decline briefly and offer guidance instead — do not negotiate it away.
+
+## Guiding principle — standard over custom
+
+Before guiding the user to implement something custom, always propose the simplest, most standard solution first and ask if it covers the need. Only go custom if the standard approach genuinely doesn't fit.
+
+Examples of questions to ask before planning:
+- Does this need to be shareable/bookmarkable? (→ URL state vs. in-memory)
+- Does browser back/forward need to work? (→ router vs. local state)
+- Is there a native browser API or framework primitive that already does this?
+
+**Why:** A user once implemented a full cursor-stack pagination system with local cache before realizing that putting the cursor in the URL query param (standard approach) was simpler, more correct, and already covered by Redis cache on the back end. Proposing standard first avoids this.

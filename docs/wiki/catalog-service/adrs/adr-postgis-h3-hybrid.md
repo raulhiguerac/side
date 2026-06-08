@@ -1,10 +1,10 @@
 ---
 title: ADR-0001 — PostGIS + h3 híbrido para spatial queries
 status: stable
-last-verified: 2026-05-28
+last-verified: 2026-06-08
 owners: [catalog-service]
 related: [[catalog-service-architecture]], [[catalog-service-poi-lifecycle]], [[glossary]]
-sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
+sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md]
 decision-date: 2026-05-21
 decision-status: accepted
 ---
@@ -39,7 +39,7 @@ Diseño híbrido:
 - ✅ Ground truth + aceleración separados — cada uno optimiza lo suyo.
 - ✅ Mismo sistema h3 que [[avm-training]] — consistencia conceptual cross-servicio.
 - ✅ `h3_cells` se llena gradualmente con el tráfico real (lazy-fill, ver [[catalog-service-poi-lifecycle]]) — los barrios populares se aceleran solos.
-- ❌ **Gap actual**: el read path (`get_location_by_point`, `get_neighborhood_by_coordinates`) **no usa** `h3_cells` para pre-filtrar al 2026-05-21. El campo se popula pero no se aprovecha. Optimización pendiente — medir P99 con dataset real antes de implementar.
+- ❌ **Gap actual**: el read path (`get_location_by_point`, `get_neighborhood_by_coordinates`) **no usa** `h3_cells` para pre-filtrar. El campo se popula pero no se aprovecha. Fix acordado: calcular el `h3_index` del punto en Python → `WHERE h3_index = ANY(Neighborhood.h3_cells)` (GIN index barato) → `ST_Contains` solo sobre los 1-3 candidatos. Pendiente de implementar en `SqlGeoreferentiationRepository.get_location_by_point`.
 - ❌ Cold start lento por barrio: la primera vez que un punto cae en un barrio, el `h3_cells` está `NULL`. Pre-fill batch como mitigación si hace falta.
 - ❌ Más deps (`geoalchemy2`, `h3`, `postgis/postgis:17-master` image) vs `postgres:17` plano.
 

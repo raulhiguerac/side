@@ -52,6 +52,12 @@ Backlog vivo de gaps detectados al documentar la wiki (2026-05-28): cosas que el
 - [ ] **Vista contenedora feed/mapa con toggle.** Crear una view que orqueste y, vía `v-if` (estado local) o nested route (URL bookmarkeable), alterne entre la subview/componente de **feed** (cards) y la de **mapa** — para que el usuario cambie de modo fácilmente desde un solo lugar. La view padre mantiene la UI compartida (`FeedFilters`, header) alrededor del slot que monta feed o mapa. Decisión `v-if` vs nested route pendiente: router si el modo debe reflejarse/compartirse en la URL, `v-if` si es solo preferencia de sesión. Conecta con el bug de `to_polygon()` (el modo mapa depende de `GetFeedMapUseCase`). Ver [[frontend-architecture]], [[properties-service-search]].
 - [ ] **`checkAuth` siempre loguea 401 en consola para usuarios no autenticados.** El catch no filtra el 401 esperado — aparece como error visual en devtools aunque el flujo es correcto. Fix: `if (axios.isAxiosError(error) && error.response?.status !== 401)` antes de loguear. Natural hacerlo junto con la centralización del axios instance. Ver `stores/auth.ts:87`.
 
+## properties-service — seguridad del feed
+
+- [ ] **Rate limiting en `/search/feed`.** Sin esto el corte de `FEED_MAX_RESULTS` es trivial — N sesiones paralelas cada una llega a 300 orgánicos. Implementar límite por IP y/o por usuario a nivel de API gateway (nginx, Traefik) o middleware FastAPI + Redis. Ver [[properties-service-search]], [[adr-feed-opaque-cursor]].
+- [ ] **Cursor firmado (HMAC).** El cursor actual es opaco pero no autenticado: alguien puede decodear el base64, manipular `created_at` para saltar a cualquier punto del dataset, y re-encodear. Un HMAC con secret server-side previene la manipulación sin cambiar el contrato público. Fix de mayor impacto/menor coste si el catálogo tiene valor real. Ver [[adr-feed-opaque-cursor]].
+- [ ] **TTL del cursor.** Un cursor válido hoy lo es para siempre. Embeber una expiración (ej. 24 h) en el payload del cursor y validarla en `decode_cursor` fuerza re-inicio del flujo de paginación y reduce la ventana de scraping sostenido. Ver [[adr-feed-opaque-cursor]].
+
 ## properties-service — deuda pequeña
 
 - [ ] **Errores de bulk create sin identificador de row.** `BulkCreatePropertiesUseCase` captura excepciones de `_enrich_location` como `str(exception)` sin referencia al row original. Refactor pendiente: incluir lat/lon o índice del row en el mensaje de error para facilitar debugging del seed. Ver `bulk_create_properties.py`.

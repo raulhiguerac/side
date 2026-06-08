@@ -1,10 +1,10 @@
 ---
 title: Dominio search — properties-service
 status: stable
-last-verified: 2026-06-05
+last-verified: 2026-06-08
 owners: [properties-service]
 related: [[properties-service]], [[properties-service-architecture]], [[adr-feed-ads-organic-injection]], [[adr-feed-opaque-cursor]], [[adr-h3-dual-resolution-map]], [[frontend-architecture]], [[open-items]]
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../../sources/properties-service/2026-06-05-feed-cursor-pagination.md]
+sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../../sources/properties-service/2026-06-05-feed-cursor-pagination.md, ../../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md]
 ---
 
 ## TL;DR
@@ -57,6 +57,31 @@ El cursor es **opaco**: `FeedCursor(created_at, id, position)` se serializa como
 - El cursor se decodifica en el UC (`decode_cursor`); un token corrupto lanza `InvalidCursorError` → HTTP 400.
 - `parse_feed_cursor` (dep de 3 params separados) fue eliminado; el endpoint recibe `cursor: Optional[str] = Query(default=None)` directamente.
 
+### Cache de página (Redis cache-aside)
+
+`GetFeedUseCase` aplica cache-aside **solo sobre los orgánicos** antes de consultar la DB:
+
+1. Construye `cache_key = feed_page(cursor_str, preferences=..., filters=...)`.
+2. Si hay hit en Redis → restaura `cards` con `model_validate`, re-inyecta ads (ads no se cachean para preservar rotación), retorna `FeedPage` sin tocar la DB.
+3. Si miss → ejecuta `get_organic` + `_inject_ads` como siempre, luego cachea `{"items": [c.model_dump(mode="json")], "next_cursor": ...}` con `TTL = FEED_PAGE_CACHE_TTL_SECONDS` (300 s, 5 min).
+
+**Por qué `model_dump(mode="json")`**: los cards tienen campos `Decimal` (precio) y `UUID` que `json.dumps` no serializa sin `default=str`; `mode="json"` resuelve esto nativamente dentro de Pydantic.
+
+**Cache key collision-safe**: la key no es solo el cursor — incluye un hash `sha256[:16]` de `{cursor, preferences, filters}`. Sin esto dos usuarios con preferencias distintas pero en la misma página `"first"` colisionan en la misma key.
+
+```python
+# cache_keys.py
+def _short_hash(data: Any) -> str:
+    raw = json.dumps(data, sort_keys=True, default=str)
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+def feed_page(cursor_str: str | None, preferences: Any = None, filters: Any = None) -> str:
+    payload = {"cursor": cursor_str, "preferences": preferences, "filters": filters}
+    return f"feed:page:{_short_hash(payload)}"
+```
+
+No hay invalidación proactiva — el TTL de 5 min es suficiente para este workload de lectura (consistencia eventual aceptable). Los ads se omiten del cache deliberadamente: se re-inyectan siempre en fresco para que la rotación no quede congelada.
+
 ## Feed mapa (`GetFeedMap`)
 
 1. `bbox.to_polygon()` → `H3Shape`; `h3shape_to_cells(polygon, resolution, contain="center")` → lista de celdas.
@@ -107,3 +132,7 @@ El promoted targeting también evoluciona: hoy los ads son globales o por ciudad
 - El feed y el mapa son públicos — no hay dependency de auth en las rutas `/search/*` ([search.py:20-48](backend/properties-service/src/app/api/routes/search.py#L20-L48)).
 - `get_properties` aplica cada filtro (`min_price`, `max_price`, `min_area_m2`, `max_area_m2`, `min_bathrooms`, `bedrooms`) con un `if x is not None` independiente, por lo que los filtros parciales son válidos ([sql_property_search_repository.py:54-70](backend/properties-service/src/app/services/search/adapters/sql_property_search_repository.py#L54-L70)).
 - `BoundingBox.to_polygon()` instancia `h3.H3Shape(...)`, una clase abstracta no instanciable — el feed-mapa tiene un bug latente hasta migrar a `h3.LatLngPoly(...)` ([feed_schemas.py:31-32](backend/properties-service/src/app/services/search/schemas/feed_schemas.py#L31-L32)).
+- `GetFeedUseCase` aplica cache-aside Redis sobre los orgánicos: hit → restaura cards + re-inyecta ads en fresco; miss → fetch DB + cachea items serializados ([get_feed.py](backend/properties-service/src/app/services/search/use_cases/get_feed.py)).
+- Cache key del feed: `feed:page:{sha256[:16](json({cursor, preferences, filters}))}` — incluye el hash de preferencias y filtros para evitar colisiones entre usuarios en la misma página ([cache_keys.py](backend/properties-service/src/app/services/shared/helpers/cache_keys.py)).
+- `FEED_PAGE_CACHE_TTL_SECONDS = 300` (5 min) — los ads no se cachean; se re-inyectan en cada request para preservar rotación ([settings.py](backend/properties-service/src/app/core/config/settings.py)).
+- `model_dump(mode="json")` es obligatorio para serializar cards a Redis — los campos `Decimal` y `UUID` fallan con `json.dumps` sin `default=str` ([get_feed.py](backend/properties-service/src/app/services/search/use_cases/get_feed.py)).

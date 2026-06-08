@@ -85,9 +85,24 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: "/feed",
-    name: "feed",
-    component: () => import("../views/properties/FeedView.vue"),
+    component: () => import("../views/properties/PropertiesView.vue"),
     meta: { requiresAuth: false },
+    children: [
+      {
+        path: "",
+        redirect: "/feed/list",
+      },
+      {
+        path: "list",
+        name: "feed-list",
+        component: () => import("../views/properties/FeedView.vue"),
+      },
+      {
+        path: "map",
+        name: "feed-map",
+        component: () => import("../views/properties/MapView.vue"),
+      },
+    ],
   },
 ];
 

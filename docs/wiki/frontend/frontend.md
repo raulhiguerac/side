@@ -1,10 +1,10 @@
 ---
 title: frontend
 status: draft
-last-verified: 2026-06-03
+last-verified: 2026-06-08
 owners: [frontend]
 related: [[architecture]], [[frontend-architecture]], [[frontend-onboarding-flow]], [[frontend-local-dev]]
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md]
 ---
 
 ## TL;DR
@@ -29,7 +29,8 @@ Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con pro
 | `/forgot-password` | ⚠ scaffolded | desconocido |
 | `/settings/{profile,security,account}` | ✅ con UCs en users-service | users-service (wiki pendiente) |
 | `/about`, `/` (home) | ⚠ scaffolded — sin data dinámica | n/a |
-| `/properties` (feed) | ✅ feed funcional — sidebar filtros + neighborhood lookup | properties-service `GET /v1/search/feed` |
+| `/feed/list` (feed lista) | ✅ feed funcional — sidebar filtros + neighborhood lookup + paginación por cursor | properties-service `GET /v1/search/feed` |
+| `/feed/map` (feed mapa) | ⚠ stub placeholder — pendiente implementación con Leaflet | properties-service `GET /v1/search/feed/map` |
 | `/dev` (DevPlayground) | sandbox interno | n/a — no es producto |
 | Onboarding modal (4 pasos) | ⚠ front completo, backend pausado | users-service `/v1/onboarding/{city,neighborhood}` — pausado |
 
@@ -60,6 +61,8 @@ Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con pro
 | `/settings` → `/settings/profile` | auth required | `SettingsLayout` + 3 children |
 | `/dev` | público | `DevPlaygroundView` |
 | `/properties` | auth required | `MyPropertiesView` |
+| `/feed` → `/feed/list` | público | `PropertiesView` (parent con toggle) + `FeedView` |
+| `/feed/map` | público | `PropertiesView` (parent) + `MapView` (stub) |
 
 Guard global en `router.beforeEach`: si la ruta `requiresAuth` y `_authChecked === false`, llama `authStore.checkAuth()`. Si tras eso `!isAuthenticated`, redirige a `/login`.
 
@@ -67,7 +70,7 @@ Guard global en `router.beforeEach`: si la ruta `requiresAuth` y `_authChecked =
 
 - **users-service** (`API.USERS_BASE_URL` default `localhost:8000`): auth, profile, settings, onboarding endpoints.
 - **catalog-service** (`API.CATALOG_BASE_URL` default `localhost:8001`): countries, localities by-country, neighborhoods by-locality.
-- **properties-service** (`API.PROPERTIES_BASE_URL` default `localhost:8003`): `GET /v1/search/feed` consumido desde `composables/feed/useFeed.ts` — feed personalizado con preferencias y filtros.
+- **properties-service** (`API.PROPERTIES_BASE_URL` default `localhost:8003`): `GET /v1/search/feed` (cursor pagination, `FeedPage { items, next_cursor }`) y `GET /v1/search/feed/map` — consumidos desde `composables/feed/useFeed.ts`.
 - **analytics-service**: form AVM en `DevPlaygroundView` — `PlaceAutocompleteElement` + `POST /v1/predict` cableado end-to-end.
 
 ## Patrones — resumen alto nivel
@@ -113,7 +116,7 @@ Detalle de cada patrón en [[frontend-architecture]].
 
 ## Claims
 
-- 10 rutas definidas en `src/router/index.ts` ([router/index.ts:5-86](frontend/src/router/index.ts#L5-L86)).
+- 12 rutas definidas en `src/router/index.ts` — incluyendo `/feed` (parent `PropertiesView`) con dos hijas: `feed-list` (`FeedView`) y `feed-map` (`MapView`) ([router/index.ts](frontend/src/router/index.ts)).
 - `vue-router` corre en `createWebHashHistory` (URL pattern `/#/...`) ([router/index.ts:89](frontend/src/router/index.ts#L89)).
 - `auth.ts` store hardcodea `http://localhost:8000/v1/...` en login/register/logout/checkAuth ([stores/auth.ts:80-83](frontend/src/stores/auth.ts#L80-L83), [stores/auth.ts:98-101](frontend/src/stores/auth.ts#L98-L101)).
 - `config/index.ts` define `API.USERS_BASE_URL` y `API.CATALOG_BASE_URL` pero solo `user.ts` y los composables lo usan; `auth.ts` ignora la config ([config/index.ts:1-5](frontend/src/config/index.ts#L1-L5)).

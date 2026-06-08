@@ -26,6 +26,11 @@ export interface PropertyLocationCard {
   longitude: number | null;
 }
 
+export interface FeedPage {
+  items: PropertyCard[];
+  next_cursor: string | null;
+}
+
 export interface PropertyCard {
   id: string;
   property_type: "house" | "apartment";
@@ -41,3 +46,8 @@ export interface PropertyCard {
   location: PropertyLocationCard | null;
   images: PropertyImageCard[];
 }
+
+export type PageCache = Record<
+  string,
+  { items: PropertyCard[]; nextCursor: string | null }
+>;

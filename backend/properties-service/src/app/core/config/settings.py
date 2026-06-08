@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     FEED_PAGE_SIZE: int = 20
     FEED_MAX_RESULTS: int = 300
     FEED_AD_INTERVAL: int = 5  # 1 ad every N organic results
+    FEED_PAGE_CACHE_TTL_SECONDS: int = 300  # 5 min
 
     # Storage
     BUCKET_PHOTOS_PROPERTIES: str = ""

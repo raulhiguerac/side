@@ -9,6 +9,7 @@ from app.services.shared.ports.cache import CachePort
 from app.services.shared.schemas.property_card import PropertyCardSchema
 
 from app.services.search.helpers.feed.encoding import encode_cursor, decode_cursor
+from app.services.shared.helpers.cache_keys import feed_page
 
 class GetFeedUseCase:
     def __init__(self, *, uow: SearchUnitOfWork, cache: CachePort) -> None:
@@ -27,7 +28,25 @@ class GetFeedUseCase:
         if cursor_str:
             cursor = decode_cursor(cursor_str)
             if cursor.position >= settings.FEED_MAX_RESULTS:
-                return FeedPage(items= [], next_cursor= None)
+                return FeedPage(items=[], next_cursor=None)
+
+        cache_key = feed_page(
+            cursor_str,
+            preferences=preferences.model_dump(mode="json") if preferences else None,
+            filters=filters.model_dump(mode="json") if filters else None,
+        )
+        cached = await self.cache.get_json(key=cache_key)
+        if cached:
+            organic_items = [PropertyCardSchema.model_validate(item) for item in cached["items"]]
+            ads = await get_ads(preferences=preferences, uow=self.uow, cache=self.cache)
+            if not ads:
+                return FeedPage(items=organic_items, next_cursor=cached["next_cursor"])
+            new_position = cursor.position if cursor else 0
+            ad_start = (new_position // settings.FEED_AD_INTERVAL) % len(ads)
+            return FeedPage(
+                items=self._inject_ads(organic=organic_items, ads=ads, ad_interval=settings.FEED_AD_INTERVAL, ad_start=ad_start),
+                next_cursor=cached["next_cursor"],
+            )
 
         page_size = settings.FEED_PAGE_SIZE
         ad_interval = settings.FEED_AD_INTERVAL
@@ -60,8 +79,14 @@ class GetFeedUseCase:
             )
         )
 
+        await self.cache.set_json(
+            key=cache_key,
+            value={"items": [c.model_dump(mode="json") for c in cards], "next_cursor": next_cursor},
+            ttl=settings.FEED_PAGE_CACHE_TTL_SECONDS,
+        )
+
         if not ads:
-            return FeedPage(items=cards,next_cursor=next_cursor)
+            return FeedPage(items=cards, next_cursor=next_cursor)
 
         ad_start = (new_position // ad_interval) % len(ads)
 

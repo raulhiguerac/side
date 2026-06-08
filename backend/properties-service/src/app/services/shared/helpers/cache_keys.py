@@ -1,4 +1,12 @@
+import hashlib
+import json
 import uuid
+from typing import Any
+
+
+def _short_hash(data: Any) -> str:
+    raw = json.dumps(data, sort_keys=True, default=str)
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
 def client_properties(user_id: uuid.UUID) -> str:
@@ -15,6 +23,15 @@ def feed_ads_by_city(city_id: uuid.UUID) -> str:
 
 def feed_ads_global() -> str:
     return "feed:ads:global"
+
+
+def feed_page(cursor_str: str | None, preferences: Any = None, filters: Any = None) -> str:
+    payload = {
+        "cursor": cursor_str,
+        "preferences": preferences,
+        "filters": filters,
+    }
+    return f"feed:page:{_short_hash(payload)}"
 
 
 def map_h3_cell(h3_index: str) -> str:

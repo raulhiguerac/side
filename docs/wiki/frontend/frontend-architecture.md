@@ -1,10 +1,10 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-06-04
+last-verified: 2026-06-08
 owners: [frontend]
 related: [[architecture]], [[frontend]], [[frontend-onboarding-flow]], [[frontend-map-component]], [[properties-service-search]]
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md]
 ---
 
 ## TL;DR
@@ -38,7 +38,7 @@ frontend/
 │   │   ├── public/{HomeView, AboutView}
 │   │   ├── auth/{LoginView, RegisterView, ResetPasswordView}
 │   │   ├── settings/{SettingsLayout, SettingsProfile, SettingsSecurity, SettingsAccount}
-│   │   ├── properties/MyPropertiesView
+│   │   ├── properties/{MyPropertiesView, PropertiesView, FeedView, MapView}
 │   │   └── dev/DevPlaygroundView
 │   └── components/
 │       ├── shared/{NavBar, NavGuest, NavUser, BaseModal}
@@ -116,14 +116,32 @@ Actions clave:
 
 ### `useFeed` ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts))
 
-Gestiona el feed de propiedades:
-- `data: ref<PropertyCard[]>` — resultados crudos del backend.
-- `neighborhoodLookup: ref<Record<string, string>>` — mapa `neighborhood_id → name` construido tras cada fetch.
-- `load(preferences?: FeedPreferences, filters?: FeedFilters)`: si llegan args los usa; si no, hace fallback a `userStore.userInterests` (resuelto con `preferences ?? (ternario del store)` — los paréntesis son obligatorios por la precedencia de `??` vs `?:`). Llama `fetchFeed`, extrae `city_id`s únicos de los resultados → `buildNeighborhoodMap` → popula `neighborhoodLookup`. Retorna `void` y muta `data.value` internamente — la view solo hace `await load(...)`, no asigna el resultado.
-- `fetchFeed(preferences, filters?)`: `GET /v1/search/feed` con `params: { ...preferences, ...filters }` (spread de ambos) — así filtros parciales (solo `max_price`, etc.) viajan sin tocar el resto.
-- **Bug histórico**: axios serializa arrays como `key[]=v` (bracket notation). FastAPI **no** parsea `key[]` como el parámetro `key` — lo trata como parámetro desconocido y usa el default vacío, haciendo que `parse_feed_preferences` retorne `None` y el feed ignore los filtros. Fix: `paramsSerializer: { indexes: null }` → serializa como `key=v1&key=v2`.
+Gestiona el feed de propiedades con paginación por cursor:
 
-La view padre del feed orquesta: recibe el evento `submit` de `FeedFilters` y hace `await load(params.preferences, params.filters)` — el componente no llama al backend, solo emite hacia arriba.
+**Estado expuesto:**
+- `data: ref<PropertyCard[]>` — items de la página actual.
+- `nextCursor: ref<string | null>` — cursor opaco para la siguiente página (`null` = última página).
+- `isFirstPage: computed` — `true` si `cursorStack` está vacío.
+- `neighborhoodLookup: ref<Record<string, string>>` — mapa `neighborhood_id → name` construido tras cada fetch (sessionStorage cachea las llamadas al catalog-service).
+
+**Funciones:**
+- `load(preferences?, filters?)` — carga página 1: resetea cursor stack, pageCache y nextCursor; guarda `resolvedPreferences` y `filters` en refs internos para reusar en `loadNext`/`loadPrev`; cachea en `pageCache["first"]`.
+- `loadNext(cursor)` — si el cursor ya está en `pageCache`, restaura de caché sin petición; si no, hace `GET /v1/search/feed?cursor=...`; push `currentPageKey` al `cursorStack` antes de avanzar.
+- `loadPrev()` — pop del `cursorStack`, restaura `data` y `nextCursor` desde `pageCache`; siempre local, nunca toca el backend.
+- `fetchFeed(preferences, filters?, cursor?)` — axios con `params: { ...preferences, ...filters, ...(cursor ? { cursor } : {}) }`.
+
+**Caché local (en memoria por instancia):**
+- `pageCache: ref<Record<string, { items, nextCursor }>>` — keyed por cursor; `"first"` para página 1.
+- `cursorStack: ref<string[]>` — historial de keys para `loadPrev`.
+- `currentPageKey: ref<string>` — key de la página actual (arranca en `"first"`).
+
+**Respuesta del back:** `FeedPage { items: PropertyCard[], next_cursor: string | null }` — el composable desempaqueta `.items`.
+
+**Bug histórico (resuelto):** axios serializa arrays como `key[]=v`; FastAPI no parsea `key[]` como `key`. Fix: `paramsSerializer: { indexes: null }`.
+
+> ⚠ **Pendiente:** cursor debería vivir en `route.query.cursor` (URL) para que sea compartible y el browser history funcione. La implementación actual es in-memory.
+
+`PropertiesView` es la vista padre en `/feed`: contiene el header ("Las escogimos pensando en ti" + subtítulo `v-if isAuthenticated`) y el toggle Lista/Mapa. El toggle usa `router-link` a `feed-list` / `feed-map` y deriva el estado activo de `route.name`. `FeedView` y `MapView` son vistas hijas renderizadas por `<router-view />`.
 
 ### `useNeighborhoodLookup` ([composables/catalog/useNeighborhoodLookup.ts](frontend/src/composables/catalog/useNeighborhoodLookup.ts))
 
@@ -286,5 +304,10 @@ El render lo encapsula `MapUser.vue` — un componente **dumb/reusable**: props 
 - `FeedFilters` carga barrios dinámicamente via `watch(selected, ...)` sobre las ciudades seleccionadas — llama `useNeighborhoodMultiselect.load(localities)` y resetea `selectedNeighborhoods` al cambiar ciudades ([components/properties/FeedFilters.vue](frontend/src/components/properties/FeedFilters.vue)).
 - `FeedFilters` emite un único evento `submit` con `{ preferences, filters }` desde `onSubmit` al click en "Aplicar" — no es reactivo con `watch`; el componente no llama al backend ([components/properties/FeedFilters.vue:269-278](frontend/src/components/properties/FeedFilters.vue#L269-L278)).
 - `toggleType(type)` en `FeedFilters` quita el tipo con `filter` si ya está en `selectedTypes` o lo agrega con `push` si no ([components/properties/FeedFilters.vue:259-267](frontend/src/components/properties/FeedFilters.vue#L259-L267)).
-- `useFeed.load(preferences?, filters?)` usa los args si llegan y cae a `userStore.userInterests` con `preferences ?? (ternario)` si no; `fetchFeed` hace spread `{ ...preferences, ...filters }` en los params ([composables/feed/useFeed.ts:33-51](frontend/src/composables/feed/useFeed.ts#L33-L51)).
-- El interface `FeedFilters` (campos opcionales/nullable: `min/max_price`, `min/max_area_m2`, `min_bathrooms`, `bedrooms`) vive en `types/feed.ts` junto a `FeedPreferences` ([types/feed.ts:1](frontend/src/types/feed.ts#L1)).
+- `useFeed.load(preferences?, filters?)` usa los args si llegan y cae a `userStore.userInterests` con `preferences ?? (ternario)` si no; `fetchFeed` hace spread `{ ...preferences, ...filters, cursor? }` en los params ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
+- `useFeed` expone `nextCursor`, `isFirstPage`, `loadNext(cursor)` y `loadPrev()` para paginación — `loadPrev` es siempre local (sin petición al back) ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
+- `GET /v1/search/feed` retorna `FeedPage { items: PropertyCard[], next_cursor: string | null }` — el composable desempaqueta `.items` ([types/feed.ts](frontend/src/types/feed.ts)).
+- `PropertiesView` es la vista padre en `/feed` con el header y toggle Lista/Mapa; el estado activo del toggle se deriva de `route.name` (computed), no de un ref local ([views/properties/PropertiesView.vue](frontend/src/views/properties/PropertiesView.vue)).
+- El `<router-view />` de `PropertiesView` está fuera del div con padding del header para evitar doble padding en las vistas hijas ([views/properties/PropertiesView.vue](frontend/src/views/properties/PropertiesView.vue)).
+- `MapView.vue` existe como stub placeholder — la implementación del mapa está pendiente ([views/properties/MapView.vue](frontend/src/views/properties/MapView.vue)).
+- El interface `FeedFilters`, `FeedPreferences`, `FeedPage` y `PageCache` viven en `types/feed.ts` ([types/feed.ts](frontend/src/types/feed.ts)).
