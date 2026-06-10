@@ -3,7 +3,10 @@ title: Integración Mapbox (catalog-service)
 status: draft
 last-verified: 2026-05-21
 owners: [catalog-service]
-related: [[catalog-service-architecture]], [[adr-mapbox-frontend-only]], [[glossary]]
+related:
+  - "[[catalog-service-architecture]]"
+  - "[[adr-mapbox-frontend-only]]"
+  - "[[glossary]]"
 sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
 ---
 

@@ -33,8 +33,8 @@ class BoundingBox(StrictBase):
     min_lon: float
     max_lon: float
 
-    def to_polygon(self) -> h3.H3Shape:
-        return h3.H3Shape(
+    def to_polygon(self) -> h3.LatLngPoly:
+        return h3.LatLngPoly(
             outer=[
                 (self.min_lat, self.min_lon),
                 (self.min_lat, self.max_lon),

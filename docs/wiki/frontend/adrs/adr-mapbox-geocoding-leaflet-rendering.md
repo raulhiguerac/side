@@ -3,7 +3,12 @@ title: ADR-0003 — Mapbox solo para geocoding, Leaflet+D3 para render
 status: stable
 last-verified: 2026-05-28
 owners: [frontend]
-related: [[frontend]], [[frontend-architecture]], [[frontend-map-component]], [[adr-mapbox-frontend-only]], [[adr-gmaps-places-geocoding]]
+related:
+  - "[[frontend]]"
+  - "[[frontend-architecture]]"
+  - "[[frontend-map-component]]"
+  - "[[adr-mapbox-frontend-only]]"
+  - "[[adr-gmaps-places-geocoding]]"
 sources: [../../../sources/frontend/2026-05-21-foundational-qa.md, ../../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md]
 decision-date: 2026-05-21
 decision-status: superseded-partial

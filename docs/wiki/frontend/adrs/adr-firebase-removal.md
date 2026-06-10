@@ -3,7 +3,10 @@ title: ADR-0004 — Remover Firebase del frontend
 status: stable
 last-verified: 2026-05-21
 owners: [frontend]
-related: [[frontend]], [[frontend-architecture]], [[adr-auth-keycloak-jwt]]
+related:
+  - "[[frontend]]"
+  - "[[frontend-architecture]]"
+  - "[[adr-auth-keycloak-jwt]]"
 sources: [../../../sources/frontend/2026-05-21-foundational-qa.md]
 decision-date: 2026-05-21
 decision-status: accepted

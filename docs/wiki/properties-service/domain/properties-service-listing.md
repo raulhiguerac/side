@@ -3,7 +3,11 @@ title: Dominio listing — properties-service
 status: draft
 last-verified: 2026-05-28
 owners: [properties-service]
-related: [[properties-service]], [[properties-service-architecture]], [[properties-service-catalog]], [[adr-image-upload-presigned-batch]]
+related:
+  - "[[properties-service]]"
+  - "[[properties-service-architecture]]"
+  - "[[properties-service-catalog]]"
+  - "[[adr-image-upload-presigned-batch]]"
 sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md]
 ---
 

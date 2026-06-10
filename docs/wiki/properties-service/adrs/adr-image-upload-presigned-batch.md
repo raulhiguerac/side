@@ -3,7 +3,9 @@ title: ADR-0001 — Upload de imágenes vía presigned URLs + batch
 status: stable
 last-verified: 2026-05-28
 owners: [properties-service]
-related: [[properties-service-listing]], [[properties-service-architecture]]
+related:
+  - "[[properties-service-listing]]"
+  - "[[properties-service-architecture]]"
 sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md]
 decision-date: 2026-05-28
 decision-status: accepted

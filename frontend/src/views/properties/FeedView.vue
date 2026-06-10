@@ -59,48 +59,22 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted } from "vue";
-import PropertyCard, {
-  type Property,
-} from "@/components/properties/PropertyCard.vue";
+import { onMounted } from "vue";
+import PropertyCard from "@/components/properties/PropertyCard.vue";
 import { useFeed } from "@/composables/feed/useFeed";
+import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import type {
-  PropertyCard as FeedCard,
   FeedPreferences,
   FeedFilters as FeedFiltersParams,
 } from "@/types/feed";
 import FeedFilters from "@/components/properties/FeedFilters.vue";
 
-const {
-  data,
-  loading,
-  load,
-  neighborhoodLookup,
-  nextCursor,
-  isFirstPage,
-  loadNext,
-  loadPrev,
-} = useFeed();
+const { data, loading, load, nextCursor, isFirstPage, loadNext, loadPrev } =
+  useFeed();
+
+const { cards } = usePropertyMapper(data);
 
 onMounted(() => load());
-
-function toCard(p: FeedCard): Property {
-  const typeLabel = p.property_type === "house" ? "Casa" : "Apartamento";
-  const listingLabel = p.listing_type === "sale" ? "en venta" : "en arriendo";
-  return {
-    id: p.id,
-    title: `${typeLabel} ${listingLabel}`,
-    price: Number(p.price),
-    location: neighborhoodLookup.value[p.location?.neighborhood_id ?? ""] ?? "",
-    image: p.images.find((i) => i.is_cover)?.url ?? p.images[0]?.url,
-    type: p.listing_type,
-    bedrooms: p.bedrooms,
-    bathrooms: Number(p.bathrooms),
-    area: Number(p.area_m2),
-  };
-}
-
-const cards = computed(() => data.value.map(toCard));
 
 async function onSubmit(params: {
   preferences: FeedPreferences;

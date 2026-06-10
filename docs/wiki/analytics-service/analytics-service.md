@@ -3,7 +3,11 @@ title: analytics-service
 status: draft
 last-verified: 2026-05-26
 owners: [analytics-service]
-related: [[architecture]], [[analytics-service-architecture]], [[analytics-service-prediction]], [[avm-training]]
+related:
+  - "[[architecture]]"
+  - "[[analytics-service-architecture]]"
+  - "[[analytics-service-prediction]]"
+  - "[[avm-training]]"
 sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md, ../../sources/analytics-service/2026-05-26-predict-endpoint-form-design.md]
 ---
 

@@ -3,7 +3,11 @@ title: Dominio admin — properties-service
 status: draft
 last-verified: 2026-05-28
 owners: [properties-service]
-related: [[properties-service]], [[properties-service-architecture]], [[adr-estimated-price-dual-signal]], [[analytics-service]]
+related:
+  - "[[properties-service]]"
+  - "[[properties-service-architecture]]"
+  - "[[adr-estimated-price-dual-signal]]"
+  - "[[analytics-service]]"
 sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md]
 ---
 

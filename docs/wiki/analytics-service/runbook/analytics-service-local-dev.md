@@ -3,7 +3,11 @@ title: Runbook — analytics-service local dev
 status: stable
 last-verified: 2026-05-25
 owners: [analytics-service]
-related: [[analytics-service]], [[analytics-service-architecture]], [[avm-training]], [[adr-mlflow-minio-stack]]
+related:
+  - "[[analytics-service]]"
+  - "[[analytics-service-architecture]]"
+  - "[[avm-training]]"
+  - "[[adr-mlflow-minio-stack]]"
 sources:
   - ../../../sources/analytics-service/2026-05-19-foundational-qa.md
   - ../../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md

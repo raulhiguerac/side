@@ -1,10 +1,15 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-06-08
+last-verified: 2026-06-09
 owners: [frontend]
-related: [[architecture]], [[frontend]], [[frontend-onboarding-flow]], [[frontend-map-component]], [[properties-service-search]]
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md]
+related:
+  - "[[architecture]]"
+  - "[[frontend]]"
+  - "[[frontend-onboarding-flow]]"
+  - "[[frontend-map-component]]"
+  - "[[properties-service-search]]"
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-09-mapview-leaflet-implementation.md]
 ---
 
 ## TL;DR
@@ -142,6 +147,33 @@ Gestiona el feed de propiedades con paginación por cursor:
 > ⚠ **Pendiente:** cursor debería vivir en `route.query.cursor` (URL) para que sea compartible y el browser history funcione. La implementación actual es in-memory.
 
 `PropertiesView` es la vista padre en `/feed`: contiene el header ("Las escogimos pensando en ti" + subtítulo `v-if isAuthenticated`) y el toggle Lista/Mapa. El toggle usa `router-link` a `feed-list` / `feed-map` y deriva el estado activo de `route.name`. `FeedView` y `MapView` son vistas hijas renderizadas por `<router-view />`.
+
+### `useFeedMap` ([composables/feed/useFeedMap.ts](frontend/src/composables/feed/useFeedMap.ts))
+
+Gestiona el feed del mapa con fetch por bbox y paginación local:
+
+- `fetchByBbox(payload: BboxPayload)` — `GET /v1/search/feed/map` con `{ min_lat, max_lat, min_lon, max_lon, resolution }`. `resolution`: zoom≥15 → H3 r9 (~300m), zoom<15 → H3 r7 (~5km). Guarda todos los resultados en `_allItems` con Fisher-Yates shuffle (desegrega agrupamiento por celda H3).
+- `PAGE_SIZE` — `computed` (no constante): zoom≥15 → 20, zoom<14 → 40. Reactivo a cambios de zoom.
+- `items` — `computed` que slice `_allItems` según `page.value` y `PAGE_SIZE`.
+- `next()` / `prev()` — paginación local (sin petición al back).
+- `page` se resetea a 0 en cada nuevo `fetchByBbox`.
+
+Diferencia clave con `useFeed`: no usa cursor — la paginación es client-side sobre la respuesta completa del bbox.
+
+### `usePropertyMapper` ([composables/properties/usePropertyMapper.ts](frontend/src/composables/properties/usePropertyMapper.ts))
+
+Composable compartido entre `FeedView` y `MapView` para resolver nombres de barrios:
+
+```ts
+export function usePropertyMapper(items: Ref<FeedCard[]>) {
+  // watch(items) → deduplica city_ids → buildNeighborhoodMap → neighborhoodLookup
+  // toCard(p): FeedCard → Property (title, price, location con nombre resuelto, etc.)
+  const cards = computed(() => items.value.map(toCard));
+  return { cards };
+}
+```
+
+Extrae la lógica de `toCard` + lookup que antes vivía duplicada en cada vista.
 
 ### `useNeighborhoodLookup` ([composables/catalog/useNeighborhoodLookup.ts](frontend/src/composables/catalog/useNeighborhoodLookup.ts))
 
@@ -309,5 +341,7 @@ El render lo encapsula `MapUser.vue` — un componente **dumb/reusable**: props 
 - `GET /v1/search/feed` retorna `FeedPage { items: PropertyCard[], next_cursor: string | null }` — el composable desempaqueta `.items` ([types/feed.ts](frontend/src/types/feed.ts)).
 - `PropertiesView` es la vista padre en `/feed` con el header y toggle Lista/Mapa; el estado activo del toggle se deriva de `route.name` (computed), no de un ref local ([views/properties/PropertiesView.vue](frontend/src/views/properties/PropertiesView.vue)).
 - El `<router-view />` de `PropertiesView` está fuera del div con padding del header para evitar doble padding en las vistas hijas ([views/properties/PropertiesView.vue](frontend/src/views/properties/PropertiesView.vue)).
-- `MapView.vue` existe como stub placeholder — la implementación del mapa está pendiente ([views/properties/MapView.vue](frontend/src/views/properties/MapView.vue)).
+- `MapView.vue` implementa el feed-mapa: layout split (lista izquierda, mapa derecho), `useFeedMap` + `usePropertyMapper`, marcadores hover, paginación local, URL state vía `router.replace` ([views/properties/MapView.vue](frontend/src/views/properties/MapView.vue)).
+- `MapView` persiste el bbox en `route.query` con `router.replace` en cada `moveend` — el handler `onBbox` llama primero `router.replace({ query: bbox })` y luego `fetchByBbox`; no hay `watch` sobre `route.query` porque el mapa es el único que escribe la URL ([views/properties/MapView.vue](frontend/src/views/properties/MapView.vue)).
+- `MapView` inicializa `center` síncronamente desde `localStorage` (clave `STORAGE_KEYS.USER_LOCATION`) para evitar la race condition de vue-leaflet; el `onMounted` solo llama `fetchByBbox` alrededor de `loc ± 0.05°` ([views/properties/MapView.vue](frontend/src/views/properties/MapView.vue)).
 - El interface `FeedFilters`, `FeedPreferences`, `FeedPage` y `PageCache` viven en `types/feed.ts` ([types/feed.ts](frontend/src/types/feed.ts)).

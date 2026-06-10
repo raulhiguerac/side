@@ -3,7 +3,12 @@ title: properties-service
 status: draft
 last-verified: 2026-05-28
 owners: [properties-service]
-related: [[architecture]], [[properties-service-architecture]], [[properties-service-listing]], [[properties-service-search]], [[properties-service-admin]]
+related:
+  - "[[architecture]]"
+  - "[[properties-service-architecture]]"
+  - "[[properties-service-listing]]"
+  - "[[properties-service-search]]"
+  - "[[properties-service-admin]]"
 sources: [../../sources/properties-service/2026-05-28-foundational-exploration.md]
 ---
 

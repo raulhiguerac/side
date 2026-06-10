@@ -3,7 +3,11 @@ title: Arquitectura del monorepo
 status: draft
 last-verified: 2026-05-28
 owners: [_shared]
-related: [[glossary]], [[dev-workflow]], [[adr-auth-keycloak-jwt]], [[adr-geo-enrichment-at-write-time]]
+related:
+  - "[[glossary]]"
+  - "[[dev-workflow]]"
+  - "[[adr-auth-keycloak-jwt]]"
+  - "[[adr-geo-enrichment-at-write-time]]"
 sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md]
 ---
 

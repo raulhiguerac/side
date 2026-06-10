@@ -3,7 +3,11 @@ title: ADR-0005 — Mapbox solo en el frontend (catalog hace reverse-only)
 status: stable
 last-verified: 2026-05-21
 owners: [catalog-service, _shared]
-related: [[catalog-service]], [[catalog-service-architecture]], [[adr-geo-enrichment-at-write-time]], [[glossary]]
+related:
+  - "[[catalog-service]]"
+  - "[[catalog-service-architecture]]"
+  - "[[adr-geo-enrichment-at-write-time]]"
+  - "[[glossary]]"
 sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
 decision-date: 2026-05-21
 decision-status: accepted

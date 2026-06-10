@@ -3,7 +3,10 @@ title: ADR-0003 — POI cache-aside, never on-demand
 status: stable
 last-verified: 2026-05-21
 owners: [catalog-service]
-related: [[catalog-service-poi-lifecycle]], [[catalog-service-architecture]], [[glossary]]
+related:
+  - "[[catalog-service-poi-lifecycle]]"
+  - "[[catalog-service-architecture]]"
+  - "[[glossary]]"
 sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
 decision-date: 2026-05-21
 decision-status: accepted

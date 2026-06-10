@@ -3,7 +3,11 @@ title: frontend
 status: draft
 last-verified: 2026-06-08
 owners: [frontend]
-related: [[architecture]], [[frontend-architecture]], [[frontend-onboarding-flow]], [[frontend-local-dev]]
+related:
+  - "[[architecture]]"
+  - "[[frontend-architecture]]"
+  - "[[frontend-onboarding-flow]]"
+  - "[[frontend-local-dev]]"
 sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md]
 ---
 

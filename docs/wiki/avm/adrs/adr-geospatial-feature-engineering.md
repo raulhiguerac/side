@@ -3,7 +3,12 @@ title: ADR-0003 — Feature engineering geoespacial schema-driven
 status: stable
 last-verified: 2026-05-28
 owners: [data]
-related: [[avm-training]], [[catalog-service-poi-lifecycle]], [[catalog-service-overpass]], [[glossary]], [[adr-h3-resolution-per-use-case]]
+related:
+  - "[[avm-training]]"
+  - "[[catalog-service-poi-lifecycle]]"
+  - "[[catalog-service-overpass]]"
+  - "[[glossary]]"
+  - "[[adr-h3-resolution-per-use-case]]"
 sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md]
 decision-date: 2026-05-28
 decision-status: accepted

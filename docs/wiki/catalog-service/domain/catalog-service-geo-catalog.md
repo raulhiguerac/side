@@ -3,7 +3,10 @@ title: Dominio geo_catalog (catalog-service)
 status: draft
 last-verified: 2026-05-21
 owners: [catalog-service]
-related: [[catalog-service]], [[catalog-service-architecture]], [[catalog-service-catalog-admin]]
+related:
+  - "[[catalog-service]]"
+  - "[[catalog-service-architecture]]"
+  - "[[catalog-service-catalog-admin]]"
 sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
 ---
 

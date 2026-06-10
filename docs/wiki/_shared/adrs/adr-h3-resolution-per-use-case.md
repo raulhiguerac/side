@@ -3,7 +3,13 @@ title: ADR-0003 — Resolución H3 por caso de uso, celdas no reusables entre fr
 status: stable
 last-verified: 2026-05-28
 owners: [_shared, data, properties-service, catalog-service]
-related: [[architecture]], [[glossary]], [[adr-h3-dual-resolution-map]], [[adr-geospatial-feature-engineering]], [[adr-postgis-h3-hybrid]], [[avm-training]]
+related:
+  - "[[architecture]]"
+  - "[[glossary]]"
+  - "[[adr-h3-dual-resolution-map]]"
+  - "[[adr-geospatial-feature-engineering]]"
+  - "[[adr-postgis-h3-hybrid]]"
+  - "[[avm-training]]"
 sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md]
 decision-date: 2026-05-28
 decision-status: accepted

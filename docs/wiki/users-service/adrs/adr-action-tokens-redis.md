@@ -3,7 +3,9 @@ title: ADR-0003 — Action tokens de un solo uso en Redis
 status: stable
 last-verified: 2026-05-28
 owners: [users-service]
-related: [[users-service-auth]], [[users-service-user]]
+related:
+  - "[[users-service-auth]]"
+  - "[[users-service-user]]"
 sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md]
 decision-date: 2026-05-28
 decision-status: accepted

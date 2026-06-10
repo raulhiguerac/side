@@ -3,7 +3,9 @@ title: ADR-0001 — Vue CLI hoy, migración a Vite diferida
 status: stable
 last-verified: 2026-05-21
 owners: [frontend]
-related: [[frontend]], [[frontend-architecture]]
+related:
+  - "[[frontend]]"
+  - "[[frontend-architecture]]"
 sources: [../../../sources/frontend/2026-05-21-foundational-qa.md]
 decision-date: 2026-05-21
 decision-status: accepted

@@ -3,7 +3,11 @@ title: ADR-0004 — H3 dual-resolution para el feed-mapa
 status: stable
 last-verified: 2026-05-28
 owners: [properties-service]
-related: [[properties-service-search]], [[properties-service-architecture]], [[glossary]], [[adr-h3-resolution-per-use-case]]
+related:
+  - "[[properties-service-search]]"
+  - "[[properties-service-architecture]]"
+  - "[[glossary]]"
+  - "[[adr-h3-resolution-per-use-case]]"
 sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md]
 decision-date: 2026-05-28
 decision-status: accepted

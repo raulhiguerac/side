@@ -3,7 +3,12 @@ title: ADR-0004 — Impresiones y clicks vía beacon de cliente + collector + Ka
 status: draft
 last-verified: 2026-06-04
 owners: [_shared, frontend, properties-service, analytics-service]
-related: [[open-items]], [[properties-service-search]], [[frontend-architecture]], [[analytics-service]], [[architecture]]
+related:
+  - "[[open-items]]"
+  - "[[properties-service-search]]"
+  - "[[frontend-architecture]]"
+  - "[[analytics-service]]"
+  - "[[architecture]]"
 sources: []
 decision-date: 2026-06-04
 decision-status: accepted

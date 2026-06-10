@@ -3,7 +3,11 @@ title: Runbook — users-service local dev
 status: draft
 last-verified: 2026-05-28
 owners: [users-service]
-related: [[users-service]], [[users-service-architecture]], [[users-service-keycloak]], [[catalog-service-local-dev]]
+related:
+  - "[[users-service]]"
+  - "[[users-service-architecture]]"
+  - "[[users-service-keycloak]]"
+  - "[[catalog-service-local-dev]]"
 sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md]
 ---
 

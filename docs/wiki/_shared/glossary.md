@@ -3,7 +3,8 @@ title: Glosario compartido
 status: draft
 last-verified: 2026-05-28
 owners: [_shared]
-related: [[architecture]]
+related:
+  - "[[architecture]]"
 sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md]
 ---
 

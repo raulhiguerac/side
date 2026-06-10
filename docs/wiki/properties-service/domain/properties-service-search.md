@@ -3,7 +3,14 @@ title: Dominio search — properties-service
 status: stable
 last-verified: 2026-06-08
 owners: [properties-service]
-related: [[properties-service]], [[properties-service-architecture]], [[adr-feed-ads-organic-injection]], [[adr-feed-opaque-cursor]], [[adr-h3-dual-resolution-map]], [[frontend-architecture]], [[open-items]]
+related:
+  - "[[properties-service]]"
+  - "[[properties-service-architecture]]"
+  - "[[adr-feed-ads-organic-injection]]"
+  - "[[adr-feed-opaque-cursor]]"
+  - "[[adr-h3-dual-resolution-map]]"
+  - "[[frontend-architecture]]"
+  - "[[open-items]]"
 sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../../sources/properties-service/2026-06-05-feed-cursor-pagination.md, ../../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md]
 ---
 

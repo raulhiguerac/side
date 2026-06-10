@@ -3,7 +3,11 @@ title: Integración properties → catalog-service
 status: draft
 last-verified: 2026-05-28
 owners: [properties-service]
-related: [[properties-service]], [[catalog-service]], [[adr-geo-enrichment-at-write-time]], [[properties-service-listing]]
+related:
+  - "[[properties-service]]"
+  - "[[catalog-service]]"
+  - "[[adr-geo-enrichment-at-write-time]]"
+  - "[[properties-service-listing]]"
 sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md]
 ---
 

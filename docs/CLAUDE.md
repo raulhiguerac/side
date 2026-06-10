@@ -13,6 +13,7 @@ Esta carpeta es un wiki versionado del proyecto. Está pensado para que un dev n
 3. **Links con `[[slug]]`.** Usa el nombre del archivo sin extensión (`[[mlflow]]`, no `[mlflow](../integrations/mlflow.md)`). Permite renombrar/mover sin romper enlaces y le da al lint algo que indexar.
 4. **Claims atómicos al final.** Cada página termina con una sección `## Claims` — una frase verificable por línea. Es lo que `/wiki-lint` chequea contra el código.
 5. **No dupliques.** Antes de crear una página nueva, busca con grep si el concepto ya vive en `_shared/` o en otro servicio.
+6. **Cerrar ítems en `open-items.md`: marcar `[x]` en su lugar y mover a `## Cerrados`. Nunca borrar el texto.** El historial de por qué existía el ítem y qué alternativas se consideraron tiene valor aunque esté cerrado.
 
 ## Skills del wiki
 

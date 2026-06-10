@@ -1,15 +1,23 @@
 ---
 title: Project roadmap 2026
-status: draft
-last-verified: 2026-05-31
+status: stable
+last-verified: 2026-06-09
 owners: [_shared]
-related: [[architecture]], [[open-items]], [[analytics-service]], [[properties-service]], [[frontend]], [[avm-training]]
-sources: [../../sources/_shared/2026-05-29-project-roadmap.md, ../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md]
+related:
+  - "[[architecture]]"
+  - "[[open-items]]"
+  - "[[analytics-service]]"
+  - "[[properties-service]]"
+  - "[[frontend]]"
+  - "[[avm-training]]"
+sources: [../../sources/_shared/2026-05-29-project-roadmap.md, ../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md]
 ---
 
 ## TL;DR
 
-Monorepo `side` — plataforma inmobiliaria colombiana. Backend hexagonal (Python/FastAPI), frontend Vue 3, ML con LightGBM + MLflow. Roadmap en 4 fases: catálogo ✅ → propiedades 🔄 → AVM online ✅ → seed + infra + nuevos MS.
+Monorepo `side` — plataforma inmobiliaria colombiana. Backend hexagonal (Python/FastAPI), frontend Vue 3, ML con LightGBM + MLflow. Roadmap en 4 fases: catálogo ✅ → propiedades 🔄 → AVM online ✅ → forms básicos → infra → diferenciadores.
+
+> Para el detalle accionable de cada ítem (bugs, deuda, gaps de mercado) ver [[open-items]] — los ítems están etiquetados por fase para que ambos documentos hablen entre sí.
 
 ## Fase 1 — Catálogo + Onboarding ✅
 
@@ -25,8 +33,14 @@ Monorepo `side` — plataforma inmobiliaria colombiana. Backend hexagonal (Pytho
 |---|---|
 | Modelos (5 tablas PostGIS + H3), listing UCs, image UCs presigned batch | ✅ |
 | Search feed UC, DI wiring, routers, seed_mapper | ✅ |
-| Alembic migrations finales, bulk_create, SqlAdminPropertyRepository.bulk_insert | ⏳ |
-| Properties seed Bogotá (bulk import IDECA) | ⏳ |
+| Cursor pagination opaco (base64url) + Redis cache-aside en feed | ✅ |
+| `PropertiesView` parent + toggle Lista/Mapa (nested routes `/feed/list`, `/feed/map`) | ✅ |
+| bulk_create UC, SqlAdminPropertyRepository.bulk_insert | ✅ |
+| Properties seed Bogotá (bulk import IDECA) | ✅ |
+| Frontend: vista detalle de propiedad (`/properties/:id`) — galería, info completa, mapa, precio estimado | ⏳ |
+| Frontend: form publicar propiedad + subir imágenes + gestionar mis listings (`/properties`) | ⏳ |
+| Frontend: MapView con Leaflet + bbox + paginación de resultados | ✅ |
+| Frontend: panel de moderación admin — aprobar/rechazar listings que infringen políticas | ⏳ |
 
 Ver [[properties-service]], [[properties-service-listing]], [[properties-service-search]].
 
@@ -36,63 +50,81 @@ Ver [[properties-service]], [[properties-service-listing]], [[properties-service
 |---|---|
 | ML pipeline: LightGBM + Optuna HPO, bogota-avm @production v1 en MLflow | ✅ |
 | analytics-ms: prediction domain, wiring DI, Alembic, /predict endpoint | ✅ |
+| analytics-ms: Kafka worker (`runner.py`) no se levanta en `main.py` startup — batch pipeline off by default | ⏳ |
 | Frontend AVM: form multi-step, GMaps Places, mapa reactivo, cableo /predict | ✅ |
 | Re-registrar modelo con `year_built` nullable en MLflow schema | ⏳ |
 
 Ver [[analytics-service]], [[avm-training]], [[analytics-service-mlflow]], [[frontend-architecture]].
 
-## Fase 4 — Infra + Nuevos MS ⏳
+## Fase 4 — Infra (~1 semana) ⏳
+
+Prioridad: forms básicos de Fase 2 primero, luego infra, luego diferenciadores.
+
+### Infraestructura — Kind / k3s
+- **Local**: Kind (CI) o k3s (VM). Manifiestos portables — la fricción local→cloud es solo config (storage PVCs, LoadBalancer, secrets manager).
+- **Estimado**: ~1 semana para Dockerfiles + Helm charts + CI/CD básico.
+- **NetworkPolicies**: cada MS en su propio namespace con egress restringido — solo el MS dueño alcanza su Postgres/Redis.
+- Objetivo: blast radius mínimo. Portable a GKE/EKS sin cambiar manifiestos.
 
 ### CI/CD
-- Pipeline básico (GitHub Actions o similar): lint → test → build → deploy.
+- Pipeline: lint → test → build → push → deploy.
+- GitHub Actions. Backup etcd para disaster recovery.
 
-### Infraestructura — K3s / Minikube
-- Reemplazar docker-compose por orquestación real: **K3s** para VPS/cloud ligero, **Minikube** para dev local.
-- **NetworkPolicies**: cada MS en su propio namespace con egress restringido — solo el MS dueño puede alcanzar su Postgres/Redis. Las DBs no son alcanzables entre namespaces.
-- Objetivo: blast radius mínimo si un MS se ve comprometido.
+## Fase 5 — Diferenciadores ⏳
+
+### Score de oportunidad de inversión (alta prioridad)
+- `(precio_listado - ml_estimated_price) / ml_estimated_price` inline en cada card del feed.
+- Diferenciador directo vs FincaRaíz/Metrocuadrado. Requiere worker Kafka properties↔analytics funcionando.
+- Ver [[adr-estimated-price-dual-signal]], [[open-items]].
+
+### Isócronas (geo diferenciador)
+- `GET /v1/geo-resolution/reachable-pois`: dado lat/lon + minutos + modo → ORS routing → polígono → H3 cells → POIs en el área.
+- Motor de routing: OpenRouteService (self-hosted o tier gratis). Mapbox descartado por cobertura en Colombia.
+- Renderizado: capa GeoJSON en Leaflet sobre el MapView.
+- Ver [[catalog-service-poi-lifecycle]], [[open-items]].
+
+### Impresiones y personalización del feed
+- Evento Kafka `listing.impressed` → analytics-ms → recomendador colaborativo/content-based.
+- Dashboard de impresiones para el propietario (alcance de su listing).
+- Feed evoluciona: preferencias declaradas → comportamiento (views, tiempo, retorno) → ranking personalizado.
+- El bbox del mapa es señal implícita de zona de interés sin acción explícita.
+- Ver [[adr-impressions-beacon-pipeline]], [[open-items]].
+
+### LLM con tool use para búsqueda en lenguaje natural
+- Traducir query libre → `FeedPreferences + FeedFilters` vía tool use.
+- Ejemplo: "apartamento 2 hab en Chapinero por menos de 500M" → payload tipado al endpoint existente.
+- El endpoint ya soporta todos los parámetros — falta solo la capa de traducción.
+- Cerouno ya la tiene → brecha competitiva activa.
+
+### Alertas de oportunidad de precio
+- Notificación push/email cuando se lista una propiedad X% por debajo del estimado en la zona de interés del usuario.
+- Requiere: AVM funcionando + notifications-ms + preferencias de zona (onboarding).
 
 ### Analytics — Heatmap desde DWH
-- Mapa de calor de precios por zona geográfica sobre el feed.
-- La DB OLTP del analytics-ms no es apta para queries analíticos pesados → requiere DWH separado.
-- Stack a decidir: BigQuery (managed, pay-per-query) vs DuckDB sobre MinIO (self-hosted, sin egress cost).
-
-### Búsqueda con lenguaje natural en el feed (draft)
-- Usar un LLM con tool use para traducir lenguaje natural del usuario a la estructura de parámetros del endpoint `GET /v1/search/feed` (`FeedPreferences` + `FeedFilters`).
-- El LLM recibe el texto libre del usuario y llama una tool que construye el payload tipado.
-- Elimina la necesidad de que el usuario interactúe con el panel de filtros explícito para búsquedas simples ("quiero un apartamento de 2 hab en Chapinero por menos de 500M").
-
-### Impresiones y personalización del feed (draft)
-- Registrar impresiones por listing como evento Kafka `listing.impressed` consumido por analytics-ms.
-- Con historial de impresiones: recomendador de promoted listings (mostrarlos a perfiles con mayor probabilidad de conversión, no al azar).
-- Feed evoluciona de preferencias declaradas (onboarding) → comportamiento (views, tiempo, retorno) → recomendador colaborativo/content-based.
-- El bbox del mapa estilo Airbnb es señal implícita de zona de interés sin acción explícita del usuario.
-- Open: diseño del evento `listing.impressed` — ¿anónimo con fingerprint o solo usuarios autenticados?
-
-### Estrategia de supply para lanzamiento
-- Riesgo principal no es técnico: es conseguir listings verificados iniciales.
-- Plan: acercarse a propietarios que ya tienen listings en otros portales llegando con el MVP funcionando.
-- Pitch: *"Tu listing en Metrocuadrado es uno entre miles sin contexto de precio. Acá el comprador llega ya filtrado por sus preferencias y con un estimado de mercado para comparar."*
-- El AVM les da valor inmediato antes de publicar: saben si su precio está bien puesto.
-- Open: ¿los listings iniciales son venta, arriendo o los dos?
+- Mapa de calor de precios por zona geográfica.
+- La DB OLTP del analytics-ms no es apta para queries analíticos pesados → DWH separado.
+- Stack a decidir: BigQuery (managed) vs DuckDB sobre MinIO (self-hosted).
 
 ### notifications-ms (draft)
 - Notificaciones push/email: matching de propiedades, cambios de precio, alertas de barrio.
-- Stack a definir: Firebase FCM + Brevo o similar. Auth: reusar Keycloak.
+- Stack a definir: Firebase FCM + Brevo. Auth: reusar Keycloak.
 
 ### payments-ms (draft)
 - Monetización: suscripciones premium, destacar listings.
-- Stack a definir: Stripe (USD, tarjeta internacional) vs Wompi/PSE (COP, mercado local).
+- Stack a definir: Stripe (USD) vs Wompi/PSE (COP, mercado local).
 
 ## Open questions
 
 - [ ] DWH para heatmap: ¿BigQuery managed o DuckDB self-hosted sobre MinIO?
 - [ ] notifications-ms: ¿mismo Keycloak o token propio para push?
 - [ ] payments-ms: ¿Stripe o Wompi/PSE como PSP primario?
-- [ ] K3s en VPS o cloud managed (GKE/EKS) para producción?
+- [ ] Infra: ¿GKE/EKS managed en prod o VPS con k3s?
+- [ ] Supply inicial: ¿listings de venta, arriendo, o ambos?
 
 ## Claims
 
 - El endpoint `POST /v1/predict` del analytics-ms está operativo y cableado desde el frontend AVM al 2026-05-29 ([routes/predict.py](backend/analytics-service/src/app/api/routes/predict.py)).
-- notifications-ms y payments-ms están en fase de draft — no hay código en el repo al 2026-05-29.
-- El heatmap de precios requiere DWH separado — la DB OLTP del analytics-ms no es apta para queries analíticos de agregación masiva.
-- La estrategia de despliegue objetivo es K3s/Minikube con NetworkPolicies por namespace — docker-compose es solo para desarrollo local.
+- El feed pagina por cursor opaco con Redis cache-aside (TTL 5 min, solo orgánicos) al 2026-06-08 ([get_feed.py](backend/properties-service/src/app/services/search/use_cases/get_feed.py)).
+- `PropertiesView` con toggle Lista/Mapa en nested routes `/feed/list` y `/feed/map` operativo al 2026-06-08 ([router/index.ts](frontend/src/router/index.ts)).
+- notifications-ms y payments-ms están en fase draft — no hay código en el repo al 2026-06-08.
+- La estrategia de despliegue objetivo es Kind/k3s con manifiestos portables a cloud — docker-compose es solo para desarrollo local.

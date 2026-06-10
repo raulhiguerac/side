@@ -3,7 +3,13 @@ title: Arquitectura interna de users-service
 status: draft
 last-verified: 2026-05-28
 owners: [users-service]
-related: [[architecture]], [[users-service]], [[users-service-auth]], [[users-service-user]], [[users-service-keycloak]], [[users-service-kc-compensation]]
+related:
+  - "[[architecture]]"
+  - "[[users-service]]"
+  - "[[users-service-auth]]"
+  - "[[users-service-user]]"
+  - "[[users-service-keycloak]]"
+  - "[[users-service-kc-compensation]]"
 sources: [../../sources/users-service/2026-05-28-foundational-exploration.md]
 ---
 

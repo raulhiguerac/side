@@ -3,7 +3,14 @@ title: Pipeline de training del AVM
 status: draft
 last-verified: 2026-05-19
 owners: [data]
-related: [[analytics-service]], [[analytics-service-prediction]], [[analytics-service-mlflow]], [[architecture]], [[adr-lightgbm-log-target]], [[adr-optuna-hpo-reproducibility]], [[adr-geospatial-feature-engineering]]
+related:
+  - "[[analytics-service]]"
+  - "[[analytics-service-prediction]]"
+  - "[[analytics-service-mlflow]]"
+  - "[[architecture]]"
+  - "[[adr-lightgbm-log-target]]"
+  - "[[adr-optuna-hpo-reproducibility]]"
+  - "[[adr-geospatial-feature-engineering]]"
 sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md]
 ---
 

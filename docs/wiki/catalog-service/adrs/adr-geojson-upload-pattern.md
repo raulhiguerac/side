@@ -3,7 +3,9 @@ title: ADR-0004 — GeoJSON upload pattern para polígonos de barrios
 status: stable
 last-verified: 2026-05-21
 owners: [catalog-service]
-related: [[catalog-service-catalog-admin]], [[glossary]]
+related:
+  - "[[catalog-service-catalog-admin]]"
+  - "[[glossary]]"
 sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
 decision-date: 2026-05-21
 decision-status: accepted

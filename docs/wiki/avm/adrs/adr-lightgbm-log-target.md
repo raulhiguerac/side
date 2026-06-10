@@ -3,7 +3,9 @@ title: ADR-0001 — LightGBM con target log10 y categóricas nativas
 status: stable
 last-verified: 2026-05-28
 owners: [data]
-related: [[avm-training]], [[analytics-service-prediction]]
+related:
+  - "[[avm-training]]"
+  - "[[analytics-service-prediction]]"
 sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md]
 decision-date: 2026-05-28
 decision-status: accepted

@@ -3,7 +3,13 @@ title: Arquitectura interna de properties-service
 status: draft
 last-verified: 2026-05-28
 owners: [properties-service]
-related: [[architecture]], [[properties-service]], [[properties-service-listing]], [[properties-service-search]], [[properties-service-admin]], [[properties-service-catalog]]
+related:
+  - "[[architecture]]"
+  - "[[properties-service]]"
+  - "[[properties-service-listing]]"
+  - "[[properties-service-search]]"
+  - "[[properties-service-admin]]"
+  - "[[properties-service-catalog]]"
 sources: [../../sources/properties-service/2026-05-28-foundational-exploration.md]
 ---
 

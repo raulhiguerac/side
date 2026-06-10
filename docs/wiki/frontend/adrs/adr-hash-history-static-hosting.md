@@ -3,7 +3,10 @@ title: ADR-0002 — Hash history para deployment en bucket estático
 status: stable
 last-verified: 2026-05-21
 owners: [frontend]
-related: [[frontend]], [[frontend-architecture]], [[frontend-local-dev]]
+related:
+  - "[[frontend]]"
+  - "[[frontend-architecture]]"
+  - "[[frontend-local-dev]]"
 sources: [../../../sources/frontend/2026-05-21-foundational-qa.md]
 decision-date: 2026-05-21
 decision-status: accepted

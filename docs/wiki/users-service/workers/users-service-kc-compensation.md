@@ -3,7 +3,12 @@ title: Worker — compensación de Keycloak (users-service)
 status: draft
 last-verified: 2026-05-28
 owners: [users-service]
-related: [[users-service]], [[users-service-auth]], [[users-service-keycloak]], [[adr-keycloak-saga-compensation]], [[adr-apscheduler-in-process-worker]]
+related:
+  - "[[users-service]]"
+  - "[[users-service-auth]]"
+  - "[[users-service-keycloak]]"
+  - "[[adr-keycloak-saga-compensation]]"
+  - "[[adr-apscheduler-in-process-worker]]"
 sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md]
 ---
 

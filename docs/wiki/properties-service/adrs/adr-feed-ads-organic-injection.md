@@ -3,7 +3,9 @@ title: ADR-0002 — Feed = orgánico + ads intercalados con fallback de preferen
 status: stable
 last-verified: 2026-05-28
 owners: [properties-service]
-related: [[properties-service-search]], [[properties-service-architecture]]
+related:
+  - "[[properties-service-search]]"
+  - "[[properties-service-architecture]]"
 sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md]
 decision-date: 2026-05-28
 decision-status: accepted

@@ -3,7 +3,10 @@ title: ADR-0001 — PostGIS + h3 híbrido para spatial queries
 status: stable
 last-verified: 2026-06-08
 owners: [catalog-service]
-related: [[catalog-service-architecture]], [[catalog-service-poi-lifecycle]], [[glossary]]
+related:
+  - "[[catalog-service-architecture]]"
+  - "[[catalog-service-poi-lifecycle]]"
+  - "[[glossary]]"
 sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md]
 decision-date: 2026-05-21
 decision-status: accepted

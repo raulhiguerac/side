@@ -3,7 +3,10 @@ title: Testing — analytics-service unit suite
 status: stable
 last-verified: 2026-05-25
 owners: [analytics-service]
-related: [[analytics-service-local-dev]], [[analytics-service-kafka-consumer]], [[analytics-service-prediction]]
+related:
+  - "[[analytics-service-local-dev]]"
+  - "[[analytics-service-kafka-consumer]]"
+  - "[[analytics-service-prediction]]"
 sources:
   - ../../../sources/analytics-service/2026-05-25-unit-test-suite.md
 ---

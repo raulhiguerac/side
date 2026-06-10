@@ -3,7 +3,10 @@ title: Kafka consumer — listing-created (analytics-service)
 status: stable
 last-verified: 2026-05-25
 owners: [analytics-service]
-related: [[analytics-service]], [[analytics-service-architecture]], [[analytics-service-prediction]]
+related:
+  - "[[analytics-service]]"
+  - "[[analytics-service-architecture]]"
+  - "[[analytics-service-prediction]]"
 sources:
   - ../../../sources/analytics-service/2026-05-20-kafka-consumer-design.md
   - ../../../sources/analytics-service/2026-05-22-listing-consumer-worker-design.md

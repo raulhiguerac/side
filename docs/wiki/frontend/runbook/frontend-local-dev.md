@@ -3,7 +3,11 @@ title: Runbook — frontend local dev
 status: draft
 last-verified: 2026-05-21
 owners: [frontend]
-related: [[frontend]], [[frontend-architecture]], [[analytics-service-local-dev]], [[catalog-service-local-dev]]
+related:
+  - "[[frontend]]"
+  - "[[frontend-architecture]]"
+  - "[[analytics-service-local-dev]]"
+  - "[[catalog-service-local-dev]]"
 sources: [../../../sources/frontend/2026-05-21-foundational-qa.md]
 ---
 

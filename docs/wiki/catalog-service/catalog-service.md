@@ -3,7 +3,12 @@ title: catalog-service
 status: draft
 last-verified: 2026-05-28
 owners: [catalog-service]
-related: [[architecture]], [[catalog-service-architecture]], [[catalog-service-catalog-admin]], [[catalog-service-geo-catalog]], [[catalog-service-poi-lifecycle]]
+related:
+  - "[[architecture]]"
+  - "[[catalog-service-architecture]]"
+  - "[[catalog-service-catalog-admin]]"
+  - "[[catalog-service-geo-catalog]]"
+  - "[[catalog-service-poi-lifecycle]]"
 sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md]
 ---
 

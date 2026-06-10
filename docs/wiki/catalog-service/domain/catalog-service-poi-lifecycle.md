@@ -3,7 +3,12 @@ title: Lifecycle del POI (catalog-service)
 status: draft
 last-verified: 2026-05-21
 owners: [catalog-service]
-related: [[catalog-service]], [[catalog-service-architecture]], [[catalog-service-overpass]], [[avm-training]], [[adr-poi-cache-aside]]
+related:
+  - "[[catalog-service]]"
+  - "[[catalog-service-architecture]]"
+  - "[[catalog-service-overpass]]"
+  - "[[avm-training]]"
+  - "[[adr-poi-cache-aside]]"
 sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
 ---
 

@@ -3,7 +3,10 @@ title: ADR-0002 — Worker de compensación in-process con APScheduler
 status: stable
 last-verified: 2026-05-28
 owners: [users-service]
-related: [[users-service-kc-compensation]], [[users-service-architecture]], [[analytics-service-kafka-consumer]]
+related:
+  - "[[users-service-kc-compensation]]"
+  - "[[users-service-architecture]]"
+  - "[[analytics-service-kafka-consumer]]"
 sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md]
 decision-date: 2026-05-28
 decision-status: accepted

@@ -3,7 +3,12 @@ title: Dominio user — users-service
 status: draft
 last-verified: 2026-05-28
 owners: [users-service]
-related: [[users-service]], [[users-service-architecture]], [[frontend-onboarding-flow]], [[adr-soft-deactivation]], [[properties-service-search]]
+related:
+  - "[[users-service]]"
+  - "[[users-service-architecture]]"
+  - "[[frontend-onboarding-flow]]"
+  - "[[adr-soft-deactivation]]"
+  - "[[properties-service-search]]"
 sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md]
 ---
 

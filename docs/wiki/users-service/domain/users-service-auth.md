@@ -3,7 +3,12 @@ title: Dominio auth — users-service
 status: draft
 last-verified: 2026-05-28
 owners: [users-service]
-related: [[users-service]], [[users-service-architecture]], [[users-service-keycloak]], [[adr-keycloak-saga-compensation]], [[adr-action-tokens-redis]]
+related:
+  - "[[users-service]]"
+  - "[[users-service-architecture]]"
+  - "[[users-service-keycloak]]"
+  - "[[adr-keycloak-saga-compensation]]"
+  - "[[adr-action-tokens-redis]]"
 sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md]
 ---
 

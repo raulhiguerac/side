@@ -3,7 +3,11 @@ title: Integración users → Keycloak
 status: draft
 last-verified: 2026-05-28
 owners: [users-service]
-related: [[users-service]], [[users-service-auth]], [[adr-auth-keycloak-jwt]], [[adr-keycloak-saga-compensation]]
+related:
+  - "[[users-service]]"
+  - "[[users-service-auth]]"
+  - "[[adr-auth-keycloak-jwt]]"
+  - "[[adr-keycloak-saga-compensation]]"
 sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md]
 ---
 

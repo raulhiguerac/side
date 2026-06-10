@@ -3,7 +3,11 @@ title: Runbook — properties-service local dev
 status: draft
 last-verified: 2026-05-28
 owners: [properties-service]
-related: [[properties-service]], [[properties-service-architecture]], [[catalog-service-local-dev]], [[analytics-service-local-dev]]
+related:
+  - "[[properties-service]]"
+  - "[[properties-service-architecture]]"
+  - "[[catalog-service-local-dev]]"
+  - "[[analytics-service-local-dev]]"
 sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md]
 ---
 

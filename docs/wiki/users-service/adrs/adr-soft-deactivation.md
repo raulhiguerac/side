@@ -3,7 +3,9 @@ title: ADR-0004 — Deactivación soft (Keycloak retiene el usuario)
 status: stable
 last-verified: 2026-05-28
 owners: [users-service]
-related: [[users-service-user]], [[users-service-keycloak]]
+related:
+  - "[[users-service-user]]"
+  - "[[users-service-keycloak]]"
 sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md]
 decision-date: 2026-05-28
 decision-status: accepted

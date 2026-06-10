@@ -3,7 +3,10 @@ title: Runbook — catalog-service local dev
 status: draft
 last-verified: 2026-05-28
 owners: [catalog-service]
-related: [[catalog-service]], [[catalog-service-architecture]], [[analytics-service-local-dev]]
+related:
+  - "[[catalog-service]]"
+  - "[[catalog-service-architecture]]"
+  - "[[analytics-service-local-dev]]"
 sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
 ---
 

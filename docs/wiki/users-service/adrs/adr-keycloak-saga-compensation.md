@@ -3,7 +3,10 @@ title: ADR-0001 — Registro como saga con compensación de Keycloak
 status: stable
 last-verified: 2026-05-28
 owners: [users-service]
-related: [[users-service-auth]], [[users-service-keycloak]], [[users-service-kc-compensation]]
+related:
+  - "[[users-service-auth]]"
+  - "[[users-service-keycloak]]"
+  - "[[users-service-kc-compensation]]"
 sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md]
 decision-date: 2026-05-28
 decision-status: accepted

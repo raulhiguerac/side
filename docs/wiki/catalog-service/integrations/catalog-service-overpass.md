@@ -3,7 +3,11 @@ title: Integración Overpass (catalog-service)
 status: draft
 last-verified: 2026-05-21
 owners: [catalog-service]
-related: [[catalog-service-poi-lifecycle]], [[catalog-service-architecture]], [[avm-training]], [[adr-poi-cache-aside]]
+related:
+  - "[[catalog-service-poi-lifecycle]]"
+  - "[[catalog-service-architecture]]"
+  - "[[avm-training]]"
+  - "[[adr-poi-cache-aside]]"
 sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
 ---
 

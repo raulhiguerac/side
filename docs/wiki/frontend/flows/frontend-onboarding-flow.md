@@ -3,7 +3,10 @@ title: Onboarding flow (frontend)
 status: stable
 last-verified: 2026-05-26
 owners: [frontend, users-service]
-related: [[frontend]], [[frontend-architecture]], [[catalog-service-geo-catalog]]
+related:
+  - "[[frontend]]"
+  - "[[frontend-architecture]]"
+  - "[[catalog-service-geo-catalog]]"
 sources:
   - docs/sources/frontend/2026-05-21-foundational-qa.md
   - docs/sources/frontend/2026-05-26-onboarding-wiring.md

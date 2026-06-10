@@ -3,7 +3,10 @@ title: Integración users → Brevo (email transaccional)
 status: draft
 last-verified: 2026-05-28
 owners: [users-service]
-related: [[users-service]], [[users-service-auth]], [[users-service-user]]
+related:
+  - "[[users-service]]"
+  - "[[users-service-auth]]"
+  - "[[users-service-user]]"
 sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md]
 ---
 

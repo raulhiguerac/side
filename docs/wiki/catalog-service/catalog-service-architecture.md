@@ -3,7 +3,12 @@ title: Arquitectura interna de catalog-service
 status: draft
 last-verified: 2026-05-21
 owners: [catalog-service]
-related: [[architecture]], [[catalog-service]], [[catalog-service-poi-lifecycle]], [[adr-postgis-h3-hybrid]], [[adr-poi-cache-aside]]
+related:
+  - "[[architecture]]"
+  - "[[catalog-service]]"
+  - "[[catalog-service-poi-lifecycle]]"
+  - "[[adr-postgis-h3-hybrid]]"
+  - "[[adr-poi-cache-aside]]"
 sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md]
 ---
 

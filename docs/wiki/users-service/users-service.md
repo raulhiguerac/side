@@ -3,7 +3,12 @@ title: users-service
 status: draft
 last-verified: 2026-05-28
 owners: [users-service]
-related: [[architecture]], [[users-service-architecture]], [[users-service-auth]], [[users-service-user]], [[users-service-keycloak]]
+related:
+  - "[[architecture]]"
+  - "[[users-service-architecture]]"
+  - "[[users-service-auth]]"
+  - "[[users-service-user]]"
+  - "[[users-service-keycloak]]"
 sources: [../../sources/users-service/2026-05-28-foundational-exploration.md]
 ---
 

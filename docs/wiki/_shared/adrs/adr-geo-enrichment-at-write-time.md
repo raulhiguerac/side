@@ -3,7 +3,10 @@ title: ADR-0002 — Geo-enrichment at write time
 status: stable
 last-verified: 2026-05-19
 owners: [_shared]
-related: [[architecture]], [[analytics-service-prediction]], [[glossary]]
+related:
+  - "[[architecture]]"
+  - "[[analytics-service-prediction]]"
+  - "[[glossary]]"
 sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md]
 decision-date: 2026-05-19
 decision-status: accepted

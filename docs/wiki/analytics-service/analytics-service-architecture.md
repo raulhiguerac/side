@@ -3,7 +3,12 @@ title: Arquitectura interna de analytics-service
 status: draft
 last-verified: 2026-05-28
 owners: [analytics-service]
-related: [[architecture]], [[analytics-service]], [[analytics-service-prediction]], [[analytics-service-mlflow]], [[analytics-service-kafka-consumer]]
+related:
+  - "[[architecture]]"
+  - "[[analytics-service]]"
+  - "[[analytics-service-prediction]]"
+  - "[[analytics-service-mlflow]]"
+  - "[[analytics-service-kafka-consumer]]"
 sources:
   - ../../sources/analytics-service/2026-05-19-foundational-qa.md
   - ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md

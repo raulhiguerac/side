@@ -57,6 +57,7 @@
               :zoom="17"
               :center="center"
               :markers="marker ? [marker] : []"
+              :hoveredId="null"
             />
           </div>
         </div>

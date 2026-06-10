@@ -3,7 +3,11 @@ title: ADR-0005 — Google Maps Places API (New) para geocoding
 status: stable
 last-verified: 2026-05-29
 owners: [frontend]
-related: [[frontend]], [[frontend-architecture]], [[adr-mapbox-geocoding-leaflet-rendering]], [[adr-mapbox-frontend-only]]
+related:
+  - "[[frontend]]"
+  - "[[frontend-architecture]]"
+  - "[[adr-mapbox-geocoding-leaflet-rendering]]"
+  - "[[adr-mapbox-frontend-only]]"
 sources: [../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md]
 decision-date: 2026-05-27
 decision-status: accepted

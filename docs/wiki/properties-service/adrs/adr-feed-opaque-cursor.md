@@ -3,7 +3,9 @@ title: ADR-0005 — Cursor de paginación opaco (base64url)
 status: stable
 last-verified: 2026-06-05
 owners: [properties-service]
-related: [[properties-service-search]], [[adr-feed-ads-organic-injection]]
+related:
+  - "[[properties-service-search]]"
+  - "[[adr-feed-ads-organic-injection]]"
 sources: [../../../sources/properties-service/2026-06-05-feed-cursor-pagination.md]
 decision-date: 2026-06-05
 decision-status: accepted

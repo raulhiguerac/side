@@ -3,7 +3,9 @@ title: ADR-0002 — HPO con Optuna y reproducibilidad por seeds fijas
 status: stable
 last-verified: 2026-05-28
 owners: [data]
-related: [[avm-training]], [[adr-lightgbm-log-target]]
+related:
+  - "[[avm-training]]"
+  - "[[adr-lightgbm-log-target]]"
 sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md]
 decision-date: 2026-05-28
 decision-status: accepted
