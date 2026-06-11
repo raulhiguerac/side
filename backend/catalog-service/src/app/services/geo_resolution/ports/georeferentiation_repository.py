@@ -19,6 +19,7 @@ class GeoreferentiationRepository(Protocol):
             *,
             lat: float,
             lon: float,
+            cell: str
         ) -> Optional[LocationByCoordinates]: ...
 
     def update_neighborhood_h3_cells(

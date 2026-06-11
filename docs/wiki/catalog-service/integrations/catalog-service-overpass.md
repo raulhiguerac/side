@@ -1,19 +1,20 @@
 ---
 title: Integración Overpass (catalog-service)
-status: draft
-last-verified: 2026-05-21
+status: stable
+last-verified: 2026-06-11
 owners: [catalog-service]
 related:
   - "[[catalog-service-poi-lifecycle]]"
   - "[[catalog-service-architecture]]"
   - "[[avm-training]]"
   - "[[adr-poi-cache-aside]]"
-sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
+  - "[[adr-isochrone-ors-h3]]"
+sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/catalog-service/2026-06-11-ors-setup-poi-unification.md]
 ---
 
 ## TL;DR
 
-Overpass API (OpenStreetMap) se usa como provider de [[glossary#poi-point-of-interest]] — el backend manda una bounding box y recibe POIs categorizados. Llamado únicamente como side-effect del POI fetch (nunca on-demand, ver [[adr-poi-cache-aside]]). Tag set hardcodeado y reducido (~15 tags) — diverge significativamente del tag set del training del AVM, conciliación pendiente.
+Overpass API (OpenStreetMap) se usa como provider de [[glossary#poi-point-of-interest]] — el backend manda una bounding box y recibe POIs categorizados. Llamado únicamente como side-effect del POI fetch (nunca on-demand, ver [[adr-poi-cache-aside]]). Tag set unificado con el AVM (5 keys OSM, 15 categorías, 100+ valores) via helper `category_map.py` — fuente única de verdad para query y clasificación.
 
 ## Configuración
 
@@ -44,64 +45,54 @@ async def get_pois_by_bbox(*, bbox: list[float]) -> dict:
 
 ## La query QL
 
-Template hardcodeado en [overpass.py:29-40](backend/catalog-service/src/app/integrations/georef/pois/overpass.py#L29-L40):
+Template en [overpass.py](backend/catalog-service/src/app/integrations/georef/pois/overpass.py) — los tag strings se importan desde `category_map.py`:
 
 ```overpassql
 [out:json][timeout:{timeout}];
 (
   node["amenity"~"{amenity}"]{bbox};
-  node["leisure"~"{leisure}"]{bbox};
   node["shop"~"{shop}"]{bbox};
+  node["public_transport"~"{public_transport}"]{bbox};
+  node["leisure"~"{leisure}"]{bbox};
+  node["healthcare"~"{healthcare}"]{bbox};
   way["amenity"~"{amenity}"]{bbox};
-  way["leisure"~"{leisure}"]{bbox};
   way["shop"~"{shop}"]{bbox};
+  way["public_transport"~"{public_transport}"]{bbox};
+  way["leisure"~"{leisure}"]{bbox};
+  way["healthcare"~"{healthcare}"]{bbox};
 );
 out center;
 ```
 
-Notas técnicas:
-- `[out:json]` — Overpass devuelve JSON (más fácil que XML).
+- `[out:json]` — Overpass devuelve JSON.
 - `[timeout:{N}]` — Overpass mata la query si excede.
-- Busca tanto **nodes** (puntos) como **ways** (líneas/polígonos: edificios, parques).
-- `out center;` — para ways y areas, Overpass calcula el centroide y lo agrega como `center: {lat, lon}` en el response. Eso simplifica el adapter (no hay que tratar geometry).
+- Busca **nodes** y **ways**. `out center;` da centroide de ways — el adapter lo lee como `center.lat/lon`.
 
-## Tag set actual
+## Tag set y categorías — `category_map.py`
 
-Tres listas hardcodeadas, joineadas con `|` como regex alternativos en la query:
+Fuente única de verdad en [`integrations/georef/pois/category_map.py`](backend/catalog-service/src/app/integrations/georef/pois/category_map.py). Define 5 mapas `{categoría: [valores OSM]}`:
 
-**AMENITY_TAGS** (~13):
-`restaurant, cafe, fast_food, school, kindergarten, university, hospital, clinic, pharmacy, bank, atm, bus_station, fuel`
+| Key OSM | Categorías | Valores aprox. |
+|---|---|---|
+| `amenity` | transport, food, education, health, finance, commerce, recreation, worship, adult | 33 |
+| `shop` | food, commerce, fashion, home, electronics, health, auto, services, leisure, adult | 72 |
+| `public_transport` | transport | 3 |
+| `leisure` | recreation | 24 |
+| `healthcare` | health | 15 |
 
-**LEISURE_TAGS** (~4):
-`park, playground, fitness_centre, sports_centre`
+**Total: 147 valores, 15 categorías estándar.**
 
-**SHOP_TAGS** (~3):
-`supermarket, mall, convenience`
+El helper exporta:
+- `AMENITY_TAGS`, `SHOP_TAGS`, `PUBLIC_TRANSPORT_TAGS`, `LEISURE_TAGS`, `HEALTHCARE_TAGS` — strings `|`-joineados para la query QL.
+- `extract_category(tags: dict) -> str | None` — clasifica un elemento OSM a una de las 15 categorías. Prioridad: amenity → shop → public_transport → leisure → healthcare.
 
-Total: **~20 tags efectivos** (subset cuidado).
+`overpass.py` importa los strings; `poi_provider.py` importa `extract_category`. `subcategories` eliminado — la taxonomía de 15 categorías lo hace innecesario.
 
-## Divergencia con el training del AVM
+**Nota**: `platform;stop_position` omitido del tag set de `public_transport` — el `;` en el valor rompe el regex de Overpass QL.
 
-[[avm-training]] usa un tag set **mucho más amplio** definido en `data/ml/AVM/training/feature_store/constants.py` — ~150 tags categorizados en 7 grupos:
+## Unificación con el AVM — resuelta
 
-| Grupo en analytics | En catalog hoy |
-|---|---|
-| `transport` (bus_station, taxi, bicycle_parking, parking, bicycle_rental) | parcial (solo `bus_station`, `fuel` bajo amenity) |
-| `food` (restaurant, cafe, fast_food, bar, pub, food_court, juice_bar, ice_cream) | parcial (3 de 8) |
-| `education` (school, college, university, kindergarten, language_school, music_school, driving_school) | parcial (3 de 7) |
-| `health` (hospital, clinic, pharmacy, doctors, dentist, veterinary) | parcial (3 de 6) |
-| `finance` (bank, atm, bureau_de_change, money_transfer) | parcial (2 de 4) |
-| `commerce`, `recreation`, `worship` | ausentes |
-| `shop` (supermarket, convenience, mall, +20 más) | parcial (3 de 23) |
-| `leisure` (park, garden, playground, dog_park, sports_*, swimming_pool, etc.) | parcial (4 de ~20) |
-| `public_transport`, `healthcare` (tags top-level distintos) | ausentes — el QUERY_TEMPLATE no los chequea |
-
-**Consecuencia**: el side-effect actual de `ResolvePoiUseCase` puebla un subset insuficiente para que el modelo AVM se entrene contra esta tabla. Por eso training sigue usando un CSV manual de OSM ([[avm-training]] sección "POI source").
-
-**Plan de conciliación** (pendiente):
-- Decidir quién es source-of-truth del tag set: ¿analytics define y catalog adopta? ¿Mantenemos dos vistas (catalog para frontend UX, analytics para ML)?
-- Si convergen: extraer el tag set a un módulo compartido (ej. `_shared/poi_taxonomy.py`) e importar desde ambos lados.
-- Si divergen: documentar explícitamente que la tabla `points_of_interest` de catalog **no** es el feature store del modelo.
+El tag set de [[avm-training]] (5 keys OSM, 15 categorías) y el de catalog ahora son idénticos. La columna `points_of_interest.category` queda alineada con lo que espera el modelo — el AVM puede migrar a consumir esta tabla via ETL sin inconsistencias. Ver [[adr-isochrone-ors-h3]] §7.
 
 ## Error handling
 
@@ -121,11 +112,12 @@ El cache + dedup viven en el UC `ResolvePoiUseCase`, no en este cliente. Tres ca
 
 ## Claims
 
-- `PoiClient.get_pois_by_bbox` es el único método del cliente ([overpass.py:48](backend/catalog-service/src/app/integrations/georef/pois/overpass.py#L48)).
-- Timeout configurado vía `settings.OVERPASS_TIMEOUT_SECONDS` (30s default) ([overpass.py:46](backend/catalog-service/src/app/integrations/georef/pois/overpass.py#L46), [settings.py:25](backend/catalog-service/src/app/core/config/settings.py#L25)).
-- La query QL es un template con 3 listas de tags (~20 totales) joineadas con `|` ([overpass.py:12-40](backend/catalog-service/src/app/integrations/georef/pois/overpass.py#L12-L40)).
-- La query usa `out center;` para que Overpass devuelva centroide de ways/areas — el adapter lo lee como `center.lat/lon`.
-- 3 categorías de error capturadas, todas mapean a `GeoResolutionUnavailableError(provider="overpass")` ([overpass.py:64-90](backend/catalog-service/src/app/integrations/georef/pois/overpass.py#L64-L90)).
-- Tag set hoy: ~20 tags vs ~150 en [[avm-training]] (`data/ml/AVM/training/feature_store/constants.py`).
-- El catch-all general (`except Exception`) significa que cualquier error inesperado del SDK queda registrado como provider down.
-- Llamado únicamente desde `PoiProviderAdapter`, que a su vez solo es invocado por `ResolvePoiUseCase` (fire-and-forget background task).
+- `PoiClient.get_pois_by_bbox` es el único método del cliente ([overpass.py](backend/catalog-service/src/app/integrations/georef/pois/overpass.py)).
+- Timeout configurado vía `settings.OVERPASS_TIMEOUT_SECONDS` (30s default).
+- La query QL cubre 5 keys OSM con 147 valores en total, joineados con `|` como regex.
+- Los tag strings y `extract_category` se importan desde `category_map.py` — `overpass.py` no tiene constantes hardcodeadas de tags.
+- `extract_category(tags)` aplica prioridad amenity → shop → public_transport → leisure → healthcare y devuelve una de 15 categorías estándar o `None` ([category_map.py](backend/catalog-service/src/app/integrations/georef/pois/category_map.py)).
+- `subcategories` en `PointOfInterest` se persiste como `None` — eliminado con la taxonomía de 15 categorías.
+- La query usa `out center;` para que Overpass devuelva centroide de ways/areas.
+- 3 categorías de error capturadas, todas mapean a `GeoResolutionUnavailableError(provider="overpass")`.
+- El tag set de catalog y el del training del AVM están unificados al 2026-06-11.

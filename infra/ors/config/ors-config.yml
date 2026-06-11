@@ -1,0 +1,12 @@
+ors:
+  engine:
+    profile_default:
+      build:
+        source_file: /home/ors/files/osm_colombia.pbf
+    profiles:
+      driving-car:
+        enabled: true
+      cycling-regular:
+        enabled: true
+      foot-walking:
+        enabled: true

@@ -1,3 +1,4 @@
+import h3
 from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
@@ -12,8 +13,14 @@ class ResolveLocationByCoordinatesUseCase:
         self.uow = uow
 
     async def execute(self, *, lat: float, lon: float) -> LocationByCoordinates:
+        h3_cell = h3.latlng_to_cell(lat, lon, 9)
         result = await run_in_threadpool(
-            partial(self.uow.georef.get_location_by_point, lat=lat, lon=lon)
+            partial(
+                self.uow.georef.get_location_by_point, 
+                lat=lat, 
+                lon=lon,
+                cell = h3_cell
+            )
         )
 
         if result is None:

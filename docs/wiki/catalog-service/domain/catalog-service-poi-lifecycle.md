@@ -1,7 +1,7 @@
 ---
 title: Lifecycle del POI (catalog-service)
 status: draft
-last-verified: 2026-05-21
+last-verified: 2026-06-11
 owners: [catalog-service]
 related:
   - "[[catalog-service]]"
@@ -9,18 +9,19 @@ related:
   - "[[catalog-service-overpass]]"
   - "[[avm-training]]"
   - "[[adr-poi-cache-aside]]"
-sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
+sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/catalog-service/2026-06-11-ors-setup-poi-unification.md]
 ---
 
 ## TL;DR
 
-Los POIs se pueblan **side-effect only** — nunca on-demand de un endpoint, solo como background task disparada por un geo-resolution exitoso. 3 capas de dedup para evitar fetches redundantes a Overpass: Redis cache short-circuit → Redis `SET NX` lock distribuido → DB `FetchZone` freshness check. Cuando fetchea, también appendea el `h3_index` al array `h3_cells` del barrio (mecánica lazy-fill). El read path actual **no usa** `h3_cells` para pre-filtrar — gap pendiente.
+Los POIs se pueblan **side-effect only** — nunca on-demand de un endpoint, solo como background task disparada por un geo-resolution exitoso. 3 capas de dedup para evitar fetches redundantes a Overpass: Redis cache short-circuit → Redis `SET NX` lock distribuido → DB `FetchZone` freshness check. Cuando fetchea, también appendea el `h3_index` al array `h3_cells` del barrio (mecánica lazy-fill). `get_location_by_point` ahora pre-filtra por `h3_cells` antes de `ST_Contains`.
 
 ## Trigger
 
-`ResolvePoiUseCase.execute(lat, lon, locality_id, neighborhood_id)` se dispara como `BackgroundTasks` desde [`/geo-resolution/resolve-neighborhood`](backend/catalog-service/src/app/api/routes/geo_resolution.py#L32-L38).
+`ResolvePoiUseCase.execute(lat, lon, locality_id, neighborhood_id)` se dispara como `BackgroundTasks` desde dos endpoints:
 
-> Hoy `/geo-resolution/by-coordinates` **NO** dispara el background task. Es uno de los gaps del refactor pendiente — ver [[catalog-service]] roadmap.
+- [`/geo-resolution/resolve-neighborhood`](backend/catalog-service/src/app/api/routes/geo_resolution.py#L32-L38) — endpoint legacy.
+- [`/geo-resolution/by-coordinates`](backend/catalog-service/src/app/api/routes/geo_resolution.py#L43-L59) — endpoint principal; pasa `locality_id` y `neighborhood_id` desde el response.
 
 Es **fire-and-forget**: la respuesta al user va antes; un error en el POI fetch no propaga al usuario.
 
@@ -154,19 +155,16 @@ El diseño esperado: un worker cron que itere `SELECT * FROM fetch_zones WHERE i
 
 ## Open items
 
-- **Activar H3 pre-filter en el read path** — el campo `h3_cells` se popula pero no se usa para acelerar `ST_Contains`. Medir P99 con dataset real antes de implementar.
 - **Refresh batch para zonas stale** — hoy una zona vencida solo se marca `is_stale=True` pero nadie la refetcha hasta que alguien pase por ahí.
-- **Tag set Overpass diverge del training del AVM** — ver [[catalog-service]] Open items.
-- **Add `BackgroundTasks` al endpoint `/by-coordinates`** — parte del refactor de `/geo-resolution`.
 
 ## Claims
 
-- `ResolvePoiUseCase` es invocado únicamente como `BackgroundTasks.add_task(...)` desde el endpoint `/geo-resolution/resolve-neighborhood`; nunca on-demand ([api/routes/geo_resolution.py:32-38](backend/catalog-service/src/app/api/routes/geo_resolution.py#L32-L38)).
+- `ResolvePoiUseCase` es invocado como `BackgroundTasks.add_task(...)` desde `/geo-resolution/resolve-neighborhood` y `/geo-resolution/by-coordinates`; nunca on-demand ([api/routes/geo_resolution.py](backend/catalog-service/src/app/api/routes/geo_resolution.py)).
 - 3 capas de dedup: cache short-circuit (`cache_key_fetch_zone`) → lock distribuido (`set_nx`, TTL `POI_LOCK_TTL_SECONDS`=30s) → DB `FetchZone` freshness ([resolve_poi.py:62-103](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_poi.py#L62-L103)).
 - El lock SIEMPRE se libera en `finally`, sin importar el flow ([resolve_poi.py:114-115](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_poi.py#L114-L115)).
 - El append de `h3_cells` es `UPDATE ... SET h3_cells = array_append(h3_cells, $h3)` ejecutado después de persistir los POIs ([sql_georeferentiation_repository.py:34-41](backend/catalog-service/src/app/services/geo_resolution/adapters/sql_georeferentiation_repository.py#L34-L41)).
-- `get_location_by_point` y `get_neighborhood_by_coordinates` usan `ST_Contains(geom, point)` directamente — sin pre-filter por `h3_cells` al 2026-05-21 ([sql_georeferentiation_repository.py:19-32](backend/catalog-service/src/app/services/geo_resolution/adapters/sql_georeferentiation_repository.py#L19-L32), [sql_georeferentiation_repository.py:58-67](backend/catalog-service/src/app/services/geo_resolution/adapters/sql_georeferentiation_repository.py#L58-L67)).
-- `PoiProviderAdapter` extrae `category` del primer tag presente entre `amenity/leisure/shop` y mete los demás como `subcategories` ([poi_provider.py:15-22](backend/catalog-service/src/app/services/geo_resolution/adapters/poi_provider.py#L15-L22)).
+- `get_location_by_point` pre-filtra con `WHERE h3_cells.any(cell)` (GIN index) antes de `ST_Contains` — el UC calcula `h3.latlng_to_cell(lat, lon, 9)` y lo pasa como `cell` ([sql_georeferentiation_repository.py](backend/catalog-service/src/app/services/geo_resolution/adapters/sql_georeferentiation_repository.py), [resolve_location_by_coordinates.py](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_location_by_coordinates.py)).
+- `PoiProviderAdapter` usa `extract_category(tags)` de `category_map.py` — clasifica a una de 15 categorías estándar. `subcategories` se persiste como `None` ([poi_provider.py](backend/catalog-service/src/app/services/geo_resolution/adapters/poi_provider.py)).
 - POIs sin `name` se descartan en el mapping ([poi_provider.py:53-54](backend/catalog-service/src/app/services/geo_resolution/adapters/poi_provider.py#L53-L54)).
 - `external_id` se construye como `f"{type}/{id}"` (`node/123`, `way/456`) y junto con `source` forma el unique constraint `uq_poi_external_id_source` ([poi_provider.py:68](backend/catalog-service/src/app/services/geo_resolution/adapters/poi_provider.py#L68), [models/location.py:392](backend/catalog-service/src/app/models/location.py#L392)).
 - `raw_response` persiste el element completo del Overpass response como JSON, para extraer fields adicionales sin re-fetch ([poi_provider.py:75](backend/catalog-service/src/app/services/geo_resolution/adapters/poi_provider.py#L75)).

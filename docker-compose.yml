@@ -198,6 +198,19 @@ services:
     ]
     networks:
       - dev-net
+  
+  router:
+    image: openrouteservice/openrouteservice:nightly
+    ports:
+    - "8082:8080"
+    environment:
+      JAVA_OPTS: "-Xmx6g -Xms1g"
+    volumes:
+      - ./data/ml/AVM/data/colombia-260510.osm.pbf:/home/ors/files/osm_colombia.pbf
+      - ./infra/ors/graphs:/home/ors/graphs
+      - ./infra/ors/config:/home/ors/config
+    networks:
+      - dev-net
 
 volumes:
   redis_data:

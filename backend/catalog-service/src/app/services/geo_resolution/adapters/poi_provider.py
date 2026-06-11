@@ -2,6 +2,7 @@ import unicodedata
 import uuid
 from datetime import datetime, timezone
 
+from app.integrations.georef.pois.category_map import extract_category
 from app.integrations.georef.pois.overpass import PoiClient
 from app.models.location import PointOfInterest, PoiSource
 from app.services.geo_resolution.ports.poi_provider_gateway import PoiProviderGateway
@@ -10,16 +11,6 @@ from app.services.geo_resolution.ports.poi_provider_gateway import PoiProviderGa
 def _normalize(text: str) -> str:
     nfkd = unicodedata.normalize("NFKD", text)
     return "".join(c for c in nfkd if not unicodedata.combining(c)).lower().strip()
-
-
-def _extract_category(props: dict) -> tuple[str | None, list[str] | None]:
-    tags = ["amenity", "leisure", "shop"]
-    found = [(tag, props[tag]) for tag in tags if tag in props]
-    if not found:
-        return None, None
-    primary = found[0][1]
-    subs = [v for _, v in found[1:]] if len(found) > 1 else None
-    return primary, subs
 
 
 def _build_address(props: dict) -> str | None:
@@ -64,7 +55,7 @@ class PoiProviderAdapter(PoiProviderGateway):
             if lat is None or lon is None:
                 continue
 
-            category, subcategories = _extract_category(tags)
+            category = extract_category(tags)
             external_id = f"{element['type']}/{element['id']}"
 
             pois.append(PointOfInterest(
@@ -78,7 +69,7 @@ class PoiProviderAdapter(PoiProviderGateway):
                 search_name=_normalize(name),
                 full_address=_build_address(tags),
                 category=category,
-                subcategories=subcategories,
+                subcategories=None,
                 latitude=lat,
                 longitude=lon,
                 h3_index=h3_index,

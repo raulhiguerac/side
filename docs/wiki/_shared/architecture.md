@@ -8,6 +8,7 @@ related:
   - "[[dev-workflow]]"
   - "[[adr-auth-keycloak-jwt]]"
   - "[[adr-geo-enrichment-at-write-time]]"
+  - "[[adr-cache-optional-layer]]"
 sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md]
 ---
 
@@ -114,6 +115,9 @@ Sin créditos en ninguna nube hoy. Stack elegido para correr en cualquier docker
 
 ### Geo-enrichment at write time
 La resolución `(lat, lon) → barrio_ideca` ocurre **al crear el listing en `properties-service`**, no al consumirlo en analytics u otros servicios. Principio: enriquecimiento geográfico al momento de escribir, no leer. Reduce calls de red en el path crítico de cada lectura y permite cachear/indexar por barrio. Ver `[[adr-geo-enrichment-at-write-time]]`.
+
+### Cache como capa opcional (degradación silenciosa)
+Redis es optimización, no dependencia crítica. Todos los servicios envuelven las operaciones de cache en `except Exception: pass` — si Redis cae, degradan a lectura directa de DB sin propagar error al cliente. El TTL de cada servicio actúa como red de seguridad contra datos stale. Ver `[[adr-cache-optional-layer]]`.
 
 ### Dev environment unificado
 Todo el desarrollo local ocurre dentro de un [[glossary#devcontainer]] levantado por `docker-compose.yml` en el root. Los servicios no contaminan el host del developer. Ver el runbook de cada servicio (ej: `[[analytics-service-local-dev]]`).

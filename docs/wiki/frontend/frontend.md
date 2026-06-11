@@ -8,7 +8,7 @@ related:
   - "[[frontend-architecture]]"
   - "[[frontend-onboarding-flow]]"
   - "[[frontend-local-dev]]"
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md]
 ---
 
 ## TL;DR
@@ -65,8 +65,9 @@ Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con pro
 | `/settings` → `/settings/profile` | auth required | `SettingsLayout` + 3 children |
 | `/dev` | público | `DevPlaygroundView` |
 | `/properties` | auth required | `MyPropertiesView` |
+| `/listing/:id` | público | `PropertyDetailView` |
 | `/feed` → `/feed/list` | público | `PropertiesView` (parent con toggle) + `FeedView` |
-| `/feed/map` | público | `PropertiesView` (parent) + `MapView` (stub) |
+| `/feed/map` | público | `PropertiesView` (parent) + `MapView` |
 
 Guard global en `router.beforeEach`: si la ruta `requiresAuth` y `_authChecked === false`, llama `authStore.checkAuth()`. Si tras eso `!isAuthenticated`, redirige a `/login`.
 
@@ -120,7 +121,8 @@ Detalle de cada patrón en [[frontend-architecture]].
 
 ## Claims
 
-- 12 rutas definidas en `src/router/index.ts` — incluyendo `/feed` (parent `PropertiesView`) con dos hijas: `feed-list` (`FeedView`) y `feed-map` (`MapView`) ([router/index.ts](frontend/src/router/index.ts)).
+- El router está modularizado en 5 archivos bajo `router/routes/` (public, auth, settings, properties, analytics) — `router/index.ts` solo instancia y aplica el guard ([router/routes/](frontend/src/router/routes/)).
+- `PropertyDetailView` existe en `views/properties/detail/` — fetch real pendiente, hoy usa mock ([views/properties/detail/PropertyDetailView.vue](frontend/src/views/properties/detail/PropertyDetailView.vue)).
 - `vue-router` corre en `createWebHashHistory` (URL pattern `/#/...`) ([router/index.ts:89](frontend/src/router/index.ts#L89)).
 - `auth.ts` store hardcodea `http://localhost:8000/v1/...` en login/register/logout/checkAuth ([stores/auth.ts:80-83](frontend/src/stores/auth.ts#L80-L83), [stores/auth.ts:98-101](frontend/src/stores/auth.ts#L98-L101)).
 - `config/index.ts` define `API.USERS_BASE_URL` y `API.CATALOG_BASE_URL` pero solo `user.ts` y los composables lo usan; `auth.ts` ignora la config ([config/index.ts:1-5](frontend/src/config/index.ts#L1-L5)).

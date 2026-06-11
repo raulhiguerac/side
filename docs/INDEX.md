@@ -66,7 +66,8 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 
 ### integrations/
 - [catalog-service-mapbox](wiki/catalog-service/integrations/catalog-service-mapbox.md) — Mapbox Geocoder forward (deprecation pendiente post-refactor de `/geo-resolution`)
-- [catalog-service-overpass](wiki/catalog-service/integrations/catalog-service-overpass.md) — Overpass QL, tag set actual + divergencia con tag set del training del AVM
+- [catalog-service-overpass](wiki/catalog-service/integrations/catalog-service-overpass.md) — Overpass QL, tag set unificado con AVM (5 keys OSM, 15 categorías, category_map.py)
+- [catalog-service-ors](wiki/catalog-service/integrations/catalog-service-ors.md) — OpenRouteService self-hosted, setup docker, paths nightly v9, isócronas
 
 ### runbook/
 - [catalog-service-local-dev](wiki/catalog-service/runbook/catalog-service-local-dev.md) — devcontainer + PostGIS DB, env vars completas, JWT via cookie, seed manual, 7 known gaps
@@ -77,6 +78,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0003 — POI cache-aside, never on-demand](wiki/catalog-service/adrs/adr-poi-cache-aside.md)
 - [ADR-0004 — GeoJSON upload pattern](wiki/catalog-service/adrs/adr-geojson-upload-pattern.md)
 - [ADR-0005 — Mapbox solo en el frontend (catalog hace reverse-only)](wiki/catalog-service/adrs/adr-mapbox-frontend-only.md)
+- [ADR-0006 — Isócronas con ORS + H3 para reachable POIs](wiki/catalog-service/adrs/adr-isochrone-ors-h3.md)
 
 ## frontend
 

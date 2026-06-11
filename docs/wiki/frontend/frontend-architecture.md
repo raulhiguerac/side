@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-06-09
+last-verified: 2026-06-11
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -9,7 +9,7 @@ related:
   - "[[frontend-onboarding-flow]]"
   - "[[frontend-map-component]]"
   - "[[properties-service-search]]"
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-09-mapview-leaflet-implementation.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-09-mapview-leaflet-implementation.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md]
 ---
 
 ## TL;DR
@@ -29,21 +29,35 @@ frontend/
 │   ├── config/
 │   │   └── index.ts              # API.USERS_BASE_URL, CATALOG_BASE_URL, AVM_BASE_URL (port 8002), STORAGE_KEYS
 │   ├── router/
-│   │   └── index.ts              # routes + beforeEach guard
+│   │   ├── index.ts              # instancia router + beforeEach guard; importa 5 módulos
+│   │   └── routes/
+│   │       ├── public.ts         # /, /about
+│   │       ├── auth.ts           # /login, /register, /forgot-password
+│   │       ├── settings.ts       # /settings + children
+│   │       ├── properties.ts     # /properties, /listing/:id, /feed + children
+│   │       └── analytics.ts      # /avm
 │   ├── stores/                   # Pinia
 │   │   ├── auth.ts
 │   │   └── user.ts
 │   ├── composables/
 │   │   ├── useOnboarding.ts
-│   │   └── Location.ts
+│   │   ├── Location.ts
+│   │   └── properties/
+│   │       ├── usePropertyDetail.ts   # computed logic de PropertyDetailView
+│   │       └── usePropertyMapper.ts
 │   ├── types/
 │   │   ├── user.ts
-│   │   └── properties.ts
+│   │   ├── feed.ts               # PropertyCard (API shape), PropertyCardUI (UI shape), PropertyImageCard
+│   │   └── properties.ts         # PropertyDetail, PropertyLocationDetail
 │   ├── views/                    # páginas-ruta
 │   │   ├── public/{HomeView, AboutView}
 │   │   ├── auth/{LoginView, RegisterView, ResetPasswordView}
 │   │   ├── settings/{SettingsLayout, SettingsProfile, SettingsSecurity, SettingsAccount}
-│   │   ├── properties/{MyPropertiesView, PropertiesView, FeedView, MapView}
+│   │   ├── properties/
+│   │   │   ├── PropertiesView.vue          # parent feed con toggle lista/mapa
+│   │   │   ├── feed/{FeedView, MapView}
+│   │   │   ├── dashboard/MyPropertiesView
+│   │   │   └── detail/PropertyDetailView   # /listing/:id
 │   │   └── dev/DevPlaygroundView
 │   └── components/
 │       ├── shared/{NavBar, NavGuest, NavUser, BaseModal}
@@ -308,6 +322,31 @@ El render lo encapsula `MapUser.vue` — un componente **dumb/reusable**: props 
 - **Build**: `npm run build` (vue-cli-service) → `dist/` estático.
 - **Deploy planeado**: bucket público (probable S3 / MinIO / GCS) sirviendo `index.html` + assets. Hash history evita necesidad de rewrites en el bucket.
 - **Sin SSR** — pura SPA client-side.
+
+## Tipos — separación UI vs API
+
+`types/feed.ts` tiene dos shapes distintas:
+- `PropertyCard` — response shape de la API de properties-service.
+- `PropertyCardUI` — shape para render del card en feed (UI). Antes vivía como `Property` en `PropertyCard.vue` — causaba TS2614 al importar desde `.ts` files.
+- `PropertyImageCard` — imagen de una propiedad, compartida por feed y detail.
+
+`types/properties.ts`:
+- `PropertyDetail` — shape completa del response `GET /v1/properties/{id}`.
+- `PropertyLocationDetail` — ubicación (neighborhood_id, city_id, country_id, lat, lon). Usa `city_id` — es el campo de properties-service, distinto al rename `locality_id` de catalog-service.
+
+Regla: nunca exportar interfaces de tipos desde archivos `.vue` — rompe TypeScript en consumers `.ts`.
+
+## PropertyDetailView
+
+Vista de detalle del listing en `/listing/:id` (`views/properties/detail/PropertyDetailView.vue`).
+
+Layout: photo grid → header (título + badges status/verificación) → precio + admin fee → stats chips → descripción → detalles secundarios → [POIs | mapa Leaflet].
+
+- **Photo grid**: `grid grid-cols-4 grid-rows-[200px_200px]` con 5 celdas; `grid-area` en `<style scoped>` porque Tailwind arbitrary values no funciona con clases dinámicas en `v-for`.
+- **Stats chips**: `grid grid-cols-3 sm:grid-cols-6` para ancho uniforme.
+- **Padding**: `px-[8%] sm:px-[12%] lg:px-[18%]` — más estrecho que navbar para dar respiro visual.
+- **Lógica**: toda en `composables/properties/usePropertyDetail.ts` — la view solo declara `property = ref<PropertyDetail | null>` y destructura el composable.
+- **Fetch real**: pendiente — hoy usa mock hardcodeado.
 
 ## Claims
 

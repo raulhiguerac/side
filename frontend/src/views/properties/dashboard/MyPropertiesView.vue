@@ -212,14 +212,13 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import PropertyCard, {
-  type Property,
-} from "@/components/properties/PropertyCard.vue";
+import PropertyCard from "@/components/properties/PropertyCard.vue";
+import type { PropertyCardUI } from "@/types/feed";
 import axios from "axios";
 
 const router = useRouter();
 const isLoading = ref(true);
-const properties = ref<Property[]>([]);
+const properties = ref<PropertyCardUI[]>([]);
 
 const activeTab = ref<"all" | "active" | "inactive" | "pending">("all");
 const tabs = [

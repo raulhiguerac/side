@@ -42,8 +42,20 @@ async def resolve_neighborhood(
 
 @router.get("/by-coordinates", response_model=LocationByCoordinates)
 async def resolve_location_by_coordinates(
+    background_tasks: BackgroundTasks,
     lat: float = Query(..., ge=-90, le=90),
     lon: float = Query(..., ge=-180, le=180),
+    poi_uc: ResolvePoiUseCase = Depends(resolve_poi_uc),
     uc: ResolveLocationByCoordinatesUseCase = Depends(resolve_location_by_coordinates_uc),
 ):
-    return await uc.execute(lat=lat, lon=lon)
+    result = await uc.execute(lat=lat, lon=lon)
+
+    background_tasks.add_task(
+        poi_uc.execute,
+        lat=lat,
+        lon=lon,
+        locality_id=result.locality_id,
+        neighborhood_id=result.neighborhood_id,
+    )
+
+    return result

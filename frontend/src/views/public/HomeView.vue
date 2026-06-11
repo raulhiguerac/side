@@ -28,11 +28,12 @@
           >
             Avalúa tu propiedad gratis
           </router-link>
-          <button
-            class="w-full sm:w-56 border border-white/40 text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-white/10 transition-all duration-200"
+          <router-link
+            to="/feed"
+            class="flex items-center justify-center w-full sm:w-56 border border-white/40 text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-white/10 transition-all duration-200"
           >
             Explorar propiedades
-          </button>
+          </router-link>
         </div>
 
         <!-- Stats -->
@@ -260,11 +261,12 @@
         >
           Empezar gratis
         </router-link>
-        <button
+        <router-link
+          to="/feed"
           class="w-full sm:w-56 border border-white/30 text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-white/10 transition-all duration-200"
         >
           Explorar propiedades
-        </button>
+        </router-link>
       </div>
     </div>
   </div>

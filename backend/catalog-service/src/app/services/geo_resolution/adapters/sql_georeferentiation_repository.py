@@ -55,12 +55,13 @@ class SqlGeoreferentiationRepository(GeoreferentiationRepository):
             return None
         return row.latitude, row.longitude
 
-    def get_location_by_point(self, *, lat: float, lon: float) -> Optional[LocationByCoordinates]:
+    def get_location_by_point(self, *, lat: float, lon: float, cell: str) -> Optional[LocationByCoordinates]:
         pnt = func.ST_SetSRID(ST_Point(lon, lat), 4326)
         stmt = (
             select(Neighborhood.id, Neighborhood.locality_id, Locality.country_id)
             .join(Locality, Locality.id == Neighborhood.locality_id)
             .where(Neighborhood.geom.isnot(None))
+            .where(Neighborhood.h3_cells.any(cell))
             .filter(func.ST_Contains(Neighborhood.geom, pnt))
             .limit(1)
         )
@@ -69,6 +70,6 @@ class SqlGeoreferentiationRepository(GeoreferentiationRepository):
             return None
         return LocationByCoordinates(
             neighborhood_id=row[0],
-            city_id=row[1],
+            locality_id=row[1],
             country_id=row[2],
         )

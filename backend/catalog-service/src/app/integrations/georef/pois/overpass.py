@@ -6,35 +6,29 @@ from requests.exceptions import ConnectionError, HTTPError, Timeout
 from app.core.config.settings import settings
 from app.core.exceptions.geo_resolution import GeoResolutionUnavailableError
 from app.core.logging.logger import get_logger
+from app.integrations.georef.pois.category_map import (
+    AMENITY_TAGS,
+    HEALTHCARE_TAGS,
+    LEISURE_TAGS,
+    PUBLIC_TRANSPORT_TAGS,
+    SHOP_TAGS,
+)
 
 logger = get_logger(__name__)
-
-AMENITY_TAGS = "|".join([
-    "restaurant", "cafe", "fast_food",
-    "school", "kindergarten", "university",
-    "hospital", "clinic", "pharmacy",
-    "bank", "atm",
-    "bus_station", "fuel",
-])
-
-LEISURE_TAGS = "|".join([
-    "park", "playground",
-    "fitness_centre", "sports_centre",
-])
-
-SHOP_TAGS = "|".join([
-    "supermarket", "mall", "convenience",
-])
 
 QUERY_TEMPLATE = (
     "[out:json][timeout:{timeout}];"
     "("
     '  node["amenity"~"{amenity}"]{bbox};'
-    '  node["leisure"~"{leisure}"]{bbox};'
     '  node["shop"~"{shop}"]{bbox};'
+    '  node["public_transport"~"{public_transport}"]{bbox};'
+    '  node["leisure"~"{leisure}"]{bbox};'
+    '  node["healthcare"~"{healthcare}"]{bbox};'
     '  way["amenity"~"{amenity}"]{bbox};'
-    '  way["leisure"~"{leisure}"]{bbox};'
     '  way["shop"~"{shop}"]{bbox};'
+    '  way["public_transport"~"{public_transport}"]{bbox};'
+    '  way["leisure"~"{leisure}"]{bbox};'
+    '  way["healthcare"~"{healthcare}"]{bbox};'
     ");"
     "out center;"
 )
@@ -50,8 +44,10 @@ class PoiClient:
         query = QUERY_TEMPLATE.format(
             timeout=settings.OVERPASS_TIMEOUT_SECONDS,
             amenity=AMENITY_TAGS,
-            leisure=LEISURE_TAGS,
             shop=SHOP_TAGS,
+            public_transport=PUBLIC_TRANSPORT_TAGS,
+            leisure=LEISURE_TAGS,
+            healthcare=HEALTHCARE_TAGS,
             bbox=bbox_str,
         )
 

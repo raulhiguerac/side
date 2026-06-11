@@ -179,24 +179,11 @@
 
 <script lang="ts" setup>
 import { computed } from "vue";
-
-export interface Property {
-  id: string;
-  title: string;
-  price: number;
-  location: string;
-  image?: string;
-  type: "sale" | "rent";
-  status?: "active" | "inactive" | "pending";
-  bedrooms: number;
-  bathrooms: number;
-  area: number;
-  isFavorite?: boolean;
-}
+import type { PropertyCardUI } from "@/types/feed";
 
 const props = withDefaults(
   defineProps<{
-    property: Property;
+    property: PropertyCardUI;
     showFavorite?: boolean;
     showStatus?: boolean;
     showActions?: boolean;

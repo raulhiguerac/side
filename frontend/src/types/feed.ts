@@ -1,3 +1,17 @@
+export interface PropertyCardUI {
+  id: string;
+  title: string;
+  price: number;
+  location: string;
+  image?: string;
+  type: "sale" | "rent";
+  status?: "active" | "inactive" | "pending";
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  isFavorite?: boolean;
+}
+
 export interface FeedFilters {
   min_price?: number | null;
   max_price?: number | null;
