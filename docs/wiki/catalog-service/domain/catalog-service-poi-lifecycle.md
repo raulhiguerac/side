@@ -1,15 +1,20 @@
 ---
 title: Lifecycle del POI (catalog-service)
 status: draft
-last-verified: 2026-06-11
+last-verified: 2026-06-15
 owners: [catalog-service]
 related:
   - "[[catalog-service]]"
   - "[[catalog-service-architecture]]"
   - "[[catalog-service-overpass]]"
+  - "[[catalog-service-ors]]"
   - "[[avm-training]]"
   - "[[adr-poi-cache-aside]]"
-sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/catalog-service/2026-06-11-ors-setup-poi-unification.md]
+  - "[[adr-isochrone-ors-h3]]"
+sources:
+  - ../../../sources/catalog-service/2026-05-21-foundational-qa.md
+  - ../../../sources/catalog-service/2026-06-11-ors-setup-poi-unification.md
+  - ../../../sources/catalog-service/2026-06-15-ors-isochrone-reachable-pois.md
 ---
 
 ## TL;DR
@@ -147,9 +152,23 @@ El diseño esperado: un worker cron que itere `SELECT * FROM fetch_zones WHERE i
 - **Redis down**: el short-circuit cache falla → se intenta el lock (`set_nx`) → si falla también, el UC sigue contra DB. El **lock no protege** si Redis está down (riesgo: fetches concurrentes a la misma zona desde múltiples instancias del servicio). Aceptable a escala actual.
 - **DB write parcial**: el `try/except` general hace `rollback()`; el lock se libera en `finally`. La zona queda sin `FetchZone` y será reintentada en la próxima request.
 
+## Read path — `get_by_h3_cells`
+
+`uow.pois.get_by_h3_cells(h3_cells: list[str])` es el método de lectura masiva del repositorio de POIs. A diferencia del write path (que persiste celda a celda via `ResolvePoiUseCase`), este método acepta N celdas en una sola query:
+
+```sql
+SELECT * FROM points_of_interest WHERE h3_index = ANY(:cells)
+```
+
+**Callers**:
+
+- `ResolveIsochroneUseCase` — el caller principal. Acumula las celdas de **todos** los perfiles y rangos de isócrona, hace una única llamada con `all_cells`, y luego hace groupby en memoria. Ver [[catalog-service-ors]].
+
+**No hay cache** en este path — `ResolveIsochroneUseCase` planea implementar cache-aside a nivel del response completo (ver [[adr-poi-cache-aside]]), no a nivel de `get_by_h3_cells`.
+
 ## Boundaries
 
-- **Nunca expuesto vía HTTP** — solo invocado como background task.
+- **Nunca expuesto vía HTTP directamente** — `ResolvePoiUseCase` es siempre background task; `get_by_h3_cells` solo se llama desde `ResolveIsochroneUseCase` durante un request síncrono.
 - **No consume tokens** — el `principal` no es relevante para POI fetching (los datos vienen del provider, no del usuario).
 - **No filtra POIs por categoría** — guarda todo lo que Overpass devuelve con `name`. El consumidor (el modelo ML futuro) decide qué tags usar.
 
@@ -169,3 +188,4 @@ El diseño esperado: un worker cron que itere `SELECT * FROM fetch_zones WHERE i
 - `external_id` se construye como `f"{type}/{id}"` (`node/123`, `way/456`) y junto con `source` forma el unique constraint `uq_poi_external_id_source` ([poi_provider.py:68](backend/catalog-service/src/app/services/geo_resolution/adapters/poi_provider.py#L68), [models/location.py:392](backend/catalog-service/src/app/models/location.py#L392)).
 - `raw_response` persiste el element completo del Overpass response como JSON, para extraer fields adicionales sin re-fetch ([poi_provider.py:75](backend/catalog-service/src/app/services/geo_resolution/adapters/poi_provider.py#L75)).
 - Refresh batch de zonas stale: **diseñado pero no implementado** al 2026-05-21.
+- `get_by_h3_cells` es el read path de POIs — `SELECT * FROM points_of_interest WHERE h3_index = ANY(:cells)`. El único caller es `ResolveIsochroneUseCase`, que acumula celdas de N perfiles antes de llamarlo ([use_cases/resolve_isochrone.py:52-54](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_isochrone.py#L52-L54)).

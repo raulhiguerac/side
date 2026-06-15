@@ -1,8 +1,22 @@
 ors:
+  endpoints:
+    isochrones:
+      maximum_intervals: 10
+      maximum_locations: 5
+      maximum_range_distance:
+        - profiles: driving-car,cycling-regular
+          value: 50000
+        - profiles: foot-walking
+          value: 20000
+      maximum_range_time:
+        - profiles: driving-car
+          value: 3600
+        - profiles: cycling-regular,foot-walking
+          value: 7200
   engine:
     profile_default:
       build:
-        source_file: /home/ors/files/osm_colombia.pbf
+        source_file: /home/ors/files/osm_bogota.pbf
     profiles:
       driving-car:
         enabled: true

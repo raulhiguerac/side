@@ -9,7 +9,7 @@ from app.core.exceptions.geo_resolution import (
     NeighborhoodResolutionError,
 )
 from app.services.geo_resolution.helpers.cache_keys import cache_key_forward_geocode
-from app.services.geo_resolution.ports.geocoding_gateway import GeocodingGateway
+from app.services.geo_resolution.ports.geocoding.gateway import GeocodingGateway
 from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWork
 from app.services.geo_resolution.schemas.neighborhood import (
     NeighborhoodInfo,

@@ -3,7 +3,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Session, select
 
 from app.models.location import FetchZone
-from app.services.geo_resolution.ports.fetch_zone_repository import FetchZoneRepository
+from app.services.geo_resolution.ports.sql.fetch_zone_repository import FetchZoneRepository
 
 
 class SqlFetchZoneRepository(FetchZoneRepository):

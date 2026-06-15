@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from app.integrations.georef.pois.category_map import extract_category
 from app.integrations.georef.pois.overpass import PoiClient
 from app.models.location import PointOfInterest, PoiSource
-from app.services.geo_resolution.ports.poi_provider_gateway import PoiProviderGateway
+from app.services.geo_resolution.ports.poi.gateway import PoiProviderGateway
 
 
 def _normalize(text: str) -> str:

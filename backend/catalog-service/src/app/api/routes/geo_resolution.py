@@ -3,11 +3,14 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 
 from app.api.deps.geo_resolution import (
+    resolve_isochrone_uc,
     resolve_location_by_coordinates_uc,
     resolve_neighborhood_uc,
     resolve_poi_uc,
 )
+from app.services.geo_resolution.schemas.isochrone import IsochroneRequest, ReachablePoisResult
 from app.services.geo_resolution.schemas.neighborhood import LocationByCoordinates, ResolvedNeighborhood
+from app.services.geo_resolution.use_cases.resolve_isochrone import ResolveIsochroneUseCase
 from app.services.geo_resolution.use_cases.resolve_location_by_coordinates import (
     ResolveLocationByCoordinatesUseCase,
 )
@@ -59,3 +62,11 @@ async def resolve_location_by_coordinates(
     )
 
     return result
+
+
+@router.post("/reachable-pois", response_model=list[ReachablePoisResult])
+async def reachable_pois(
+    req: IsochroneRequest,
+    uc: ResolveIsochroneUseCase = Depends(resolve_isochrone_uc),
+):
+    return await uc.execute(req=req)

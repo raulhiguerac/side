@@ -6,7 +6,7 @@ from sqlalchemy import func, select, update
 from sqlmodel import Session
 
 from app.models.location import Country, Locality, Neighborhood
-from app.services.geo_resolution.ports.georeferentiation_repository import (
+from app.services.geo_resolution.ports.sql.georeferentiation_repository import (
     GeoreferentiationRepository,
 )
 from app.services.geo_resolution.schemas.neighborhood import LocationByCoordinates

@@ -202,11 +202,11 @@ services:
   router:
     image: openrouteservice/openrouteservice:nightly
     ports:
-    - "8082:8080"
+    - "8082:8082"
     environment:
       JAVA_OPTS: "-Xmx6g -Xms1g"
     volumes:
-      - ./data/ml/AVM/data/colombia-260510.osm.pbf:/home/ors/files/osm_colombia.pbf
+      - ./data/ml/AVM/data/bogota-260510.osm.pbf:/home/ors/files/osm_bogota.pbf
       - ./infra/ors/graphs:/home/ors/graphs
       - ./infra/ors/config:/home/ors/config
     networks:

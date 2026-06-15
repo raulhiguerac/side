@@ -1,13 +1,13 @@
 from fastapi.concurrency import run_in_threadpool
 from sqlmodel import Session
 
-from app.services.geo_resolution.adapters.sql_fetch_zone_repository import (
+from app.services.geo_resolution.adapters.sql.fetch_zone_repository import (
     SqlFetchZoneRepository,
 )
-from app.services.geo_resolution.adapters.sql_georeferentiation_repository import (
+from app.services.geo_resolution.adapters.sql.georeferentiation_repository import (
     SqlGeoreferentiationRepository,
 )
-from app.services.geo_resolution.adapters.sql_poi_repository import SqlPoiRepository
+from app.services.geo_resolution.adapters.sql.poi_repository import SqlPoiRepository
 from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWork
 
 

@@ -4,7 +4,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Session, col, select
 
 from app.models.location import PointOfInterest
-from app.services.geo_resolution.ports.poi_repository import PoiRepository
+from app.services.geo_resolution.ports.poi.repository import PoiRepository
 
 UPSERT_FIELDS = {
     "name", "search_name", "full_address", "category", "subcategories",

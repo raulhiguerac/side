@@ -1,6 +1,6 @@
 from app.core.exceptions.geo_resolution import GeoResolutionNotFoundError
 from app.integrations.georef.mapbox.georeferentiation import GeoreferentiationClient
-from app.services.geo_resolution.ports.geocoding_gateway import GeocodingGateway
+from app.services.geo_resolution.ports.geocoding.gateway import GeocodingGateway
 from app.services.geo_resolution.schemas.geocoding import GeocodingResult
 
 

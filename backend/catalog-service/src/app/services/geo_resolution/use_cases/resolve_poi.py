@@ -12,7 +12,7 @@ from app.services.geo_resolution.helpers.cache_keys import (
     cache_key_fetch_zone,
     lock_key_fetch_zone,
 )
-from app.services.geo_resolution.ports.poi_provider_gateway import PoiProviderGateway
+from app.services.geo_resolution.ports.poi.gateway import PoiProviderGateway
 from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWork
 from app.services.shared.ports.cache import CachePort
 

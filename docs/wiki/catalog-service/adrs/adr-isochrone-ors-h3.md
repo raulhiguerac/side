@@ -1,17 +1,20 @@
 ---
 title: ADR-0006 — Isócronas con ORS + H3 para reachable POIs
-status: draft
-last-verified: 2026-06-10
+status: stable
+last-verified: 2026-06-15
 owners: [catalog-service, frontend]
 related:
   - "[[catalog-service-poi-lifecycle]]"
   - "[[catalog-service-architecture]]"
+  - "[[catalog-service-ors]]"
   - "[[adr-postgis-h3-hybrid]]"
   - "[[adr-poi-cache-aside]]"
   - "[[frontend-map-component]]"
   - "[[open-items]]"
 decision-date: 2026-06-10
 decision-status: accepted
+sources:
+  - ../../../sources/catalog-service/2026-06-15-ors-isochrone-reachable-pois.md
 ---
 
 # ADR-0006 — Isócronas con ORS + H3 para reachable POIs
@@ -68,24 +71,17 @@ Miss → llama ORS → convierte a H3 → query POIs → cachea response complet
 
 ### 4. Responsabilidad: catalog-service — response unificado
 
-**Nuevo UC en el dominio `geo_resolution`**: `ReachablePoiUseCase`.
+**UC en el dominio `geo_resolution`**: `ResolveIsochroneUseCase`.
 
-Endpoint: `GET /v1/geo-resolution/reachable-pois?property_id=&minutes=&mode=`
+Endpoint implementado: `POST /v1/geo-resolution/reachable-pois`
 
-El UC resuelve internamente las coordenadas desde `property_id` y devuelve **un único response con polígono + POIs**:
+Body: `{lat, lon, range_seconds: list[int], profile: list[OrsProfile], property_id?: uuid}`. El caller pasa coordenadas directamente (no se resuelven internamente desde `property_id`). `property_id` es opcional y se usa como clave de cache cuando viene desde property detail.
 
-```json
-{
-  "polygon": { "type": "Feature", "geometry": { ...GeoJSON Polygon... } },
-  "pois": [
-    { "name": "Colegio Los Nogales", "category": "education", "lat": ..., "lon": ... }
-  ]
-}
-```
+Response: `list[ReachablePoisResult]` — un elemento por perfil/rango con `{profile, range, isochrone, pois, error}`. El polígono (`isochrone`) y los POIs van en el mismo objeto.
 
-El frontend no necesita dos requests ni coordinar estado — recibe todo en uno. El polígono ya está calculado cuando se buscan los POIs; devolverlo no tiene costo adicional.
+El frontend no necesita dos requests — recibe polígono + POIs en uno. El polígono ya está calculado cuando se buscan los POIs; devolverlo no tiene costo adicional.
 
-Modos soportados: `walking` (default), `driving-car`, `cycling-regular`.
+Perfiles soportados: `foot-walking` (default), `driving-car`, `cycling-regular`.
 
 ### 5. Edge case de borde
 
@@ -128,8 +124,9 @@ El patrón osmium ya está validado en el notebook `02_feature_engineering.ipynb
 
 ## Claims
 
-- El endpoint `GET /v1/geo-resolution/reachable-pois` no existe aún — es el objetivo de implementación de este ADR.
-- `h3.polygon_to_cells(polygon, res=9, contain="center")` es la función de conversión — `contain="center"` excluye celdas cuyo centroide queda fuera del polígono.
-- La cache key es `geo:iso:{property_id}:{minutes}:{mode}` — el response completo (polígono + POIs) se cachea como unidad, TTL 24 h.
+- El endpoint `POST /v1/geo-resolution/reachable-pois` está implementado en `ResolveIsochroneUseCase` — devuelve `list[ReachablePoisResult]` con polígono + POIs por perfil ([use_cases/resolve_isochrone.py](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_isochrone.py)).
+- `h3.polygon_to_cells(polygon, res=9)` es la función de conversión — solo incluye celdas cuyo centroide cae dentro del polígono (comportamiento default de `polygon_to_cells`).
+- Cache-aside **no implementado** al 2026-06-15 — el cache key definitivo (ver [[adr-poi-cache-aside]]) será `geo:reachable:property:{property_id}` desde property detail y `geo:reachable:{hash(lat,lon,range,profiles)}` desde el AVM. TTL 1h.
 - ORS fue elegido sobre Mapbox por cobertura en Colombia — Mapbox tiene gaps en la red vial colombiana.
 - La responsabilidad del UC vive completamente en catalog-service; properties-service y el frontend son callers sin lógica de routing.
+- `property_id` es un campo opcional en `IsochroneRequest` — usado como discriminante de cache key, no para resolver coordenadas ([schemas/isochrone.py](backend/catalog-service/src/app/services/geo_resolution/schemas/isochrone.py)).
