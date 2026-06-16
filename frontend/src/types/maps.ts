@@ -7,7 +7,11 @@ export type MarkerImageType =
   | "apartment"
   // POIs por categoría
   | "food"
-  | "education";
+  | "education"
+  | "health"
+  | "transport"
+  | "commerce"
+  | "poi";
 
 export interface MarkerData {
   id: string;

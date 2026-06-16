@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     POI_LOCK_TTL_SECONDS: int = 30
     H3_RESOLUTION: int = 9
     OVERPASS_TIMEOUT_SECONDS: int = 30
+    ORS_URL: str = os.getenv("ORS_URL", "")
+    ORS_TIMEOUT_SECONDS: float = 5.0
 
     class Config:
         env_file = ".env"

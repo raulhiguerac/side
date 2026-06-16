@@ -105,7 +105,9 @@ function getInitialCenter(): [number, number] {
       const loc = JSON.parse(raw);
       if (loc.latitude && loc.longitude) return [loc.latitude, loc.longitude];
     }
-  } catch {}
+  } catch {
+    // ignore parse errors, fall through to default
+  }
   return [4.681414, -74.046864];
 }
 

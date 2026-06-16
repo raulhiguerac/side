@@ -26,8 +26,8 @@ class ResolveIsochroneUseCase:
         all_cells: list[str] = []
 
         for entry in isochrones:
-            if entry.range:
-                exterior = entry.isochrone[0]
+            if entry.range and entry.isochrone:
+                exterior = entry.isochrone.coordinates[0]
                 polygon = h3.LatLngPoly([(lat, lng) for lng, lat in exterior])
                 cells = list(h3.polygon_to_cells(polygon, res=settings.H3_RESOLUTION))
 
@@ -50,7 +50,7 @@ class ResolveIsochroneUseCase:
                 )
 
         pois = await run_in_threadpool(
-            partial(self.uow.pois.get_by_h3_cells, h3_cells=all_cells)
+            partial(self.uow.pois.get_by_h3_cells, h3_cells=list(set(all_cells)))
         )
         poi_dict = self._group_pois_by_cell(pois=pois)
 

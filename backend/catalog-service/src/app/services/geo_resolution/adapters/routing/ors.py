@@ -1,7 +1,7 @@
 from app.integrations.georef.ors.routing import OrsRoutingClient
 from app.services.geo_resolution.ports.routing.gateway import RoutingGateway
 
-from app.services.geo_resolution.schemas.isochrone import IsochroneRequest, IsochroneEntry
+from app.services.geo_resolution.schemas.isochrone import IsochroneRequest, IsochroneEntry, GeoJsonPolygon
 
 
 class OrsRoutingAdapter(RoutingGateway):
@@ -19,7 +19,7 @@ class OrsRoutingAdapter(RoutingGateway):
                         IsochroneEntry(
                             profile=feature.profile,
                             range=feature_dict.get("properties", {}).get("value"),
-                            isochrone=feature_dict.get("geometry", {}).get("coordinates"),
+                            isochrone=GeoJsonPolygon.model_validate(feature_dict["geometry"])
                         )
                     )
             else:

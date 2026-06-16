@@ -22,10 +22,15 @@ class IsochroneProfileResult(StrictBase):
     error: str | None = None
 
 
+class GeoJsonPolygon(StrictBase):
+    type: Literal["Polygon"] = "Polygon"
+    coordinates: list[list[list[float]]]
+
+
 class IsochroneEntry(StrictBase):
     profile: OrsProfile
     range: float | None = None
-    isochrone: list[list[list[float]]] | None = None
+    isochrone: GeoJsonPolygon | None = None
 
 
 class ReachablePoiItem(StrictBase):
@@ -41,6 +46,6 @@ class ReachablePoiItem(StrictBase):
 class ReachablePoisResult(StrictBase):
     profile: OrsProfile
     range: float | None = None
-    isochrone: list[list[list[float]]] | None = None
+    isochrone: GeoJsonPolygon | None = None
     pois: list[ReachablePoiItem] = []
     error: str | None = None

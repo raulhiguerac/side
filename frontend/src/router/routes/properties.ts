@@ -4,7 +4,8 @@ export const propertiesRoutes: RouteRecordRaw[] = [
   {
     path: "/properties",
     name: "my-properties",
-    component: () => import("@/views/properties/dashboard/MyPropertiesView.vue"),
+    component: () =>
+      import("@/views/properties/dashboard/MyPropertiesView.vue"),
     meta: { requiresAuth: true },
   },
   {

@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-06-11
+last-verified: 2026-06-15
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -9,7 +9,17 @@ related:
   - "[[frontend-onboarding-flow]]"
   - "[[frontend-map-component]]"
   - "[[properties-service-search]]"
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-09-mapview-leaflet-implementation.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md]
+sources:
+  - ../../sources/frontend/2026-05-21-foundational-qa.md
+  - ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md
+  - ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md
+  - ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md
+  - ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md
+  - ../../sources/frontend/2026-06-04-feed-filters-contract.md
+  - ../../sources/frontend/2026-06-08-feed-pagination-map-view.md
+  - ../../sources/frontend/2026-06-09-mapview-leaflet-implementation.md
+  - ../../sources/frontend/2026-06-11-property-detail-router-refactor.md
+  - ../../sources/frontend/2026-06-15-poi-detail-view-mapuser-cluster.md
 ---
 
 ## TL;DR
@@ -42,13 +52,16 @@ frontend/
 │   ├── composables/
 │   │   ├── useOnboarding.ts
 │   │   ├── Location.ts
+│   │   ├── pois/
+│   │   │   └── useReachablePois.ts    # POIs alcanzables desde una propiedad (3 perfiles × 3 rangos)
 │   │   └── properties/
 │   │       ├── usePropertyDetail.ts   # computed logic de PropertyDetailView
 │   │       └── usePropertyMapper.ts
 │   ├── types/
 │   │   ├── user.ts
 │   │   ├── feed.ts               # PropertyCard (API shape), PropertyCardUI (UI shape), PropertyImageCard
-│   │   └── properties.ts         # PropertyDetail, PropertyLocationDetail
+│   │   ├── properties.ts         # PropertyDetail, PropertyLocationDetail
+│   │   └── pois.ts               # OrsProfile, GeoJsonPolygon, ReachablePoiItem, RangeGroup, CATEGORY_META, CATEGORY_PRIORITY
 │   ├── views/                    # páginas-ruta
 │   │   ├── public/{HomeView, AboutView}
 │   │   ├── auth/{LoginView, RegisterView, ResetPasswordView}
@@ -345,7 +358,9 @@ Layout: photo grid → header (título + badges status/verificación) → precio
 - **Photo grid**: `grid grid-cols-4 grid-rows-[200px_200px]` con 5 celdas; `grid-area` en `<style scoped>` porque Tailwind arbitrary values no funciona con clases dinámicas en `v-for`.
 - **Stats chips**: `grid grid-cols-3 sm:grid-cols-6` para ancho uniforme.
 - **Padding**: `px-[8%] sm:px-[12%] lg:px-[18%]` — más estrecho que navbar para dar respiro visual.
-- **Lógica**: toda en `composables/properties/usePropertyDetail.ts` — la view solo declara `property = ref<PropertyDetail | null>` y destructura el composable.
+- **Lógica de detalle**: `composables/properties/usePropertyDetail.ts` — la view solo declara `property = ref<PropertyDetail | null>` y destructura el composable.
+- **Sección POI**: `useReachablePois("foot-walking")` — ver [[frontend-poi-reachable]]. Acordeón por rango (5/10/15 min), cards de categorías, mapa con isocronas + cluster de markers.
+- **`mapCenterCoords`**: `ref<[number, number] | undefined>()` local — inicializado en `onMounted` desde `property.location` para evitar cast TypeScript inválido en `v-model`.
 - **Fetch real**: pendiente — hoy usa mock hardcodeado.
 
 ## Claims

@@ -11,6 +11,7 @@ related:
 sources:
   - ../../../sources/catalog-service/2026-06-11-ors-setup-poi-unification.md
   - ../../../sources/catalog-service/2026-06-15-ors-isochrone-reachable-pois.md
+  - ../../../sources/catalog-service/2026-06-15-isochrone-poi-seed-fixes.md
 ---
 
 ## TL;DR
@@ -165,8 +166,35 @@ ORS usa `[lon, lat]` (GeoJSON standard). El polígono de respuesta también vien
 | `IsochroneRequest` | Request body del endpoint público |
 | `IsochroneProfileResult` | Interno a `OrsRoutingClient` (respuesta cruda por perfil) |
 | `IsochroneEntry` | Adaptado por `OrsRoutingAdapter` (un entry por feature GeoJSON) |
+| `GeoJsonPolygon` | `{ type: "Polygon", coordinates: list[list[list[float]]] }` — tipado explícito para el polígono de isocrona |
 | `ReachablePoiItem` | POI serializado en el response |
-| `ReachablePoisResult` | Elemento del response final (por perfil/rango) |
+| `ReachablePoisResult` | Elemento del response final (por perfil/rango) — campo `isochrone: GeoJsonPolygon \| None` |
+
+`IsochroneEntry.isochrone` y `ReachablePoisResult.isochrone` usan `GeoJsonPolygon` en vez del raw `list[list[list[float]]]` que tenían originalmente. El UC accede al polígono exterior como `entry.isochrone.coordinates[0]` (no `entry.isochrone[0]`).
+
+### Crash fix — `resolve_isochrone.py`
+
+El UC tenía `exterior = entry.isochrone[0]` que crasheaba cuando `isochrone` era `None` (perfil ORS con error). Fix:
+
+```python
+if entry.range and entry.isochrone:
+    exterior = entry.isochrone.coordinates[0]
+```
+
+### Config — `settings.py`
+
+ORS no usa `os.getenv` directo. Las vars viven en `settings.py`:
+
+```python
+ORS_URL: str = os.getenv("ORS_URL", "")
+ORS_TIMEOUT_SECONDS: float = 5.0
+```
+
+`integrations/georef/ors/routing.py` importa `settings` — igual que el resto de integraciones del servicio.
+
+### Known issue — port sync/async mismatch
+
+`PoiProviderGateway` (port en `ports/routing/gateway.py`) declara `get_isochrones` como **sync**, pero el adapter (`OrsRoutingAdapter`) lo implementa como **async**. Pendiente corrección del protocol.
 
 ### Cache-aside — pendiente
 
@@ -189,3 +217,6 @@ No implementado aún — `CachePort` no está inyectado en `ResolveIsochroneUseC
 - El lookup de POIs usa `get_by_h3_cells` con **todas las celdas de todos los perfiles acumuladas** — 1 query a DB sin importar cuántos perfiles se pidan ([use_cases/resolve_isochrone.py:52-54](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_isochrone.py#L52-L54)).
 - ORS devuelve coordenadas en orden `[lon, lat]`; la conversión a `h3.LatLngPoly` invierte con `[(lat, lng) for lng, lat in exterior]`.
 - Cache-aside de `reachable-pois` **no implementado** al 2026-06-15 — `CachePort` no inyectado en `ResolveIsochroneUseCase`.
+- `IsochroneEntry.isochrone` y `ReachablePoisResult.isochrone` son `GeoJsonPolygon | None` — el exterior se accede como `entry.isochrone.coordinates[0]`, nunca `entry.isochrone[0]` ([schemas/isochrone.py](backend/catalog-service/src/app/services/geo_resolution/schemas/isochrone.py)).
+- `ORS_URL` y `ORS_TIMEOUT_SECONDS` viven en `settings.py` — `routing.py` no llama `os.getenv` directamente ([core/config/settings.py](backend/catalog-service/src/app/core/config/settings.py)).
+- `PoiProviderGateway` declara `get_isochrones` como sync pero el adapter lo implementa async — mismatch pendiente de corrección ([ports/routing/gateway.py](backend/catalog-service/src/app/services/geo_resolution/ports/routing/gateway.py)).

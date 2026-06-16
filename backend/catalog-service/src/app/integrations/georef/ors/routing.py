@@ -1,8 +1,8 @@
 import asyncio
-import os
 
 import httpx
 
+from app.core.config.settings import settings
 from app.core.exceptions.geo_resolution import GeoResolutionUnavailableError
 from app.core.logging.logger import get_logger
 from app.services.geo_resolution.schemas.isochrone import IsochroneProfileResult, IsochroneRequest
@@ -12,12 +12,11 @@ logger = get_logger(__name__)
 
 class OrsRoutingClient:
     def __init__(self):
-        base_url = os.getenv("ORS_URL")
-        if not base_url:
+        if not settings.ORS_URL:
             raise ValueError("ORS_URL is not set")
 
-        self.base_url = base_url
-        self.timeout = 5.0
+        self.base_url = settings.ORS_URL
+        self.timeout = settings.ORS_TIMEOUT_SECONDS
 
     async def _fetch_profile(self, client: httpx.AsyncClient, url: str, body: dict, profile: str) -> tuple:
         logger.info("ors_isochrone_request profile=%s", profile)

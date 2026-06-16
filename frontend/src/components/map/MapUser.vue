@@ -1,18 +1,22 @@
 <template>
   <l-map
+    ref="mapRef"
     v-model:zoom="zoom"
-    v-model:center="center"
+    v-model:center="internalCenter"
     @moveend="onMoveEnd"
-    :min-zoom="14"
+    @ready="onMapReady"
+    :min-zoom="props.minZoom ?? 14"
     :max-zoom="17"
   >
     <l-tile-layer
       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       layer-type="base"
       name="OpenStreetMap"
-    ></l-tile-layer>
+    />
+
+    <!-- Property markers (subject, house, apartment) — declarative with custom icon -->
     <l-marker
-      v-for="marker in props.markers"
+      v-for="marker in specialMarkers"
       :key="marker.id"
       :lat-lng="[marker.lat, marker.lon]"
     >
@@ -45,22 +49,48 @@
         </div>
       </l-icon>
     </l-marker>
-    <slot></slot>
+
+    <slot />
   </l-map>
 </template>
 
 <script lang="ts" setup>
+import { ref, computed, watch, onUnmounted } from "vue";
 import { LMarker, LTileLayer, LMap, LIcon } from "@vue-leaflet/vue-leaflet";
-import type { MarkerData } from "@/types/maps";
+import * as L from "leaflet";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { MarkerClusterGroup } = require("leaflet.markercluster");
+import type { MarkerData, MarkerImageType } from "@/types/maps";
 import { markerIconMap } from "@/constants/markerIcons";
 import type { LeafletEvent } from "leaflet";
 
+const SPECIAL_TYPES: MarkerImageType[] = ["subject", "house", "apartment"];
+
+const POI_COLORS: Partial<Record<MarkerImageType, string>> = {
+  food: "#f97316",
+  education: "#3b82f6",
+  health: "#ef4444",
+  transport: "#8b5cf6",
+  commerce: "#eab308",
+  poi: "#6b7280",
+};
+
 const zoom = defineModel<number>("zoom", { default: 15 });
-const center = defineModel<[number, number]>("center")
+const center = defineModel<[number, number]>("center");
+
+// Internal center that l-map owns — prevents Leaflet LatLng objects from
+// leaking into parent state and avoids circular update crashes.
+const internalCenter = ref<[number, number]>(center.value ?? [4.681414, -74.046864]);
+watch(center, (val) => {
+  if (val) internalCenter.value = val;
+});
 
 const props = defineProps<{
   markers: Array<MarkerData>;
   hoveredId: string | null;
+  minZoom?: number;
 }>();
 
 const emit = defineEmits<{
@@ -74,6 +104,52 @@ const emit = defineEmits<{
     }
   ];
 }>();
+
+const mapRef = ref<InstanceType<typeof LMap> | null>(null);
+let clusterGroup: any = null;
+
+const specialMarkers = computed(() =>
+  props.markers.filter((m) => SPECIAL_TYPES.includes(m.imageType))
+);
+const poiMarkers = computed(() =>
+  props.markers.filter((m) => !SPECIAL_TYPES.includes(m.imageType))
+);
+
+function buildCluster() {
+  const map = (mapRef.value as any)?.leafletObject as L.Map | undefined;
+  if (!map) return;
+
+  if (clusterGroup) map.removeLayer(clusterGroup);
+
+  clusterGroup = new MarkerClusterGroup({
+    maxClusterRadius: 50,
+    chunkedLoading: true,
+  });
+
+  for (const m of poiMarkers.value) {
+    const color = POI_COLORS[m.imageType] ?? "#6b7280";
+    const icon = L.divIcon({
+      html: `<div style="width:10px;height:10px;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4)"></div>`,
+      className: "",
+      iconSize: [10, 10],
+      iconAnchor: [5, 5],
+    });
+    L.marker([m.lat, m.lon], { icon }).addTo(clusterGroup);
+  }
+
+  map.addLayer(clusterGroup);
+}
+
+function onMapReady() {
+  buildCluster();
+}
+
+watch(poiMarkers, buildCluster, { deep: true });
+
+onUnmounted(() => {
+  const map = (mapRef.value as any)?.leafletObject as L.Map | undefined;
+  if (map && clusterGroup) map.removeLayer(clusterGroup);
+});
 
 function onMoveEnd(event: LeafletEvent) {
   const bounds = event.target.getBounds();

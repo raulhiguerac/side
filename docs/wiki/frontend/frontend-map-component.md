@@ -1,14 +1,19 @@
 ---
 title: Componente de mapa reusable (MapUser)
 status: stable
-last-verified: 2026-06-09
+last-verified: 2026-06-15
 owners: [frontend]
 related:
   - "[[frontend]]"
   - "[[frontend-architecture]]"
   - "[[adr-mapbox-geocoding-leaflet-rendering]]"
   - "[[adr-gmaps-places-geocoding]]"
-sources: [../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md, ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md, ../../sources/frontend/2026-06-09-mapview-leaflet-implementation.md]
+sources:
+  - ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md
+  - ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md
+  - ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md
+  - ../../sources/frontend/2026-06-09-mapview-leaflet-implementation.md
+  - ../../sources/frontend/2026-06-15-poi-detail-view-mapuser-cluster.md
 ---
 
 ## TL;DR
@@ -53,7 +58,24 @@ Y los pasa a `<l-map>` como `v-model:zoom="zoom"` y `v-model:center="center"`. E
 - `defineModel` requiere **Vue 3.4+** — upgrade a 3.5 ya completado (ver [[frontend-architecture]]).
 - Escala de zoom Leaflet: 0 = mundo, ~10 ciudad, ~13-15 barrio/calle, ~16-18 manzana, 19 = máximo tiles OSM. Feed-mapa usa `:min-zoom="14"` `:max-zoom="17"`.
 
-### Race condition crítica: inicialización del center
+### `internalCenter` — por qué el `defineModel center` NO se pasa directamente a `l-map`
+
+Leaflet emite objetos `LatLng` propios (no tuples `[number, number]`) en el evento `update:center` cuando el usuario hace pan. Si `defineModel center` está vinculado directo a `l-map` con `v-model:center="center"`, ese objeto `LatLng` contamina el ref del padre. En el siguiente ciclo reactivo, Leaflet llama `setLatLng` con su propio `LatLng` recibido de vuelta como prop y falla con `Invalid LatLng object: (undefined, undefined)`.
+
+**Fix:** `internalCenter` es un ref interno que `l-map` posee libremente:
+
+```ts
+const center = defineModel<[number, number]>("center");
+const internalCenter = ref<[number, number]>(center.value ?? [4.681414, -74.046864]);
+
+watch(center, (val) => {
+  if (val) internalCenter.value = val;
+});
+```
+
+Template: `v-model:center="internalCenter"` en `<l-map>`. El padre pasa el centro inicial y puede moverlo programáticamente (vía `v-model:center`); cuando el usuario hace pan, `internalCenter` se actualiza localmente sin contaminar el estado del padre. El bbox se emite por `@moveend` — los padres que necesitan saber la posición actual usan eso.
+
+### Race condition histórica: inicialización del center
 
 vue-leaflet registra su watcher de `center` **dentro de un `onMounted` async** (necesita await del import dinámico de Leaflet). Si el padre actualiza `center.value` también en `onMounted`, el watcher puede no estar registrado aún → el mapa ignora el pan.
 
@@ -113,6 +135,75 @@ export interface MarkerData {
 
 `hoveredId` se setea en `@mouseenter`/`@mouseleave` de cada `PropertyCard` en la vista padre.
 
+## Cluster de POI markers — `leaflet.markercluster`
+
+Cuando el padre pasa markers de tipo POI (no `subject | house | apartment`), `MapUser` los renderiza imperativamentce con `leaflet.markercluster` en vez de declarativamente con `<l-marker>`. Esto permite manejar cientos de POIs sin degradar el render.
+
+**Split de markers:**
+- `specialMarkers` (computed): tipos `subject | house | apartment` — declarativos con `<l-marker>` + `<l-icon>` (iconos Lucide, hover state).
+- `poiMarkers` (computed): el resto — imperativo con `MarkerClusterGroup`.
+
+**Implementación:**
+
+```ts
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { MarkerClusterGroup } = require("leaflet.markercluster");
+let clusterGroup: any = null; // L.MarkerClusterGroup no está en @types/leaflet
+```
+
+En `onMapReady` y en `watch(poiMarkers, ...)`:
+```ts
+function buildCluster() {
+  const map = (mapRef.value as any)?.leafletObject;
+  if (!map) return;
+  if (clusterGroup) map.removeLayer(clusterGroup);
+  clusterGroup = new MarkerClusterGroup({ maxClusterRadius: 50, chunkedLoading: true });
+  for (const m of poiMarkers.value) {
+    const color = POI_COLORS[m.imageType] ?? "#6b7280";
+    const icon = L.divIcon({
+      html: `<div style="width:10px;height:10px;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4)"></div>`,
+      className: "", iconSize: [10, 10], iconAnchor: [5, 5],
+    });
+    L.marker([m.lat, m.lon], { icon }).addTo(clusterGroup);
+  }
+  map.addLayer(clusterGroup);
+}
+```
+
+**`POI_COLORS` por `MarkerImageType`:**
+
+```ts
+const POI_COLORS: Partial<Record<MarkerImageType, string>> = {
+  food: "#f97316",       // naranja
+  education: "#3b82f6",  // azul
+  health: "#ef4444",     // rojo
+  transport: "#8b5cf6",  // violeta
+  commerce: "#eab308",   // amarillo
+  poi: "#6b7280",        // gris (fallback)
+};
+```
+
+**Tipos nuevos en `MarkerImageType`** (`types/maps.ts`): `health | transport | commerce | poi` — mapeados en `constants/markerIcons.ts` con `HeartPulse | Bus | ShoppingCart | MapPin`.
+
+**CSS e imports:** webpack requiere imports explícitos (no CDN):
+```ts
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+```
+
+`shims-vue.d.ts` necesita:
+```ts
+declare module '*.css';
+declare module 'leaflet.markercluster';
+```
+
+**ESLint:** `defineModel` es una macro de Vue 3.4 — añadir a `.eslintrc.js` globals:
+```js
+globals: { defineModel: "readonly" }
+```
+
+`onUnmounted`: `map.removeLayer(clusterGroup)` para limpiar.
+
 ## D3 como capa plug-and-play
 
 D3 sobre el mapa (heatmaps, densidad, choropleth) **no va en la view ni dentro de `MapUser`**. Va en un componente/composable dedicado que **consume la instancia Leaflet** que `MapUser` expone (vía `@ready`/`defineExpose`):
@@ -122,20 +213,29 @@ D3 sobre el mapa (heatmaps, densidad, choropleth) **no va en la view ni dentro d
 
 Ver [[adr-mapbox-geocoding-leaflet-rendering]] para la decisión de stack (Leaflet+D3).
 
-## Estado (2026-06-09)
+## Estado (2026-06-15)
 
 - Vue 3.5 upgrade completado — `defineModel` y `useTemplateRef` funcionan.
 - Iconos migrados a Lucide (`markerIconMap` en `constants/markerIcons.ts`).
-- `center` migrado a `defineModel` two-way (antes era one-way `:center`).
-- `MapUser` usado en `DevPlaygroundView` (AVM) y `MapView` (feed-mapa).
-- Race condition de center documentada y resuelta con inicialización síncrona desde localStorage.
+- `internalCenter` pattern implementado — `defineModel center` ya no va directo a `l-map`.
+- `leaflet.markercluster` integrado para POI markers (split imperativo/declarativo).
+- `MapUser` usado en `DevPlaygroundView` (AVM), `MapView` (feed-mapa) y `PropertyDetailView` (POI section).
 
 ## Claims
 
 - `MapUser.vue` usa `@vue-leaflet/vue-leaflet` (`LMap`, `LTileLayer`, `LMarker`, `LIcon`) ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - El padre debe pasar `:markers="marker ? [marker] : []"` cuando el marker puede ser `null` ([views/dev/DevPlaygroundView.vue](frontend/src/views/dev/DevPlaygroundView.vue)).
-- `zoom` y `center` son two-way vía `defineModel` + `v-model:` en `<l-map>` — requiere Vue 3.4+ ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- `zoom` es two-way vía `defineModel` + `v-model:zoom` en `<l-map>` — requiere Vue 3.4+ ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- `center` usa `internalCenter` como intermediario — Leaflet emite `LatLng` objects en `update:center`, no tuples; vincular `defineModel center` directo a `<l-map>` causa crash `Invalid LatLng object: (undefined, undefined)` ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- `internalCenter` se inicializa con `center.value ?? [4.681414, -74.046864]`; un `watch(center, ...)` permite que el padre mueva el mapa programáticamente ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - vue-leaflet registra su watcher de `center` dentro de un `onMounted` async — actualizar `center.value` desde el padre en `onMounted` crea una race condition; el fix es inicializar el ref síncronamente en script setup ([views/properties/MapView.vue](frontend/src/views/properties/MapView.vue)).
+- POI markers (non-special) se renderizan con `leaflet.markercluster` (`MarkerClusterGroup` imperativo); special markers (`subject | house | apartment`) siguen siendo declarativos con `<l-marker>` ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- `require("leaflet.markercluster")` en vez de `import` — webpack no adjunta el plugin al namespace `L` con ES import ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- `clusterGroup` tipado como `any` — `L.MarkerClusterGroup` no está en `@types/leaflet` ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- CSS del cluster requiere imports explícitos: `import "leaflet.markercluster/dist/MarkerCluster.css"` y `"...Default.css"` ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- `shims-vue.d.ts` necesita `declare module '*.css'` y `declare module 'leaflet.markercluster'` para que TypeScript acepte esos imports ([shims-vue.d.ts](frontend/src/shims-vue.d.ts)).
+- `defineModel` añadido a `.eslintrc.js` globals (`"readonly"`) — macro Vue 3.4 no reconocida sin esto ([.eslintrc.js](frontend/.eslintrc.js)).
+- `v-model` no acepta TypeScript `as` casts (inválido como LHS) — usar un ref correctamente tipado en su lugar.
 - `MapUser` expone una prop `markers: MarkerData[]` (v-for de `<l-marker>`) **y** un `<slot>` para capas extra ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - Los iconos de marker son componentes Lucide resueltos por `markerIconMap` (`Record<MarkerImageType, Component>`) — renderizados con `<component :is="markerIconMap[marker.imageType]">` ([constants/markerIcons.ts](frontend/src/constants/markerIcons.ts)).
 - `<l-icon>` requiere `class-name="!bg-transparent !border-0 !shadow-none"` para limpiar el contenedor Leaflet ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).

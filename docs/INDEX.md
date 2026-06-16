@@ -88,6 +88,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 
 ### flows/
 - [frontend-onboarding-flow](wiki/frontend/flows/frontend-onboarding-flow.md) — modal wizard de 4 pasos, state machine, persistencia dual server+client, refactor users-service ↔ catalog pendiente
+- [frontend-poi-reachable](wiki/frontend/flows/frontend-poi-reachable.md) — sección "Cerca del lugar": useReachablePois (1 POST × 9 resultados), acordeón por rango, isocronas + cluster markers, CATEGORY_META/PRIORITY
 
 ### runbook/
 - [frontend-local-dev](wiki/frontend/runbook/frontend-local-dev.md) — `npm run serve` port 8080, env vars, levantar backends a mano, 8 known gaps

@@ -12,3 +12,5 @@ declare module '*.vue' {
 
 declare module '@vueform/vueform/locales/en';
 declare module '@vueform/vueform/locales/*';
+declare module '*.css';
+declare module 'leaflet.markercluster';

@@ -15,6 +15,7 @@ sources:
   - ../../../sources/catalog-service/2026-05-21-foundational-qa.md
   - ../../../sources/catalog-service/2026-06-11-ors-setup-poi-unification.md
   - ../../../sources/catalog-service/2026-06-15-ors-isochrone-reachable-pois.md
+  - ../../../sources/catalog-service/2026-06-15-isochrone-poi-seed-fixes.md
 ---
 
 ## TL;DR
@@ -140,6 +141,36 @@ WHERE locality_id = $locality_id
 
 Pendiente medir si hace falta (la latencia actual con `ST_Contains` directo puede ser aceptable mientras los barrios sean pocos por locality).
 
+## Seed masivo desde PBF (`scripts/seed_pois.py`)
+
+Además del fetch on-demand via Overpass, existe un script de seed que lee directamente un archivo `.pbf` de OpenStreetMap:
+
+```
+backend/catalog-service/scripts/seed_pois.py
+```
+
+**Uso:**
+```bash
+uv run python scripts/seed_pois.py \
+  --pbf data/ml/AVM/data/colombia-260510.osm.pbf \
+  --locality-id <uuid> \
+  [--dry-run] [--batch-size 1000]
+```
+
+**Mecánica:**
+- `pyosmium.SimpleHandler` parsea los nodos del PBF filtrando por tags POI: `amenity`, `shop`, `leisure`, `healthcare`, `public_transport`, `tourism`, `office`.
+- `external_id`: `node/{osm_id}` — mismo formato que el adapter de Overpass, garantiza que el upsert posterior no duplique.
+- `h3_index`: `h3.latlng_to_cell(lat, lon, 9)` — resolución 9, igual que el sistema online.
+- Bulk upsert con `psycopg2 execute_values` + `ON CONFLICT (external_id, source) DO UPDATE SET ...` — idempotente, se puede re-correr.
+- `source`: `PoiSource.osm` — consistente con Overpass.
+
+**Diferencias vs Overpass adapter:**
+- Sin filtro de `name` — el seed importa todos los nodos con tags POI, incluso sin nombre.
+- Sin `raw_response` — solo campos estructurados.
+- Pensado para usarse como **init container** en deploy para poblar Bogotá antes de que el tráfico real dispare el fetch on-demand.
+
+`osmium>=3.7.0` declarado en `pyproject.toml`.
+
 ## Refresh batch — diseñado, no implementado
 
 `FetchZone.is_stale` se setea automáticamente cuando una zona vencida es chequeada por el UC (caso "old + not stale" del diagrama). Pero **nada lo dispara cíclicamente**.
@@ -189,3 +220,4 @@ SELECT * FROM points_of_interest WHERE h3_index = ANY(:cells)
 - `raw_response` persiste el element completo del Overpass response como JSON, para extraer fields adicionales sin re-fetch ([poi_provider.py:75](backend/catalog-service/src/app/services/geo_resolution/adapters/poi_provider.py#L75)).
 - Refresh batch de zonas stale: **diseñado pero no implementado** al 2026-05-21.
 - `get_by_h3_cells` es el read path de POIs — `SELECT * FROM points_of_interest WHERE h3_index = ANY(:cells)`. El único caller es `ResolveIsochroneUseCase`, que acumula celdas de N perfiles antes de llamarlo ([use_cases/resolve_isochrone.py:52-54](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_isochrone.py#L52-L54)).
+- `scripts/seed_pois.py` usa `pyosmium.SimpleHandler` para parsear PBF, `external_id = node/{osm_id}` (compatible con Overpass), upsert `ON CONFLICT DO UPDATE` — idempotente y compatible con el sistema on-demand ([scripts/seed_pois.py](backend/catalog-service/scripts/seed_pois.py)).
