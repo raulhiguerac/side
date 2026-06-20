@@ -2,7 +2,7 @@
 
 Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVENTIONS.md) antes de editar.
 
-> **Estado actual:** el piloto arrancó en `analytics-service` (2026-05-19) y, tras validar el patrón, se extendió a `catalog-service`, `frontend`, `properties-service` y `users-service`. Todos los microservicios del backend están documentados al 2026-05-28.
+> **Estado actual:** el piloto arrancó en `analytics-service` (2026-05-19) y, tras validar el patrón, se extendió a `catalog-service`, `frontend`, `properties-service` y `users-service`. Todos los microservicios del backend + el frontend + el workload `avm` están documentados (desde 2026-05-28); última pasada de verificación contra código: 2026-06-12.
 
 ---
 
@@ -19,6 +19,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
   - [ADR-0003 — Resolución H3 por caso de uso, celdas no reusables entre fronteras](wiki/_shared/adrs/adr-h3-resolution-per-use-case.md)
   - [ADR-0004 — Impresiones y clicks vía beacon de cliente + collector + Kafka](wiki/_shared/adrs/adr-impressions-beacon-pipeline.md)
   - [ADR-0005 — Cache como capa opcional; degradación silenciosa a DB](wiki/_shared/adrs/adr-cache-optional-layer.md)
+  - [ADR-0006 — Librería interna compartida para clientes de infra (Redis/MinIO)](wiki/_shared/adrs/adr-shared-infra-lib.md)
 
 ## analytics-service (piloto)
 
@@ -30,15 +31,11 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - _analytics-service-glossary_ — términos específicos del servicio — _pendiente_
 
 ### flows/
-- _training-pipeline_ — MLflow + MinIO end-to-end — _pendiente Día 4_
-- _online-prediction_ — UC online actual — _pendiente Día 4_
+- _training-pipeline_ — MLflow + MinIO end-to-end — _pendiente_
+- _online-prediction_ — UC online actual — _pendiente_
 
 ### integrations/
-- _mlflow_ — _pendiente Día 5_
-- _minio_ — _pendiente Día 5_
-
-### integrations/
-- [analytics-service-mlflow](wiki/analytics-service/analytics-service-mlflow.md) — ModelClient, AVMModelAdapter, env vars MLflow, stack docker-compose
+- [analytics-service-mlflow](wiki/analytics-service/analytics-service-mlflow.md) — ModelClient, AVMModelAdapter, env vars MLflow + MinIO, stack docker-compose
 
 ### workers/
 - [analytics-service-kafka-consumer](wiki/analytics-service/workers/analytics-service-kafka-consumer.md) — ListingCreatedConsumer, diseño micro-batch 15 min, DLQ, group.id y scaling

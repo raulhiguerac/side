@@ -1,7 +1,7 @@
 ---
 title: Dominio search — properties-service
 status: stable
-last-verified: 2026-06-08
+last-verified: 2026-06-16
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -91,12 +91,12 @@ No hay invalidación proactiva — el TTL de 5 min es suficiente para este workl
 
 ## Feed mapa (`GetFeedMap`)
 
-1. `bbox.to_polygon()` → `H3Shape`; `h3shape_to_cells(polygon, resolution, contain="center")` → lista de celdas.
+1. `bbox.to_polygon()` → `h3.LatLngPoly`; `h3shape_to_cells(polygon, resolution, contain="center")` → lista de celdas.
 
-> ⚠ **Bug latente**: `to_polygon()` instancia `h3.H3Shape(...)`, que es la clase abstracta padre de `LatLngPoly`/`LatLngMultiPoly` y no es instanciable — `GetFeedMapUseCase` crashea en runtime. Fix: `h3.LatLngPoly(...)`. Ver [[open-items]].
+> ✅ **Bug corregido (2026-06-09)**: `to_polygon()` instanciaba `h3.H3Shape(...)`, la clase abstracta padre de `LatLngPoly`/`LatLngMultiPoly` (no instanciable) — `GetFeedMapUseCase` crasheaba en runtime. Fix aplicado: `h3.LatLngPoly(...)`. Ver [[open-items]].
 
 2. **Cache-aside por celda**: `mget_json([map:h3:<cell>])`; las celdas hit se devuelven, las miss se acumulan.
-3. Celdas miss → `properties.get_by_bbox(h3_indexes, resolution)` en Postgres.
+3. Celdas miss → `properties.get_by_bbox(h3_indexes, resolution)` en Postgres. El repo filtra **solo por columna H3** (`h3_r7.in_(cells)` o `h3_r9.in_(cells)` según la resolución) — no hay `ST_Within` en este path; la precisión del bbox es la de las celdas (`contain="center"`).
 4. Se cachean los resultados agrupados por celda (`mset_json`, TTL 5 min) y se devuelven `cached + fresh`.
 
 Resolución elegida por el cliente vía query `resolution` (7–9): r9 (~300m) para zoom cercano, r7 (~5km) para zoom lejano. Ver [[adr-h3-dual-resolution-map]].

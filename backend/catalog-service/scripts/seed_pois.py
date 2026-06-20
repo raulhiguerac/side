@@ -27,6 +27,8 @@ import osmium
 import psycopg2
 import psycopg2.extras
 
+from src.app.core.config.settings import settings
+
 POI_TAGS = ("amenity", "shop", "leisure", "healthcare", "public_transport", "tourism", "office")
 BATCH_SIZE = 500
 
@@ -116,7 +118,7 @@ def build_row(feat: dict, locality_id: uuid.UUID, now: datetime) -> tuple:
     name = tags.get("name") or pick_category(tags) or f"node/{osm_id}"
     category = pick_category(tags)
     external_id = f"node/{osm_id}"
-    h3_index = h3.latlng_to_cell(lat, lon, 9)
+    h3_index = h3.latlng_to_cell(lat, lon, settings.H3_RESOLUTION)
     raw = build_raw_response(osm_id, lat, lon, tags)
     geom_wkt = f"SRID=4326;POINT({lon} {lat})"
 

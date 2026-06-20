@@ -1,7 +1,7 @@
 ---
 title: ADR-0003 — Resolución H3 por caso de uso, celdas no reusables entre fronteras
 status: stable
-last-verified: 2026-05-28
+last-verified: 2026-06-16
 owners: [_shared, data, properties-service, catalog-service]
 related:
   - "[[architecture]]"
@@ -9,6 +9,7 @@ related:
   - "[[adr-h3-dual-resolution-map]]"
   - "[[adr-geospatial-feature-engineering]]"
   - "[[adr-postgis-h3-hybrid]]"
+  - "[[adr-poi-cache-aside]]"
   - "[[avm-training]]"
 sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md]
 decision-date: 2026-05-28
@@ -32,7 +33,7 @@ A primera vista parece una inconsistencia (un servicio guarda r9, el modelo entr
 ## Decisión
 
 - **La resolución H3 se elige por caso de uso, no globalmente.** Los dos usos son fundamentalmente distintos:
-  - **En un servicio, H3 es una clave de lookup espacial.** Una query indexada sobre la celda devuelve la lista de entidades en ella. Conviene **granular (r9)**: celdas chicas → resultados acotados y precisos para el viewport/zona. properties agrega r7 para el zoom lejano del mapa.
+  - **En un servicio, H3 es una clave de lookup espacial.** Una query indexada sobre la celda devuelve la lista de entidades en ella. Conviene **granular (r9)**: celdas chicas → resultados acotados y precisos para el viewport/zona. properties agrega r7 para el zoom lejano del mapa. En catalog hay además un motivo de fetch: la celda r9 es la unidad de consulta a Overpass, y ~300m mantiene cada bbox chico para no sobrecargar el provider — ver [[adr-poi-cache-aside]].
   - **En el modelo, H3 es un feature del vector.** Conviene **más grueso (r6/r7/r8)**: r9 haría cada celda casi única → señal dispersa, ruido y riesgo de overfitting. Resoluciones gruesas agrupan zonas con señal de precio compartida.
 - **Las celdas NO se cruzan entre fronteras.** El modelo **recomputa** sus celdas r6/r7/r8 desde `lat/lon` en inferencia (en el preprocesador del AVM); **nunca** consume las celdas r9/r7 que almacenan los servicios. Los servicios, a su vez, no usan las celdas del modelo.
 - **Garantía a mantener**: cualquier integración que cruce el límite servicio↔modelo (ej. cuando el feature store de catalog/properties alimente al AVM) **debe recomputar la resolución del consumidor desde `lat/lon`**, no reusar la celda almacenada del productor.

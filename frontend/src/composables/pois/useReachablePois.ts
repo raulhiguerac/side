@@ -104,6 +104,7 @@ export function useReachablePois(profile: OrsProfile) {
   async function loadPois(lat: number, lon: number, propertyId: string) {
     try {
       loading.value = true;
+      ranges.value = [];
       const pois = await fetchPois(lat, lon, propertyId);
       for (const result of pois) {
         if (result.range === null) continue;

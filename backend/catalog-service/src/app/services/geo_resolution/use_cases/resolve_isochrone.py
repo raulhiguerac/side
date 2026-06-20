@@ -78,7 +78,6 @@ class ResolveIsochroneUseCase:
         grouped: dict[str, list[PointOfInterest]] = {}
 
         for poi in pois:
-            cell = h3.latlng_to_cell(poi.latitude, poi.longitude, settings.H3_RESOLUTION)
-            grouped.setdefault(cell, []).append(poi)
+            grouped.setdefault(poi.h3_index, []).append(poi)
 
         return grouped
