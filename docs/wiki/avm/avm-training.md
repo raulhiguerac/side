@@ -1,7 +1,7 @@
 ---
 title: Pipeline de training del AVM
 status: draft
-last-verified: 2026-05-19
+last-verified: 2026-06-20
 owners: [data]
 related:
   - "[[analytics-service]]"

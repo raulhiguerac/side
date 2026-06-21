@@ -99,5 +99,6 @@ def resolve_location_by_coordinates_uc(
 def resolve_isochrone_uc(
     uow: GeoResolutionUnitOfWork = Depends(get_uow),
     gateway: RoutingGateway = Depends(get_routing_gateway),
+    cache: CachePort = Depends(get_cache_port),
 ) -> ResolveIsochroneUseCase:
-    return ResolveIsochroneUseCase(uow=uow, gateway=gateway)
+    return ResolveIsochroneUseCase(uow=uow, gateway=gateway, cache=cache)

@@ -1,7 +1,7 @@
 ---
 title: ADR-0003 — Promoción del modelo es externa al servicio
 status: stable
-last-verified: 2026-05-19
+last-verified: 2026-06-20
 owners: [analytics-service]
 related:
   - "[[analytics-service]]"

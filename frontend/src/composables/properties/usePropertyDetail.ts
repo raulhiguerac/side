@@ -103,12 +103,11 @@ export function usePropertyDetail(property: Ref<PropertyDetail | null>) {
     return map[property.value?.verification_status ?? ""] ?? "";
   });
 
-  const mapCenter = computed((): [number, number] | null => {
-    const loc = property.value?.location;
-    return loc ? [loc.latitude, loc.longitude] : null;
-  });
-
   const gridImages = computed(() => property.value?.images.slice(0, 5) ?? []);
+
+  const hasAdminFee = computed(() => !!property.value?.admin_fee)
+
+  const description = computed(() => property.value?.description ?? null)
 
   return {
     title,
@@ -120,7 +119,8 @@ export function usePropertyDetail(property: Ref<PropertyDetail | null>) {
     statusStyle,
     verificationLabel,
     verificationStyle,
-    mapCenter,
     gridImages,
+    hasAdminFee,
+    description
   };
 }

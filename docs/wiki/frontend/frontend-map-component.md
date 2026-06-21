@@ -1,11 +1,12 @@
 ---
 title: Componente de mapa reusable (MapUser)
 status: stable
-last-verified: 2026-06-15
+last-verified: 2026-06-20
 owners: [frontend]
 related:
   - "[[frontend]]"
   - "[[frontend-architecture]]"
+  - "[[frontend-poi-reachable]]"
   - "[[adr-mapbox-geocoding-leaflet-rendering]]"
   - "[[adr-gmaps-places-geocoding]]"
 sources:
@@ -14,6 +15,7 @@ sources:
   - ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md
   - ../../sources/frontend/2026-06-09-mapview-leaflet-implementation.md
   - ../../sources/frontend/2026-06-15-poi-detail-view-mapuser-cluster.md
+  - ../../sources/frontend/2026-06-20-property-detail-view-refactor.md
 ---
 
 ## TL;DR
@@ -109,6 +111,11 @@ export interface MarkerData {
   lat: number;
   lon: number;
   imageType: MarkerImageType;
+  label?: string;          // nombre — usado también en el popup del cluster
+  categoryLabel?: string;
+  address?: string;
+  phone?: string;
+  website?: string;
 }
 ```
 
@@ -164,16 +171,18 @@ function buildCluster() {
       html: `<div style="width:10px;height:10px;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4)"></div>`,
       className: "", iconSize: [10, 10], iconAnchor: [5, 5],
     });
-    L.marker([m.lat, m.lon], { icon }).addTo(clusterGroup);
+    const marker = L.marker([m.lat, m.lon], { icon }).addTo(clusterGroup);
+    if (m.label) marker.bindPopup(buildPoiPopupHtml(m));
   }
   map.addLayer(clusterGroup);
 }
 ```
 
-**`POI_COLORS` por `MarkerImageType`:**
+**`POI_COLORS` por `MarkerImageType`** — vive en `constants/poiColors.ts` (no inline en `MapUser.vue`), junto a `POI_BUCKET_LABELS` (labels en español por bucket):
 
 ```ts
-const POI_COLORS: Partial<Record<MarkerImageType, string>> = {
+// constants/poiColors.ts
+export const POI_COLORS: Partial<Record<MarkerImageType, string>> = {
   food: "#f97316",       // naranja
   education: "#3b82f6",  // azul
   health: "#ef4444",     // rojo
@@ -181,9 +190,22 @@ const POI_COLORS: Partial<Record<MarkerImageType, string>> = {
   commerce: "#eab308",   // amarillo
   poi: "#6b7280",        // gris (fallback)
 };
+
+export const POI_BUCKET_LABELS: Partial<Record<MarkerImageType, string>> = {
+  food: "Comida", education: "Educación", health: "Salud",
+  transport: "Transporte", commerce: "Comercio", poi: "Otros",
+};
 ```
 
+Se sacó de `MapUser.vue` para que un componente nuevo (`MapLegend.vue`) lo pueda reusar sin duplicar el objeto — ver [[frontend-poi-reachable]]. `MapUser` solo importa `POI_COLORS`.
+
 **Tipos nuevos en `MarkerImageType`** (`types/maps.ts`): `health | transport | commerce | poi` — mapeados en `constants/markerIcons.ts` con `HeartPulse | Bus | ShoppingCart | MapPin`.
+
+### Popup al click en markers del cluster
+
+Cada marker del cluster soporta `bindPopup` con la info del POI (Leaflet lo muestra al click por default, sin código extra de eventos). `MarkerData` gana campos opcionales para esto: `label` (nombre), `categoryLabel`, `address`, `phone`, `website`. `buildPoiPopupHtml(m)` arma el HTML con los campos disponibles (cada uno opcional, solo se renderiza si existe) y `website` como link clickeable.
+
+**Escapado obligatorio**: el nombre/dirección de un POI viene de OSM/Overpass (dato externo, no confiable). `escapeHtml(text)` usa el truco `div.textContent = text; return div.innerHTML` para escapar antes de interpolar en el string HTML del popup — sin esto, un POI con `<script>` en el nombre sería XSS.
 
 **CSS e imports:** webpack requiere imports explícitos (no CDN):
 ```ts
@@ -213,13 +235,15 @@ D3 sobre el mapa (heatmaps, densidad, choropleth) **no va en la view ni dentro d
 
 Ver [[adr-mapbox-geocoding-leaflet-rendering]] para la decisión de stack (Leaflet+D3).
 
-## Estado (2026-06-15)
+## Estado (2026-06-20)
 
 - Vue 3.5 upgrade completado — `defineModel` y `useTemplateRef` funcionan.
 - Iconos migrados a Lucide (`markerIconMap` en `constants/markerIcons.ts`).
 - `internalCenter` pattern implementado — `defineModel center` ya no va directo a `l-map`.
 - `leaflet.markercluster` integrado para POI markers (split imperativo/declarativo).
-- `MapUser` usado en `DevPlaygroundView` (AVM), `MapView` (feed-mapa) y `PropertyDetailView` (POI section).
+- Markers del cluster tienen `bindPopup` con info del POI (nombre/categoría/dirección/teléfono/website), escapada con `escapeHtml`.
+- `POI_COLORS`/`POI_BUCKET_LABELS` centralizados en `constants/poiColors.ts`; nuevo componente reusable `MapLegend.vue`.
+- `MapUser` usado en `DevPlaygroundView` (AVM), `MapView` (feed-mapa) y `NearbyPlaces` (dentro de `PropertyDetailView`, POI section).
 
 ## Claims
 
@@ -243,3 +267,7 @@ Ver [[adr-mapbox-geocoding-leaflet-rendering]] para la decisión de stack (Leafl
 - Lucide `Building` es stroke-only — `:fill` no tiene efecto; usar div wrapper con bg color para cambiar el fondo ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - `MarkerData` y `MarkerImageType` viven en `types/maps.ts` ([types/maps.ts](frontend/src/types/maps.ts)).
 - El CSS de Leaflet se carga vía `<link>` en `public/index.html`, no por import ([public/index.html:11](frontend/public/index.html#L11)).
+- `POI_COLORS` y `POI_BUCKET_LABELS` viven en `constants/poiColors.ts`, no inline en `MapUser.vue` — reusados por `MapLegend.vue` ([constants/poiColors.ts](frontend/src/constants/poiColors.ts)).
+- Cada marker del cluster con `label` definido recibe `bindPopup(buildPoiPopupHtml(m))` — Leaflet lo muestra al click sin manejo de eventos adicional ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- `escapeHtml` (`div.textContent`/`innerHTML`) sanitiza cada campo del POI antes de interpolarlo en el HTML del popup — el dato viene de OSM/Overpass, fuente externa ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- `MapLegend.vue` (`components/map/`) es un componente sin estado que itera `POI_COLORS`/`POI_BUCKET_LABELS` — pensado para reusarse en `AvmView` además de `NearbyPlaces` ([components/map/MapLegend.vue](frontend/src/components/map/MapLegend.vue)).

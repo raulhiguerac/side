@@ -1,17 +1,20 @@
 ---
 title: Integración ORS — OpenRouteService (catalog-service)
 status: stable
-last-verified: 2026-06-15
+last-verified: 2026-06-20
 owners: [catalog-service]
 related:
   - "[[adr-isochrone-ors-h3]]"
   - "[[catalog-service-poi-lifecycle]]"
   - "[[catalog-service-architecture]]"
   - "[[adr-poi-cache-aside]]"
+  - "[[adr-cache-optional-layer]]"
+  - "[[adr-h3-resolution-per-use-case]]"
 sources:
   - ../../../sources/catalog-service/2026-06-11-ors-setup-poi-unification.md
   - ../../../sources/catalog-service/2026-06-15-ors-isochrone-reachable-pois.md
   - ../../../sources/catalog-service/2026-06-15-isochrone-poi-seed-fixes.md
+  - ../../../sources/catalog-service/2026-06-20-isochrone-cache-aside.md
 ---
 
 ## TL;DR
@@ -196,12 +199,21 @@ ORS_TIMEOUT_SECONDS: float = 5.0
 
 `PoiProviderGateway` (port en `ports/routing/gateway.py`) declara `get_isochrones` como **sync**, pero el adapter (`OrsRoutingAdapter`) lo implementa como **async**. Pendiente corrección del protocol.
 
-### Cache-aside — pendiente
+### Cache-aside — implementado (2026-06-20)
 
-Ver [[adr-poi-cache-aside]] y [[open-items]]. Dos keys según el caller:
-- `geo:reachable:property:{property_id}` — cuando viene desde property detail (TTL 1h).
-- `geo:reachable:{hash(lat,lon,range,profiles)}` — para calls del AVM sin `property_id` (TTL 1h).
-No implementado aún — `CachePort` no está inyectado en `ResolveIsochroneUseCase`.
+`ResolveIsochroneUseCase.execute()` chequea cache **antes** de llamar `gateway.get_isochrones`:
+
+- Si `req.property_id` viene → key estática `get_isochrone_key(property_id=...)` → `geo:reachable:property:{property_id}`.
+- Si no (caso AVM, lat/lon variable) → se snappea el punto a su celda H3 r9 (`h3.latlng_to_cell(lat, lon, settings.H3_RESOLUTION)`) → `geo:reachable:cell:{h3_cell}`. Mismo grano que ya usa el servicio para bucketear POIs ([[adr-h3-resolution-per-use-case]]); el desfase de snappear a la celda es aceptable salvo en walking con rangos cortos.
+- Es **todo-o-nada por request**: ORS siempre devuelve los 3 profiles fijos en una sola llamada (`asyncio.gather`), así que no existe cache parcial por perfil.
+- Solo se cachea la response completa (isócrona + POIs) si ningún profile dio error. TTL: `settings.CACHE_TTL_ISOCHRONE_SECONDS` (1h).
+- Helper de key: `get_isochrone_key` en `services/geo_resolution/helpers/cache_keys.py`.
+
+**Bug de DI encontrado y corregido**: el provider `resolve_isochrone_uc` (`api/deps/geo_resolution.py`) nunca inyectaba `cache` al construir el UC — faltaba el argumento requerido (`CachePort`). Esto dejaba la ruta rota: las requests a `/reachable-pois` quedaban "stalled" sin respuesta en el browser en vez de un error limpio. Fix: agregar `cache: CachePort = Depends(get_cache_port)` al provider.
+
+**Hallazgo relacionado**: el `try/except Exception: pass` alrededor de llamadas a cache (patrón documentado en [[adr-cache-optional-layer]]) es redundante en catalog-service — `CacheClient.get_json`/`set_json` ya atrapan la excepción de Redis internamente y devuelven `None`/`False`. Se quitó ese wrapper de `ResolveNeighborhoodUseCase` y `ResolvePoiUseCase`. Ver [[open-items]] para el pendiente de validar lo mismo en properties-service/users-service.
+
+Pendiente: invalidación cruzada cuando se actualiza/borra una propiedad en properties-service — nadie invalida `geo:reachable:property:{property_id}` en catalog-service. Anotado como extensión de [[adr-shared-infra-lib]] en [[open-items]].
 
 ## Claims
 
@@ -216,7 +228,9 @@ No implementado aún — `CachePort` no está inyectado en `ResolveIsochroneUseC
 - `OrsRoutingClient` usa `asyncio.gather` para lanzar un request por perfil en paralelo — un error en un perfil no bloquea los demás ([integrations/georef/ors/routing.py](backend/catalog-service/src/app/integrations/georef/ors/routing.py)).
 - El lookup de POIs usa `get_by_h3_cells` con **todas las celdas de todos los perfiles acumuladas** — 1 query a DB sin importar cuántos perfiles se pidan ([use_cases/resolve_isochrone.py:52-54](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_isochrone.py#L52-L54)).
 - ORS devuelve coordenadas en orden `[lon, lat]`; la conversión a `h3.LatLngPoly` invierte con `[(lat, lng) for lng, lat in exterior]`.
-- Cache-aside de `reachable-pois` **no implementado** al 2026-06-15 — `CachePort` no inyectado en `ResolveIsochroneUseCase`.
+- Cache-aside de `reachable-pois` implementado al 2026-06-20: key por `property_id` o por celda H3 r9 del punto, check antes de llamar a ORS, cache todo-o-nada por request ([use_cases/resolve_isochrone.py](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_isochrone.py)).
+- El provider `resolve_isochrone_uc` no inyectaba `cache` hasta el 2026-06-20 — bug de DI que dejaba la ruta sin respuesta ("stalled") en vez de fallar con error limpio ([api/deps/geo_resolution.py](backend/catalog-service/src/app/api/deps/geo_resolution.py)).
+- El `try/except Exception: pass` alrededor de llamadas a cache es redundante en catalog-service — `CacheClient` ya atrapa la excepción de Redis internamente ([integrations/cache/redis/cache.py](backend/catalog-service/src/app/integrations/cache/redis/cache.py)).
 - `IsochroneEntry.isochrone` y `ReachablePoisResult.isochrone` son `GeoJsonPolygon | None` — el exterior se accede como `entry.isochrone.coordinates[0]`, nunca `entry.isochrone[0]` ([schemas/isochrone.py](backend/catalog-service/src/app/services/geo_resolution/schemas/isochrone.py)).
 - `ORS_URL` y `ORS_TIMEOUT_SECONDS` viven en `settings.py` — `routing.py` no llama `os.getenv` directamente ([core/config/settings.py](backend/catalog-service/src/app/core/config/settings.py)).
 - `PoiProviderGateway` declara `get_isochrones` como sync pero el adapter lo implementa async — mismatch pendiente de corrección ([ports/routing/gateway.py](backend/catalog-service/src/app/services/geo_resolution/ports/routing/gateway.py)).

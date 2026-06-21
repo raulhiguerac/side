@@ -64,18 +64,30 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 const { MarkerClusterGroup } = require("leaflet.markercluster");
 import type { MarkerData, MarkerImageType } from "@/types/maps";
 import { markerIconMap } from "@/constants/markerIcons";
+import { POI_COLORS } from "@/constants/poiColors";
 import type { LeafletEvent } from "leaflet";
 
 const SPECIAL_TYPES: MarkerImageType[] = ["subject", "house", "apartment"];
 
-const POI_COLORS: Partial<Record<MarkerImageType, string>> = {
-  food: "#f97316",
-  education: "#3b82f6",
-  health: "#ef4444",
-  transport: "#8b5cf6",
-  commerce: "#eab308",
-  poi: "#6b7280",
-};
+function escapeHtml(text: string): string {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function buildPoiPopupHtml(m: MarkerData): string {
+  const rows: string[] = [`<strong>${escapeHtml(m.label ?? "")}</strong>`];
+  if (m.categoryLabel) rows.push(escapeHtml(m.categoryLabel));
+  if (m.address) rows.push(escapeHtml(m.address));
+  if (m.phone) rows.push(escapeHtml(m.phone));
+  if (m.website) {
+    const safeHref = encodeURI(m.website);
+    rows.push(
+      `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${escapeHtml(m.website)}</a>`
+    );
+  }
+  return `<div style="font-size:12px;line-height:1.4">${rows.join("<br/>")}</div>`;
+}
 
 const zoom = defineModel<number>("zoom", { default: 15 });
 const center = defineModel<[number, number]>("center");
@@ -87,11 +99,14 @@ watch(center, (val) => {
   if (val) internalCenter.value = val;
 });
 
-const props = defineProps<{
-  markers: Array<MarkerData>;
-  hoveredId: string | null;
-  minZoom?: number;
-}>();
+const props = withDefaults(
+  defineProps<{
+    markers: Array<MarkerData>;
+    hoveredId: string | null;
+    minZoom?: number;
+  }>(),
+  { markers: () => [] }
+);
 
 const emit = defineEmits<{
   bbox: [
@@ -134,7 +149,8 @@ function buildCluster() {
       iconSize: [10, 10],
       iconAnchor: [5, 5],
     });
-    L.marker([m.lat, m.lon], { icon }).addTo(clusterGroup);
+    const marker = L.marker([m.lat, m.lon], { icon }).addTo(clusterGroup);
+    if (m.label) marker.bindPopup(buildPoiPopupHtml(m));
   }
 
   map.addLayer(clusterGroup);

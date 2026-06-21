@@ -18,4 +18,9 @@ export interface MarkerData {
   lat: number;
   lon: number;
   imageType: MarkerImageType;
+  label?: string;
+  categoryLabel?: string;
+  address?: string;
+  phone?: string;
+  website?: string;
 }

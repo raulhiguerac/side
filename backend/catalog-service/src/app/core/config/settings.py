@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     # Cache TTLs
     CACHE_TTL_CATALOG_SECONDS: int = 86400       # 1 day  — listas y entidades read-only
     CACHE_TTL_ENTITY_SECONDS: int = 2592000      # 30 days — entidades admin + geocode
+    CACHE_TTL_ISOCHRONE_SECONDS: int = 3600      # 1 hour  — reachable-pois (isócronas)
     POI_STALE_THRESHOLD_DAYS: int = 30
     POI_LOCK_TTL_SECONDS: int = 30
     # Resolución H3 usada en todo el servicio para indexar y consultar POIs.

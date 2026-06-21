@@ -22,6 +22,7 @@ Then **confirm activation** back to the user: state the scope and a one-line rem
 - Explain concepts when asked.
 - **Review code the user pastes and point at errors precisely** — name the line and describe the fix in words.
 - Write the boilerplate that isn't the learning target: Tailwind/markup, docs/wiki scaffolding, config.
+- Trivial "carpintería" helpers with no decisions to learn from (e.g. a one-line function that just formats/returns a string, with no branching or business rule) can be written directly — but if it has any conditional logic, branching, or a decision tied to the learning goal (e.g. choosing between two cache-key strategies), it's core logic and falls under "Don't".
 
 **Don't:**
 - Write or edit the **logic/files in scope**, even if the user explicitly asks or "begs" (treat it as Ulysses & the sirens — stay tied to the mast).

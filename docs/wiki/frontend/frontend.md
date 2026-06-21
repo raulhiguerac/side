@@ -1,14 +1,14 @@
 ---
 title: frontend
 status: draft
-last-verified: 2026-06-08
+last-verified: 2026-06-20
 owners: [frontend]
 related:
   - "[[architecture]]"
   - "[[frontend-architecture]]"
   - "[[frontend-onboarding-flow]]"
   - "[[frontend-local-dev]]"
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md, ../../sources/frontend/2026-06-20-property-detail-view-refactor.md]
 ---
 
 ## TL;DR
@@ -122,7 +122,7 @@ Detalle de cada patrón en [[frontend-architecture]].
 ## Claims
 
 - El router está modularizado en 5 archivos bajo `router/routes/` (public, auth, settings, properties, analytics) — `router/index.ts` solo instancia y aplica el guard ([router/routes/](frontend/src/router/routes/)).
-- `PropertyDetailView` existe en `views/properties/detail/` — fetch real pendiente, hoy usa mock ([views/properties/detail/PropertyDetailView.vue](frontend/src/views/properties/detail/PropertyDetailView.vue)).
+- `PropertyDetailView` existe en `views/properties/detail/`, refactorizada en 3 componentes hijos (`PropertyPhotoGrid`/`PropertyOverview`/`NearbyPlaces`) y con fetch real a `GET /v1/properties/{id}` ([views/properties/detail/PropertyDetailView.vue](frontend/src/views/properties/detail/PropertyDetailView.vue)).
 - `vue-router` corre en `createWebHashHistory` (URL pattern `/#/...`) ([router/index.ts:89](frontend/src/router/index.ts#L89)).
 - `auth.ts` store hardcodea `http://localhost:8000/v1/...` en login/register/logout/checkAuth ([stores/auth.ts:80-83](frontend/src/stores/auth.ts#L80-L83), [stores/auth.ts:98-101](frontend/src/stores/auth.ts#L98-L101)).
 - `config/index.ts` define `API.USERS_BASE_URL` y `API.CATALOG_BASE_URL` pero solo `user.ts` y los composables lo usan; `auth.ts` ignora la config ([config/index.ts:1-5](frontend/src/config/index.ts#L1-L5)).

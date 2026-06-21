@@ -160,7 +160,4 @@ class ResolvePoiUseCase:
         await self._set_cache(key=cache_key, ttl=STALE_THRESHOLD_DAYS * 86400)
 
     async def _set_cache(self, *, key: str, ttl: int) -> None:
-        try:
-            await self.cache_client.set(key=key, value="1", ttl=ttl)
-        except Exception:
-            pass
+        await self.cache_client.set(key=key, value="1", ttl=ttl)

@@ -5,7 +5,9 @@ from functools import partial
 from app.core.config.settings import settings
 from app.models.location import PointOfInterest
 from app.services.geo_resolution.ports.routing.gateway import RoutingGateway
+from app.services.shared.ports.cache import CachePort
 from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWork
+from app.services.geo_resolution.helpers.cache_keys import get_isochrone_key
 from app.services.geo_resolution.schemas.isochrone import (
     IsochroneRequest,
     ReachablePoiItem,
@@ -14,11 +16,28 @@ from app.services.geo_resolution.schemas.isochrone import (
 
 
 class ResolveIsochroneUseCase:
-    def __init__(self, *, uow: GeoResolutionUnitOfWork, gateway: RoutingGateway) -> None:
+    def __init__(
+            self, 
+            *, 
+            uow: GeoResolutionUnitOfWork,
+            cache: CachePort,
+            gateway: RoutingGateway
+        ) -> None:
         self.uow = uow
+        self.cache = cache
         self.gateway = gateway
 
     async def execute(self, *, req: IsochroneRequest) -> list[ReachablePoisResult]:
+        if req.property_id:
+            cache_key = get_isochrone_key(property_id=req.property_id)
+        else:
+            h3_cell = h3.latlng_to_cell(req.lat, req.lon, settings.H3_RESOLUTION)
+            cache_key = get_isochrone_key(h3_cell=h3_cell)
+        
+        response_json = await self.cache.get_json(key=cache_key)
+        if response_json is not None:
+            return [ReachablePoisResult.model_validate(entry) for entry in response_json]
+        
         isochrones = await self.gateway.get_isochrones(req=req)
 
         models: list[dict] = []
@@ -69,6 +88,13 @@ class ResolveIsochroneUseCase:
                         for poi in poi_dict[k]
                     ],
                 )
+            )
+        
+        if not errors:
+            await self.cache.set_json(
+                key=cache_key, 
+                value=[entry.model_dump(mode='json') for entry in response],
+                ttl=settings.CACHE_TTL_ISOCHRONE_SECONDS
             )
 
         return response + errors

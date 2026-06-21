@@ -1,7 +1,7 @@
 ---
 title: ADR-0006 — Isócronas con ORS + H3 para reachable POIs
 status: stable
-last-verified: 2026-06-15
+last-verified: 2026-06-20
 owners: [catalog-service, frontend]
 related:
   - "[[catalog-service-poi-lifecycle]]"
@@ -126,7 +126,7 @@ El patrón osmium ya está validado en el notebook `02_feature_engineering.ipynb
 
 - El endpoint `POST /v1/geo-resolution/reachable-pois` está implementado en `ResolveIsochroneUseCase` — devuelve `list[ReachablePoisResult]` con polígono + POIs por perfil ([use_cases/resolve_isochrone.py](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_isochrone.py)).
 - `h3.polygon_to_cells(polygon, res=9)` es la función de conversión — solo incluye celdas cuyo centroide cae dentro del polígono (comportamiento default de `polygon_to_cells`).
-- Cache-aside **no implementado** al 2026-06-15 — el cache key definitivo (ver [[adr-poi-cache-aside]]) será `geo:reachable:property:{property_id}` desde property detail y `geo:reachable:{hash(lat,lon,range,profiles)}` desde el AVM. TTL 1h.
+- Cache-aside implementado al 2026-06-20 — key `geo:reachable:property:{property_id}` cuando viene desde property detail, o `geo:reachable:cell:{h3_cell}` (snap a la celda H3 r9 del punto) desde el AVM sin `property_id`. TTL 1h. Detalle completo en [[catalog-service-ors]].
 - ORS fue elegido sobre Mapbox por cobertura en Colombia — Mapbox tiene gaps en la red vial colombiana.
 - La responsabilidad del UC vive completamente en catalog-service; properties-service y el frontend son callers sin lógica de routing.
 - `property_id` es un campo opcional en `IsochroneRequest` — usado como discriminante de cache key, no para resolver coordenadas ([schemas/isochrone.py](backend/catalog-service/src/app/services/geo_resolution/schemas/isochrone.py)).

@@ -1,4 +1,5 @@
 import type { Component } from "vue";
+import type { MarkerImageType } from "@/types/maps";
 import {
   School,
   HeartPulse,
@@ -77,31 +78,32 @@ export const PRIORITY_CATEGORIES = new Set(Object.keys(CATEGORY_PRIORITY));
 export interface CategoryMeta {
   label: string;
   icon: Component;
+  bucket: MarkerImageType;
 }
 
 export const CATEGORY_META: Record<string, CategoryMeta> = {
-  school: { label: "Educación", icon: School },
-  kindergarten: { label: "Educación", icon: School },
-  college: { label: "Educación", icon: School },
-  university: { label: "Educación", icon: School },
-  hospital: { label: "Salud", icon: HeartPulse },
-  clinic: { label: "Salud", icon: HeartPulse },
-  doctor: { label: "Salud", icon: HeartPulse },
-  dentist: { label: "Salud", icon: HeartPulse },
-  pharmacy: { label: "Salud", icon: HeartPulse },
-  supermarket: { label: "Supermercados", icon: ShoppingCart },
-  bus_station: { label: "Transporte", icon: Bus },
-  platform: { label: "Transporte", icon: Bus },
-  stop_position: { label: "Transporte", icon: Bus },
-  bakery: { label: "Panadería", icon: Croissant },
-  convenience: { label: "Tienda", icon: ShoppingCart },
-  restaurant: { label: "Restaurantes", icon: Utensils },
-  cafe: { label: "Cafés", icon: Utensils },
-  fast_food: { label: "Comida rápida", icon: Utensils },
-  bank: { label: "Banco", icon: Landmark },
-  atm: { label: "Banco", icon: Landmark },
-  park: { label: "Parques", icon: TreePine },
-  fitness_centre: { label: "Gimnasio", icon: TreePine },
+  school: { label: "Educación", icon: School, bucket: "education" },
+  kindergarten: { label: "Educación", icon: School, bucket: "education" },
+  college: { label: "Educación", icon: School, bucket: "education" },
+  university: { label: "Educación", icon: School, bucket: "education" },
+  hospital: { label: "Salud", icon: HeartPulse, bucket: "health" },
+  clinic: { label: "Salud", icon: HeartPulse, bucket: "health" },
+  doctor: { label: "Salud", icon: HeartPulse, bucket: "health" },
+  dentist: { label: "Salud", icon: HeartPulse, bucket: "health" },
+  pharmacy: { label: "Salud", icon: HeartPulse, bucket: "health" },
+  supermarket: { label: "Supermercados", icon: ShoppingCart, bucket: "commerce" },
+  bus_station: { label: "Transporte", icon: Bus, bucket: "transport" },
+  platform: { label: "Transporte", icon: Bus, bucket: "transport" },
+  stop_position: { label: "Transporte", icon: Bus, bucket: "transport" },
+  bakery: { label: "Panadería", icon: Croissant, bucket: "food" },
+  convenience: { label: "Tienda", icon: ShoppingCart, bucket: "commerce" },
+  restaurant: { label: "Restaurantes", icon: Utensils, bucket: "food" },
+  cafe: { label: "Cafés", icon: Utensils, bucket: "food" },
+  fast_food: { label: "Comida rápida", icon: Utensils, bucket: "food" },
+  bank: { label: "Banco", icon: Landmark, bucket: "poi" },
+  atm: { label: "Banco", icon: Landmark, bucket: "poi" },
+  park: { label: "Parques", icon: TreePine, bucket: "poi" },
+  fitness_centre: { label: "Gimnasio", icon: TreePine, bucket: "poi" },
 };
 
 export interface RangeGroup {

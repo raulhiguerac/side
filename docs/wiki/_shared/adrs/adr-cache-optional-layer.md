@@ -1,14 +1,17 @@
 ---
 title: ADR-0005 — Cache como capa opcional; degradación silenciosa a DB
 status: stable
-last-verified: 2026-06-09
+last-verified: 2026-06-20
 owners: [_shared]
 related:
   - "[[architecture]]"
   - "[[catalog-service-architecture]]"
   - "[[properties-service-architecture]]"
   - "[[analytics-service-architecture]]"
-sources: [../../sources/_shared/2026-06-09-mvp-audit-scores.md]
+  - "[[catalog-service-ors]]"
+sources:
+  - ../../sources/_shared/2026-06-09-mvp-audit-scores.md
+  - ../../sources/catalog-service/2026-06-20-isochrone-cache-aside.md
 ---
 
 ## TL;DR
@@ -49,6 +52,12 @@ except Exception:
 
 - **Raise en cache fail**: haría que Redis fuera un punto único de falla. Un pico de carga o reinicio de Redis tumbaría la API entera aunque la DB esté sana.
 - **Circuit breaker**: más correcto a largo plazo, pero agrega complejidad. Para MVP, el `except pass` cumple el mismo objetivo de no propagar el fallo.
+
+## Nota (2026-06-20) — el wrapper explícito puede ser redundante
+
+La decisión de fondo (cache nunca debe tumbar el request) sigue vigente, pero el *mecanismo* documentado arriba (`try/except Exception: pass` en cada call site) no es la única forma en que se logra. En catalog-service se verificó que `CacheClient.get_json`/`set_json` ([integrations/cache/redis/cache.py](backend/catalog-service/src/app/integrations/cache/redis/cache.py)) ya atrapan la excepción de Redis internamente y devuelven `None`/`False` — el wrapper en el use case no hacía nada. Se quitó de `ResolveNeighborhoodUseCase` y `ResolvePoiUseCase` sin cambiar el comportamiento observable.
+
+Pendiente: confirmar si las copias de `CacheClient` en properties-service y users-service (ya divergidas entre sí, ver [[adr-shared-infra-lib]]) también atrapan internamente, o si ahí el wrapper en el use case sigue siendo necesario porque el cliente propaga la excepción. Hasta confirmar, **no asumir que el wrapper es siempre redundante fuera de catalog-service** — seguir el patrón documentado arriba como default seguro.
 
 ## Consecuencias
 

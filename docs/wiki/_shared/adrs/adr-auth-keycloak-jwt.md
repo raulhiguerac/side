@@ -1,7 +1,7 @@
 ---
 title: ADR-0001 — Auth vía Keycloak JWT
 status: stable
-last-verified: 2026-05-20
+last-verified: 2026-06-20
 owners: [_shared]
 related:
   - "[[architecture]]"

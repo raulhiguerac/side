@@ -1,13 +1,14 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-06-15
+last-verified: 2026-06-20
 owners: [frontend]
 related:
   - "[[architecture]]"
   - "[[frontend]]"
   - "[[frontend-onboarding-flow]]"
   - "[[frontend-map-component]]"
+  - "[[frontend-poi-reachable]]"
   - "[[properties-service-search]]"
 sources:
   - ../../sources/frontend/2026-05-21-foundational-qa.md
@@ -20,6 +21,7 @@ sources:
   - ../../sources/frontend/2026-06-09-mapview-leaflet-implementation.md
   - ../../sources/frontend/2026-06-11-property-detail-router-refactor.md
   - ../../sources/frontend/2026-06-15-poi-detail-view-mapuser-cluster.md
+  - ../../sources/frontend/2026-06-20-property-detail-view-refactor.md
 ---
 
 ## TL;DR
@@ -351,17 +353,15 @@ Regla: nunca exportar interfaces de tipos desde archivos `.vue` — rompe TypeSc
 
 ## PropertyDetailView
 
-Vista de detalle del listing en `/listing/:id` (`views/properties/detail/PropertyDetailView.vue`).
+Vista de detalle del listing en `/listing/:id` (`views/properties/detail/PropertyDetailView.vue`). Refactorizada (2026-06-20) para que la view **solo orqueste**: un `property = ref<PropertyDetail | null>`, el composable `usePropertyDetail`, y 3 componentes hijos que reciben los datos ya resueltos.
 
-Layout: photo grid → header (título + badges status/verificación) → precio + admin fee → stats chips → descripción → detalles secundarios → [POIs | mapa Leaflet].
-
-- **Photo grid**: `grid grid-cols-4 grid-rows-[200px_200px]` con 5 celdas; `grid-area` en `<style scoped>` porque Tailwind arbitrary values no funciona con clases dinámicas en `v-for`.
-- **Stats chips**: `grid grid-cols-3 sm:grid-cols-6` para ancho uniforme.
-- **Padding**: `px-[8%] sm:px-[12%] lg:px-[18%]` — más estrecho que navbar para dar respiro visual.
-- **Lógica de detalle**: `composables/properties/usePropertyDetail.ts` — la view solo declara `property = ref<PropertyDetail | null>` y destructura el composable.
-- **Sección POI**: `useReachablePois("foot-walking")` — ver [[frontend-poi-reachable]]. Acordeón por rango (5/10/15 min), cards de categorías, mapa con isocronas + cluster de markers.
-- **`mapCenterCoords`**: `ref<[number, number] | undefined>()` local — inicializado en `onMounted` desde `property.location` para evitar cast TypeScript inválido en `v-model`.
-- **Fetch real**: pendiente — hoy usa mock hardcodeado.
+- **`PropertyPhotoGrid.vue`** (`components/properties/`) — grid de fotos (`grid grid-cols-4 grid-rows-[200px_200px]`, `grid-area` en `<style scoped>` porque Tailwind arbitrary values no funciona con clases dinámicas en `v-for`). Es padre de **`PhotoGalleryPopup.vue`** (carrusel `vue3-carousel` dentro de `BaseModal` con `size="3xl"`) — patrón props-down/events-up: el popup nunca muta el prop `isOpen`, solo emite `close`.
+- **`PropertyOverview.vue`** — header + precio + stats chips + descripción + detalles secundarios. Cero lógica propia, todo via props que mapean 1:1 a lo que devuelve `usePropertyDetail` (incluye `hasAdminFee`/`description` como `computed`, y `locationLabel` resuelto en la view con el mismo patrón de `buildNeighborhoodMap` que usan las cards del feed).
+- **`NearbyPlaces.vue`** — sección "Cerca del lugar" (perfiles, acordeón POI, mapa, isocronas, leyenda). Ver [[frontend-poi-reachable]] — a diferencia de los otros dos, es dueño de su propio `useReachablePois` (recibe `lat`/`lon`/`propertyId`, resuelve interno).
+- **Padding de la view**: `px-[8%] sm:px-[12%] lg:px-[18%]` — más estrecho que navbar para dar respiro visual.
+- **Lógica de detalle**: `composables/properties/usePropertyDetail.ts` — la view solo destructura el composable.
+- **Location label**: `buildNeighborhoodMap` (`composables/catalog/useNeighborhoodLookup.ts`) resuelto en `onMounted` de la view tras cargar la propiedad — resuelve barrio, no ciudad.
+- **Fetch real**: `propertiesApi.get<PropertyDetail>('/v1/properties/${route.params.id}')` usando el `id` de la ruta (`/listing/:id`) — reemplaza el mock hardcodeado que tenía antes.
 
 ## Claims
 

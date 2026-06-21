@@ -56,12 +56,9 @@ class ResolveNeighborhoodUseCase:
     async def _resolve_coordinates(self, query: str, locality_id: uuid.UUID) -> tuple[float, float]:
         cache_key = cache_key_forward_geocode(query=query, locality_id=locality_id)
 
-        try:
-            cached = await self.cache.get_json(key=cache_key)
-            if cached:
-                return cached["lat"], cached["lon"]
-        except Exception:
-            pass
+        cached = await self.cache.get_json(key=cache_key)
+        if cached:
+            return cached["lat"], cached["lon"]
 
         country_code = await run_in_threadpool(
             partial(self.uow.georef.get_locality_country_code, locality_id=locality_id)
@@ -75,13 +72,10 @@ class ResolveNeighborhoodUseCase:
 
         result = await self.georef.forward_geocode(query=query, country_code=country_code, proximity=proximity)
 
-        try:
-            await self.cache.set_json(
-                key=cache_key,
-                value={"lat": result.latitude, "lon": result.longitude},
-                ttl=settings.CACHE_TTL_ENTITY_SECONDS,
-            )
-        except Exception:
-            pass
+        await self.cache.set_json(
+            key=cache_key,
+            value={"lat": result.latitude, "lon": result.longitude},
+            ttl=settings.CACHE_TTL_ENTITY_SECONDS,
+        )
 
         return result.latitude, result.longitude

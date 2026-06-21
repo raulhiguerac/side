@@ -1,7 +1,7 @@
 ---
 title: ADR-0002 — Geo-enrichment at write time
 status: stable
-last-verified: 2026-05-19
+last-verified: 2026-06-20
 owners: [_shared]
 related:
   - "[[architecture]]"
