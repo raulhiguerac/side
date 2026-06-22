@@ -74,8 +74,9 @@ def get_my_properties_uc(
 
 def get_public_user_properties_uc(
     uow: ListingUnitOfWork = Depends(get_listing_uow),
+    cache: CachePort = Depends(get_cache_port),
 ) -> GetPublicUserPropertiesUseCase:
-    return GetPublicUserPropertiesUseCase(uow=uow)
+    return GetPublicUserPropertiesUseCase(uow=uow, cache=cache)
 
 
 def get_create_property_uc(

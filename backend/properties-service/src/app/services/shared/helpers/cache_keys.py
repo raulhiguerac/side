@@ -13,6 +13,14 @@ def client_properties(user_id: uuid.UUID) -> str:
     return f"properties:user:{user_id}"
 
 
+def public_user_properties(user_id: uuid.UUID, offset: int = 0) -> str:
+    return f"properties:user:{user_id}:public:{offset}"
+
+
+def public_user_properties_pattern(user_id: uuid.UUID) -> str:
+    return f"properties:user:{user_id}:public:*"
+
+
 def cache_property(property_id: uuid.UUID) -> str:
     return f"properties:detail:{property_id}"
 

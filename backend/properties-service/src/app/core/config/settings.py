@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     FEED_AD_INTERVAL: int = 5  # 1 ad every N organic results
     FEED_PAGE_CACHE_TTL_SECONDS: int = 300  # 5 min
 
+    # Public user properties (storefront del publicante)
+    PUBLIC_PROPERTIES_PAGE_SIZE: int = 20
+
     # Storage
     BUCKET_PHOTOS_PROPERTIES: str = ""
     STORAGE_PUBLIC_BASE_URL: str = ""

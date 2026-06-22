@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.api.deps.auth import get_current_principal, get_current_principal_optional
 from app.api.deps.listing import (
@@ -69,8 +69,9 @@ async def get_my_properties(
 async def get_public_user_properties(
     user_id: uuid.UUID,
     uc: Annotated[GetPublicUserPropertiesUseCase, Depends(get_public_user_properties_uc)],
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[PropertyCardSchema]:
-    return await uc.execute(user_id=user_id)
+    return await uc.execute(user_id=user_id, offset=offset)
 
 
 # -------------------------------------------------------------------------

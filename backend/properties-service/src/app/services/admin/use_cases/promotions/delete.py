@@ -6,7 +6,12 @@ from fastapi.concurrency import run_in_threadpool
 from app.core.exceptions.listing import PromotionError, PromotionNotFoundError
 from app.schemas.principal import Principal
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork
-from app.services.shared.helpers.cache_keys import client_properties, feed_ads_by_city, feed_ads_global
+from app.services.shared.helpers.cache_keys import (
+    client_properties,
+    feed_ads_by_city,
+    feed_ads_global,
+    public_user_properties_pattern,
+)
 from app.services.shared.ports.cache import CachePort
 
 
@@ -38,5 +43,8 @@ class DeletePromotionUseCase:
                 client_properties(user_id=prop.owner_id),
                 *([feed_ads_by_city(prop.location.city_id)] if prop.location else []),
             ])
+            await self.cache.delete_pattern(
+                pattern=public_user_properties_pattern(user_id=prop.owner_id)
+            )
         except Exception:
             pass

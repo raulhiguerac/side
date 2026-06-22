@@ -8,7 +8,12 @@ from app.schemas.principal import Principal
 from app.services.listing.helpers.db_error_translator import translate_db_error
 from app.services.listing.helpers.property_guard import get_owned_property_for_update
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork
-from app.services.shared.helpers.cache_keys import cache_property, client_properties, property_image_ids
+from app.services.shared.helpers.cache_keys import (
+    cache_property,
+    client_properties,
+    property_image_ids,
+    public_user_properties_pattern,
+)
 from app.services.shared.ports.cache import CachePort
 
 
@@ -55,5 +60,8 @@ class DeletePropertyImagesUseCase:
                 client_properties(user_id=principal.sub),
                 property_image_ids(property_id),
             ])
+            await self.cache_client.delete_pattern(
+                pattern=public_user_properties_pattern(user_id=principal.sub)
+            )
         except Exception:
             pass

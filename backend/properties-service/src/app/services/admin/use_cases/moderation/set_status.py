@@ -6,7 +6,12 @@ from fastapi.concurrency import run_in_threadpool
 from app.core.exceptions.listing import InvalidStatusTransitionError, PropertyNotFoundError, SetVisibilityError
 from app.models.property import ListingStatus
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork
-from app.services.shared.helpers.cache_keys import cache_property, client_properties, map_h3_cell
+from app.services.shared.helpers.cache_keys import (
+    cache_property,
+    client_properties,
+    map_h3_cell,
+    public_user_properties_pattern,
+)
 from app.services.shared.ports.cache import CachePort
 
 _ALLOWED_TRANSITIONS: dict[ListingStatus, list[ListingStatus]] = {
@@ -52,5 +57,8 @@ class SetPropertyStatusUseCase:
                 client_properties(user_id=prop.owner_id),
                 *[map_h3_cell(i) for i in [prop.h3_r9, prop.h3_r7]],
             ])
+            await self.cache.delete_pattern(
+                pattern=public_user_properties_pattern(user_id=prop.owner_id)
+            )
         except Exception:
             pass

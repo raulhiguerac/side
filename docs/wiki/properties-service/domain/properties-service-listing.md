@@ -1,14 +1,18 @@
 ---
 title: Dominio listing — properties-service
 status: draft
-last-verified: 2026-05-28
+last-verified: 2026-06-22
 owners: [properties-service]
 related:
   - "[[properties-service]]"
   - "[[properties-service-architecture]]"
   - "[[properties-service-catalog]]"
   - "[[adr-image-upload-presigned-batch]]"
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md]
+  - "[[adr-owner-list-cache-invalidation]]"
+  - "[[adr-cache-optional-layer]]"
+sources:
+  - ../../../sources/properties-service/2026-05-28-foundational-exploration.md
+  - ../../../sources/properties-service/2026-06-22-public-storefront-cache-invalidation.md
 ---
 
 ## TL;DR
@@ -21,10 +25,10 @@ El dominio del **dueño** sobre sus propiedades: crear, editar, borrar, controla
 |---|---|---|
 | `CreatePropertyUseCase` | `use_cases/property_core/create_property.py` | Valida barrio↔ciudad contra catalog, computa H3, persiste `Property` + `PropertyLocation`. |
 | `UpdatePropertyUseCase` | `use_cases/property_core/update_property.py` | Patch parcial; re-valida geo y re-computa H3 si cambia location; invalida cache. |
-| `DeletePropertyUseCase` | `use_cases/property_core/delete_property.py` | Borra la propiedad (cascade a location/imágenes) e invalida cache. |
+| `DeletePropertyUseCase` | `use_cases/property_core/delete_property.py` | **Soft-delete**: `status=inactive` + `deleted_at`/`deleted_by`; no borra filas. Invalida cache. |
 | `GetPropertyUseCase` | `use_cases/property_core/get_property.py` | Detalle con cache-aside; reglas de visibilidad por status/owner. |
-| `GetMyPropertiesUseCase` | `use_cases/property_core/get_my_properties.py` | Lista del owner (cache por usuario). |
-| `GetPublicUserPropertiesUseCase` | `use_cases/property_core/get_public_user_properties.py` | Lista pública de otro usuario. |
+| `GetMyPropertiesUseCase` | `use_cases/property_core/get_my_properties.py` | Lista del owner — todos los estados, cache por usuario (`client_properties`). |
+| `GetPublicUserPropertiesUseCase` | `use_cases/property_core/get_public_user_properties.py` | Vitrina pública de otro usuario — solo `active`, paginada por offset, cache por página. |
 | `SetPropertyVisibilityUseCase` | `use_cases/property_core/set_property_visibility.py` | Toggle de visibilidad del dueño. |
 | `RequestPresignedUrlsUseCase` | `use_cases/images/request_presigned_urls.py` | Crea batch + URLs presignadas PUT. |
 | `ConfirmImageUploadsUseCase` | `use_cases/images/confirm_image_uploads.py` | Valida batch y materializa `PropertyImage`. |
@@ -49,6 +53,26 @@ La propiedad nace en `draft` — no es visible en el feed hasta que un admin la 
 - Si miss, lee de DB. `None` → `PropertyNotFoundError`.
 - **Regla de visibilidad**: si `status != active` y el requester no es el owner → `PropertyNotFoundError` (no se filtra existencia de drafts ajenos).
 - Solo se cachean propiedades `active` (TTL `CACHE_TTL_PROPERTY_SECONDS` = 6h).
+
+## Caching e invalidación de las listas del owner
+
+Hay **dos** listas cacheadas del dueño, con scope distinto:
+
+| Lista | Key | Filtro | Auth |
+|---|---|---|---|
+| Mis propiedades (`/me`) | `properties:user:{id}` (`client_properties`) | todos los estados | JWT → `principal.sub` |
+| Vitrina pública (`/users/{id}`) | `properties:user:{id}:public:{offset}` (`public_user_properties`) | solo `active` | sin auth, `user_id` del path |
+
+La pública pagina por **offset** (`PUBLIC_PROPERTIES_PAGE_SIZE` = 20), por eso el offset va **en la key** — sin él, la página 2 devolvería la data cacheada de la 1. El resultado vacío también se cachea (`if cached is not None`) para que un usuario sin listings no pegue a DB en cada request.
+
+**Invalidación por prefijo.** Como un cambio de membresía corre la posición de todas las propiedades siguientes, no se puede invalidar una sola página: `delete_pattern("properties:user:{id}:public:*")` borra **todas** las páginas del dueño (`SCAN` + `DEL`) y se re-cachean on-demand. Cada UC de escritura relevante hace **dos operaciones**: `delete([keys exactas])` + `delete_pattern(prefijo público)`. Detalle y alternativas en [[adr-owner-list-cache-invalidation]]; la degradación silenciosa ante Redis caído sigue [[adr-cache-optional-layer]].
+
+**8 UCs invalidan la vitrina pública** (criterio: cambian la membresía del set `active` o un campo que renderiza `PropertyCardSchema` — precio/datos, fotos con `is_cover`, `is_promoted`):
+
+- listing: `update_property`, `delete_property`, `set_property_visibility`, `confirm_image_uploads`, `delete_property_images`
+- admin: `moderation/set_status`, `promotions/create`, `promotions/delete`
+
+**Excluidos a propósito**: `verify` (la card no expone `verification_status`) y `create_property` (nace `draft`, entra al set público recién al publicarse vía `set_visibility`/`set_status`, que ya invalidan).
 
 ## Flujo de imágenes (presigned + batch)
 
@@ -84,3 +108,8 @@ Estados del batch: `pending → ready → confirmed`, con ramas `expired` (TTL v
 - Confirm rechaza si `confirmed_keys` no es subconjunto de `expected_keys` con `BatchNotConsistentError` ([confirm_image_uploads.py:74-81](backend/properties-service/src/app/services/listing/use_cases/images/confirm_image_uploads.py#L74-L81)).
 - Confirm exige estado `ready`; un batch `pending` se marca `failed` ([confirm_image_uploads.py:65-72](backend/properties-service/src/app/services/listing/use_cases/images/confirm_image_uploads.py#L65-L72)).
 - `create_count` está acotado a `[1, MAX_IMAGES_PER_PROPERTY]` por el schema ([listing_schemas.py:90-92](backend/properties-service/src/app/services/listing/schemas/listing_schemas.py#L90-L92)).
+- `DeleteProperty` es soft-delete: setea `status=inactive` + `deleted_at` + `deleted_by`, no borra filas ([delete_property.py:21-23](backend/properties-service/src/app/services/listing/use_cases/property_core/delete_property.py#L21-L23)).
+- `GetPublicUserProperties` devuelve solo `status=active`, paginadas por offset con `LIMIT PUBLIC_PROPERTIES_PAGE_SIZE` ([sql_property_repository.py:37-52](backend/properties-service/src/app/services/listing/adapters/sql_property_repository.py#L37-L52)).
+- La vitrina pública cachea por página con offset en la key (`properties:user:{id}:public:{offset}`) y trata `[]` como hit válido con `if cached is not None` ([get_public_user_properties.py](backend/properties-service/src/app/services/listing/use_cases/property_core/get_public_user_properties.py)).
+- Los 8 UCs de escritura que tocan el set público invalidan con `delete_pattern(public_user_properties_pattern(owner))` además de las keys exactas; `verify` y `create_property` no ([cache_keys.py](backend/properties-service/src/app/services/shared/helpers/cache_keys.py)).
+- El endpoint público acota el offset a `>= 0` vía `Query(ge=0)` y default 0 ([properties.py](backend/properties-service/src/app/api/routes/properties.py)).

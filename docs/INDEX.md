@@ -119,6 +119,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0003 — Precio estimado dual (admin vs ML)](wiki/properties-service/adrs/adr-estimated-price-dual-signal.md)
 - [ADR-0004 — H3 dual-resolution para el feed-mapa](wiki/properties-service/adrs/adr-h3-dual-resolution-map.md)
 - [ADR-0005 — Cursor de paginación opaco (base64url)](wiki/properties-service/adrs/adr-feed-opaque-cursor.md)
+- [ADR-0006 — Invalidación por prefijo del cache de la vitrina pública](wiki/properties-service/adrs/adr-owner-list-cache-invalidation.md)
 
 ## users-service
 
