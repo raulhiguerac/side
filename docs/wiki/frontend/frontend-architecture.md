@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-06-20
+last-verified: 2026-06-21
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -10,6 +10,7 @@ related:
   - "[[frontend-map-component]]"
   - "[[frontend-poi-reachable]]"
   - "[[properties-service-search]]"
+  - "[[open-items]]"
 sources:
   - ../../sources/frontend/2026-05-21-foundational-qa.md
   - ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md
@@ -22,6 +23,7 @@ sources:
   - ../../sources/frontend/2026-06-11-property-detail-router-refactor.md
   - ../../sources/frontend/2026-06-15-poi-detail-view-mapuser-cluster.md
   - ../../sources/frontend/2026-06-20-property-detail-view-refactor.md
+  - ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md
 ---
 
 ## TL;DR
@@ -43,7 +45,7 @@ frontend/
 │   ├── router/
 │   │   ├── index.ts              # instancia router + beforeEach guard; importa 5 módulos
 │   │   └── routes/
-│   │       ├── public.ts         # /, /about
+│   │       ├── public.ts         # /, /about, /users/:userId
 │   │       ├── auth.ts           # /login, /register, /forgot-password
 │   │       ├── settings.ts       # /settings + children
 │   │       ├── properties.ts     # /properties, /listing/:id, /feed + children
@@ -65,7 +67,7 @@ frontend/
 │   │   ├── properties.ts         # PropertyDetail, PropertyLocationDetail
 │   │   └── pois.ts               # OrsProfile, GeoJsonPolygon, ReachablePoiItem, RangeGroup, CATEGORY_META, CATEGORY_PRIORITY
 │   ├── views/                    # páginas-ruta
-│   │   ├── public/{HomeView, AboutView}
+│   │   ├── public/{HomeView, AboutView, PublicProfileView}  # /users/:userId — mock
 │   │   ├── auth/{LoginView, RegisterView, ResetPasswordView}
 │   │   ├── settings/{SettingsLayout, SettingsProfile, SettingsSecurity, SettingsAccount}
 │   │   ├── properties/
@@ -77,7 +79,11 @@ frontend/
 │   └── components/
 │       ├── shared/{NavBar, NavGuest, NavUser, BaseModal}
 │       ├── onboarding/{IntentSelector, LocalitySelector, NeighborhoodSelector, PropertyTypeSelector}
-│       ├── properties/{PropertyCard, HouseCard}
+│       ├── properties/
+│       │   ├── cards/{PropertyCard, HouseCard}      # HouseCard sin uso actual
+│       │   ├── photos/{PropertyPhotoGrid, PhotoGalleryPopup}
+│       │   ├── detail/{PropertyOverview, NearbyPlaces}
+│       │   └── feed/FeedFilters
 │       ├── settings/SettingsSidebar
 │       └── map/MapUser
 ├── package.json
@@ -299,7 +305,7 @@ Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. No hay invalidación
 |---|---|
 | `shared/` | NavBar, NavGuest (no-logged), NavUser (logged), BaseModal — reusables transversales. |
 | `onboarding/` | 4 selectors (Intent, Locality, Neighborhood, PropertyType) — usados desde el modal. |
-| `properties/` | `PropertyCard`, `HouseCard` — cards para feed. `FeedFilters` — sidebar de filtros con secciones Preferencias (ciudad, barrio, tipo) y Filtros (precio, área, habitaciones, baños); se pre-pobla con ciudades de `useCities`, barrios cargados dinámicamente al seleccionar ciudad vía `watch`. Mantiene estado local (`selected`, `selectedNeighborhoods`, `selectedTypes`, `filters: ref<FeedFilters>({})` con `v-model.number`); `property_types` se togglea con `toggleType(type)` (push/filter sobre el array). **Emite un solo `submit` con `{preferences, filters}` al click en "Aplicar"** — no reactivo con `watch`, decisión para evitar una petición por cada cambio de campo. El objeto `preferences` se arma en `onSubmit` leyendo los refs (`selected.value`, etc.), sin ref `preferences` duplicado. |
+| `properties/` | Organizado en subcarpetas por dominio desde 2026-06-21. `cards/{PropertyCard, HouseCard}` — cards para feed (`HouseCard` sin uso actual). `photos/{PropertyPhotoGrid, PhotoGalleryPopup}`. `detail/{PropertyOverview, NearbyPlaces}`. `feed/FeedFilters` — sidebar de filtros con secciones Preferencias (ciudad, barrio, tipo) y Filtros (precio, área, habitaciones, baños); se pre-pobla con ciudades de `useCities`, barrios cargados dinámicamente al seleccionar ciudad vía `watch`. Mantiene estado local (`selected`, `selectedNeighborhoods`, `selectedTypes`, `filters: ref<FeedFilters>({})` con `v-model.number`); `property_types` se togglea con `toggleType(type)` (push/filter sobre el array). **Emite un solo `submit` con `{preferences, filters}` al click en "Aplicar"** — no reactivo con `watch`, decisión para evitar una petición por cada cambio de campo. El objeto `preferences` se arma en `onSubmit` leyendo los refs (`selected.value`, etc.), sin ref `preferences` duplicado. |
 | `settings/` | SettingsSidebar — navegación lateral del SettingsLayout. |
 | `map/` | MapUser — componente de mapa dumb/reusable (vue-leaflet declarativo, markers-prop + slot). Ver [[frontend-map-component]]. |
 | `avm/` | AvmForm / AvmResult — form del avalúo multi-step. `AvmForm` consume `composables/useAvmForm` (expone `AvmFormPayload`, `AvmPredictRequest`, `SelectedPlace`). Emite `place-selected` (marker en tiempo real) y `submit` (payload + place + neighborhood resuelto). `DevPlaygroundView` orquesta: recibe `place-selected` → actualiza `center` y `marker` reactivos → pasa al mapa. |
@@ -355,13 +361,22 @@ Regla: nunca exportar interfaces de tipos desde archivos `.vue` — rompe TypeSc
 
 Vista de detalle del listing en `/listing/:id` (`views/properties/detail/PropertyDetailView.vue`). Refactorizada (2026-06-20) para que la view **solo orqueste**: un `property = ref<PropertyDetail | null>`, el composable `usePropertyDetail`, y 3 componentes hijos que reciben los datos ya resueltos.
 
-- **`PropertyPhotoGrid.vue`** (`components/properties/`) — grid de fotos (`grid grid-cols-4 grid-rows-[200px_200px]`, `grid-area` en `<style scoped>` porque Tailwind arbitrary values no funciona con clases dinámicas en `v-for`). Es padre de **`PhotoGalleryPopup.vue`** (carrusel `vue3-carousel` dentro de `BaseModal` con `size="3xl"`) — patrón props-down/events-up: el popup nunca muta el prop `isOpen`, solo emite `close`.
+- **`PropertyPhotoGrid.vue`** (`components/properties/photos/`) — grid de fotos (`grid grid-cols-4 grid-rows-[200px_200px]`, `grid-area` en `<style scoped>` porque Tailwind arbitrary values no funciona con clases dinámicas en `v-for`). Es padre de **`PhotoGalleryPopup.vue`** (carrusel `vue3-carousel` dentro de `BaseModal` con `size="3xl"`) — patrón props-down/events-up: el popup nunca muta el prop `isOpen`, solo emite `close`.
 - **`PropertyOverview.vue`** — header + precio + stats chips + descripción + detalles secundarios. Cero lógica propia, todo via props que mapean 1:1 a lo que devuelve `usePropertyDetail` (incluye `hasAdminFee`/`description` como `computed`, y `locationLabel` resuelto en la view con el mismo patrón de `buildNeighborhoodMap` que usan las cards del feed).
 - **`NearbyPlaces.vue`** — sección "Cerca del lugar" (perfiles, acordeón POI, mapa, isocronas, leyenda). Ver [[frontend-poi-reachable]] — a diferencia de los otros dos, es dueño de su propio `useReachablePois` (recibe `lat`/`lon`/`propertyId`, resuelve interno).
 - **Padding de la view**: `px-[8%] sm:px-[12%] lg:px-[18%]` — más estrecho que navbar para dar respiro visual.
 - **Lógica de detalle**: `composables/properties/usePropertyDetail.ts` — la view solo destructura el composable.
 - **Location label**: `buildNeighborhoodMap` (`composables/catalog/useNeighborhoodLookup.ts`) resuelto en `onMounted` de la view tras cargar la propiedad — resuelve barrio, no ciudad.
 - **Fetch real**: `propertiesApi.get<PropertyDetail>('/v1/properties/${route.params.id}')` usando el `id` de la ruta (`/listing/:id`) — reemplaza el mock hardcodeado que tenía antes.
+
+## PublicProfileView (mock, en construcción)
+
+Vista pública del perfil de un publicante en `/users/:userId` (`views/public/PublicProfileView.vue`). Hoy es **100% mock** — header (foto, nombre, badge verificado, rating, stats, CTAs WhatsApp/Mensaje/Llamar) y listado de propiedades viven como datos hardcodeados en el componente, con paginación local (`slice` sobre un array fijo, mismo patrón que `useFeedMap`).
+
+- El endpoint real ya existe — `GET /v1/properties/users/{user_id}` (properties-service, público, sin auth) → devuelve `list[PropertyCardSchema]` — pero todavía no está cableado a la vista.
+- Cuando se conecte la data real, el plan es separar en dos composables: `useUserPublicProfile(userId)` (datos del usuario — mock hasta que `users-service` expone un endpoint público con esos campos) y `usePublicUserProperties(userId)` (listings reales, vía el endpoint de arriba).
+- El endpoint de propiedades hoy no pagina server-side (devuelve la lista completa) — gap trackeado en [[open-items]] bajo "Página pública de perfil del publicante" (sub-tarea de paginación offset/limit, pendiente de implementación).
+- `PropertyCard.vue` (compartido con Feed/Map/MyProperties) se rediseñó en esta misma iteración: precio en `text-2xl` antes del título (que pasó a `text-brand-muted`), separadores `divide-x` entre hab/baños/m², y `cursor-pointer` + `hover:-translate-y-1` en toda la card.
 
 ## Claims
 
@@ -387,9 +402,9 @@ Vista de detalle del listing en `/listing/:id` (`views/properties/detail/Propert
 - axios serializa arrays como `key[]=v` (bracket notation) por defecto; FastAPI no parsea `key[]` como el parámetro `key` — fix: `paramsSerializer: { indexes: null }` en el request de `useFeed` ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
 - `buildNeighborhoodMap` aplana `Object.values(getNeighborhoodsByLocalities(ids)).flat()` y reduce a `Record<neighborhoodId, name>` — lookup O(1) usado en `toCard` de `FeedView` ([composables/catalog/useNeighborhoodLookup.ts](frontend/src/composables/catalog/useNeighborhoodLookup.ts)).
 - `useCities` es un singleton de módulo (`export const cities`) — estado compartido entre todos los componentes que lo importen en la misma sesión ([composables/catalog/useCities.ts](frontend/src/composables/catalog/useCities.ts)).
-- `FeedFilters` carga barrios dinámicamente via `watch(selected, ...)` sobre las ciudades seleccionadas — llama `useNeighborhoodMultiselect.load(localities)` y resetea `selectedNeighborhoods` al cambiar ciudades ([components/properties/FeedFilters.vue](frontend/src/components/properties/FeedFilters.vue)).
-- `FeedFilters` emite un único evento `submit` con `{ preferences, filters }` desde `onSubmit` al click en "Aplicar" — no es reactivo con `watch`; el componente no llama al backend ([components/properties/FeedFilters.vue:269-278](frontend/src/components/properties/FeedFilters.vue#L269-L278)).
-- `toggleType(type)` en `FeedFilters` quita el tipo con `filter` si ya está en `selectedTypes` o lo agrega con `push` si no ([components/properties/FeedFilters.vue:259-267](frontend/src/components/properties/FeedFilters.vue#L259-L267)).
+- `FeedFilters` carga barrios dinámicamente via `watch(selected, ...)` sobre las ciudades seleccionadas — llama `useNeighborhoodMultiselect.load(localities)` y resetea `selectedNeighborhoods` al cambiar ciudades ([components/properties/feed/FeedFilters.vue](frontend/src/components/properties/feed/FeedFilters.vue)).
+- `FeedFilters` emite un único evento `submit` con `{ preferences, filters }` desde `onSubmit` al click en "Aplicar" — no es reactivo con `watch`; el componente no llama al backend ([components/properties/feed/FeedFilters.vue:269-278](frontend/src/components/properties/feed/FeedFilters.vue#L269-L278)).
+- `toggleType(type)` en `FeedFilters` quita el tipo con `filter` si ya está en `selectedTypes` o lo agrega con `push` si no ([components/properties/feed/FeedFilters.vue:259-267](frontend/src/components/properties/feed/FeedFilters.vue#L259-L267)).
 - `useFeed.load(preferences?, filters?)` usa los args si llegan y cae a `userStore.userInterests` con `preferences ?? (ternario)` si no; `fetchFeed` hace spread `{ ...preferences, ...filters, cursor? }` en los params ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
 - `useFeed` expone `nextCursor`, `isFirstPage`, `loadNext(cursor)` y `loadPrev()` para paginación — `loadPrev` es siempre local (sin petición al back) ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
 - `GET /v1/search/feed` retorna `FeedPage { items: PropertyCard[], next_cursor: string | null }` — el composable desempaqueta `.items` ([types/feed.ts](frontend/src/types/feed.ts)).

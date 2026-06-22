@@ -1,14 +1,14 @@
 ---
 title: frontend
 status: draft
-last-verified: 2026-06-20
+last-verified: 2026-06-21
 owners: [frontend]
 related:
   - "[[architecture]]"
   - "[[frontend-architecture]]"
   - "[[frontend-onboarding-flow]]"
   - "[[frontend-local-dev]]"
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md, ../../sources/frontend/2026-06-20-property-detail-view-refactor.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md, ../../sources/frontend/2026-06-20-property-detail-view-refactor.md, ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md]
 ---
 
 ## TL;DR
@@ -53,7 +53,7 @@ Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con pro
 - **Firebase 10** + Google sign-in: spike-out, no funcionó. Ver [[adr-firebase-removal]].
 - `vue-class-component`: alpha de Vue 2 era — sospecha de zombie, no se importa en el código revisado.
 
-## Routes (10)
+## Routes (11)
 
 | Path | Auth | Componente |
 |---|---|---|
@@ -68,6 +68,7 @@ Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con pro
 | `/listing/:id` | público | `PropertyDetailView` |
 | `/feed` → `/feed/list` | público | `PropertiesView` (parent con toggle) + `FeedView` |
 | `/feed/map` | público | `PropertiesView` (parent) + `MapView` |
+| `/users/:userId` | público | `PublicProfileView` — ⚠ scaffolded, todo mock (perfil + listings), endpoint real `GET /v1/properties/users/{user_id}` existe pero aún no está cableado |
 
 Guard global en `router.beforeEach`: si la ruta `requiresAuth` y `_authChecked === false`, llama `authStore.checkAuth()`. Si tras eso `!isAuthenticated`, redirige a `/login`.
 

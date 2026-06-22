@@ -47,9 +47,9 @@ import type { PropertyDetail } from "@/types/properties";
 import { usePropertyDetail } from "@/composables/properties/usePropertyDetail";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
 import propertiesApi from "@/api/propertiesApi";
-import PropertyPhotoGrid from "@/components/properties/PropertyPhotoGrid.vue";
-import PropertyOverview from "@/components/properties/PropertyOverview.vue";
-import NearbyPlaces from "@/components/properties/NearbyPlaces.vue";
+import PropertyPhotoGrid from "@/components/properties/photos/PropertyPhotoGrid.vue";
+import PropertyOverview from "@/components/properties/detail/PropertyOverview.vue";
+import NearbyPlaces from "@/components/properties/detail/NearbyPlaces.vue";
 
 const route = useRoute();
 const property = ref<PropertyDetail | null>(null);

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-white rounded-2xl border border-brand-divider overflow-hidden hover:shadow-lg transition-shadow group"
+    class="bg-white rounded-2xl border border-brand-divider overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group"
   >
     <!-- Image -->
     <div class="relative h-48 overflow-hidden">
@@ -45,7 +45,7 @@
       <!-- Status badge (para propiedades del usuario) -->
       <div
         v-if="showStatus && property.status"
-        class="absolute bottom-3 left-3 px-3 py-1 rounded-full text-xs font-semibold"
+        class="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold"
         :class="statusBadgeClass"
       >
         {{ statusLabel }}
@@ -55,8 +55,8 @@
     <!-- Content -->
     <div class="p-4">
       <!-- Price -->
-      <div class="flex items-baseline gap-1 mb-2">
-        <span class="text-brand-text text-xl font-bold">
+      <div class="flex items-baseline gap-1 mb-1">
+        <span class="text-brand-text text-2xl font-bold">
           ${{ formatPrice(property.price) }}
         </span>
         <span v-if="property.type === 'rent'" class="text-brand-muted text-sm"
@@ -65,7 +65,7 @@
       </div>
 
       <!-- Title -->
-      <h3 class="text-brand-text font-semibold text-sm mb-2 line-clamp-1">
+      <h3 class="text-brand-muted text-sm mb-2 line-clamp-1">
         {{ property.title }}
       </h3>
 
@@ -89,8 +89,10 @@
       </div>
 
       <!-- Features -->
-      <div class="flex items-center gap-4 text-brand-muted text-xs">
-        <div class="flex items-center gap-1">
+      <div
+        class="flex items-center divide-x divide-brand-divider text-brand-muted text-xs"
+      >
+        <div class="flex items-center gap-1 pr-3">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="14"
@@ -107,7 +109,7 @@
           </svg>
           <span>{{ property.bedrooms }} hab.</span>
         </div>
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-1 px-3">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="14"
@@ -127,7 +129,7 @@
           </svg>
           <span>{{ property.bathrooms }} baños</span>
         </div>
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-1 pl-3">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="14"

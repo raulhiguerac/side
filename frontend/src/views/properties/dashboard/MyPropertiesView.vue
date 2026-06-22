@@ -212,7 +212,7 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import PropertyCard from "@/components/properties/PropertyCard.vue";
+import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
 import type { PropertyCardUI } from "@/types/feed";
 import axios from "axios";
 

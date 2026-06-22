@@ -60,14 +60,14 @@
 
 <script lang="ts" setup>
 import { onMounted } from "vue";
-import PropertyCard from "@/components/properties/PropertyCard.vue";
+import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
 import { useFeed } from "@/composables/feed/useFeed";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import type {
   FeedPreferences,
   FeedFilters as FeedFiltersParams,
 } from "@/types/feed";
-import FeedFilters from "@/components/properties/FeedFilters.vue";
+import FeedFilters from "@/components/properties/feed/FeedFilters.vue";
 
 const { data, loading, load, nextCursor, isFirstPage, loadNext, loadPrev } =
   useFeed();

@@ -28,7 +28,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import type { PropertyImageCard } from "@/types/feed";
-import PhotoGalleryPopup from "@/components/properties/PhotoGalleryPopup.vue";
+import PhotoGalleryPopup from "@/components/properties/photos/PhotoGalleryPopup.vue";
 
 const isOpen= ref<boolean>(false);
 const imageIndex= ref<number>(0);

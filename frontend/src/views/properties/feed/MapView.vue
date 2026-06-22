@@ -90,7 +90,7 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from "vue";
 import MapUser from "@/components/map/MapUser.vue";
-import PropertyCard from "@/components/properties/PropertyCard.vue";
+import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
 import { useFeedMap } from "@/composables/feed/useFeedMap";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import { useUserStore } from "@/stores/user";
