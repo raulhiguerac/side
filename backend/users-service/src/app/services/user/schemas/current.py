@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Annotated, Literal, Optional, Union
 
 from pydantic import EmailStr, Field
@@ -7,24 +8,26 @@ from app.models.account import AccountIntent, OnboardingStep
 from app.schemas.base import StrictBase
 
 
-class CurrentUserPerson(StrictBase): 
-    first_name: str 
-    last_name: str 
-    phone: Optional[str] 
-    photo_url: Optional[str] 
+class CurrentUserPerson(StrictBase):
+    first_name: str
+    last_name: str
+    phone: Optional[str]
+    photo_url: Optional[str]
     description: Optional[str]
     intent: Optional[AccountIntent]
     account_type: Literal['person']
-    
+    created_at: Optional[datetime] = None
+
 class CurrentUserOrganization(StrictBase):
-    display_name: str 
-    phone: Optional[str] 
-    photo_url: Optional[str] 
-    description: Optional[str] 
+    display_name: str
+    phone: Optional[str]
+    photo_url: Optional[str]
+    description: Optional[str]
     intent: Optional[AccountIntent]
     account_type: Literal["organization"]
+    created_at: Optional[datetime] = None
 
-class CurrentUserProfileOut(StrictBase): 
+class CurrentUserProfileOut(StrictBase):
     profile: Annotated[
         Union[CurrentUserPerson,CurrentUserOrganization],
         Field(discriminator="account_type")

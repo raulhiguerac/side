@@ -1,7 +1,7 @@
 ---
 title: Open items — gaps y deuda técnica cross-service
 status: draft
-last-verified: 2026-06-16
+last-verified: 2026-06-23
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -13,7 +13,7 @@ related:
   - "[[avm-training]]"
   - "[[adr-estimated-price-dual-signal]]"
   - "[[adr-gmaps-places-geocoding]]"
-sources: [../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md]
+sources: [../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md, ../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md, ../../sources/users-service/2026-06-23-public-profile-endpoint.md]
 ---
 
 ## TL;DR
@@ -36,6 +36,7 @@ Backlog vivo de gaps detectados al documentar la wiki (2026-05-28): cosas que el
 ### Crítico — flujo de valor
 
 - [ ] **Worker de properties que consume `price-predicted`.** Cablear el consumer que escucha el topic de [[analytics-service]] y llama `SetEstimatedPriceUseCase` con `principal=None` para poblar `ml_estimated_price`. Hoy `workers/` de properties está vacío y el path ML no tiene caller — es el flujo async properties↔analytics que [[architecture]] marca "en definición". Sin esto, el precio del AVM nunca llega al listing. Ver [[adr-estimated-price-dual-signal]], [[properties-service-admin]].
+- [ ] **Desactivación de cuenta no propaga a los listings del usuario.** `DeactivateCurrentAccountUseCase` (`deactivate_current_account.py:20-42`) marca la cuenta `is_active=False` e invalida su cache, pero no notifica a nadie — los listings del usuario en [[properties-service]] quedan publicados y visibles en el feed aunque el dueño ya no esté activo. Falta: publicar un evento (ej. Kafka `account.deactivated {account_id}`) y un consumer en properties-service que marque `inactive` todos los listings de ese `owner_id`. Mismo patrón fire-and-forget que `price-predicted` (ítem anterior). Ver [[users-service]], [[properties-service-admin]].
 
 ### Impresiones, analytics de comportamiento y feed personalizado
 
@@ -68,6 +69,7 @@ Backlog vivo de gaps detectados al documentar la wiki (2026-05-28): cosas que el
 
 - [ ] **Re-registrar AVM con `year_built` nullable.** `_make_raw_input_example()` en `trainer.py` usa `year_built: 2012` (int) → MLflow infiere `long required` → rechaza `null` en runtime antes del preprocessing. Fix: pasar `year_built: None` en el ejemplo y re-correr `final_train` + promover alias `production`. Workaround temporal: reemplazar `None` con `0` en `AVMModelAdapter` tras el `model_dump`. Ver [[analytics-service-mlflow]].
 - [x] **Conciliar tag set de POIs.** `category_map.py` unifica 5 keys OSM, 15 categorías, 147 valores — idéntico al tag set del AVM. `extract_category()` reemplaza el mapper anterior. Cerrado 2026-06-11. Ver [[catalog-service-overpass]], [[adr-geospatial-feature-engineering]].
+- [ ] **Evaluar self-host de Overpass.** La instancia pública `overpass-api.de` empezó a devolver 406 a requests sin `User-Agent` descriptivo (mitigado 2026-06-23 seteando `settings.OVERPASS_USER_AGENT`) y sigue devolviendo `ServerLoadError` (504) bajo carga — riesgo de disponibilidad fuera de nuestro control. Self-host requiere levantar un Overpass propio (similar al contenedor ORS ya en `infra/`) y subir/mantener actualizados los extractos `.pbf` (Colombia/Bogotá) al servicio. Pendiente decidir si vale el costo operativo vs. seguir absorbiendo los fallos del público con retries. Ver [[catalog-service-overpass]].
 - [ ] **Resolución H3 al cablear feature store desde un MS (caveat, no bug).** Los servicios indexan en r9 (lookup espacial granular) y el AVM usa r6/r7/r8 (feature del vector; r9 mete ruido). Hoy NO rompe nada porque el modelo recomputa sus celdas desde `lat/lon` en inferencia y no consume las celdas de los MS. Cuando se conecte el feature store desde un MS al modelo, **recomputar la resolución del modelo, no reusar la celda r9 almacenada**. Decisión en [[adr-h3-resolution-per-use-case]]; documentado en [[glossary#h3]].
 - [ ] **CI + promoción del training AVM.** Automatizar el run (orchestrator tipo Airflow) y formalizar la promoción del alias `production` (hoy manual). Ver [[avm-training]], [[adr-model-promotion-external-to-service]].
 

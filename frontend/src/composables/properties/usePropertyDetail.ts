@@ -105,9 +105,9 @@ export function usePropertyDetail(property: Ref<PropertyDetail | null>) {
 
   const gridImages = computed(() => property.value?.images.slice(0, 5) ?? []);
 
-  const hasAdminFee = computed(() => !!property.value?.admin_fee)
+  const hasAdminFee = computed(() => !!property.value?.admin_fee);
 
-  const description = computed(() => property.value?.description ?? null)
+  const description = computed(() => property.value?.description ?? null);
 
   return {
     title,
@@ -121,6 +121,6 @@ export function usePropertyDetail(property: Ref<PropertyDetail | null>) {
     verificationStyle,
     gridImages,
     hasAdminFee,
-    description
+    description,
   };
 }

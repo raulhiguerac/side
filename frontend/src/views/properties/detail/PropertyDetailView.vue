@@ -9,7 +9,10 @@
 
     <template v-else-if="property">
       <!-- Photo grid -->
-      <PropertyPhotoGrid :grid-images="gridImages" :all-images="property.images" />
+      <PropertyPhotoGrid
+        :grid-images="gridImages"
+        :all-images="property.images"
+      />
 
       <PropertyOverview
         :title="title"

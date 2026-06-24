@@ -5,28 +5,24 @@
       class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 bg-white border border-brand-divider rounded-2xl p-5"
     >
       <img
-        :src="profile.avatar"
-        :alt="profile.name"
+        :src="profile?.profile.photo_url ?? undefined"
+        :alt="displayName"
         class="w-28 h-28 rounded-full object-cover shrink-0 border border-brand-divider"
       />
 
       <div class="flex flex-col gap-1.5 flex-1">
         <div class="flex items-center gap-1.5">
-          <h1 class="text-brand-text text-lg font-bold">{{ profile.name }}</h1>
+          <h1 class="text-brand-text text-lg font-bold">{{ displayName }}</h1>
           <BadgeCheck class="w-4 h-4 text-brand-primary" />
         </div>
-        <span class="text-brand-muted text-xs">{{ profile.role }}</span>
+
+        <p v-if="profile?.profile.description" class="text-brand-muted text-sm">
+          {{ profile.profile.description }}
+        </p>
 
         <div
           class="flex flex-wrap items-center gap-3 text-brand-text text-sm mt-1"
         >
-          <span class="flex items-center gap-1">
-            <Star class="w-4 h-4 text-yellow-400 fill-yellow-400" />
-            {{ profile.rating }}
-          </span>
-          <span class="text-brand-muted">·</span>
-          <span>{{ profile.responseRate }} respuesta</span>
-          <span class="text-brand-muted">·</span>
           <span>{{ memberSince }} en la plataforma</span>
           <span class="text-brand-muted">·</span>
           <span>{{ activeListingsCount }} propiedades activas</span>
@@ -94,27 +90,42 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
-import { BadgeCheck, MessageCircle, MessageSquare, Phone, Star } from "@lucide/vue";
+import { BadgeCheck, MessageCircle, MessageSquare, Phone } from "@lucide/vue";
 import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
 import type { PropertyCardUI } from "@/types/feed";
+import type { CurrentUserProfileOut } from "@/types/user";
+import { API } from "@/config";
+import axios from "axios";
 
 const route = useRoute();
 const userId = route.params.userId as string;
 
-const profile = ref({
-  id: "970d29ba-dd16-4d6d-81c6-30e0d9d297b0",
-  name: "Mariana Restrepo",
-  role: "Agente inmobiliaria",
-  avatar: "https://i.pravatar.cc/150?img=47",
-  rating: "4.8",
-  registeredAt: "2023-02-10",
-  responseRate: "95%",
+const profile = ref<CurrentUserProfileOut>();
+
+onMounted(async () => {
+  try {
+    const { data } = await axios.get<CurrentUserProfileOut>(
+      `${API.USERS_BASE_URL}/v1/users/profiles/${userId}`
+    );
+    profile.value = data;
+  } catch (error) {
+    console.error("Error al obtener el perfil:", error);
+  }
+});
+
+const displayName = computed(() => {
+  const p = profile.value?.profile;
+  if (!p) return "";
+  return p.account_type === "person" ? `${p.first_name} ${p.last_name}` : p.display_name;
 });
 
 const memberSince = computed(() => {
-  const registered = new Date(profile.value.registeredAt);
+  const createdAt = profile.value?.profile.created_at;
+    if (!createdAt) return "";
+
+  const registered = new Date(createdAt);
   const months =
     (Date.now() - registered.getTime()) / (1000 * 60 * 60 * 24 * 30);
   const years = Math.floor(months / 12);

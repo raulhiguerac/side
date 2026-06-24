@@ -91,7 +91,11 @@ export const CATEGORY_META: Record<string, CategoryMeta> = {
   doctor: { label: "Salud", icon: HeartPulse, bucket: "health" },
   dentist: { label: "Salud", icon: HeartPulse, bucket: "health" },
   pharmacy: { label: "Salud", icon: HeartPulse, bucket: "health" },
-  supermarket: { label: "Supermercados", icon: ShoppingCart, bucket: "commerce" },
+  supermarket: {
+    label: "Supermercados",
+    icon: ShoppingCart,
+    bucket: "commerce",
+  },
   bus_station: { label: "Transporte", icon: Bus, bucket: "transport" },
   platform: { label: "Transporte", icon: Bus, bucket: "transport" },
   stop_position: { label: "Transporte", icon: Bus, bucket: "transport" },

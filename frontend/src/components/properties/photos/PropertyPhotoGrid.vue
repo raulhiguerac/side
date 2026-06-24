@@ -3,7 +3,7 @@
     class="grid grid-cols-4 grid-rows-[200px_200px] gap-[6px] rounded-2xl overflow-hidden"
   >
     <div
-      v-for="(img, i) in gridImages"
+      v-for="(img, i) in props.gridImages"
       :key="i"
       :class="`cell-${i + 1}`"
       class="overflow-hidden group cursor-pointer"
@@ -19,7 +19,7 @@
 
   <PhotoGalleryPopup
     :is-open="isOpen"
-    :images="allImages"
+    :images="props.allImages"
     :start-index="imageIndex"
     @close="isOpen = false"
   />
@@ -30,17 +30,17 @@ import { ref } from "vue";
 import type { PropertyImageCard } from "@/types/feed";
 import PhotoGalleryPopup from "@/components/properties/photos/PhotoGalleryPopup.vue";
 
-const isOpen= ref<boolean>(false);
-const imageIndex= ref<number>(0);
+const isOpen = ref<boolean>(false);
+const imageIndex = ref<number>(0);
 
-const { gridImages, allImages } = defineProps<{
+const props = defineProps<{
   gridImages: Array<PropertyImageCard>;
   allImages: Array<PropertyImageCard>;
 }>();
 
-function openPopup(i: number){
-  isOpen.value = true
-  imageIndex.value = i
+function openPopup(i: number) {
+  isOpen.value = true;
+  imageIndex.value = i;
 }
 </script>
 

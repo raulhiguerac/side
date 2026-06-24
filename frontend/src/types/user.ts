@@ -24,3 +24,30 @@ export interface UserState {
   userDismissedModal: boolean;
   userInterests: UserInterests;
 }
+
+export type AccountIntent = "buyer" | "seller" | "renter" | "explorer";
+
+export interface CurrentUserPerson {
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  photo_url: string | null;
+  description: string | null;
+  intent: AccountIntent | null;
+  account_type: "person";
+  created_at: string | null;
+}
+
+export interface CurrentUserOrganization {
+  display_name: string;
+  phone: string | null;
+  photo_url: string | null;
+  description: string | null;
+  intent: AccountIntent | null;
+  account_type: "organization";
+  created_at: string | null;
+}
+
+export interface CurrentUserProfileOut {
+  profile: CurrentUserPerson | CurrentUserOrganization;
+}

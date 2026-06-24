@@ -57,15 +57,31 @@ class SqlGeoreferentiationRepository(GeoreferentiationRepository):
 
     def get_location_by_point(self, *, lat: float, lon: float, cell: str) -> Optional[LocationByCoordinates]:
         pnt = func.ST_SetSRID(ST_Point(lon, lat), 4326)
-        stmt = (
+
+        # Prefiltro por h3_cells (índice GIN) para acotar candidatos antes del
+        # ST_Contains — una celda puede solapar 2-3 barrios cerca de un borde,
+        # así que el ST_Contains sigue siendo el que decide el barrio correcto.
+        narrowed_stmt = (
             select(Neighborhood.id, Neighborhood.locality_id, Locality.country_id)
             .join(Locality, Locality.id == Neighborhood.locality_id)
-            .where(Neighborhood.geom.isnot(None))
             .where(Neighborhood.h3_cells.any(cell))
             .filter(func.ST_Contains(Neighborhood.geom, pnt))
             .limit(1)
         )
-        row = self.session.execute(stmt).first()
+        row = self.session.execute(narrowed_stmt).first()
+
+        if row is None:
+            # Celda fría (nunca poblada): sin candidatos para acotar, hay que
+            # barrer todos los barrios con geom.
+            full_stmt = (
+                select(Neighborhood.id, Neighborhood.locality_id, Locality.country_id)
+                .join(Locality, Locality.id == Neighborhood.locality_id)
+                .where(Neighborhood.geom.isnot(None))
+                .filter(func.ST_Contains(Neighborhood.geom, pnt))
+                .limit(1)
+            )
+            row = self.session.execute(full_stmt).first()
+
         if row is None:
             return None
         return LocationByCoordinates(

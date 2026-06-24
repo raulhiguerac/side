@@ -33,7 +33,9 @@
     <!-- POIs + Map -->
     <div class="flex flex-col md:flex-row gap-6">
       <!-- Left: POI accordion by range -->
-      <div class="order-2 md:order-1 w-full md:w-1/2 h-[500px] overflow-y-auto pr-1 space-y-2">
+      <div
+        class="order-2 md:order-1 w-full md:w-1/2 h-[500px] overflow-y-auto pr-1 space-y-2"
+      >
         <div
           v-for="range in groupedByRange"
           :key="range.minutes"
@@ -77,7 +79,8 @@
               >
                 <div class="flex items-center gap-1.5 text-brand-muted">
                   <component :is="group.icon" :size="13" />
-                  <span class="text-[11px] font-medium uppercase tracking-wide"
+                  <span
+                    class="text-[11px] font-medium uppercase tracking-wide"
                     >{{ group.label }}</span
                   >
                 </div>
@@ -95,7 +98,10 @@
       </div>
 
       <!-- Right: Map -->
-      <div class="order-1 md:order-2 w-full md:w-1/2 rounded-2xl overflow-hidden" style="height: 500px">
+      <div
+        class="order-1 md:order-2 w-full md:w-1/2 rounded-2xl overflow-hidden"
+        style="height: 500px"
+      >
         <MapUser
           v-if="mapCenterCoords"
           v-model:zoom="mapZoom"
@@ -138,7 +144,7 @@ import {
 import MapUser from "@/components/map/MapUser.vue";
 import MapLegend from "@/components/map/MapLegend.vue";
 
-const { lat, lon, propertyId } = defineProps<{
+const props = defineProps<{
   lat: number;
   lon: number;
   propertyId: string;
@@ -151,7 +157,10 @@ const { groupedByRange, loadPois, profiles, activeProfile } =
 
 const hoveredId = ref<string | null>(null);
 const mapZoom = ref(14);
-const mapCenterCoords = ref<[number, number] | undefined>([lat, lon]);
+const mapCenterCoords = ref<[number, number] | undefined>([
+  props.lat,
+  props.lon,
+]);
 
 const poiMarkers = computed<MarkerData[]>(() => {
   const seen = new Set<string>();
@@ -188,6 +197,6 @@ const poiMarkers = computed<MarkerData[]>(() => {
 });
 
 onMounted(async () => {
-  await loadPois(lat, lon, propertyId);
+  await loadPois(props.lat, props.lon, props.propertyId);
 });
 </script>

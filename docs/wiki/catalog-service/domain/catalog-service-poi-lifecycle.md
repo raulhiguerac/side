@@ -1,7 +1,7 @@
 ---
 title: Lifecycle del POI (catalog-service)
 status: draft
-last-verified: 2026-06-15
+last-verified: 2026-06-23
 owners: [catalog-service]
 related:
   - "[[catalog-service]]"
@@ -11,16 +11,18 @@ related:
   - "[[avm-training]]"
   - "[[adr-poi-cache-aside]]"
   - "[[adr-isochrone-ors-h3]]"
+  - "[[adr-postgis-h3-hybrid]]"
 sources:
   - ../../../sources/catalog-service/2026-05-21-foundational-qa.md
   - ../../../sources/catalog-service/2026-06-11-ors-setup-poi-unification.md
   - ../../../sources/catalog-service/2026-06-15-ors-isochrone-reachable-pois.md
   - ../../../sources/catalog-service/2026-06-15-isochrone-poi-seed-fixes.md
+  - ../../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md
 ---
 
 ## TL;DR
 
-Los POIs se pueblan **side-effect only** — nunca on-demand de un endpoint, solo como background task disparada por un geo-resolution exitoso. 3 capas de dedup para evitar fetches redundantes a Overpass: Redis cache short-circuit → Redis `SET NX` lock distribuido → DB `FetchZone` freshness check. Cuando fetchea, también appendea el `h3_index` al array `h3_cells` del barrio (mecánica lazy-fill). `get_location_by_point` ahora pre-filtra por `h3_cells` antes de `ST_Contains`.
+Los POIs se pueblan **side-effect only** — nunca on-demand de un endpoint, solo como background task disparada por un geo-resolution exitoso. 3 capas de dedup para evitar fetches redundantes a Overpass: Redis cache short-circuit → Redis `SET NX` lock distribuido → DB `FetchZone` freshness check. Cuando fetchea, también appendea el `h3_index` al array `h3_cells` del barrio (mecánica lazy-fill). `get_location_by_point` combina `h3_cells` + `ST_Contains` (el pre-filtro acota candidatos, pero `ST_Contains` decide), con fallback a `ST_Contains` completo si la celda nunca fue poblada — ver fix 2026-06-23 más abajo.
 
 ## Trigger
 
@@ -116,7 +118,7 @@ TTLs:
 - **`source`**: `PoiSource.osm` hardcodeado.
 - **`h3_index`**: el de la zona (precomputed, no se re-calcula por POI).
 
-## La lazy-fill de `h3_cells` — gap actual
+## La lazy-fill de `h3_cells`
 
 `update_neighborhood_h3_cells` ([sql_georeferentiation_repository.py:34-41](backend/catalog-service/src/app/services/geo_resolution/adapters/sql_georeferentiation_repository.py#L34-L41)) ejecuta:
 
@@ -128,18 +130,33 @@ WHERE id = $neighborhood_id
 
 Cada zona fetcheada agrega **una celda** al array. Con tráfico real, los barrios populares van llenando su array de h3_cells; los olvidados quedan vacíos.
 
-**El gap**: el read path actual (`get_location_by_point` y `get_neighborhood_by_coordinates`) hace `ST_Contains(geom, point)` directo sin usar `h3_cells` para pre-filtrar. O sea: hoy `h3_cells` se popula pero **no se aprovecha** para acelerar las queries. La optimización descrita en [[catalog-service]] (3-1500 candidatos PostGIS → 1-3 con H3 pre-filtro) está **diseñada pero no implementada en el read path**.
+### El huevo-gallina que esto causó (fix 2026-06-23)
 
-Para activarla, los reads tendrían que cambiar a algo como:
+Hasta el 2026-06-22, `get_location_by_point` pre-filtraba **solo** por `h3_cells.any(cell)` antes de intentar `ST_Contains` — y el `background_tasks.add_task(poi_uc.execute, ...)` de `/by-coordinates` (que es lo único que puebla `h3_cells`) corría *después* de un `uc.execute()` exitoso. Resultado: una celda nunca pisada nunca tenía match en `h3_cells` → 404 inmediato → la excepción se lanzaba antes de programar el background task → la celda nunca se poblaba. Huevo-gallina permanente para cualquier zona nueva.
+
+**Fix**: `get_location_by_point` ([sql_georeferentiation_repository.py:58-84](backend/catalog-service/src/app/services/geo_resolution/adapters/sql_georeferentiation_repository.py#L58-L84)) ahora:
 
 ```sql
-SELECT * FROM neighborhoods
-WHERE locality_id = $locality_id
-  AND h3_cells @> ARRAY[$query_h3]::varchar[]
-  AND ST_Contains(geom, $point);
+-- 1) narrowed: si la celda ya está poblada, acota candidatos y decide con ST_Contains
+SELECT ... FROM neighborhoods
+JOIN localities ON ...
+WHERE h3_cells @> ARRAY[$query_h3]::varchar[]
+  AND ST_Contains(geom, $point)
+LIMIT 1;
+
+-- 2) si (1) no da resultado (celda fría, nunca poblada): fallback completo
+SELECT ... FROM neighborhoods
+JOIN localities ON ...
+WHERE geom IS NOT NULL
+  AND ST_Contains(geom, $point)
+LIMIT 1;
 ```
 
-Pendiente medir si hace falta (la latencia actual con `ST_Contains` directo puede ser aceptable mientras los barrios sean pocos por locality).
+`ST_Contains` decide siempre, en ambos pasos — el pre-filtro por `h3_cells` solo acota candidatos (1-3 barrios vecinos), nunca devuelve el resultado por sí solo. Esto evita un segundo edge case: una celda h3 puede solapar dos barrios cerca de un borde, así que confiar solo en el match de celda podía devolver el barrio vecino equivocado.
+
+El `background_tasks.add_task(poi_uc.execute, ...)` en `/by-coordinates` se restauró — corre después de que `uc.execute()` ya resolvió (por cualquiera de los dos pasos), así que toda celda consultada queda poblada para la próxima vez.
+
+`get_neighborhood_by_coordinates` (resolve-neighborhood por dirección) **no se tocó** — sigue haciendo `ST_Contains` directo sin pre-filtro por h3. Ver [[adr-postgis-h3-hybrid]].
 
 ## Seed masivo desde PBF (`scripts/seed_pois.py`)
 
@@ -213,7 +230,8 @@ SELECT * FROM points_of_interest WHERE h3_index = ANY(:cells)
 - 3 capas de dedup: cache short-circuit (`cache_key_fetch_zone`) → lock distribuido (`set_nx`, TTL `POI_LOCK_TTL_SECONDS`=30s) → DB `FetchZone` freshness ([resolve_poi.py:62-103](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_poi.py#L62-L103)).
 - El lock SIEMPRE se libera en `finally`, sin importar el flow ([resolve_poi.py:114-115](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_poi.py#L114-L115)).
 - El append de `h3_cells` es `UPDATE ... SET h3_cells = array_append(h3_cells, $h3)` ejecutado después de persistir los POIs ([sql_georeferentiation_repository.py:34-41](backend/catalog-service/src/app/services/geo_resolution/adapters/sql_georeferentiation_repository.py#L34-L41)).
-- `get_location_by_point` pre-filtra con `WHERE h3_cells.any(cell)` (GIN index) antes de `ST_Contains` — el UC calcula `h3.latlng_to_cell(lat, lon, 9)` y lo pasa como `cell` ([sql_georeferentiation_repository.py](backend/catalog-service/src/app/services/geo_resolution/adapters/sql_georeferentiation_repository.py), [resolve_location_by_coordinates.py](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_location_by_coordinates.py)).
+- `get_location_by_point` combina `h3_cells.any(cell)` (GIN index, acota candidatos) con `ST_Contains` (decide siempre) en una query "narrowed"; si no hay match, cae a un `ST_Contains` completo sobre todos los barrios con `geom` (celda fría) — nunca confía solo en el match de celda. El UC calcula `h3.latlng_to_cell(lat, lon, settings.H3_RESOLUTION)` y lo pasa como `cell` ([sql_georeferentiation_repository.py:58-84](backend/catalog-service/src/app/services/geo_resolution/adapters/sql_georeferentiation_repository.py#L58-L84), [resolve_location_by_coordinates.py](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_location_by_coordinates.py)). Fix 2026-06-23: antes de esto, el pre-filtro solo (sin fallback) causaba un huevo-gallina permanente para celdas nunca pobladas.
+- `/geo-resolution/by-coordinates` programa `background_tasks.add_task(poi_uc.execute, ...)` después de que `uc.execute()` resuelve — restaurado 2026-06-23 tras el fix del huevo-gallina ([api/routes/geo_resolution.py:46-63](backend/catalog-service/src/app/api/routes/geo_resolution.py#L46-L63)).
 - `PoiProviderAdapter` usa `extract_category(tags)` de `category_map.py` — clasifica a una de 15 categorías estándar. `subcategories` se persiste como `None` ([poi_provider.py](backend/catalog-service/src/app/services/geo_resolution/adapters/poi_provider.py)).
 - POIs sin `name` se descartan en el mapping ([poi_provider.py:53-54](backend/catalog-service/src/app/services/geo_resolution/adapters/poi_provider.py#L53-L54)).
 - `external_id` se construye como `f"{type}/{id}"` (`node/123`, `way/456`) y junto con `source` forma el unique constraint `uq_poi_external_id_source` ([poi_provider.py:68](backend/catalog-service/src/app/services/geo_resolution/adapters/poi_provider.py#L68), [models/location.py:392](backend/catalog-service/src/app/models/location.py#L392)).

@@ -13,16 +13,21 @@
 </template>
 
 <script lang="ts" setup>
-const { size = "lg" } = defineProps<{
+import { computed } from "vue";
+
+const props = defineProps<{
   modelValue: boolean;
   size?: "lg" | "xl" | "3xl";
 }>();
 
-const sizeClass = {
-  lg: "max-w-lg",
-  xl: "max-w-xl",
-  "3xl": "max-w-3xl",
-}[size];
+const sizeClass = computed(
+  () =>
+    ({
+      lg: "max-w-lg",
+      xl: "max-w-xl",
+      "3xl": "max-w-3xl",
+    }[props.size ?? "lg"])
+);
 
 defineEmits(["update:modelValue"]);
 </script>

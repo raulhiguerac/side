@@ -16,6 +16,7 @@ def map_profile_db_to_schema(
             description=profile_db.description,
             intent=profile_db.intent,
             account_type="person",
+            created_at=profile_db.created_at,
         )
 
     return CurrentUserOrganization(
@@ -25,4 +26,5 @@ def map_profile_db_to_schema(
         description=profile_db.description,
         intent=profile_db.intent,
         account_type="organization",
+        created_at=profile_db.created_at,
     )

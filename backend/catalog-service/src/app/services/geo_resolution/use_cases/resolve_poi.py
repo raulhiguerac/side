@@ -109,7 +109,7 @@ class ResolvePoiUseCase:
             )
 
         except Exception as exc:
-            logger.error("resolve_poi_error", extra={"extra": {"h3_index": h3_index, "reason": str(exc)}})
+            logger.error("resolve_poi_error h3_index=%s reason=%s: %s", h3_index, exc.__class__.__name__, exc)
             await self.uow.rollback()
         finally:
             await self.cache_client.delete(key=lock_key)

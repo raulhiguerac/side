@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # migración que recompute `h3_index` de toda la tabla. No es un toggle inocuo.
     H3_RESOLUTION: int = 9
     OVERPASS_TIMEOUT_SECONDS: int = 30
+    # overpass-api.de rechaza con 406 los requests sin un User-Agent descriptivo.
+    OVERPASS_USER_AGENT: str = os.getenv(
+        "OVERPASS_USER_AGENT", "side-catalog-service/1.0 (contact: raul.higuera369@gmail.com)"
+    )
     ORS_URL: str = os.getenv("ORS_URL", "")
     ORS_TIMEOUT_SECONDS: float = 5.0
 

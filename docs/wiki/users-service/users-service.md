@@ -1,7 +1,7 @@
 ---
 title: users-service
 status: draft
-last-verified: 2026-05-28
+last-verified: 2026-06-23
 owners: [users-service]
 related:
   - "[[architecture]]"
@@ -9,7 +9,7 @@ related:
   - "[[users-service-auth]]"
   - "[[users-service-user]]"
   - "[[users-service-keycloak]]"
-sources: [../../sources/users-service/2026-05-28-foundational-exploration.md]
+sources: [../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-06-23-public-profile-endpoint.md]
 ---
 
 ## TL;DR
@@ -50,6 +50,7 @@ Todo bajo prefijo `/v1`.
 | GET | `/v1/users/me` | cookie access |
 | GET | `/v1/users/me/interests` | cookie access |
 | GET/PATCH | `/v1/users/me/profile` | cookie access |
+| GET | `/v1/users/profiles/{account_id}` | público (sin auth) |
 | POST | `/v1/users/me/profile/photo` | cookie access |
 | POST | `/v1/users/me/deactivate` | cookie access |
 | POST | `/v1/users/reactivation/request` | público |

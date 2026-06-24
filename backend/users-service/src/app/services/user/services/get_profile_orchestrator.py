@@ -30,7 +30,6 @@ class ProfileApplicationService:
         Returns the profile for an account regardless of active status.
         Useful for:
         - reactivation flows
-        - public views
         - admin access
         """
         return await self._get_profile(
@@ -45,7 +44,8 @@ class ProfileApplicationService:
     ) -> CurrentUserProfileOut:
         """
         Returns the profile only if the account is active.
-        Used for authenticated user flows.
+        Used for authenticated user flows and public profile views —
+        a deactivated account's profile should not be visible to anyone.
         """
         return await self._get_profile(
             account_id=account_id,

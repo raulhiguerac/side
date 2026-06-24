@@ -83,10 +83,14 @@ function buildPoiPopupHtml(m: MarkerData): string {
   if (m.website) {
     const safeHref = encodeURI(m.website);
     rows.push(
-      `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${escapeHtml(m.website)}</a>`
+      `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${escapeHtml(
+        m.website
+      )}</a>`
     );
   }
-  return `<div style="font-size:12px;line-height:1.4">${rows.join("<br/>")}</div>`;
+  return `<div style="font-size:12px;line-height:1.4">${rows.join(
+    "<br/>"
+  )}</div>`;
 }
 
 const zoom = defineModel<number>("zoom", { default: 15 });
@@ -94,7 +98,9 @@ const center = defineModel<[number, number]>("center");
 
 // Internal center that l-map owns — prevents Leaflet LatLng objects from
 // leaking into parent state and avoids circular update crashes.
-const internalCenter = ref<[number, number]>(center.value ?? [4.681414, -74.046864]);
+const internalCenter = ref<[number, number]>(
+  center.value ?? [4.681414, -74.046864]
+);
 watch(center, (val) => {
   if (val) internalCenter.value = val;
 });

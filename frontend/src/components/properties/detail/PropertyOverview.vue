@@ -22,8 +22,8 @@
         <div
           class="hidden group-hover:block absolute top-[calc(100%+6px)] right-0 w-56 bg-gray-800 text-gray-100 text-[0.7rem] leading-snug p-2 rounded-lg z-10"
         >
-          Certificamos que el anuncio cumple nuestras reglas de moderación y
-          que la propiedad pertenece al publicante.
+          Certificamos que el anuncio cumple nuestras reglas de moderación y que
+          la propiedad pertenece al publicante.
         </div>
       </div>
     </div>

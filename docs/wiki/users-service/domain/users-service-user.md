@@ -1,7 +1,7 @@
 ---
 title: Dominio user — users-service
 status: draft
-last-verified: 2026-05-28
+last-verified: 2026-06-23
 owners: [users-service]
 related:
   - "[[users-service]]"
@@ -9,7 +9,7 @@ related:
   - "[[frontend-onboarding-flow]]"
   - "[[adr-soft-deactivation]]"
   - "[[properties-service-search]]"
-sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md]
+sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/users-service/2026-06-23-public-profile-endpoint.md]
 ---
 
 ## TL;DR
@@ -21,7 +21,8 @@ El dominio de **perfil y ciclo de cuenta**: leer/editar el perfil propio, subir 
 | UC | Archivo | Qué hace |
 |---|---|---|
 | `GetCurrentAccountUseCase` | `use_cases/account/get_current_account.py` | Datos de cuenta del usuario actual. |
-| `GetCurrentProfileUseCase` | `use_cases/profile/get_current_profile.py` | Perfil (cache-aside). |
+| `GetCurrentProfileUseCase` | `use_cases/profile/get_current_profile.py` | Perfil propio (cache-aside, `principal.sub`). |
+| `GetProfileByIdUseCase` | `use_cases/profile/get_profile_by_id.py` | Perfil público de **otra** cuenta, por `account_id` (sin auth). |
 | `UpdateCurrentProfileUseCase` | `use_cases/profile/update_current_profile.py` | Patch de perfil; invalida cache. |
 | `UpdateCurrentProfilePhotoUseCase` | `use_cases/profile/upload_profile_photo.py` | Sube foto a storage, actualiza `photo_url`/`photo_key`. |
 | `GetUserInterestsUseCase` | `use_cases/account/get_interests.py` | Intereses (ciudad/barrio/tipo). |
@@ -35,7 +36,16 @@ El dominio de **perfil y ciclo de cuenta**: leer/editar el perfil propio, subir 
 
 ## Perfil — persona vs empresa
 
-`accounts.account_type` define si el perfil vive en `user_profile` (persona) o `company_profile` (organización). Los readers (`CurrentProfileReader`, `CurrentAccountReader`) resuelven la tabla correcta según el tipo. El orquestador `ProfileApplicationService` expone `get_profile` (permite cuentas inactivas: reactivación/admin) y `get_active_profile` (solo activas), ambos con cache-aside.
+`accounts.account_type` define si el perfil vive en `user_profile` (persona) o `company_profile` (organización). Los readers (`CurrentProfileReader`, `CurrentAccountReader`) resuelven la tabla correcta según el tipo. El orquestador `ProfileApplicationService` expone `get_profile` (permite cuentas inactivas: reactivación/admin) y `get_active_profile` (solo activas, usado tanto por `/me/profile` como por la vista pública), ambos con cache-aside.
+
+## Perfil público (`GET /v1/users/profiles/{account_id}`)
+
+Endpoint sin auth para que cualquier visitante (anónimo o no) vea el perfil de otra cuenta — pensado para la página pública del publicante de un listing en el frontend. Decisiones de la implementación (2026-06-23):
+
+- **Usa `get_active_profile()`, no `get_profile()`**: aunque el docstring viejo de `get_profile()` mencionaba "public views" como caso de uso, se decidió que una cuenta desactivada no debe ser visible para nadie — ni siquiera en modo público. Mismo gate que ya tiene `/me/profile` para uno mismo.
+- **Cero cache nueva**: `profile_cache_key(account_id)` ya estaba parametrizada por `account_id` puro, no por "current user" — el endpoint público cae en la misma key que ya llena el propio `/me/profile` de ese usuario.
+- **Gap conocido, sin resolver**: en cache-hit, `_get_profile` devuelve el perfil cacheado sin re-chequear `is_active`. Si una cuenta se desactiva durante el TTL (`PROFILE_CACHE_TTL_SECONDS=600`), el perfil público puede seguir visible hasta 10 minutos después de la desactivación.
+- **`created_at` para "miembro desde X" en el front**: viene de `UserProfile.created_at`/`CompanyProfile.created_at` (mismo patrón audit que `Account`), no de `Account.created_at` — evita threadear ese campo a través del orchestrator/reader. `CurrentUserOut` (DTO de `/me`, privado) no lo incluye.
 
 ## Foto de perfil
 
@@ -61,6 +71,8 @@ Estos intereses alimentan las `FeedPreferences` del feed de [[properties-service
 
 - El tipo de cuenta (`person`/`organization`) determina si el perfil está en `user_profile` o `company_profile` ([account.py:61-98](backend/users-service/src/app/models/account.py#L61-L98)).
 - El orquestador de perfil expone `get_profile` (inactivas permitidas) y `get_active_profile` (solo activas), ambos con cache-aside ([get_profile_orchestrator.py:24-77](backend/users-service/src/app/services/user/services/get_profile_orchestrator.py#L24-L77)).
+- `GET /v1/users/profiles/{account_id}` no tiene `Depends(get_current_principal)` — es público, y usa `get_active_profile` (no `get_profile`) para que cuentas desactivadas no sean visibles ([user.py](backend/users-service/src/app/api/routes/user.py), [get_profile_by_id.py](backend/users-service/src/app/services/user/use_cases/profile/get_profile_by_id.py)).
+- `CurrentUserPerson.created_at`/`CurrentUserOrganization.created_at` se mapean desde `profile_db.created_at` (la fila de `user_profile`/`company_profile`), no desde `Account.created_at` ([mapper.py](backend/users-service/src/app/services/user/helpers/mapper.py)).
 - La foto de perfil se sube a través del backend con `storage.upload_file`, no presigned ([upload_profile_photo.py:46-51](backend/users-service/src/app/services/user/use_cases/profile/upload_profile_photo.py#L46-L51)).
 - El onboarding tiene 4 pasos + `done` en el enum `OnboardingStep` ([account.py:30-35](backend/users-service/src/app/models/account.py#L30-L35)).
 - La deactivación es soft: `is_active=False` + metadata, sin borrar el usuario de Keycloak ([deactivate_current_account.py:27-30](backend/users-service/src/app/services/user/use_cases/account/deactivate_current_account.py#L27-L30)).

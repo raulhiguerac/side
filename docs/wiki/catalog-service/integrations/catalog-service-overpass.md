@@ -1,7 +1,7 @@
 ---
 title: Integración Overpass (catalog-service)
 status: stable
-last-verified: 2026-06-11
+last-verified: 2026-06-23
 owners: [catalog-service]
 related:
   - "[[catalog-service-poi-lifecycle]]"
@@ -9,18 +9,19 @@ related:
   - "[[avm-training]]"
   - "[[adr-poi-cache-aside]]"
   - "[[adr-isochrone-ors-h3]]"
-sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/catalog-service/2026-06-11-ors-setup-poi-unification.md]
+sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/catalog-service/2026-06-11-ors-setup-poi-unification.md, ../../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md]
 ---
 
 ## TL;DR
 
-Overpass API (OpenStreetMap) se usa como provider de [[glossary#poi-point-of-interest]] — el backend manda una bounding box y recibe POIs categorizados. Llamado únicamente como side-effect del POI fetch (nunca on-demand, ver [[adr-poi-cache-aside]]). Tag set unificado con el AVM (5 keys OSM, 15 categorías, 100+ valores) via helper `category_map.py` — fuente única de verdad para query y clasificación.
+Overpass API (OpenStreetMap) se usa como provider de [[glossary#poi-point-of-interest]] — el backend manda una bounding box y recibe POIs categorizados. Llamado únicamente como side-effect del POI fetch (nunca on-demand, ver [[adr-poi-cache-aside]]). Tag set unificado con el AVM (5 keys OSM, 15 categorías, 100+ valores) via helper `category_map.py` — fuente única de verdad para query y clasificación. Requiere `User-Agent` descriptivo desde 2026-06-23 (la instancia pública empezó a devolver 406 sin él).
 
 ## Configuración
 
 | Env / setting | Valor | Para qué |
 |---|---|---|
 | `settings.OVERPASS_TIMEOUT_SECONDS` | 30 | Timeout de cada query Overpass (cliente + dentro del QL) |
+| `settings.OVERPASS_USER_AGENT` | `side-catalog-service/1.0 (contact: ...)` | Header `User-Agent` enviado a Overpass — sin esto, `overpass-api.de` responde 406 |
 
 No hay credenciales — Overpass es gratuita pero **rate-limited** (sin límites publicados estrictos, regla práctica: < 1 query/s). Por eso el dedup distribuido es crítico ([[catalog-service-poi-lifecycle]]).
 
@@ -96,15 +97,21 @@ El tag set de [[avm-training]] (5 keys OSM, 15 categorías) y el de catalog ahor
 
 ## Error handling
 
-Tres categorías capturadas en el cliente, todas mapean al mismo error de dominio:
+Todas las excepciones mapean al mismo error de dominio (`GeoResolutionUnavailableError(provider="overpass")`), pero desde 2026-06-23 cada categoría se captura por separado para loggear la causa real — antes caían todas en un `except Exception` genérico porque las excepciones propias de la lib `overpass` (`OverpassSyntaxError`, `MultipleRequestsError`, `ServerLoadError`, `UnknownOverpassError`) **no heredan de `requests.exceptions`**:
 
-| Excepción de la lib | Error de dominio |
-|---|---|
-| `requests.exceptions.ConnectionError`, `Timeout` | `GeoResolutionUnavailableError(provider="overpass")` |
-| `requests.exceptions.HTTPError` | `GeoResolutionUnavailableError(provider="overpass")` |
-| `Exception` (catch-all) | `GeoResolutionUnavailableError(provider="overpass")` |
+| Excepción de la lib | Causa típica | Log |
+|---|---|---|
+| `requests.exceptions.ConnectionError`, `Timeout` | Red/DNS, timeout de conexión | `overpass_unreachable` |
+| `requests.exceptions.HTTPError` | Error HTTP de `requests` | `overpass_http_error` |
+| `overpass.errors.OverpassSyntaxError` | Overpass respondió 400 | `overpass_syntax_error` |
+| `overpass.errors.MultipleRequestsError` | Overpass respondió 429 (rate limit) | `overpass_rate_limited` |
+| `overpass.errors.ServerLoadError` | Overpass respondió 504 (server sobrecargado) | `overpass_server_overloaded` |
+| `overpass.errors.UnknownOverpassError` | Cualquier otro status code, incluye el 406 antes del fix de User-Agent | `overpass_unknown_error` |
+| `Exception` (catch-all) | Lo no anticipado | `overpass_unexpected_error` |
 
-El catch-all es liberal — cualquier error inesperado del SDK termina como "Overpass no disponible". Aceptable porque el llamador es un background task que no propaga al user.
+**Nota sobre el logging**: `setup_logging()` ([core/logging/logger.py](backend/catalog-service/src/app/core/logging/logger.py)) usa un formato fijo con solo `%(message)s` — cualquier `extra={...}` pasado a `logger.error`/`warning` se **descarta siempre**, en todo el servicio (no solo aquí). Por eso estos logs interpolan el motivo directo en el string del mensaje en vez de pasarlo por `extra`.
+
+El catch-all sigue ahí para lo verdaderamente inesperado. Aceptable porque el llamador es un background task que no propaga al user.
 
 ## Caching y dedup (recap)
 
@@ -119,5 +126,6 @@ El cache + dedup viven en el UC `ResolvePoiUseCase`, no en este cliente. Tres ca
 - `extract_category(tags)` aplica prioridad amenity → shop → public_transport → leisure → healthcare y devuelve una de 15 categorías estándar o `None` ([category_map.py](backend/catalog-service/src/app/integrations/georef/pois/category_map.py)).
 - `subcategories` en `PointOfInterest` se persiste como `None` — eliminado con la taxonomía de 15 categorías.
 - La query usa `out center;` para que Overpass devuelva centroide de ways/areas.
-- 3 categorías de error capturadas, todas mapean a `GeoResolutionUnavailableError(provider="overpass")`.
+- 7 categorías de error capturadas (incl. catch-all), todas mapean a `GeoResolutionUnavailableError(provider="overpass")`, cada una con su propio log para no perder la causa ([overpass.py](backend/catalog-service/src/app/integrations/georef/pois/overpass.py)).
+- `PoiClient` pasa `headers={"User-Agent": settings.OVERPASS_USER_AGENT, "Accept-Charset": "utf-8;q=0.7,*;q=0.7"}` a `overpass.API(...)` — sin esto, `overpass-api.de` responde 406 a cualquier request (confirmado con curl, no es específico de la lib Python). Fix 2026-06-23.
 - El tag set de catalog y el del training del AVM están unificados al 2026-06-11.

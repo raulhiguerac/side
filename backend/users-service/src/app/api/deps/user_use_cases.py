@@ -39,6 +39,9 @@ from app.services.user.use_cases.account.request_account_reactivation import (
 from app.services.user.use_cases.profile.get_current_profile import (
     GetCurrentProfileUseCase,
 )
+from app.services.user.use_cases.profile.get_profile_by_id import (
+    GetProfileByIdUseCase,
+)
 from app.services.user.use_cases.profile.update_current_profile import (
     UpdateCurrentProfileUseCase,
 )
@@ -133,6 +136,13 @@ def get_current_profile_uc(
     profile_service: ProfileApplicationService = Depends(get_profile_application),
 ) -> GetCurrentProfileUseCase:
     return GetCurrentProfileUseCase(
+        profile_service=profile_service,
+    )
+
+def get_profile_by_id_uc(
+    profile_service: ProfileApplicationService = Depends(get_profile_application),
+) -> GetProfileByIdUseCase:
+    return GetProfileByIdUseCase(
         profile_service=profile_service,
     )
 
