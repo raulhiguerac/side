@@ -5,6 +5,7 @@ import { authRoutes } from "./routes/auth";
 import { settingsRoutes } from "./routes/settings";
 import { propertiesRoutes } from "./routes/properties";
 import { analyticsRoutes } from "./routes/analytics";
+import { devRoutes } from "./routes/dev";
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -14,6 +15,7 @@ const router = createRouter({
     ...settingsRoutes,
     ...propertiesRoutes,
     ...analyticsRoutes,
+    ...devRoutes,
   ],
 });
 

@@ -35,7 +35,7 @@ from app.services.listing.use_cases.property_core.get_property import GetPropert
 from app.services.listing.use_cases.property_core.get_public_user_properties import GetPublicUserPropertiesUseCase
 from app.services.listing.use_cases.property_core.set_property_visibility import SetPropertyVisibilityUseCase
 from app.services.listing.use_cases.property_core.update_property import UpdatePropertyUseCase
-from app.services.shared.schemas.property_card import PropertyCardSchema
+from app.services.shared.schemas.property_card import PropertyCardSchema, PublicUserPropertiesResponse
 from app.services.shared.schemas.property_detail import PropertyDetailSchema
 
 router = APIRouter(prefix="/properties", tags=["properties"])
@@ -63,14 +63,14 @@ async def get_my_properties(
 
 @router.get(
     "/users/{user_id}",
-    response_model=list[PropertyCardSchema],
+    response_model=PublicUserPropertiesResponse,
     status_code=status.HTTP_200_OK,
 )
 async def get_public_user_properties(
     user_id: uuid.UUID,
     uc: Annotated[GetPublicUserPropertiesUseCase, Depends(get_public_user_properties_uc)],
     offset: Annotated[int, Query(ge=0)] = 0,
-) -> list[PropertyCardSchema]:
+) -> PublicUserPropertiesResponse:
     return await uc.execute(user_id=user_id, offset=offset)
 
 

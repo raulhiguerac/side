@@ -1,7 +1,7 @@
 ---
 title: Dominio listing — properties-service
 status: draft
-last-verified: 2026-06-22
+last-verified: 2026-06-25
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -13,6 +13,7 @@ related:
 sources:
   - ../../../sources/properties-service/2026-05-28-foundational-exploration.md
   - ../../../sources/properties-service/2026-06-22-public-storefront-cache-invalidation.md
+  - ../../../sources/properties-service/2026-06-25-public-user-properties-pagination.md
 ---
 
 ## TL;DR
@@ -28,7 +29,7 @@ El dominio del **dueño** sobre sus propiedades: crear, editar, borrar, controla
 | `DeletePropertyUseCase` | `use_cases/property_core/delete_property.py` | **Soft-delete**: `status=inactive` + `deleted_at`/`deleted_by`; no borra filas. Invalida cache. |
 | `GetPropertyUseCase` | `use_cases/property_core/get_property.py` | Detalle con cache-aside; reglas de visibilidad por status/owner. |
 | `GetMyPropertiesUseCase` | `use_cases/property_core/get_my_properties.py` | Lista del owner — todos los estados, cache por usuario (`client_properties`). |
-| `GetPublicUserPropertiesUseCase` | `use_cases/property_core/get_public_user_properties.py` | Vitrina pública de otro usuario — solo `active`, paginada por offset, cache por página. |
+| `GetPublicUserPropertiesUseCase` | `use_cases/property_core/get_public_user_properties.py` | Vitrina pública de otro usuario — solo `active`, paginada por offset, devuelve `PublicUserPropertiesResponse(items, has_more)`, cache por página. |
 | `SetPropertyVisibilityUseCase` | `use_cases/property_core/set_property_visibility.py` | Toggle de visibilidad del dueño. |
 | `RequestPresignedUrlsUseCase` | `use_cases/images/request_presigned_urls.py` | Crea batch + URLs presignadas PUT. |
 | `ConfirmImageUploadsUseCase` | `use_cases/images/confirm_image_uploads.py` | Valida batch y materializa `PropertyImage`. |
@@ -63,7 +64,7 @@ Hay **dos** listas cacheadas del dueño, con scope distinto:
 | Mis propiedades (`/me`) | `properties:user:{id}` (`client_properties`) | todos los estados | JWT → `principal.sub` |
 | Vitrina pública (`/users/{id}`) | `properties:user:{id}:public:{offset}` (`public_user_properties`) | solo `active` | sin auth, `user_id` del path |
 
-La pública pagina por **offset** (`PUBLIC_PROPERTIES_PAGE_SIZE` = 20), por eso el offset va **en la key** — sin él, la página 2 devolvería la data cacheada de la 1. El resultado vacío también se cachea (`if cached is not None`) para que un usuario sin listings no pegue a DB en cada request.
+La pública pagina por **offset** con truco `+1`: `PUBLIC_PROPERTIES_PAGE_SIZE = 21` en settings (fetch 21 filas; si `len == 21` → `has_more=True`, se devuelven solo los primeros 20). El offset va **en la key** — sin él, la página 2 devolvería la data cacheada de la 1. El resultado vacío también se cachea (`if cached is not None`) para que un usuario sin listings no pegue a DB en cada request. La respuesta es `PublicUserPropertiesResponse(items: list[PropertyCardSchema], has_more: bool)`; el cache guarda el dict completo incluyendo `has_more`.
 
 **Invalidación por prefijo.** Como un cambio de membresía corre la posición de todas las propiedades siguientes, no se puede invalidar una sola página: `delete_pattern("properties:user:{id}:public:*")` borra **todas** las páginas del dueño (`SCAN` + `DEL`) y se re-cachean on-demand. Cada UC de escritura relevante hace **dos operaciones**: `delete([keys exactas])` + `delete_pattern(prefijo público)`. Detalle y alternativas en [[adr-owner-list-cache-invalidation]]; la degradación silenciosa ante Redis caído sigue [[adr-cache-optional-layer]].
 
@@ -109,7 +110,7 @@ Estados del batch: `pending → ready → confirmed`, con ramas `expired` (TTL v
 - Confirm exige estado `ready`; un batch `pending` se marca `failed` ([confirm_image_uploads.py:65-72](backend/properties-service/src/app/services/listing/use_cases/images/confirm_image_uploads.py#L65-L72)).
 - `create_count` está acotado a `[1, MAX_IMAGES_PER_PROPERTY]` por el schema ([listing_schemas.py:90-92](backend/properties-service/src/app/services/listing/schemas/listing_schemas.py#L90-L92)).
 - `DeleteProperty` es soft-delete: setea `status=inactive` + `deleted_at` + `deleted_by`, no borra filas ([delete_property.py:21-23](backend/properties-service/src/app/services/listing/use_cases/property_core/delete_property.py#L21-L23)).
-- `GetPublicUserProperties` devuelve solo `status=active`, paginadas por offset con `LIMIT PUBLIC_PROPERTIES_PAGE_SIZE` ([sql_property_repository.py:37-52](backend/properties-service/src/app/services/listing/adapters/sql_property_repository.py#L37-L52)).
-- La vitrina pública cachea por página con offset en la key (`properties:user:{id}:public:{offset}`) y trata `[]` como hit válido con `if cached is not None` ([get_public_user_properties.py](backend/properties-service/src/app/services/listing/use_cases/property_core/get_public_user_properties.py)).
+- `GetPublicUserProperties` devuelve solo `status=active`, paginadas por offset con `LIMIT PUBLIC_PROPERTIES_PAGE_SIZE` (21) — la DB devuelve hasta 21 filas, el UC retorna las primeras 20 y deduce `has_more` del conteo ([sql_property_repository.py:37-52](backend/properties-service/src/app/services/listing/adapters/sql_property_repository.py#L37-L52), [get_public_user_properties.py](backend/properties-service/src/app/services/listing/use_cases/property_core/get_public_user_properties.py)).
+- La respuesta de la vitrina pública es `PublicUserPropertiesResponse(items, has_more)` — el cache guarda el dict completo incluyendo `has_more`; trata `cached is not None` como hit válido para usuarios sin listings ([property_card.py](backend/properties-service/src/app/services/shared/schemas/property_card.py)).
 - Los 8 UCs de escritura que tocan el set público invalidan con `delete_pattern(public_user_properties_pattern(owner))` además de las keys exactas; `verify` y `create_property` no ([cache_keys.py](backend/properties-service/src/app/services/shared/helpers/cache_keys.py)).
 - El endpoint público acota el offset a `>= 0` vía `Query(ge=0)` y default 0 ([properties.py](backend/properties-service/src/app/api/routes/properties.py)).

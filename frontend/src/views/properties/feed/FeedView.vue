@@ -25,7 +25,12 @@
           v-else-if="cards.length"
           class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"
         >
-          <PropertyCard v-for="card in cards" :key="card.id" :property="card" />
+          <PropertyCard
+            v-for="card in cards"
+            :key="card.id"
+            :property="card"
+            @click="router.push(`/listing/${card.id}`)"
+          />
         </div>
 
         <div v-else class="text-center text-brand-muted py-20">
@@ -60,6 +65,7 @@
 
 <script lang="ts" setup>
 import { onMounted } from "vue";
+import router from "@/router";
 import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
 import { useFeed } from "@/composables/feed/useFeed";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";

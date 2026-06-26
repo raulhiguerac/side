@@ -145,6 +145,7 @@
           :show-favorite="false"
           :show-status="true"
           :show-actions="true"
+          @click="router.push(`/listing/${property.id}`)"
           @edit="editProperty"
           @delete="confirmDelete"
         />

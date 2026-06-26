@@ -1,5 +1,30 @@
 import type { PropertyImageCard } from "@/types/feed";
 
+export interface CreatePropertyForm {
+  property_type: string;
+  listing_type: string;
+  condition: string;
+  currency: string;
+  area_m2: number | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  parking_spots: number;
+  price: number | null;
+  admin_fee: number | null;
+  floor_number: number | null;
+  total_floors: number | null;
+  description: string;
+  year_built: number | null;
+  stratum: number | null;
+  location: {
+    neighborhood_id: string;
+    city_id: string;
+    country_id: string;
+    latitude: number | null;
+    longitude: number | null;
+  };
+}
+
 export interface PropertyLocationDetail {
   neighborhood_id: string;
   city_id: string;

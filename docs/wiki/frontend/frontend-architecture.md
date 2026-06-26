@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-06-21
+last-verified: 2026-06-25
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -9,6 +9,7 @@ related:
   - "[[frontend-onboarding-flow]]"
   - "[[frontend-map-component]]"
   - "[[frontend-poi-reachable]]"
+  - "[[frontend-property-create-form]]"
   - "[[properties-service-search]]"
   - "[[open-items]]"
 sources:
@@ -24,6 +25,7 @@ sources:
   - ../../sources/frontend/2026-06-15-poi-detail-view-mapuser-cluster.md
   - ../../sources/frontend/2026-06-20-property-detail-view-refactor.md
   - ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md
+  - ../../sources/frontend/2026-06-25-property-create-form-and-nearby-fixes.md
 ---
 
 ## TL;DR
@@ -58,16 +60,18 @@ frontend/
 │   │   ├── Location.ts
 │   │   ├── pois/
 │   │   │   └── useReachablePois.ts    # POIs alcanzables desde una propiedad (3 perfiles × 3 rangos)
-│   │   └── properties/
-│   │       ├── usePropertyDetail.ts   # computed logic de PropertyDetailView
-│   │       └── usePropertyMapper.ts
+│   │   ├── properties/
+│   │   │   ├── usePropertyDetail.ts   # computed logic de PropertyDetailView
+│   │   │   └── usePropertyMapper.ts   # PropertyCard → PropertyCardUI con lookup de barrio
+│   │   └── users/
+│   │       └── useProfileListings.ts  # vitrina pública: acumulador + paginación por página
 │   ├── types/
 │   │   ├── user.ts
 │   │   ├── feed.ts               # PropertyCard (API shape), PropertyCardUI (UI shape), PropertyImageCard
-│   │   ├── properties.ts         # PropertyDetail, PropertyLocationDetail
+│   │   ├── properties.ts         # PropertyDetail, PropertyLocationDetail, CreatePropertyForm
 │   │   └── pois.ts               # OrsProfile, GeoJsonPolygon, ReachablePoiItem, RangeGroup, CATEGORY_META, CATEGORY_PRIORITY
 │   ├── views/                    # páginas-ruta
-│   │   ├── public/{HomeView, AboutView, PublicProfileView}  # /users/:userId — mock
+│   │   ├── public/{HomeView, AboutView, PublicProfileView}  # /users/:userId
 │   │   ├── auth/{LoginView, RegisterView, ResetPasswordView}
 │   │   ├── settings/{SettingsLayout, SettingsProfile, SettingsSecurity, SettingsAccount}
 │   │   ├── properties/
@@ -75,7 +79,7 @@ frontend/
 │   │   │   ├── feed/{FeedView, MapView}
 │   │   │   ├── dashboard/MyPropertiesView
 │   │   │   └── detail/PropertyDetailView   # /listing/:id
-│   │   └── dev/DevPlaygroundView
+│   │   └── dev/{DevPlaygroundView, CreatePropertyDevView}  # sin auth, dev only
 │   └── components/
 │       ├── shared/{NavBar, NavGuest, NavUser, BaseModal}
 │       ├── onboarding/{IntentSelector, LocalitySelector, NeighborhoodSelector, PropertyTypeSelector}
@@ -369,14 +373,21 @@ Vista de detalle del listing en `/listing/:id` (`views/properties/detail/Propert
 - **Location label**: `buildNeighborhoodMap` (`composables/catalog/useNeighborhoodLookup.ts`) resuelto en `onMounted` de la view tras cargar la propiedad — resuelve barrio, no ciudad.
 - **Fetch real**: `propertiesApi.get<PropertyDetail>('/v1/properties/${route.params.id}')` usando el `id` de la ruta (`/listing/:id`) — reemplaza el mock hardcodeado que tenía antes.
 
-## PublicProfileView (mock, en construcción)
+## PublicProfileView
 
-Vista pública del perfil de un publicante en `/users/:userId` (`views/public/PublicProfileView.vue`). Hoy es **100% mock** — header (foto, nombre, badge verificado, rating, stats, CTAs WhatsApp/Mensaje/Llamar) y listado de propiedades viven como datos hardcodeados en el componente, con paginación local (`slice` sobre un array fijo, mismo patrón que `useFeedMap`).
+Vista pública del perfil de un publicante en `/users/:userId` (`views/public/PublicProfileView.vue`). El header (foto, nombre, badge verificado, rating, stats, CTAs) sigue siendo mock — no hay endpoint público de perfil en `users-service` todavía. El listado de propiedades ya está cableado al backend real via `useProfileListings` + `usePropertyMapper`.
 
-- El endpoint real ya existe — `GET /v1/properties/users/{user_id}` (properties-service, público, sin auth) → devuelve `list[PropertyCardSchema]` — pero todavía no está cableado a la vista.
-- Cuando se conecte la data real, el plan es separar en dos composables: `useUserPublicProfile(userId)` (datos del usuario — mock hasta que `users-service` expone un endpoint público con esos campos) y `usePublicUserProperties(userId)` (listings reales, vía el endpoint de arriba).
-- El endpoint de propiedades hoy no pagina server-side (devuelve la lista completa) — gap trackeado en [[open-items]] bajo "Página pública de perfil del publicante" (sub-tarea de paginación offset/limit, pendiente de implementación).
-- `PropertyCard.vue` (compartido con Feed/Map/MyProperties) se rediseñó en esta misma iteración: precio en `text-2xl` antes del título (que pasó a `text-brand-muted`), separadores `divide-x` entre hab/baños/m², y `cursor-pointer` + `hover:-translate-y-1` en toda la card.
+### `useProfileListings` (`composables/users/useProfileListings.ts`)
+
+Gestiona la paginación de la vitrina pública con patrón acumulador:
+
+- `all_listings: PropertyCard[]` — array interno (no reactivo) que acumula todas las páginas fetched.
+- `listings: Ref<PropertyCard[]>` — slice de la página actual mostrada en pantalla.
+- `hasMore: Ref<boolean>` — viene del backend (`PublicUserPropertiesResponse.has_more`).
+- `fetchUserListings(account_id, offset)` — `GET /v1/properties/users/{id}?offset=...` → acumula en `all_listings`, actualiza `listings` con los items de la página, setea `hasMore`.
+- `previousListings(page)` — guard `page < 2`; slice `all_listings[(page-2)*20 : (page-1)*20]` sin hit al backend.
+
+En `PublicProfileView`: `page` ref arranca en 0, se incrementa tras el primer fetch en `onMounted`. `next()` llama `fetchUserListings(userId, page * 20); page++`. `prev()` llama `previousListings(page); page--`. `activeListingsCount` muestra `"+20"` si `hasMore`, si no `listings.length` — evita mostrar conteos mentirosos en páginas intermedias. Todas las cards tienen `@click="router.push('/listing/${card.id}')"` igual que `FeedView`/`MapView`/`MyPropertiesView`.
 
 ## Claims
 
@@ -407,6 +418,9 @@ Vista pública del perfil de un publicante en `/users/:userId` (`views/public/Pu
 - `toggleType(type)` en `FeedFilters` quita el tipo con `filter` si ya está en `selectedTypes` o lo agrega con `push` si no ([components/properties/feed/FeedFilters.vue:259-267](frontend/src/components/properties/feed/FeedFilters.vue#L259-L267)).
 - `useFeed.load(preferences?, filters?)` usa los args si llegan y cae a `userStore.userInterests` con `preferences ?? (ternario)` si no; `fetchFeed` hace spread `{ ...preferences, ...filters, cursor? }` en los params ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
 - `useFeed` expone `nextCursor`, `isFirstPage`, `loadNext(cursor)` y `loadPrev()` para paginación — `loadPrev` es siempre local (sin petición al back) ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
+- `useProfileListings` usa un acumulador `all_listings[]` no-reactivo; `listings` es el slice de la página actual; `previousListings(page)` es siempre local con guard `page < 2` ([composables/users/useProfileListings.ts](frontend/src/composables/users/useProfileListings.ts)).
+- `FeedView`, `MapView`, `MyPropertiesView` y `PublicProfileView` tienen `@click="router.push('/listing/${card.id}')"` en el `v-for` de cards ([views/properties/feed/FeedView.vue](frontend/src/views/properties/feed/FeedView.vue), [views/public/PublicProfileView.vue](frontend/src/views/public/PublicProfileView.vue)).
+- `types/properties.ts` contiene `CreatePropertyForm` — shape del body `POST /v1/properties`, incluye `location: { neighborhood_id, city_id, country_id, latitude, longitude }` ([types/properties.ts](frontend/src/types/properties.ts)).
 - `GET /v1/search/feed` retorna `FeedPage { items: PropertyCard[], next_cursor: string | null }` — el composable desempaqueta `.items` ([types/feed.ts](frontend/src/types/feed.ts)).
 - `PropertiesView` es la vista padre en `/feed` con el header y toggle Lista/Mapa; el estado activo del toggle se deriva de `route.name` (computed), no de un ref local ([views/properties/PropertiesView.vue](frontend/src/views/properties/PropertiesView.vue)).
 - El `<router-view />` de `PropertiesView` está fuera del div con padding del header para evitar doble padding en las vistas hijas ([views/properties/PropertiesView.vue](frontend/src/views/properties/PropertiesView.vue)).

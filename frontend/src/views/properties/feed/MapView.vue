@@ -11,6 +11,7 @@
             :key="card.id"
             :property="card"
             :show-favorite="false"
+            @click="router.push(`/listing/${card.id}`)"
             @mouseenter="hoveredId = card.id"
             @mouseleave="hoveredId = null"
           />

@@ -1,5 +1,12 @@
 <template>
-  <div class="space-y-4">
+  <div v-show="loading" class="flex items-center justify-center py-20">
+    <svg class="animate-spin h-8 w-8 text-brand-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  </div>
+
+  <div v-show="!loading" class="space-y-4">
     <h2 class="text-base font-semibold text-brand-text">Cerca del lugar</h2>
 
     <!-- Profile buttons -->
@@ -131,8 +138,9 @@
   </div>
 </template>
 
+
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch, nextTick } from "vue";
 import { LPolygon } from "@vue-leaflet/vue-leaflet";
 import { ChevronDown } from "@lucide/vue";
 import type { MarkerData } from "@/types/maps";
@@ -152,7 +160,7 @@ const props = defineProps<{
 
 const openRange = ref<number>(5);
 
-const { groupedByRange, loadPois, profiles, activeProfile } =
+const { groupedByRange, loadPois, profiles, activeProfile, loading } =
   useReachablePois("foot-walking");
 
 const hoveredId = ref<string | null>(null);
@@ -194,6 +202,13 @@ const poiMarkers = computed<MarkerData[]>(() => {
     }
   }
   return markers;
+});
+
+watch(loading, async (val) => {
+  if (!val) {
+    await nextTick();
+    window.dispatchEvent(new Event("resize"));
+  }
 });
 
 onMounted(async () => {

@@ -1,7 +1,7 @@
 ---
 title: Flujo POIs alcanzables — NearbyPlaces
 status: stable
-last-verified: 2026-06-20
+last-verified: 2026-06-25
 owners: [frontend]
 related:
   - "[[frontend-map-component]]"
@@ -12,6 +12,7 @@ related:
 sources:
   - ../../sources/frontend/2026-06-15-poi-detail-view-mapuser-cluster.md
   - ../../sources/frontend/2026-06-20-property-detail-view-refactor.md
+  - ../../sources/frontend/2026-06-25-property-create-form-and-nearby-fixes.md
 ---
 
 ## TL;DR
@@ -117,6 +118,12 @@ Componente reusable (`components/map/MapLegend.vue`) en la misma fila que los ch
 ### Responsive
 Tanto la fila de chips+leyenda como la fila de POIs+mapa son `flex-col` por default y `md:flex-row` desde tablet. En mobile el mapa va arriba y los POIs abajo (`order-1 md:order-2` en la columna del mapa, `order-2 md:order-1` en la del acordeón) — en desktop el orden visual vuelve a POIs-izquierda/mapa-derecha.
 
+## Spinner de carga + Leaflet gray map
+
+`NearbyPlaces` expone `loading` de `useReachablePois` y alterna spinner/contenido con **`v-show`** (no `v-if`). La distinción es crítica: Leaflet inicializa el mapa en `onMounted` y necesita que el contenedor DOM exista en ese momento — con `v-if` el contenedor no existe aún y Leaflet lanza `Map container not found`; con `v-show` existe pero está oculto (`display: none`), por lo que Leaflet lo inicializa con tamaño 0×0 y el mapa queda gris.
+
+**Fix:** `watch(loading, async (val) => { if (!val) { await nextTick(); window.dispatchEvent(new Event("resize")); } })` — Leaflet tiene un handler nativo sobre `resize` de `window` que llama `invalidateSize()`, recalcula el tamaño del contenedor ya visible y pinta los tiles.
+
 ## Open items
 
 - Panel izquierdo muestra `range.count` (total backend); mapa muestra markers filtrados/deduplicados — los números no coinciden. Pendiente decidir si mostrar conteo filtrado, dual, o ninguno.
@@ -125,7 +132,8 @@ Tanto la fila de chips+leyenda como la fila de POIs+mapa son `flex-col` por defa
 
 ## Claims
 
-- `NearbyPlaces.vue` recibe `lat`, `lon`, `propertyId` como props y llama `loadPois` en su propio `onMounted` — no depende de que la view padre orqueste el timing del fetch ([components/properties/NearbyPlaces.vue](frontend/src/components/properties/NearbyPlaces.vue)).
+- `NearbyPlaces.vue` recibe `lat`, `lon`, `propertyId` como props y llama `loadPois` en su propio `onMounted` — no depende de que la view padre orqueste el timing del fetch ([NearbyPlaces.vue](frontend/src/components/properties/detail/NearbyPlaces.vue)).
+- El spinner usa `v-show` (no `v-if`) para que el contenedor Leaflet exista en DOM desde el `onMounted`; al terminar la carga, un `watch` dispara `window.dispatchEvent(new Event("resize"))` para forzar `invalidateSize` ([NearbyPlaces.vue](frontend/src/components/properties/detail/NearbyPlaces.vue)).
 - `useReachablePois` hace un único `POST /v1/geo-resolution/reachable-pois` con `range_seconds: [300, 600, 900]` y los 3 perfiles — 9 resultados en una sola llamada ([composables/pois/useReachablePois.ts](frontend/src/composables/pois/useReachablePois.ts)).
 - `groupedByRange` filtra por `activeProfile` y agrupa por `CATEGORY_META[category].label` — máx 8 grupos × 2 POIs; ordena por `CATEGORY_PRIORITY` ([composables/pois/useReachablePois.ts](frontend/src/composables/pois/useReachablePois.ts)).
 - POIs donde `name === category` se filtran — son nodos OSM sin nombre real ([composables/pois/useReachablePois.ts](frontend/src/composables/pois/useReachablePois.ts)).

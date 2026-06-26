@@ -67,3 +67,8 @@ class PropertyCardSchema(StrictBase):
         if hasattr(data, "promotions"):
             data.__dict__["is_promoted"] = bool(data.promotions)
         return data
+
+
+class PublicUserPropertiesResponse(StrictBase):
+    items: list[PropertyCardSchema]
+    has_more: bool

@@ -29,7 +29,8 @@ class Settings(BaseSettings):
     FEED_PAGE_CACHE_TTL_SECONDS: int = 300  # 5 min
 
     # Public user properties (storefront del publicante)
-    PUBLIC_PROPERTIES_PAGE_SIZE: int = 20
+    # 21 = page_size 20 + 1 extra para detectar has_more sin COUNT(*)
+    PUBLIC_PROPERTIES_PAGE_SIZE: int = 21
 
     # Storage
     BUCKET_PHOTOS_PROPERTIES: str = ""
