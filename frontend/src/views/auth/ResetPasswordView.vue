@@ -127,7 +127,7 @@
  * 4. Si falla → mostramos error
  */
 import { ref } from "vue";
-import axios from "axios";
+import usersApi from "@/api/usersApi";
 import router from "@/router";
 
 // 📝 Datos del formulario (locales, no van al store)
@@ -152,11 +152,9 @@ const resetPasswordUser = async () => {
 
   try {
     // 1. Hacemos la petición
-    await axios.post(
-      "http://localhost:8000/v1/auth/reset-password/request",
-      { email: user.value.email }, // Asegúrate de usar .value si es un ref de Vue
-      { withCredentials: true }
-    );
+    await usersApi.post("/v1/auth/reset-password/request", {
+      email: user.value.email,
+    });
 
     // 2. Si llega aquí, es que fue exitoso (status 200)
     // Normalmente el reset no te loguea de inmediato,

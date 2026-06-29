@@ -1,14 +1,14 @@
 ---
 title: frontend
 status: draft
-last-verified: 2026-06-21
+last-verified: 2026-06-28
 owners: [frontend]
 related:
   - "[[architecture]]"
   - "[[frontend-architecture]]"
   - "[[frontend-onboarding-flow]]"
   - "[[frontend-local-dev]]"
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md, ../../sources/frontend/2026-06-20-property-detail-view-refactor.md, ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md, ../../sources/frontend/2026-06-20-property-detail-view-refactor.md, ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md, ../../sources/frontend/2026-06-28-endpoint-coverage-and-stepimages.md]
 ---
 
 ## TL;DR
@@ -64,6 +64,7 @@ Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con pro
 | `/forgot-password` | sin auth meta | `ResetPasswordView` |
 | `/settings` → `/settings/profile` | auth required | `SettingsLayout` + 3 children |
 | `/dev` | público | `DevPlaygroundView` |
+| `/dev/imagenes` | público | `StepImagenesDevView` — preview del step 3 sin auth ni form |
 | `/properties` | auth required | `MyPropertiesView` |
 | `/listing/:id` | público | `PropertyDetailView` |
 | `/feed` → `/feed/list` | público | `PropertiesView` (parent con toggle) + `FeedView` |
@@ -76,7 +77,7 @@ Guard global en `router.beforeEach`: si la ruta `requiresAuth` y `_authChecked =
 
 - **users-service** (`API.USERS_BASE_URL` default `localhost:8000`): auth, profile, settings, onboarding endpoints.
 - **catalog-service** (`API.CATALOG_BASE_URL` default `localhost:8001`): countries, localities by-country, neighborhoods by-locality.
-- **properties-service** (`API.PROPERTIES_BASE_URL` default `localhost:8003`): `GET /v1/search/feed` (cursor pagination, `FeedPage { items, next_cursor }`) y `GET /v1/search/feed/map` — consumidos desde `composables/feed/useFeed.ts`.
+- **properties-service** (`API.PROPERTIES_BASE_URL` default `/api/properties`): `GET /v1/search/feed`, `GET /v1/search/feed/map`, `GET /v1/properties/me`, `GET /v1/properties/users/{id}`, `POST /v1/properties/create`, `GET /v1/properties/{id}`, `DELETE /v1/properties/{id}`. Pendiente cablear: presigned-urls + confirm (imágenes), PATCH (edición), visibility. Cobertura al 2026-06-28: **26/63 endpoints** totales entre los 4 servicios.
 - **analytics-service**: form AVM en `DevPlaygroundView` — `PlaceAutocompleteElement` + `POST /v1/predict` cableado end-to-end.
 
 ## Patrones — resumen alto nivel
@@ -98,7 +99,7 @@ Detalle de cada patrón en [[frontend-architecture]].
 ## Roadmap inmediato (deuda técnica tracked)
 
 - [ ] **Remover Firebase** — imports en `LoginView.vue`, dep `firebase` del `package.json`, eventual cleanup del endpoint backend (`/v1/auth/login/google` si solo lo usaba esta integración).
-- [ ] **Centralizar axios** — instance única con `baseURL` y `withCredentials`, interceptor 401 → logout. Eliminar URLs hardcoded en `auth.ts`.
+- [x] **Centralizar axios** ✅ resuelto 2026-06-28 — instancias dedicadas por servicio + interceptor silent refresh + webpack proxy. Ver [[frontend-architecture]].
 - [ ] **Vite migration** — post-cierre de todos los microservicios backend.
 - [ ] **Cerrar CORS** en backends pre-producción — hoy `allow_origins=["*"]` en catalog.
 - [ ] **Implementar `/v1/properties/mine`** en properties-service para activar `/properties` end-to-end.

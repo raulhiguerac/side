@@ -12,7 +12,7 @@
           </p>
         </div>
         <button
-          @click="$router.push('/properties/new')"
+          @click="$router.push('/properties/create')"
           class="inline-flex items-center gap-2 px-5 py-3 bg-brand-primary text-white text-sm font-semibold rounded-xl hover:bg-green-600 transition-colors"
         >
           <svg
@@ -114,7 +114,7 @@
         </p>
         <button
           v-if="activeTab === 'all'"
-          @click="$router.push('/properties/new')"
+          @click="$router.push('/properties/create')"
           class="inline-flex items-center gap-2 px-5 py-3 bg-brand-primary text-white text-sm font-semibold rounded-xl hover:bg-green-600 transition-colors"
         >
           <svg
@@ -215,7 +215,7 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
 import type { PropertyCardUI } from "@/types/feed";
-import axios from "axios";
+import propertiesApi from "@/api/propertiesApi";
 
 const router = useRouter();
 const isLoading = ref(true);
@@ -263,9 +263,7 @@ const emptyStateDescription = computed(() => {
 const fetchProperties = async () => {
   isLoading.value = true;
   try {
-    const response = await axios.get("http://localhost:8000/v1/properties/me", {
-      withCredentials: true,
-    });
+    const response = await propertiesApi.get("/v1/properties/me");
     properties.value = response.data.properties || [];
   } catch (error) {
     console.error("Error al cargar propiedades:", error);
@@ -330,9 +328,8 @@ const deleteProperty = async () => {
 
   isDeleting.value = true;
   try {
-    await axios.delete(
-      `http://localhost:8000/v1/properties/${propertyToDelete.value}`,
-      { withCredentials: true }
+    await propertiesApi.delete(
+      `/v1/properties/${propertyToDelete.value}`
     );
     properties.value = properties.value.filter(
       (p) => p.id !== propertyToDelete.value

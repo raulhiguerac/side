@@ -248,7 +248,7 @@
 <script lang="ts" setup>
 import { ref } from "vue";
 import { useAuthStore } from "@/stores/auth";
-import axios from "axios";
+import usersApi from "@/api/usersApi";
 import router from "@/router";
 
 const authStore = useAuthStore();
@@ -263,11 +263,7 @@ const deleteConfirm = ref("");
 const deactivateAccount = async () => {
   isLoading.value = true;
   try {
-    await axios.post(
-      "http://localhost:8000/v1/users/me/deactivate",
-      {},
-      { withCredentials: true }
-    );
+    await usersApi.post("/v1/users/me/deactivate", {});
 
     // Logout después de desactivar
     await authStore.logout();
@@ -283,9 +279,7 @@ const deactivateAccount = async () => {
 const deleteAccount = async () => {
   isLoading.value = true;
   try {
-    await axios.delete("http://localhost:8000/v1/users/me", {
-      withCredentials: true,
-    });
+    await usersApi.delete("/v1/users/me");
 
     // Logout y redirigir
     authStore.user = null;

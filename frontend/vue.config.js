@@ -7,6 +7,30 @@ const webpack = require("webpack");
 
 module.exports = defineConfig({
   transpileDependencies: true,
+  devServer: {
+    proxy: {
+      "/api/users": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        pathRewrite: { "^/api/users": "" },
+      },
+      "/api/catalog": {
+        target: "http://localhost:8001",
+        changeOrigin: true,
+        pathRewrite: { "^/api/catalog": "" },
+      },
+      "/api/avm": {
+        target: "http://localhost:8002",
+        changeOrigin: true,
+        pathRewrite: { "^/api/avm": "" },
+      },
+      "/api/properties": {
+        target: "http://localhost:8003",
+        changeOrigin: true,
+        pathRewrite: { "^/api/properties": "" },
+      },
+    },
+  },
   configureWebpack: {
     plugins: [
       new webpack.DefinePlugin({

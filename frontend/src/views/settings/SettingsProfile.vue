@@ -145,7 +145,7 @@ import { useAuthStore } from "@/stores/auth";
 import IntentSelector, {
   type Intent,
 } from "@/components/onboarding/IntentSelector.vue";
-import axios from "axios";
+import usersApi from "@/api/usersApi";
 
 const authStore = useAuthStore();
 const isLoading = ref(false);
@@ -206,16 +206,12 @@ const resetForm = () => {
 const saveProfile = async () => {
   isLoading.value = true;
   try {
-    await axios.patch(
-      "http://localhost:8000/v1/users/me/profile",
-      {
-        first_name: form.value.first_name,
-        last_name: form.value.last_name,
-        phone: form.value.phone,
-        description: form.value.description,
-      },
-      { withCredentials: true }
-    );
+    await usersApi.patch("/v1/users/me/profile", {
+      first_name: form.value.first_name,
+      last_name: form.value.last_name,
+      phone: form.value.phone,
+      description: form.value.description,
+    });
     authStore.updateUser(form.value);
     originalForm.value = { ...form.value };
     avatarFile.value = null;

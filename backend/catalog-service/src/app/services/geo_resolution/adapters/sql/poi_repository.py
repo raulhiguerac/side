@@ -49,7 +49,7 @@ class SqlPoiRepository(PoiRepository):
         return self.session.exec(stmt).all()
     
     def _to_dict(self, poi: PointOfInterest) -> dict:
-        return {k: v for k, v in poi.model_dump().items() if v is not None}
+        return {k: v for k, v in poi.model_dump().items() if v is not None or k in UPSERT_FIELDS}
 
     def add(self, *, poi: PointOfInterest) -> None:
         stmt = insert(PointOfInterest).values(self._to_dict(poi))

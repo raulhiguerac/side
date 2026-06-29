@@ -373,7 +373,7 @@ watch(place, async (val) => {
   if (!val) return;
   emit("place-selected", { place: val });
   neighborhood.value =
-    (await getNeighborhood(val.latitude, val.longitude)) ?? null;
+    (await getNeighborhood(val.latitude, val.longitude))?.name ?? null;
 });
 
 function onSubmit() {

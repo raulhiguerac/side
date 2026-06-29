@@ -78,7 +78,7 @@ import type {
   SelectedPlace,
 } from "@/composables/avm/useAvmForm";
 import type { MarkerData } from "@/types/maps";
-import axios from "axios";
+import avmApi from "@/api/avmApi";
 import { API } from "@/config";
 
 const showResult = ref(false);
@@ -128,9 +128,7 @@ async function onSubmit(data: {
 }
 
 async function fetchPredict(payload: AvmPredictRequest): Promise<number> {
-  const response = await axios.post(`${API.AVM_BASE_URL}/v1/predict`, payload, {
-    withCredentials: true,
-  });
+  const response = await avmApi.post("/v1/predict", payload);
   return response.data.predicted_price;
 }
 

@@ -1,7 +1,6 @@
-import axios from "axios";
 import { ref, computed } from "vue";
 import type { Component } from "vue";
-import { API } from "@/config";
+import catalogApi from "@/api/catalogApi";
 import { Footprints, Bike, Car } from "@lucide/vue";
 import type {
   RangeGroup,
@@ -40,8 +39,8 @@ async function fetchPois(
   propertyId: string
 ): Promise<ReachablePoisResult[]> {
   try {
-    const { data } = await axios.post(
-      `${API.CATALOG_BASE_URL}/v1/geo-resolution/reachable-pois`,
+    const { data } = await catalogApi.post(
+      "/v1/geo-resolution/reachable-pois",
       {
         lat: lat,
         lon: lon,

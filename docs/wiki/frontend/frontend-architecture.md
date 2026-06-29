@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-06-25
+last-verified: 2026-06-28
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -26,6 +26,7 @@ sources:
   - ../../sources/frontend/2026-06-20-property-detail-view-refactor.md
   - ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md
   - ../../sources/frontend/2026-06-25-property-create-form-and-nearby-fixes.md
+  - ../../sources/frontend/2026-06-28-devcontainer-proxy-chrome-fix.md
 ---
 
 ## TL;DR
@@ -276,19 +277,61 @@ Hash history (`createWebHashHistory`) — ver [[adr-hash-history-static-hosting]
 
 ## API consumption pattern
 
-**Hoy: axios directo, sin instance central.**
+**Instancias dedicadas por servicio** — cada servicio tiene su propia instancia de axios en `src/api/`:
 
-Tres patrones coexisten en código:
+| Archivo | baseURL (dev) | `withCredentials` | Auth interceptor |
+|---|---|---|---|
+| `catalogApi.ts` | `/api/catalog` | No | No — catálogo es público |
+| `avmApi.ts` | `/api/avm` | No | No — sin auth hoy |
+| `usersApi.ts` | `/api/users` | Sí | Sí |
+| `propertiesApi.ts` | `/api/properties` | Sí | Sí |
 
-1. **Hardcoded URL string**: `auth.ts` (login, register, logout, checkAuth) — `"http://localhost:8000/v1/..."`.
-2. **Template literal con config**: `user.ts`, `composables/Location.ts`, `useOnboarding.ts` — `` `${API.USERS_BASE_URL}/v1/...` ``.
-3. **Constante directa**: `detectLocation` usa `API.IPAPI_URL` (third-party).
+`auth.ts` (store Pinia) sigue usando `usersApi` directamente para login/register/logout/checkAuth.
 
-Todas las calls llevan `withCredentials: true` para que la cookie viaje.
+Las baseURLs son rutas relativas (proxy en dev) — ver sección "Webpack devServer proxy".
 
-> ⚠ **CORS + `withCredentials`**: `allow_origins=["*"]` en el backend es incompatible con `withCredentials: true` — el browser bloquea la respuesta (la spec prohíbe wildcard origin con credenciales). Cada backend debe usar `allow_origins=["http://localhost:8080"]` + `allow_credentials=True`. El analytics-service tiene este fix en `src/app/main.py`.
+### Silent refresh interceptor (`src/api/interceptors.ts`)
 
-**Plan** (open item): un único `apiClient.ts` con axios instance configurada (`baseURL`, `withCredentials`, interceptor 401 → `authStore.logout()`). Eliminar las 3 variantes.
+`applyAuthInterceptor(instance)` se llama en `usersApi` y `propertiesApi`. Comportamiento:
+
+```
+response 401
+  └─ !error.config → reject inmediato (error sin config = cancelado/red)
+  └─ original._retry → reject (evita loop infinito en el retry)
+  └─ isRefreshing === true → encolar en failedQueue; resolver/rechazar cuando termine el refresh en curso
+  └─ isRefreshing === false →
+       original._retry = true
+       isRefreshing = true
+       POST /v1/auth/refresh (timeout 3s, withCredentials)
+         ├─ éxito → processQueue(null) → retry instance(original)
+         └─ fallo → processQueue(error) → redirectToLogin() → reject
+       finally: isRefreshing = false
+```
+
+**`isRefreshing` y `failedQueue` son module-level** (declarados fuera de cualquier función o composable Vue), no instancia-por-componente. Esto es intencional: sobreviven al desmonte/remonte de componentes. Si fueran `ref` dentro de un composable, cada componente tendría su propio flag y podrían dispararse múltiples refresh concurrentes.
+
+**`!error.config` guard**: `error.config` puede ser `undefined` cuando el error ocurre antes de que axios haya terminado de construir la request (red caída, request cancelada). Sin el guard, `original._retry` lanzaría un TypeError. El guard hace `return Promise.reject(error)` inmediatamente en ese caso.
+
+**Timeout de 3s en refresh**: si users-service no responde, el refresh falla rápido en vez de colgar indefinidamente — la request original termina rechazada y el usuario es redirigido a login.
+
+### Webpack devServer proxy
+
+Las baseURLs usan rutas relativas (`/api/users`, `/api/catalog`, etc.) para desarrollo. `vue.config.js` configura el proxy:
+
+```js
+devServer: {
+  proxy: {
+    "/api/users":      { target: "http://localhost:8000", changeOrigin: true, pathRewrite: { "^/api/users": "" } },
+    "/api/catalog":    { target: "http://localhost:8001", changeOrigin: true, pathRewrite: { "^/api/catalog": "" } },
+    "/api/avm":        { target: "http://localhost:8002", changeOrigin: true, pathRewrite: { "^/api/avm": "" } },
+    "/api/properties": { target: "http://localhost:8003", changeOrigin: true, pathRewrite: { "^/api/properties": "" } },
+  }
+}
+```
+
+**Por qué existe el proxy**: Chrome bloquea subresource requests (`fetch`/XHR) entre puertos distintos de `localhost` en un devcontainer — VS Code port forwarding agrega una capa Node.js que interactúa mal con el mecanismo de reutilización de conexiones keep-alive de Chrome (el request queda stalled indefinidamente sin error). Firefox no tiene este problema. El proxy hace que el browser siempre hable con `localhost:8080` (same-origin, sin CORS, sin problema de Chrome); webpack reenvía internamente dentro del container.
+
+Para producción: setear `VUE_APP_USERS_URL`, `VUE_APP_CATALOG_URL`, `VUE_APP_AVM_URL`, `VUE_APP_PROPERTIES_URL` con las URLs reales — `config/index.ts` las prioriza sobre el default del proxy.
 
 ## Caching local
 
@@ -398,7 +441,12 @@ En `PublicProfileView`: `page` ref arranca en 0, se incrementa tras el primer fe
 - `detectLocation` usa el provider externo `ipapi.co` para inferir país por IP ([stores/user.ts:69](frontend/src/stores/user.ts#L69)).
 - El guard del router llama `checkAuth()` solo si `_authChecked === false` ([router/index.ts:104-110](frontend/src/router/index.ts#L104-L110)).
 - `useOnboarding` mantiene `activeComponent` como `shallowRef<Component | null>` — `shallowRef` porque los componentes Vue son reactivos por sí solos ([composables/useOnboarding.ts:19](frontend/src/composables/useOnboarding.ts#L19)).
-- Las 3 variantes de cómo se arma la URL de axios coexisten en `auth.ts` (hardcoded), `user.ts` (template literal con config) y `Location.ts` (template literal con config).
+- Hay 4 instancias de axios dedicadas por servicio: `catalogApi` y `avmApi` (sin `withCredentials`, sin interceptor — son APIs públicas); `usersApi` y `propertiesApi` (con `withCredentials: true` y `applyAuthInterceptor`) ([api/](frontend/src/api/)).
+- `applyAuthInterceptor` intercepta 401, refresca token con POST `/v1/auth/refresh` (timeout 3s), reintenta la request original; si el refresh falla, redirige a login ([api/interceptors.ts](frontend/src/api/interceptors.ts)).
+- `isRefreshing` y `failedQueue` en `interceptors.ts` son variables de módulo (no Vue ref ni composable) — sobreviven al ciclo de vida de los componentes y garantizan que solo se dispare un refresh concurrente aunque múltiples requests fallen con 401 simultáneamente ([api/interceptors.ts:6-11](frontend/src/api/interceptors.ts#L6-L11)).
+- El guard `!error.config` en el interceptor evita TypeError cuando `error.config` es `undefined` (request cancelada o error de red antes de que axios termine de construirla) ([api/interceptors.ts:39](frontend/src/api/interceptors.ts#L39)).
+- Las baseURLs usan rutas relativas (`/api/*`) en dev — el proxy de `vue.config.js` las reenvía a cada backend dentro del container; en prod se sobreescriben con `VUE_APP_*_URL` ([config/index.ts](frontend/src/config/index.ts), [vue.config.js](frontend/vue.config.js)).
+- El proxy de webpack es necesario porque Chrome bloquea subresource requests entre puertos `localhost` distintos en un devcontainer (VS Code port forwarding + keep-alive reuse); Firefox no tiene este problema ([vue.config.js](frontend/vue.config.js)).
 - `leaflet` (^1.9.4) y `@vue-leaflet/vue-leaflet` (^0.10.1) están en `devDependencies`, pero **se usan en runtime** en `MapUser.vue` — deberían moverse a `dependencies` ([package.json:35](frontend/package.json#L35), [package.json:46](frontend/package.json#L46), [components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - Firebase NO se inicializa en `main.ts` — el `initializeApp(firebaseConfig)` está comentado ([main.ts:14](frontend/src/main.ts#L14)).
 - `MapUser.vue` es un componente de mapa dumb (vue-leaflet declarativo, props + `<slot>`, `defineModel` para zoom) — ver [[frontend-map-component]] ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).

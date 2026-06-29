@@ -248,7 +248,7 @@
  * 4. Si falla → mostramos error
  */
 import { ref } from "vue";
-import axios from "axios";
+import usersApi from "@/api/usersApi";
 import router from "@/router";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useAuthStore } from "@/stores/auth";
@@ -307,11 +307,9 @@ const loginWithGoogle = async () => {
 
     // El login con Google todavía usa axios porque
     // el flujo es diferente (token de Firebase)
-    const response = await axios.post(
-      "http://localhost:8000/v1/auth/login/google",
-      { token: idToken },
-      { withCredentials: true }
-    );
+    const response = await usersApi.post("/v1/auth/login/google", {
+      token: idToken,
+    });
 
     if (response.status === 200) {
       // Después del login con Google, verificamos la sesión

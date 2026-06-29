@@ -1,14 +1,16 @@
 ---
 title: Runbook — frontend local dev
 status: draft
-last-verified: 2026-05-21
+last-verified: 2026-06-28
 owners: [frontend]
 related:
   - "[[frontend]]"
   - "[[frontend-architecture]]"
   - "[[analytics-service-local-dev]]"
   - "[[catalog-service-local-dev]]"
-sources: [../../../sources/frontend/2026-05-21-foundational-qa.md]
+sources:
+  - ../../../sources/frontend/2026-05-21-foundational-qa.md
+  - ../../../sources/frontend/2026-06-28-devcontainer-proxy-chrome-fix.md
 ---
 
 ## TL;DR
@@ -54,19 +56,26 @@ Abrir **`http://localhost:8080/#/`** en el browser del host. El `#/` es necesari
 
 ## Env vars del frontend
 
-`frontend/.env.example` actual:
+Las vars `VUE_APP_*_URL` son **opcionales en dev** — si no están seteadas, `config/index.ts` usa los paths del proxy (`/api/users`, `/api/catalog`, etc.) que webpack redirige automáticamente.
 
 ```bash
+# Solo necesarias para staging/prod o para apuntar a un backend remoto:
 VUE_APP_USERS_URL=http://localhost:8000
 VUE_APP_CATALOG_URL=http://localhost:8001
+VUE_APP_AVM_URL=http://localhost:8002
+VUE_APP_PROPERTIES_URL=http://localhost:8003
 VUE_APP_IPAPI_URL=https://ipapi.co/json/
 ```
 
 Notas:
 - Prefijo `VUE_APP_*` lo requiere Vue CLI (Vite usaría `VITE_*`).
-- `VUE_APP_USERS_URL` apunta al puerto del **users-service** (no del devcontainer host).
-- `VUE_APP_CATALOG_URL` apunta al puerto del **catalog-service**.
-- `VUE_APP_IPAPI_URL` es la URL de **ipapi.co** (third-party) usado para detectar el país por IP en `userStore.detectLocation`.
+- `VUE_APP_IPAPI_URL` es la URL de **ipapi.co** (third-party) para detectar país por IP.
+
+## Webpack devServer proxy
+
+`vue.config.js` configura un proxy que reenvía `/api/<servicio>/*` → `http://localhost:<puerto>/*` dentro del container. Esto es **necesario para Chrome**: las subresource requests cross-port a `localhost` quedan stalled indefinidamente en Chrome con VS Code devcontainer port forwarding (Firefox no tiene este problema). El proxy hace todo same-origin desde el browser.
+
+**No hay que tocar nada** — funciona solo al arrancar `npm run serve`. Si se agregan nuevos servicios, añadir su entrada en `devServer.proxy`.
 
 ## Levantar los backends necesarios
 
@@ -148,16 +157,17 @@ Configurado con ESLint + `@vue/eslint-config-typescript` + Prettier. Hay un `.es
 
 Worth flag para cuando se priorice testing — gap conocido.
 
-## Known gaps (2026-05-21)
+## Known gaps (actualizado 2026-06-28)
 
-1. **`auth.ts` hardcodea `http://localhost:8000`** — bug en cuanto `VUE_APP_USERS_URL` cambie (staging/prod). Ver [[frontend-architecture]] sección "API consumption pattern".
-2. **Sin axios instance central** — interceptor 401 manual en cada store.
+1. **`auth.ts` (store Pinia) hardcodea URLs** — usa `usersApi` pero el store de Keycloak puede quedar desincronizado si cambia el host. Menor riesgo ahora que las instancias están centralizadas.
+2. ~~**Sin axios instance central**~~ — **resuelto** (2026-06-28): instancias dedicadas por servicio + interceptor de silent refresh. Ver [[frontend-architecture]] sección "API consumption pattern".
 3. **Sin tests** — ningún framework configurado.
-4. **CORS abierto** — pre-producción debe cerrarse.
+4. ~~**CORS abierto**~~ — **resuelto** parcialmente: el proxy webpack hace las requests same-origin en dev. En prod los backends deben tener `allow_origins` cerrado a los dominios reales.
 5. **Backends a mano** — no hay docker-compose service que arranque users/catalog/analytics automáticamente (se corren manualmente desde el devcontainer).
 6. **Firebase residual** — `firebase` aún en deps y usado en `LoginView.loginWithGoogle`. Ver [[adr-firebase-removal]].
 7. **`leaflet` y `@vue-leaflet/vue-leaflet` en devDependencies** — debería ser `dependencies` si se usa en runtime.
 8. **Onboarding completo en frontend, pausado en backend** — ver [[frontend-onboarding-flow]] "El refactor pendiente".
+9. **Cursor de paginación del feed no vive en `route.query`** — paginación in-memory, no compartible por URL.
 
 ## Comandos útiles
 
@@ -181,8 +191,9 @@ npm run build -- --report   # genera dist/report.html (webpack-bundle-analyzer)
 - Script `npm run serve` invoca `vue-cli-service serve`, port default 8080 ([package.json:6](frontend/package.json#L6)).
 - Script `npm run build` invoca `vue-cli-service build` y produce `dist/` ([package.json:7](frontend/package.json#L7)).
 - Env vars del frontend usan prefijo `VUE_APP_*` (requerido por Vue CLI 5) ([.env.example](frontend/.env.example)).
-- `.env.example` declara `VUE_APP_USERS_URL`, `VUE_APP_CATALOG_URL`, `VUE_APP_IPAPI_URL` — sin Firebase, sin MAPBOX, sin Sentry/analytics.
+- En dev, si no se setean `VUE_APP_*_URL`, `config/index.ts` usa paths de proxy (`/api/users`, etc.) — el proxy de `vue.config.js` los reenvía al backend correspondiente ([config/index.ts](frontend/src/config/index.ts), [vue.config.js](frontend/vue.config.js)).
+- El proxy webpack es obligatorio en Chrome con devcontainer: subresource requests cross-port a localhost quedan stalled indefinidamente por la interacción de VS Code port forwarding con el keep-alive de Chrome ([vue.config.js](frontend/vue.config.js)).
 - El devcontainer ([.devcontainer/Dockerfile](.devcontainer/Dockerfile)) incluye Node 20 + uv + pnpm preinstalados.
 - El `develop` service del compose forwarda los ports 8000, 5173, 8080 — el 8080 es justo el que usa Vue CLI por default ([docker-compose.yml:10-12](docker-compose.yml#L10-L12)).
 - Backends NO están como service en el compose — se corren manualmente desde dentro del devcontainer (mismo patrón que [[analytics-service-local-dev]] y [[catalog-service-local-dev]]).
-- No hay tests configurados al 2026-05-21 (ningún framework de test en `devDependencies`).
+- No hay tests configurados (ningún framework de test en `devDependencies`).

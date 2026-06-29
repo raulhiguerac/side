@@ -1,5 +1,5 @@
-import axios from "axios";
-import { API, STORAGE_KEYS } from "@/config";
+import { STORAGE_KEYS } from "@/config";
+import catalogApi from "@/api/catalogApi";
 import { useUserStore } from "@/stores/user";
 
 export async function getCitiesByCountry(id: string) {
@@ -7,8 +7,8 @@ export async function getCitiesByCountry(id: string) {
     const key = STORAGE_KEYS.CITIES_BY_COUNTRY(id);
     const raw = sessionStorage.getItem(key);
     if (raw) return JSON.parse(raw);
-    const { data } = await axios.get(
-      `${API.CATALOG_BASE_URL}/v1/localities/by-country`,
+    const { data } = await catalogApi.get(
+      `/v1/localities/by-country`,
       {
         params: { country_id: id },
       }
@@ -38,8 +38,8 @@ export async function getNeighborhoodsByLocalities(localityIds: string[]) {
   if (missing.length === 0) return cached;
 
   try {
-    const { data } = await axios.get(
-      `${API.CATALOG_BASE_URL}/v1/neighborhoods/by-localities`,
+    const { data } = await catalogApi.get(
+      `/v1/neighborhoods/by-localities`,
       { params: new URLSearchParams(missing.map((id) => ["locality_ids", id])) }
     );
 
@@ -67,7 +67,7 @@ export async function locations() {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.COUNTRIES);
       if (raw) return JSON.parse(raw);
-      const { data } = await axios.get(`${API.CATALOG_BASE_URL}/v1/countries`);
+      const { data } = await catalogApi.get(`/v1/countries`);
       localStorage.setItem(STORAGE_KEYS.COUNTRIES, JSON.stringify(data));
       return data;
     } catch (error) {
@@ -84,21 +84,33 @@ export async function locations() {
   return { countryDetected, countryUser };
 }
 
+export interface ResolvedNeighborhood {
+  name: string;
+  neighborhood_id: string;
+  city_id: string;
+  country_id: string;
+}
+
 export async function getNeighborhood(
   lat: number,
   lon: number
-): Promise<string | undefined> {
+): Promise<ResolvedNeighborhood | undefined> {
   try {
-    const neighborhood = await axios.get(
-      `${API.CATALOG_BASE_URL}/v1/geo-resolution/by-coordinates`,
+    const { data: coords } = await catalogApi.get(
+      `/v1/geo-resolution/by-coordinates`,
       { params: { lat, lon } }
     );
-    const neighborhood_name = await axios.get(
-      `${API.CATALOG_BASE_URL}/v1/neighborhoods/by-id`,
-      { params: { neighborhood_id: neighborhood.data.neighborhood_id } }
+    const { data: nbh } = await catalogApi.get(
+      `/v1/neighborhoods/by-id`,
+      { params: { neighborhood_id: coords.neighborhood_id } }
     );
 
-    return neighborhood_name.data.name;
+    return {
+      name: nbh.name,
+      neighborhood_id: coords.neighborhood_id,
+      city_id: coords.locality_id,
+      country_id: coords.country_id,
+    };
   } catch (error) {
     console.error("Error al obtener los barrios:", error);
   }

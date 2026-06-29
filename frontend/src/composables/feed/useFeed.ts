@@ -1,7 +1,6 @@
-import axios from "axios";
 import { ref, computed } from "vue";
 import { useUserStore } from "@/stores/user";
-import { API } from "@/config";
+import propertiesApi from "@/api/propertiesApi";
 import type {
   FeedPreferences,
   FeedFilters,
@@ -17,8 +16,8 @@ async function fetchFeed(
   cursor?: string | null
 ): Promise<FeedPage> {
   try {
-    const { data } = await axios.get(
-      `${API.PROPERTIES_BASE_URL}/v1/search/feed`,
+    const { data } = await propertiesApi.get(
+      "/v1/search/feed",
       {
         params: { ...preferences, ...filters, ...(cursor ? { cursor } : {}) },
         paramsSerializer: { indexes: null },

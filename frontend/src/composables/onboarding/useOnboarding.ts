@@ -1,7 +1,6 @@
 import { ref, shallowRef, type Component } from "vue";
-import axios from "axios";
-
-import { API, STORAGE_KEYS } from "@/config";
+import { STORAGE_KEYS } from "@/config";
+import usersApi from "@/api/usersApi";
 import { useUserStore } from "@/stores/user";
 import IntentSelector from "@/components/onboarding/IntentSelector.vue";
 import LocalitySelector from "@/components/onboarding/LocalitySelector.vue";
@@ -53,11 +52,9 @@ export function useOnboarding() {
 
   const saveCity = async (localities: { id: string; name: string }[]) => {
     try {
-      await axios.post(
-        `${API.USERS_BASE_URL}/v1/onboarding/city`,
-        { locality_ids: localities.map((l) => l.id) },
-        { withCredentials: true }
-      );
+      await usersApi.post("/v1/onboarding/city", {
+        locality_ids: localities.map((l) => l.id),
+      });
       userStore.userInterests.localities = localities.map((l) => l.id);
       userStore.onboardingStep = "neighborhood";
       activeComponent.value = STEP_MAP["neighborhood"];
@@ -70,11 +67,7 @@ export function useOnboarding() {
     localities: { locality_id: string; neighborhoods: Record<number, string> }[]
   ) => {
     try {
-      await axios.post(
-        `${API.USERS_BASE_URL}/v1/onboarding/neighborhood`,
-        { localities },
-        { withCredentials: true }
-      );
+      await usersApi.post("/v1/onboarding/neighborhood", { localities });
       userStore.onboardingStep = "property_type";
       activeComponent.value = STEP_MAP["property_type"];
     } catch (e) {
@@ -86,11 +79,10 @@ export function useOnboarding() {
     try {
       await Promise.all(
         Object.entries(selections).map(([locality_id, property_type]) =>
-          axios.post(
-            `${API.USERS_BASE_URL}/v1/onboarding/property-type`,
-            { locality_id, property_type },
-            { withCredentials: true }
-          )
+          usersApi.post("/v1/onboarding/property-type", {
+            locality_id,
+            property_type,
+          })
         )
       );
       closeFlow();

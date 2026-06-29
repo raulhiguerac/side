@@ -96,7 +96,7 @@ async def request_presigned_urls(
 # -------------------------------------------------------------------------
 
 @router.post(
-    "",
+    "/create",
     status_code=status.HTTP_201_CREATED,
 )
 async def create_property(

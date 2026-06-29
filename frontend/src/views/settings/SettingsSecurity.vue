@@ -296,7 +296,7 @@
 
 <script lang="ts" setup>
 import { ref, computed } from "vue";
-import axios from "axios";
+import usersApi from "@/api/usersApi";
 
 const isLoading = ref(false);
 const errorMessage = ref("");
@@ -329,14 +329,10 @@ const changePassword = async () => {
   isLoading.value = true;
 
   try {
-    await axios.post(
-      "http://localhost:8000/v1/auth/change-password",
-      {
-        current_password: form.value.currentPassword,
-        new_password: form.value.newPassword,
-      },
-      { withCredentials: true }
-    );
+    await usersApi.post("/v1/auth/change-password", {
+      current_password: form.value.currentPassword,
+      new_password: form.value.newPassword,
+    });
 
     successMessage.value = "Contraseña actualizada correctamente";
     form.value = { currentPassword: "", newPassword: "", confirmPassword: "" };
