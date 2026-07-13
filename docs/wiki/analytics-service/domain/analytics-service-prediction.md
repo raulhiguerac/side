@@ -1,7 +1,7 @@
 ---
 title: Dominio prediction (analytics-service)
-status: draft
-last-verified: 2026-05-26
+status: stable
+last-verified: 2026-07-13
 owners: [analytics-service]
 related:
   - "[[analytics-service]]"

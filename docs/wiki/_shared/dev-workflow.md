@@ -1,7 +1,7 @@
 ---
 title: Dev workflow — reglas de trabajo del monorepo
 status: stable
-last-verified: 2026-05-23
+last-verified: 2026-07-13
 owners: [_shared]
 related:
   - "[[architecture]]"

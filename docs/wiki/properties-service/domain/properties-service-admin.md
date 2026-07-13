@@ -1,7 +1,7 @@
 ---
 title: Dominio admin — properties-service
-status: draft
-last-verified: 2026-05-28
+status: stable
+last-verified: 2026-07-13
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -20,7 +20,7 @@ El dominio de **operación interna**: moderación (status + verificación), prec
 | UC | Archivo | Qué hace |
 |---|---|---|
 | `SetPropertyStatusUseCase` | `use_cases/moderation/set_status.py` | Cambia `status` validando la state machine; invalida cache. |
-| `VerifyPropertyUseCase` | `use_cases/moderation/verify.py` | Setea `verification_status` + `verified_by` / `rejection_reason`. |
+| `VerifyPropertyUseCase` | `use_cases/moderation/verify.py` | Cambia `verification_status` validando su propia state machine; **no** setea `verified_by` (campo muerto — el UC no recibe `principal`). |
 | `SetEstimatedPriceUseCase` | `use_cases/estimated_price/set_estimated_price.py` | Escribe precio estimado admin **o** ML según haya principal. |
 | `GetPropertiesAdminUseCase` | `use_cases/get_properties.py` | Listado admin con filtros. |
 | `GetPropertyDetailAdminUseCase` | `use_cases/get_property_detail.py` | Detalle admin (sin reglas de visibilidad). |
@@ -32,7 +32,7 @@ El dominio de **operación interna**: moderación (status + verificación), prec
 
 ## State machine de status
 
-`set_status` solo permite transiciones declaradas en `_ALLOWED_TRANSITIONS` ([set_status.py:12-18](backend/properties-service/src/app/services/admin/use_cases/moderation/set_status.py#L12-L18)):
+`set_status` solo permite transiciones declaradas en `_ALLOWED_TRANSITIONS` ([set_status.py:17-23](backend/properties-service/src/app/services/admin/use_cases/moderation/set_status.py#L17-L23)):
 
 | Desde | Hacia |
 |---|---|
@@ -43,6 +43,19 @@ El dominio de **operación interna**: moderación (status + verificación), prec
 | `rented` | `inactive` |
 
 Una transición no permitida lanza `InvalidStatusTransitionError`. Tras el cambio se invalida cache de detalle, mis-propiedades del owner y celdas H3 (para que el feed-mapa refleje el cambio de visibilidad).
+
+### State machine de `verification_status` (independiente de la de arriba)
+
+`VerifyPropertyUseCase` tiene su **propia** `_ALLOWED_TRANSITIONS` sobre `VerificationStatus`, separada de la de `ListingStatus` de arriba — no documentada hasta ahora:
+
+| Desde | Hacia |
+|---|---|
+| `unverified` | `pending` |
+| `pending` | `verified`, `rejected` |
+| `rejected` | `pending` |
+| `verified` | — (terminal, sin salida) |
+
+Una transición no permitida lanza el mismo `InvalidStatusTransitionError` que `set_status`. El UC no recibe `principal` en su firma (`execute(*, property_id, request)`), así que el campo `verified_by` del modelo `Property` nunca se escribe desde este flujo — queda muerto.
 
 ## Precio estimado dual
 
@@ -73,8 +86,8 @@ Mismo patrón bulk-then-row-by-row que el UC batch de [[analytics-service-archit
 
 ## Claims
 
-- Las rutas `/admin/*` están protegidas con `dependencies=[Depends(require_admin)]` a nivel router ([admin.py:41-45](backend/properties-service/src/app/api/routes/admin.py#L41-L45)).
-- `set_status` valida transiciones contra `_ALLOWED_TRANSITIONS` y lanza `InvalidStatusTransitionError` si no aplica ([set_status.py:34-39](backend/properties-service/src/app/services/admin/use_cases/moderation/set_status.py#L34-L39)).
+- Las rutas `/admin/*` están protegidas con `dependencies=[Depends(require_admin)]` a nivel router ([admin.py:43-47](backend/properties-service/src/app/api/routes/admin.py#L43-L47)).
+- `set_status` valida transiciones contra `_ALLOWED_TRANSITIONS` y lanza `InvalidStatusTransitionError` si no aplica ([set_status.py:39-44](backend/properties-service/src/app/services/admin/use_cases/moderation/set_status.py#L39-L44)).
 - `SetEstimatedPriceUseCase` escribe `admin_estimated_price` si hay principal, `ml_estimated_price` si no ([set_estimated_price.py:26-32](backend/properties-service/src/app/services/admin/use_cases/estimated_price/set_estimated_price.py#L26-L32)).
 - El path ML de `set_estimated_price` no tiene caller — `workers/` está vacío al 2026-05-28 ([workers/](backend/properties-service/src/app/workers)).
 - El bulk enriquece ubicación contra catalog con un `Semaphore(50)` de concurrencia ([bulk_create_properties.py:22-23](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py#L22-L23), [bulk_create_properties.py:97-101](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py#L97-L101)).

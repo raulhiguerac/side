@@ -1,7 +1,7 @@
 ---
 title: Glosario compartido
 status: draft
-last-verified: 2026-05-28
+last-verified: 2026-07-13
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -94,7 +94,7 @@ Captura periódica del estado del mercado (listings activos, precios, días en m
 
 - `barrio_ideca` aparece como columna en la tabla `predictions` y como campo de `PredictionRequest` ([prediction.py](backend/analytics-service/src/app/services/prediction/schemas/prediction.py)).
 - IDECA es el estándar oficial del distrito de Bogotá para datos espaciales (https://www.ideca.gov.co/).
-- El modelo servido por `analytics-service` se determina por el alias `production` en MLflow, no por versión explícita ([avm_model_adapter.py:10](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L10)).
+- El modelo servido por `analytics-service` se determina por el alias `production` en MLflow, no por versión explícita ([avm_model_adapter.py:11](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L11)).
 - POIs hoy se extraen desde CSV de OpenStreetMap (input del CLI de training en `data/ml/AVM/train.py`).
 - `notifications-service` y `payments-service` no están implementados al 2026-05-19.
-- Los UCs reciben `principal: uuid.UUID`, no el token JWT ([online.py:44](backend/analytics-service/src/app/services/prediction/use_cases/online.py#L44)).
+- Los UCs reciben `principal: uuid.UUID`, no el token JWT ([online.py:22](backend/analytics-service/src/app/services/prediction/use_cases/online.py#L22)).

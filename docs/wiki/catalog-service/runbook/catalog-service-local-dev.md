@@ -1,7 +1,7 @@
 ---
 title: Runbook — catalog-service local dev
 status: draft
-last-verified: 2026-05-28
+last-verified: 2026-07-13
 owners: [catalog-service]
 related:
   - "[[catalog-service]]"
@@ -41,6 +41,7 @@ Subset del compose que necesita catalog-service:
 | `keycloak` | keycloak:26.4.7 | **8180** | IdP — admin UI en http://localhost:8180 | admin / admin |
 | `redis` | redis:latest | 6379 | Cache forward geocode + lock + FetchZone short-circuit | n/a |
 | `redisinsight` | redis/redisinsight | 5540 | UI de Redis | n/a |
+| `router` | openrouteservice/openrouteservice:nightly | 8082 | ORS — backea `ORS_URL`, usado por `/geo-resolution/reachable-pois` | n/a |
 | `mlflow`, `minio`, etc. | — | — | irrelevantes para catalog | — |
 
 ## Correr catalog-service
@@ -62,7 +63,7 @@ curl http://localhost:8000/v1/health
 
 ## Env vars del servicio
 
-`backend/catalog-service/.env.example` **está incompleto** al 2026-05-21 (igual que el de analytics): solo declara `DATABASE_URL` y `REDIS_URL`. Set mínimo recomendado para dev local:
+`backend/catalog-service/.env.example` **sigue incompleto**: declara `DATABASE_URL`, `REDIS_URL` y `ORS_URL` (agregado 2026-06-14), pero falta `DATABASE_CATALOG_URL` (naming correcto), las vars de Keycloak, `ADMIN_ROLE` y `MAPBOX_API_KEY`. Set mínimo recomendado para dev local:
 
 ```bash
 # Persistencia (la DB que levanta el compose)
@@ -77,6 +78,9 @@ ADMIN_ROLE=admin
 
 # Mapbox (solo necesario hasta el refactor de /geo-resolution; ver ADR-0005)
 MAPBOX_API_KEY=<tu token>
+
+# ORS (OpenRouteService) — necesario para /geo-resolution/reachable-pois; sin default seguro
+ORS_URL=http://router:8082/ors
 
 # (los TTLs y H3_RESOLUTION tienen defaults razonables en settings.py)
 ```
@@ -158,8 +162,8 @@ Los CSVs/GeoJSON de IDECA viven hoy localmente — pedirlos al equipo si no los 
 
 ## Known gaps (2026-05-21)
 
-1. **`.env.example` incompleto** — falta declarar `DATABASE_CATALOG_URL` (no `DATABASE_URL` — naming distinto), las 4 vars de Keycloak, `ADMIN_ROLE`, y `MAPBOX_API_KEY`.
-2. **Sin script de seed** — todo manual vía bulk endpoints. Workflow no auto-recoverable si reseteás el volumen de Postgres.
+1. **`.env.example` incompleto** — ya declara `ORS_URL` (2026-06-14), pero falta `DATABASE_CATALOG_URL` (no `DATABASE_URL` — naming distinto), las 4 vars de Keycloak, `ADMIN_ROLE`, y `MAPBOX_API_KEY`.
+2. **Sin script de seed para countries/admin-divisions/localities/neighborhoods** — todo manual vía bulk endpoints. Workflow no auto-recoverable si reseteás el volumen de Postgres. (Existe `scripts/seed_pois.py`, agregado 2026-06-15, pero es un flujo distinto — siembra POIs desde un extracto OSM `.pbf` vía `osmium`, no el catálogo geográfico.)
 3. **Role `admin` no auto-asignado al user `admin`** del realm — hay que setearlo a mano la primera vez.
 4. **Bucket `mlflow-artifacts` y MinIO no son necesarios para catalog** — pero levantan igual con el compose (overhead aceptable para dev unificado).
 5. **`MAPBOX_API_KEY` requerido por el endpoint legacy** — eliminable cuando se haga el refactor de [[adr-mapbox-frontend-only]].
@@ -201,7 +205,7 @@ docker logs $(docker ps -qf name=keycloak) -f
 - catalog-service usa `postgis/postgis:17-master`; properties-service también la usa para su DB ([docker-compose.yml:31](docker-compose.yml#L31), [docker-compose.yml:42](docker-compose.yml#L42)).
 - El servicio lee la connection string desde `DATABASE_CATALOG_URL` (no `DATABASE_URL`) ([core/config/settings.py:8](backend/catalog-service/src/app/core/config/settings.py#L8)).
 - Auth lee JWT desde la cookie `access_token`, no del header `Authorization` ([api/deps/auth.py:45](backend/catalog-service/src/app/api/deps/auth.py#L45)).
-- El `.env.example` del servicio solo declara `DATABASE_URL` y `REDIS_URL`, falta el resto ([backend/catalog-service/.env.example](backend/catalog-service/.env.example)).
+- El `.env.example` del servicio declara `DATABASE_URL`, `REDIS_URL` y `ORS_URL`; sigue faltando `DATABASE_CATALOG_URL`, Keycloak, `ADMIN_ROLE` y `MAPBOX_API_KEY` ([backend/catalog-service/.env.example](backend/catalog-service/.env.example)).
 - 2 migraciones Alembic disponibles al 2026-05-21 (catálogo geo + POIs) ([backend/catalog-service/src/app/migrations/versions/](backend/catalog-service/src/app/migrations/versions/)).
 - No hay script de seed automatizado — el catálogo se carga vía bulk endpoints manualmente.
 - El role `admin` debe asignarse a mano al user `admin` del realm `master` para que `/admin/*` pase `require_admin`.

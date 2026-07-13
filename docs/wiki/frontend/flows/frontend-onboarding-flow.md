@@ -1,7 +1,7 @@
 ---
 title: Onboarding flow (frontend)
 status: stable
-last-verified: 2026-05-26
+last-verified: 2026-07-13
 owners: [frontend, users-service]
 related:
   - "[[frontend]]"
@@ -23,17 +23,21 @@ Vive en [`App.vue`](frontend/src/App.vue) con un `watch` sobre `authStore.isAuth
 ```ts
 watch(
   () => authStore.isAuthenticated,
-  (isLogged) => {
+  async (isLogged) => {
     if (!isLogged) return;
-    const manualCheck = sessionStorage.getItem("onboarding_dismissed") === "true";
+    await userStore.checkInterests();
+    const manualCheck =
+      sessionStorage.getItem("onboarding_dismissed") === "true";
     if (!manualCheck) startFlow();
   },
   { immediate: true }
 );
 ```
 
+También hay un `onMounted` separado que llama `authStore.checkAuth()` y, si ya está autenticado, `userStore.checkInterests()` — cubre el caso de refresh de página con sesión ya activa (el `watch` con `immediate: true` no dispara si `isAuthenticated` nunca cambia de valor).
+
 - Dispara `startFlow()` **una vez** post-login si el usuario no dismisseó el modal en esta sesión.
-- `startFlow()` viene del composable [`useOnboarding`](frontend/src/composables/useOnboarding.ts).
+- `startFlow()` viene del composable [`useOnboarding`](frontend/src/composables/onboarding/useOnboarding.ts).
 
 ## State machine — 4 pasos
 
@@ -179,13 +183,14 @@ PropertyTypeSelector → savePropertyTypes(selections)
 
 ## Claims
 
-- El `watch` sobre `isAuthenticated` con `immediate: true` dispara `startFlow()` automáticamente post-login ([App.vue](frontend/src/App.vue)).
-- `STEP_MAP` define los 4 selectors y mapea exactamente a los strings del campo `onboarding_step` del backend ([composables/useOnboarding.ts:11-16](frontend/src/composables/useOnboarding.ts#L11-L16)).
+- El `watch` sobre `isAuthenticated` con `immediate: true` dispara `startFlow()` automáticamente post-login; el mismo handler también llama `userStore.checkInterests()` antes de decidir si abre el modal ([App.vue](frontend/src/App.vue)).
+- `isModalOpen` y `activeComponent` son **estado a nivel de módulo** (`ref`/`shallowRef` declarados fuera de la función `useOnboarding()`, no dentro) — singleton entre todos los componentes que llamen al composable, mismo patrón que `useCities` ([composables/onboarding/useOnboarding.ts](frontend/src/composables/onboarding/useOnboarding.ts)).
+- `STEP_MAP` define los 4 selectors y mapea exactamente a los strings del campo `onboarding_step` del backend ([composables/onboarding/useOnboarding.ts](frontend/src/composables/onboarding/useOnboarding.ts)).
 - El step inicial por default es `"intent"` si el backend no devuelve uno ([stores/user.ts](frontend/src/stores/user.ts)).
-- `dismissModal()` setea `onboarding_dismissed = "true"` en `sessionStorage` (per-tab, no `localStorage`) ([stores/user.ts](frontend/src/stores/user.ts)).
-- `IntentSelector` llama `POST /v1/onboarding/intent` directamente; al éxito emite `onSaved` que App.vue mapea a `advanceToCity()` ([composables/useOnboarding.ts:49-52](frontend/src/composables/useOnboarding.ts#L49-L52)).
-- `saveCity` envía `{ locality_ids: string[] }` y guarda solo UUIDs en `userStore.userInterests.localities` ([composables/useOnboarding.ts:54-67](frontend/src/composables/useOnboarding.ts#L54-L67)).
-- `savePropertyTypes` llama `POST /v1/onboarding/property-type` en paralelo, una vez por ciudad, via `Promise.all` ([composables/useOnboarding.ts:85-100](frontend/src/composables/useOnboarding.ts#L85-L100)).
-- `useLocalitiesWithNames.load()` resuelve UUIDs a nombres usando `catalog-service` cacheado en `sessionStorage` — compartido por `NeighborhoodSelector` y `PropertyTypeSelector` ([composables/useLocalitiesWithNames.ts](frontend/src/composables/useLocalitiesWithNames.ts)).
-- `getNeighborhoodsByLocalities` usa `new URLSearchParams` para serializar el array (workaround para FastAPI query params vs comportamiento default de Axios) ([composables/Location.ts:43](frontend/src/composables/Location.ts#L43)).
+- `dismissModal()` setea `STORAGE_KEYS.ONBOARDING_DISMISSED = "true"` en `sessionStorage` (per-tab, no `localStorage`) y fuerza `onboardingStep = "done"` ([stores/user.ts](frontend/src/stores/user.ts)).
+- `IntentSelector` llama `POST /v1/onboarding/intent` directamente y emite el evento `saved`; `App.vue` lo escucha via el prop dinámico `onSaved: advanceToCity` que solo se pasa cuando `activeComponent === IntentSelector` ([components/onboarding/IntentSelector.vue](frontend/src/components/onboarding/IntentSelector.vue), [App.vue](frontend/src/App.vue)).
+- `saveCity` envía `{ locality_ids: string[] }` y guarda solo UUIDs en `userStore.userInterests.localities` ([composables/onboarding/useOnboarding.ts](frontend/src/composables/onboarding/useOnboarding.ts)).
+- `savePropertyTypes` llama `POST /v1/onboarding/property-type` en paralelo, una vez por ciudad, via `Promise.all` ([composables/onboarding/useOnboarding.ts](frontend/src/composables/onboarding/useOnboarding.ts)).
+- `useLocalitiesWithNames.load()` resuelve UUIDs a nombres usando `catalog-service` cacheado en `sessionStorage` — compartido por `NeighborhoodSelector` y `PropertyTypeSelector` ([composables/catalog/useLocalitiesWithNames.ts](frontend/src/composables/catalog/useLocalitiesWithNames.ts)).
+- `getNeighborhoodsByLocalities` usa `new URLSearchParams` para serializar el array (workaround para FastAPI query params vs comportamiento default de Axios) ([composables/catalog/useLocation.ts](frontend/src/composables/catalog/useLocation.ts)).
 - Las opciones visibles al user (nombres de localities/neighborhoods) vienen siempre de `catalog-service` — `users-service` solo almacena UUIDs.

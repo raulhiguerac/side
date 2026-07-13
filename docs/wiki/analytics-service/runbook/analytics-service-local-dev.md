@@ -1,7 +1,7 @@
 ---
 title: Runbook — analytics-service local dev
 status: stable
-last-verified: 2026-05-25
+last-verified: 2026-07-13
 owners: [analytics-service]
 related:
   - "[[analytics-service]]"
@@ -43,16 +43,20 @@ El servicio analytics **no está como service en el compose** — se corre manua
 |---|---|---|---|---|
 | `develop` | build local | 8000, 5173, 8080 | El devcontainer (tu shell) | n/a |
 | `users-ms-db` | postgres:17 | (interno) | DB de users-service | admin / admin |
-| `catalog-ms-db` | postgis/postgis:17 | (interno) | DB de catalog-service | admin / admin |
-| `properties-ms-db` | postgis/postgis:17 | (interno) | DB de properties-service | admin / admin |
+| `catalog-ms-db` | postgis/postgis:17-master | (interno) | DB de catalog-service | admin / admin |
+| `properties-ms-db` | postgis/postgis:17-master | (interno) | DB de properties-service | admin / admin |
+| `analytics-ms-db` | postgres:17 | (interno) | DB de analytics-service — `POSTGRES_DB: analytics-ms-db` | admin / admin |
 | `keycloak-db` | postgres:17 | (interno) | DB de Keycloak | keycloak / password |
 | `keycloak` | keycloak:26.4.7 | **8180** | IdP — admin UI en http://localhost:8180 | admin / admin |
 | `redis` | redis:latest | 6379 | Cache + rate limit | n/a |
 | `redisinsight` | redis/redisinsight | 5540 | UI de Redis — http://localhost:5540 | n/a |
-| `minio` | minio:RELEASE.2025-09-07 | 9000 (API), **9001** (console) | Artifact store — console en http://localhost:9001 | minioadmin / minioadmin |
+| `minio` | minio/minio:RELEASE.2025-09-07T16-13-09Z-cpuv1 | 9000 (API), **9001** (console) | Artifact store — console en http://localhost:9001 | minioadmin / minioadmin |
 | `mlflow` | mlflow:v3.12.0-full | 5000 | Model registry + tracking — UI en http://localhost:5000 | n/a |
+| `kafka-broker` | apache/kafka:latest | 9092 | Broker Kafka — `advertised.listeners` interno `broker:29092` | n/a |
+| `topic-init` | apache/kafka:latest | — | One-shot: crea los topics `listing-created`, `price-predicted`, `listing-created-dlq` | n/a |
+| `router` | openrouteservice/openrouteservice:nightly | 8082 | ORS — usado por catalog-service, no por analytics | n/a |
 
-**Nota**: NO hay un `analytics-ms-db` en el compose — ver gap #1 abajo.
+`analytics-ms-db` **ya existe** en el compose (agregado antes del 2026-05-25) — 14 services en total, no 10. El worker Kafka necesita que `kafka-broker` y `topic-init` estén up para conectar; eso no está documentado en la sección "Correr analytics-service" más abajo.
 
 ## Correr analytics-service
 
@@ -82,8 +86,8 @@ curl http://localhost:8000/v1/health
 `backend/analytics-service/.env.example` **está incompleto** al 2026-05-20: solo declara `DATABASE_URL` y `REDIS_URL`. Para que `/predict` funcione, el `.env` real necesita además las 5 env vars de MLflow y las 3 de autenticación Keycloak. Set mínimo recomendado para dev local:
 
 ```bash
-# Persistencia
-DATABASE_URL=postgresql://admin:admin@analytics-ms-db:5432/analytics_service_db
+# Persistencia — ⚠️ el compose crea la DB con nombre `analytics-ms-db` (POSTGRES_DB), no `analytics_service_db`
+DATABASE_URL=postgresql://admin:admin@analytics-ms-db:5432/analytics-ms-db
 REDIS_URL=redis://redis:6379/2
 
 # MLflow + MinIO (artifact store)
@@ -118,15 +122,15 @@ El endpoint está expuesto en `POST /v1/predict`. Requiere un JWT válido — el
 1. Obtener un JWT de Keycloak (Postman collection pendiente, ver [[adr-auth-keycloak-jwt]]).
 2. POST a `http://localhost:8000/v1/predict` con `Cookie: access_token=<jwt>` y body con shape de `PredictionRequest` (rangos en [[analytics-service-prediction]]).
 3. Validar que la response tenga `id`, `predicted_price`, `model_version`, `created_at`.
-4. Opcionalmente revisar el registro insertado: `psql -h analytics-ms-db -U admin -d analytics_service_db -c "SELECT * FROM predictions ORDER BY created_at DESC LIMIT 1;"`
+4. Opcionalmente revisar el registro insertado: `psql -h analytics-ms-db -U admin -d analytics-ms-db -c "SELECT * FROM predictions ORDER BY created_at DESC LIMIT 1;"`
 
-Bloqueantes previos a poder hacer este test: gaps #1 (DB), #2 (Alembic), #3 (bucket MinIO) y #4 (modelo seed) — ver abajo.
+Gaps #1, #2 y #4 ya están resueltos. **Gap #3 (bucket `mlflow-artifacts`) sigue abierto** — ver Known gaps abajo.
 
 ## Known gaps
 
 ~~1. **No hay `analytics-ms-db` en `docker-compose.yml`**.~~ ✓ Resuelto — DB y migraciones corriendo (2026-05-25).
 ~~2. **No hay migraciones Alembic aplicadas**.~~ ✓ `alembic upgrade head` aplicado, tabla `predictions` activa (2026-05-25).
-~~3. **El bucket `mlflow-artifacts` no se crea automáticamente en MinIO**.~~ ✓ Resuelto (2026-05-25).
+3. **El bucket `mlflow-artifacts` no se crea automáticamente en MinIO** — **sigue abierto** (re-verificado 2026-07-13): `MINIO_DEFAULT_BUCKETS` en `docker-compose.yml` solo declara `mi-casa-en-minutos`; no hay init container ni script `mc mb` en el repo que cree `mlflow-artifacts`. `--default-artifact-root s3://mlflow-artifacts/` de MLflow apunta a un bucket que no existe hasta que alguien lo crea a mano.
 ~~4. **No hay modelo seed en MLflow**.~~ ✓ `bogota-avm` con alias `production` disponible — `/predict` y worker batch funcionando end-to-end (2026-05-25).
 ~~5. **El `.env.example` del servicio está incompleto**.~~ ✓ Env vars MLflow, auth y Kafka documentadas arriba (2026-05-25).
 ~~6. **La FastAPI dependency de auth no existe**.~~ ✓ Implementada en `api/deps/auth.py` (2026-05-20).
@@ -134,7 +138,7 @@ Bloqueantes previos a poder hacer este test: gaps #1 (DB), #2 (Alembic), #3 (buc
 
 ## Postman collection (pendiente)
 
-Una collection pública para obtener token de Keycloak + llamar `/predict` se creará cuando los gaps de infra (#1–#4) estén cerrados y haya un realm de Keycloak con un usuario de prueba configurado.
+Una collection pública para obtener token de Keycloak + llamar `/predict` se creará cuando el gap #3 (bucket MinIO) esté cerrado y haya un realm de Keycloak con un usuario de prueba configurado. Los gaps #1, #2 y #4 ya no bloquean.
 
 ## Comandos útiles dentro del devcontainer
 
@@ -160,14 +164,14 @@ docker compose restart keycloak
 
 ## Claims
 
-- `docker-compose.yml` define 10 services: `develop`, `users-ms-db`, `catalog-ms-db`, `properties-ms-db`, `keycloak-db`, `keycloak`, `redis`, `redisinsight`, `minio`, `mlflow` ([docker-compose.yml](docker-compose.yml)).
-- `analytics-service` NO está incluido como service en el compose al 2026-05-20.
+- `docker-compose.yml` define 14 services: `develop`, `users-ms-db`, `catalog-ms-db`, `properties-ms-db`, `analytics-ms-db`, `keycloak-db`, `keycloak`, `redis`, `redisinsight`, `minio`, `mlflow`, `kafka-broker`, `topic-init`, `router` ([docker-compose.yml](docker-compose.yml)).
+- `analytics-service` (la app) NO está incluida como service en el compose — solo su DB (`analytics-ms-db`) lo está.
 - El `develop` service monta el repo root en `/workspace` ([docker-compose.yml:7-8](docker-compose.yml#L7-L8)).
-- Keycloak escucha en host port **8180** mapeado al 8080 interno del container ([docker-compose.yml:87-88](docker-compose.yml#L87-L88)).
-- MinIO API en host port 9000, consola en 9001 ([docker-compose.yml:119-121](docker-compose.yml#L119-L121)).
-- MLflow en host port 5000 con SQLite como backend store en `/mlflow/mlflow.db` ([docker-compose.yml:142-147](docker-compose.yml#L142-L147)).
-- MLflow `--default-artifact-root` apunta a `s3://mlflow-artifacts/`, bucket que **no** está en `MINIO_DEFAULT_BUCKETS` ([docker-compose.yml:127](docker-compose.yml#L127), [docker-compose.yml:146](docker-compose.yml#L146)).
-- El `postCreateCommand` del devcontainer ejecuta `setup-analytics-kernel.sh`, que registra un Jupyter kernel llamado `analytics` ([devcontainer.json:31-33](.devcontainer/devcontainer.json#L31-L33), [setup-analytics-kernel.sh](data/ml/AVM/scripts/setup-analytics-kernel.sh)).
+- Keycloak escucha en host port **8180** mapeado al 8080 interno del container ([docker-compose.yml:98-99](docker-compose.yml#L98-L99)).
+- MinIO API en host port 9000, consola en 9001 ([docker-compose.yml:130-132](docker-compose.yml#L130-L132)).
+- MLflow en host port 5000 con SQLite como backend store en `/mlflow/mlflow.db` ([docker-compose.yml:156](docker-compose.yml#L156)).
+- MLflow `--default-artifact-root` apunta a `s3://mlflow-artifacts/`, bucket que **no** está en `MINIO_DEFAULT_BUCKETS` ([docker-compose.yml:138](docker-compose.yml#L138), [docker-compose.yml:157](docker-compose.yml#L157)).
+- El `postCreateCommand` del devcontainer ejecuta `setup-analytics-kernel.sh`, que registra un Jupyter kernel llamado `analytics` ([devcontainer.json:34](.devcontainer/devcontainer.json#L34), [setup-analytics-kernel.sh](data/ml/AVM/scripts/setup-analytics-kernel.sh)).
 - El Dockerfile de analytics-service usa `python:3.10-slim` + uv + `ENV PYTHONPATH=/app/src` + uvicorn sobre `app.main:app` puerto 8000 ([Dockerfile](backend/analytics-service/Dockerfile)).
 - `PYTHONPATH=src` es obligatorio para correr el web server o el worker localmente — sin esto `import app` falla con `ModuleNotFoundError`.
 - `backend/analytics-service/.env.example` no incluye las env vars de MLflow ni las de auth Keycloak al 2026-05-20 ([.env.example](backend/analytics-service/.env.example)).

@@ -1,7 +1,7 @@
 ---
 title: ADR-0004 — H3 dual-resolution para el feed-mapa
 status: stable
-last-verified: 2026-05-28
+last-verified: 2026-07-13
 owners: [properties-service]
 related:
   - "[[properties-service-search]]"
@@ -49,6 +49,6 @@ El feed-mapa devuelve las propiedades dentro del viewport del usuario. El viewpo
 - `Property` guarda `h3_r9` y `h3_r7`, ambos indexados ([property.py:152-153](backend/properties-service/src/app/models/property.py#L152-L153)).
 - Las celdas se computan con `h3.latlng_to_cell` en resoluciones 9 y 7 ([geometry.py:11-13](backend/properties-service/src/app/services/shared/helpers/geometry.py#L11-L13)).
 - El feed-mapa convierte el bbox a celdas con `h3shape_to_cells_experimental(..., contain="center")` ([get_feed_map.py:28-29](backend/properties-service/src/app/services/search/use_cases/get_feed_map.py#L28-L29)).
-- El cache de mapa es por celda con clave `map:h3:<index>` y TTL de 5 min ([get_feed_map.py:14](backend/properties-service/src/app/services/search/use_cases/get_feed_map.py#L14), [cache_keys.py:20-21](backend/properties-service/src/app/services/shared/helpers/cache_keys.py#L20-L21)).
-- La resolución del mapa está acotada a `[7, 9]` ([search.py:45](backend/properties-service/src/app/api/routes/search.py#L45)).
-- `set_status` invalida las celdas H3 de la propiedad al cambiar status ([set_status.py:50-54](backend/properties-service/src/app/services/admin/use_cases/moderation/set_status.py#L50-L54)).
+- El cache de mapa es por celda con clave `map:h3:<index>` y TTL de 5 min ([get_feed_map.py:14](backend/properties-service/src/app/services/search/use_cases/get_feed_map.py#L14), [cache_keys.py:45-46](backend/properties-service/src/app/services/shared/helpers/cache_keys.py#L45-L46)).
+- La resolución del mapa está acotada a `[7, 9]` ([search.py:44](backend/properties-service/src/app/api/routes/search.py#L44)).
+- `set_status` invalida las celdas H3 de la propiedad al cambiar status ([set_status.py:55-59](backend/properties-service/src/app/services/admin/use_cases/moderation/set_status.py#L55-L59)).

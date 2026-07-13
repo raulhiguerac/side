@@ -1,12 +1,13 @@
 ---
 title: analytics-service
 status: draft
-last-verified: 2026-05-26
+last-verified: 2026-07-13
 owners: [analytics-service]
 related:
   - "[[architecture]]"
   - "[[analytics-service-architecture]]"
   - "[[analytics-service-prediction]]"
+  - "[[analytics-service-kafka-consumer]]"
   - "[[avm-training]]"
 sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md, ../../sources/analytics-service/2026-05-26-predict-endpoint-form-design.md]
 ---
@@ -71,8 +72,8 @@ Decisiones de diseño acordadas (2026-05-20): **confluent-kafka**, micro-batch d
 - **SQLModel + Postgres** — persistencia de `predictions`
 - **MLflow** — model registry + tracking + serving del modelo
 - **MinIO** — artifact storage de MLflow (S3-compatible self-hosted)
-- **Redis** — futuro: rate limit + reverse ETL del heatmap
-- **Workers** — futuro: consumer async
+- **Redis** — declarado en dependencies, sin uso en código todavía (futuro: rate limit + reverse ETL del heatmap)
+- **confluent-kafka** — consumer del topic `listing-created` ya implementado (`workers/listing_created/`), corre como proceso separado long-running — ver [[analytics-service-kafka-consumer]]
 
 Stack declarado en [pyproject.toml](backend/analytics-service/pyproject.toml). El servicio carga el modelo de MLflow al startup (no on-demand) — ver [[analytics-service-architecture]].
 
@@ -82,7 +83,7 @@ Stack declarado en [pyproject.toml](backend/analytics-service/pyproject.toml). E
 - [x] Dependency FastAPI para resolver JWT → `principal` (`api/deps/auth.py`) ✓ 2026-05-20
 - [x] Migración Alembic para crear tabla `predictions` ✓ 2026-05-25
 - [x] Implementar consumer del topic `listing-created` (workers/) ✓ 2026-05-22
-- [ ] `analytics-ms-db` en `docker-compose.yml`
+- [x] `analytics-ms-db` en `docker-compose.yml` ✓ (`postgres:17`, `analytics-postgres-data` volume)
 - [ ] Form frontend AVM: Mapbox autocomplete → catalog geo-resolution → `POST /predict`
 - [ ] Agregar campo `address` a `PredictionRequest` + migración
 - [ ] Endpoint de feedback de satisfacción post-predicción (alimenta campo `feedback`)

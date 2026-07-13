@@ -1,7 +1,7 @@
 ---
 title: Testing — analytics-service unit suite
 status: stable
-last-verified: 2026-05-25
+last-verified: 2026-07-13
 owners: [analytics-service]
 related:
   - "[[analytics-service-local-dev]]"

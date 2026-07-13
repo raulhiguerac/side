@@ -1,7 +1,7 @@
 ---
 title: ADR-0006 — Invalidación por prefijo del cache de la vitrina pública (offset en la key)
 status: stable
-last-verified: 2026-06-22
+last-verified: 2026-07-13
 owners: [properties-service]
 related:
   - "[[properties-service-listing]]"
@@ -16,7 +16,7 @@ decision-status: accepted
 
 ## Contexto
 
-La vitrina pública de un publicante (`GET /v1/properties/users/{user_id}`, `GetPublicUserPropertiesUseCase`) devuelve sus propiedades `active` paginadas por **offset** (`LIMIT/OFFSET`, page size `PUBLIC_PROPERTIES_PAGE_SIZE = 20`). Se le agregó cache-aside. Dos decisiones acopladas:
+La vitrina pública de un publicante (`GET /v1/properties/users/{user_id}`, `GetPublicUserPropertiesUseCase`) devuelve sus propiedades `active` paginadas por **offset** (`LIMIT/OFFSET`, `PUBLIC_PROPERTIES_PAGE_SIZE = 21` — 20 de página real + 1 extra para detectar `has_more` sin `COUNT(*)`, ver [[properties-service-listing]]). Se le agregó cache-aside. Dos decisiones acopladas:
 
 1. **Granularidad del cache** frente a la paginación: ¿una entrada por página (offset en la key) o una sola entrada con la lista completa y slice en memoria?
 2. **Cómo invalidar** cuando el dueño cambia una propiedad, dado que el set público es dinámico.

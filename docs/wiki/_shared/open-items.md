@@ -1,7 +1,7 @@
 ---
 title: Open items — gaps y deuda técnica cross-service
 status: draft
-last-verified: 2026-06-23
+last-verified: 2026-07-13
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -61,7 +61,6 @@ Backlog vivo de gaps detectados al documentar la wiki (2026-05-28): cosas que el
 
 ### Cadena del frontend (Google Maps → predicción)
 
-- [ ] **Endpoint de resolución por coordenadas en catalog para el front.** El ADR [[adr-gmaps-places-geocoding]] asume un `resolve-by-coords` (lat/lon → barrio, sin Mapbox). Verificar si el `/v1/geo-resolution/by-coordinates` existente ya lo cubre o si falta crear/ajustar el endpoint (path/método/shape) que describe el ADR.
 - [ ] **Refactor `/geo-resolution` en catalog.** Deprecar `resolve-neighborhood` (forward Mapbox, duplica el SDK del front). `by-coordinates` ya tiene `BackgroundTasks` de POIs ✅ y `locality_id` ✅ — solo falta deprecar el otro endpoint. Ver [[catalog-service]], [[adr-mapbox-frontend-only]].
 - [ ] **Restricción de HTTP referrer** en la API key de Google Maps antes de producción (en dev corre sin restricción de dominio). Ver [[adr-gmaps-places-geocoding]].
 
@@ -72,6 +71,10 @@ Backlog vivo de gaps detectados al documentar la wiki (2026-05-28): cosas que el
 - [ ] **Evaluar self-host de Overpass.** La instancia pública `overpass-api.de` empezó a devolver 406 a requests sin `User-Agent` descriptivo (mitigado 2026-06-23 seteando `settings.OVERPASS_USER_AGENT`) y sigue devolviendo `ServerLoadError` (504) bajo carga — riesgo de disponibilidad fuera de nuestro control. Self-host requiere levantar un Overpass propio (similar al contenedor ORS ya en `infra/`) y subir/mantener actualizados los extractos `.pbf` (Colombia/Bogotá) al servicio. Pendiente decidir si vale el costo operativo vs. seguir absorbiendo los fallos del público con retries. Ver [[catalog-service-overpass]].
 - [ ] **Resolución H3 al cablear feature store desde un MS (caveat, no bug).** Los servicios indexan en r9 (lookup espacial granular) y el AVM usa r6/r7/r8 (feature del vector; r9 mete ruido). Hoy NO rompe nada porque el modelo recomputa sus celdas desde `lat/lon` en inferencia y no consume las celdas de los MS. Cuando se conecte el feature store desde un MS al modelo, **recomputar la resolución del modelo, no reusar la celda r9 almacenada**. Decisión en [[adr-h3-resolution-per-use-case]]; documentado en [[glossary#h3]].
 - [ ] **CI + promoción del training AVM.** Automatizar el run (orchestrator tipo Airflow) y formalizar la promoción del alias `production` (hoy manual). Ver [[avm-training]], [[adr-model-promotion-external-to-service]].
+
+### properties-service — arquitectura interna
+
+- [ ] **Refactor: `CreatePropertyUseCase` construye el ORM model `Property` directamente (`create_property.py:62`).** El UC debería pasar el schema de dominio al repo y que el repo haga el mapeo al ORM model — leak de hex arch detectado 2026-06-30. Ver [[properties-service-listing]].
 
 ### Infra compartida entre servicios
 
@@ -135,13 +138,14 @@ Los tres pilares están ausentes hoy. Sin los tres juntos es imposible diagnosti
 
 - [x] **Contradicción PostGIS "único servicio"** — corregida en catalog (overview, runbook, ADR) y glossary; properties-ms-db también usa `postgis/postgis:17-master` (2026-05-28).
 - [x] **Contradicción auth Bearer vs cookie** — corregida en [[analytics-service-architecture]] y [[architecture]]; todos los servicios leen el JWT de la cookie `access_token` (2026-05-28).
-- [x] **Conectar `gmp-placeselect` al chain completo** en `DevPlaygroundView.vue` (place → coords → catalog by-coords → `/v1/predict`). Cableado 2026-05-29 — ver [[frontend-architecture]], [[adr-gmaps-places-geocoding]].
+- [x] **Conectar `gmp-placeselect` al chain completo** en `DevPlaygroundView.vue` (place → coords → catalog by-coords → `/v1/predict`). Cableado 2026-05-29 — ver [[frontend-architecture]], [[adr-gmaps-places-geocoding]]. **Nota (2026-07-13)**: esa lógica ya no vive en `DevPlaygroundView.vue` — se movió a `StepUbicacion.vue` (flujo de creación de propiedad); el evento correcto además es `gmp-select`, no `gmp-placeselect` (ver ADR-0005 actualizado).
 - [x] **Vista contenedora feed/mapa con toggle.** View que orquesta nested routes y alterna entre la subview de **feed** (cards) y la de **mapa** — la view padre mantiene `FeedFilters` y header compartidos alrededor del slot. Decisión tomada: nested route (URL bookmarkeable, no `v-if`). Ver [[frontend-architecture]], [[properties-service-search]]. Implementado 2026-06-08.
 - [x] **MapView con Leaflet + bbox + paginación.** `/feed/map` con `GetFeedMapUseCase`: bbox del viewport → celdas H3 → markers en Leaflet, paginación local por flechas, hover state, URL state vía `router.replace`. Implementado 2026-06-09 — ver [[frontend-architecture]], [[frontend-map-component]].
 - [x] **`BoundingBox.to_polygon()` instancia una clase abstracta de h3.** Fix: `h3.LatLngPoly(...)` y return type actualizado. Corregido 2026-06-09 — ver [[properties-service-search]].
 - [x] **H3 pre-filter antes de `ST_Within` en `GetFeedMapUseCase`.** El repo ya filtra **solo por columna H3** (`h3_r7.in_(cells)` o `h3_r9.in_(cells)` según la resolución) — no hay `ST_Within` en este path. La precisión del bbox es la de las celdas (`contain="center"`). Verificado 2026-06-09 — ver [[properties-service-search]], [[adr-postgis-h3-hybrid]].
 - [x] **Refactor sección POI de `PropertyDetailView`.** La sección entera se extrajo a `NearbyPlaces.vue` (autocontenido, dueño de `useReachablePois`); `CATEGORY_TO_MARKER` se eliminó (reemplazado por `CategoryMeta.bucket` en `types/pois.ts`), sin imports muertos. Cerrado 2026-06-20 — ver [[frontend-poi-reachable]], [[frontend-map-component]].
 - [x] **Cache-aside para `reachable-pois` (duplicado).** Era el mismo ítem que el de la sección "Infra compartida" (key por `property_id` o por h3 cell, TTL 1h) — duplicado detectado por `/wiki-lint`, consolidado ahí. Implementado 2026-06-20 — ver [[catalog-service-ors]], [[adr-isochrone-ors-h3]].
+- [x] **Endpoint de resolución por coordenadas en catalog para el front.** `GET /v1/geo-resolution/by-coordinates` (`ResolveLocationByCoordinatesUseCase`) cubre lo que el ADR [[adr-gmaps-places-geocoding]] pedía — ya wired end-to-end desde el frontend. Verificado 2026-07-13 vía `/wiki-lint`.
 
 ## Claims
 

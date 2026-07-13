@@ -1,7 +1,7 @@
 ---
 title: Project roadmap 2026
 status: stable
-last-verified: 2026-06-09
+last-verified: 2026-07-13
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -37,8 +37,8 @@ Monorepo `side` — plataforma inmobiliaria colombiana. Backend hexagonal (Pytho
 | `PropertiesView` parent + toggle Lista/Mapa (nested routes `/feed/list`, `/feed/map`) | ✅ |
 | bulk_create UC, SqlAdminPropertyRepository.bulk_insert | ✅ |
 | Properties seed Bogotá (bulk import IDECA) | ✅ |
-| Frontend: vista detalle de propiedad (`/properties/:id`) — galería, info completa, mapa, precio estimado | ⏳ |
-| Frontend: form publicar propiedad + subir imágenes + gestionar mis listings (`/properties`) | ⏳ |
+| Frontend: vista detalle de propiedad (`/listing/:id`) — galería, info completa, mapa ✅; precio estimado ⏳ | 🔄 |
+| Frontend: form publicar propiedad + subir imágenes + gestionar mis listings (`/properties`) | ✅ |
 | Frontend: MapView con Leaflet + bbox + paginación de resultados | ✅ |
 | Frontend: panel de moderación admin — aprobar/rechazar listings que infringen políticas | ⏳ |
 

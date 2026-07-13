@@ -1,7 +1,7 @@
 ---
 title: ADR-0005 — Cursor de paginación opaco (base64url)
 status: stable
-last-verified: 2026-06-05
+last-verified: 2026-07-13
 owners: [properties-service]
 related:
   - "[[properties-service-search]]"
@@ -42,5 +42,5 @@ decode: str → base64url → bytes → json → FeedCursor.model_validate()
 ## Claims
 
 - `encode_cursor` serializa `FeedCursor` a base64url y `decode_cursor` invierte el proceso ([encoding.py](backend/properties-service/src/app/services/search/helpers/feed/encoding.py)).
-- `decode_cursor` lanza `InvalidCursorError` (HTTP 400) ante cualquier fallo de base64, JSON o validación de schema ([encoding.py:12-18](backend/properties-service/src/app/services/search/helpers/feed/encoding.py#L12-L18)).
+- `decode_cursor` lanza `InvalidCursorError` (HTTP 400) ante cualquier fallo de base64, JSON o validación de schema ([encoding.py:14-21](backend/properties-service/src/app/services/search/helpers/feed/encoding.py#L14-L21)).
 - El endpoint devuelve `FeedPage` con `next_cursor: str | None`; `None` indica que no hay más páginas ([search.py:21](backend/properties-service/src/app/api/routes/search.py#L21), [feed_schemas.py:25-27](backend/properties-service/src/app/services/search/schemas/feed_schemas.py#L25-L27)).

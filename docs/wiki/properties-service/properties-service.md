@@ -1,7 +1,7 @@
 ---
 title: properties-service
 status: draft
-last-verified: 2026-05-28
+last-verified: 2026-07-13
 owners: [properties-service]
 related:
   - "[[architecture]]"
@@ -97,7 +97,7 @@ Es el agregado central del dominio inmobiliario. Tres responsabilidades:
 
 - `properties-service` define 3 dominios bajo `services/`: `listing`, `search`, `admin`, más `shared` ([services/](backend/properties-service/src/app/services)).
 - El `api_router` incluye 4 routers: `health`, `properties`, `search`, `admin` ([api/main.py:7-10](backend/properties-service/src/app/api/main.py#L7-L10)).
-- Las rutas `/admin/*` están protegidas globalmente vía `dependencies=[Depends(require_admin)]` en el `APIRouter` ([api/routes/admin.py:41-45](backend/properties-service/src/app/api/routes/admin.py#L41-L45)).
+- Las rutas `/admin/*` están protegidas globalmente vía `dependencies=[Depends(require_admin)]` en el `APIRouter` ([api/routes/admin.py:43-47](backend/properties-service/src/app/api/routes/admin.py#L43-L47)).
 - Auth lee el JWT desde la cookie `access_token`, no del header `Authorization` ([api/deps/auth.py:46](backend/properties-service/src/app/api/deps/auth.py#L46)).
 - `workers/` solo contiene `__init__.py` — no hay consumer Kafka al 2026-05-28 ([workers/](backend/properties-service/src/app/workers)).
 - `create_property` valida contra catalog que el barrio pertenece a la ciudad antes de persistir ([create_property.py:25-31](backend/properties-service/src/app/services/listing/use_cases/property_core/create_property.py#L25-L31)).

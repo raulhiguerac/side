@@ -1,7 +1,7 @@
 ---
 title: MLflow en analytics-service
 status: draft
-last-verified: 2026-05-29
+last-verified: 2026-07-13
 owners: [analytics-service]
 related:
   - "[[analytics-service]]"
@@ -86,10 +86,10 @@ El shape de features que MLflow espera coincide con `PredictionRequest` excluyen
 - `ModelClient.__init__` carga el modelo con `mlflow.pyfunc.load_model(model_uri)` — bloqueante, en startup ([mlflow/model.py:29](backend/analytics-service/src/app/integrations/ml/mlflow/model.py#L29)).
 - `ModelClient.__init__` lanza `ValueError` si falta cualquiera de las 5 env vars ([mlflow/model.py:17-25](backend/analytics-service/src/app/integrations/ml/mlflow/model.py#L17-L25)).
 - `online_predict` usa `.iloc[0]` (scalar), `batch_predict` usa `.tolist()` (lista) ([mlflow/model.py:36-40](backend/analytics-service/src/app/integrations/ml/mlflow/model.py#L36-L40)).
-- `AVMModelAdapter` hardcodea `model_name="bogota-avm"` y `alias="production"` ([avm_model_adapter.py:9](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L9)).
-- `property_id` se excluye del dict enviado a MLflow vía `exclude={'property_id'}` ([avm_model_adapter.py:11](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L11)).
-- El bucket `mlflow-artifacts` no está en `MINIO_DEFAULT_BUCKETS` — debe crearse manualmente antes del primer training run ([docker-compose.yml:127](docker-compose.yml#L127)).
-- MLflow usa SQLite como backend store en `/mlflow/mlflow.db` dentro del container ([docker-compose.yml:146](docker-compose.yml#L146)).
+- `AVMModelAdapter` hardcodea `model_name="bogota-avm"` y `alias="production"` ([avm_model_adapter.py:11,16](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L11-L16)).
+- `property_id` se excluye del dict enviado a MLflow vía `exclude={'property_id'}` ([avm_model_adapter.py:12,17](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L12-L17)).
+- El bucket `mlflow-artifacts` no está en `MINIO_DEFAULT_BUCKETS` — debe crearse manualmente antes del primer training run ([docker-compose.yml:138](docker-compose.yml#L138)).
+- MLflow usa SQLite como backend store en `/mlflow/mlflow.db` dentro del container ([docker-compose.yml:156](docker-compose.yml#L156)).
 - El schema de MLflow se infiere de `input_example` en `final_train` — si `year_built` es no nulo en el ejemplo, MLflow lo marca `long required` y rechaza `null` en runtime antes de que corra el preprocessing ([trainer.py](data/ml/AVM/training/pipeline/trainer.py)).
 - `_year_to_antiguedad(None)` devuelve `'sin especificar'` correctamente, pero la validación del schema MLflow rechaza `null` antes de llegar al preprocessor ([transforms/encoders.py:18-20](data/ml/AVM/training/transforms/encoders.py#L18-L20)).
 - Fix correcto: re-registrar con `year_built: None` en `_make_raw_input_example()` para que el schema sea nullable — requiere nuevo `final_train` y promoción manual al alias `production` ([trainer.py](data/ml/AVM/training/pipeline/trainer.py)).
