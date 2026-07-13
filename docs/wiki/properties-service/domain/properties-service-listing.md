@@ -1,7 +1,7 @@
 ---
 title: Dominio listing — properties-service
 status: draft
-last-verified: 2026-06-25
+last-verified: 2026-07-13
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -10,10 +10,13 @@ related:
   - "[[adr-image-upload-presigned-batch]]"
   - "[[adr-owner-list-cache-invalidation]]"
   - "[[adr-cache-optional-layer]]"
+  - "[[adr-property-edit-fixed-fields]]"
+  - "[[adr-single-listing-type-per-property]]"
 sources:
   - ../../../sources/properties-service/2026-05-28-foundational-exploration.md
   - ../../../sources/properties-service/2026-06-22-public-storefront-cache-invalidation.md
   - ../../../sources/properties-service/2026-06-25-public-user-properties-pagination.md
+  - ../../../sources/properties-service/2026-07-13-owner-listings-order-by-created-at.md
 ---
 
 ## TL;DR
@@ -25,11 +28,11 @@ El dominio del **dueño** sobre sus propiedades: crear, editar, borrar, controla
 | UC | Archivo | Qué hace |
 |---|---|---|
 | `CreatePropertyUseCase` | `use_cases/property_core/create_property.py` | Valida barrio↔ciudad contra catalog, computa H3, persiste `Property` + `PropertyLocation`. |
-| `UpdatePropertyUseCase` | `use_cases/property_core/update_property.py` | Patch parcial; re-valida geo y re-computa H3 si cambia location; invalida cache. |
+| `UpdatePropertyUseCase` | `use_cases/property_core/update_property.py` | Patch parcial; re-valida geo y re-computa H3 si cambia location; invalida cache. Acepta cambiar cualquier campo (incluida `location`) — el frontend restringe cuáles expone como editables, ver [[adr-property-edit-fixed-fields]]. |
 | `DeletePropertyUseCase` | `use_cases/property_core/delete_property.py` | **Soft-delete**: `status=inactive` + `deleted_at`/`deleted_by`; no borra filas. Invalida cache. |
 | `GetPropertyUseCase` | `use_cases/property_core/get_property.py` | Detalle con cache-aside; reglas de visibilidad por status/owner. |
-| `GetMyPropertiesUseCase` | `use_cases/property_core/get_my_properties.py` | Lista del owner — todos los estados, cache por usuario (`client_properties`). |
-| `GetPublicUserPropertiesUseCase` | `use_cases/property_core/get_public_user_properties.py` | Vitrina pública de otro usuario — solo `active`, paginada por offset, devuelve `PublicUserPropertiesResponse(items, has_more)`, cache por página. |
+| `GetMyPropertiesUseCase` | `use_cases/property_core/get_my_properties.py` | Lista del owner — todos los estados, cache por usuario (`client_properties`), ordenada por `created_at desc`. |
+| `GetPublicUserPropertiesUseCase` | `use_cases/property_core/get_public_user_properties.py` | Vitrina pública de otro usuario — solo `active`, paginada por offset y ordenada por `created_at desc`, devuelve `PublicUserPropertiesResponse(items, has_more)`, cache por página. |
 | `SetPropertyVisibilityUseCase` | `use_cases/property_core/set_property_visibility.py` | Toggle de visibilidad del dueño. |
 | `RequestPresignedUrlsUseCase` | `use_cases/images/request_presigned_urls.py` | Crea batch + URLs presignadas PUT. |
 | `ConfirmImageUploadsUseCase` | `use_cases/images/confirm_image_uploads.py` | Valida batch y materializa `PropertyImage`. |
@@ -114,3 +117,5 @@ Estados del batch: `pending → ready → confirmed`, con ramas `expired` (TTL v
 - La respuesta de la vitrina pública es `PublicUserPropertiesResponse(items, has_more)` — el cache guarda el dict completo incluyendo `has_more`; trata `cached is not None` como hit válido para usuarios sin listings ([property_card.py](backend/properties-service/src/app/services/shared/schemas/property_card.py)).
 - Los 8 UCs de escritura que tocan el set público invalidan con `delete_pattern(public_user_properties_pattern(owner))` además de las keys exactas; `verify` y `create_property` no ([cache_keys.py](backend/properties-service/src/app/services/shared/helpers/cache_keys.py)).
 - El endpoint público acota el offset a `>= 0` vía `Query(ge=0)` y default 0 ([properties.py](backend/properties-service/src/app/api/routes/properties.py)).
+- `get_user_properties` y `get_public_user_properties` ordenan por `Property.created_at.desc()` — en la paginada, el `order_by` va antes de `limit()`/`offset()`, necesario para que la paginación por offset sea estable ([sql_property_repository.py](backend/properties-service/src/app/services/listing/adapters/sql_property_repository.py)).
+- `Property` es 1 fila = 1 `listing_type` fijo; no hay relación entre filas que representen el mismo inmueble bajo distintas modalidades (venta/arriendo) — ver [[adr-single-listing-type-per-property]] ([models/property.py](backend/properties-service/src/app/models/property.py)).

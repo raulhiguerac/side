@@ -1,6 +1,9 @@
 <template>
   <div
-    class="grid grid-cols-4 grid-rows-[200px_200px] gap-[6px] rounded-2xl overflow-hidden"
+    :class="[
+      'grid grid-cols-4 gap-[6px] rounded-2xl overflow-hidden',
+      props.expand ? 'flex-1 grid-rows-2' : 'grid-rows-[200px_200px]',
+    ]"
   >
     <div
       v-for="(img, i) in props.gridImages"
@@ -33,10 +36,14 @@ import PhotoGalleryPopup from "@/components/properties/photos/PhotoGalleryPopup.
 const isOpen = ref<boolean>(false);
 const imageIndex = ref<number>(0);
 
-const props = defineProps<{
-  gridImages: Array<PropertyImageCard>;
-  allImages: Array<PropertyImageCard>;
-}>();
+const props = withDefaults(
+  defineProps<{
+    gridImages: Array<PropertyImageCard>;
+    allImages: Array<PropertyImageCard>;
+    expand?: boolean;
+  }>(),
+  { expand: false }
+);
 
 function openPopup(i: number) {
   isOpen.value = true;

@@ -1,3 +1,5 @@
+export type ListingStatus = "draft" | "active" | "inactive" | "sold" | "rented";
+
 export interface PropertyCardUI {
   id: string;
   title: string;
@@ -5,7 +7,7 @@ export interface PropertyCardUI {
   location: string;
   image?: string;
   type: "sale" | "rent";
-  status?: "active" | "inactive" | "pending";
+  status?: ListingStatus;
   bedrooms: number;
   bathrooms: number;
   area: number;
@@ -49,7 +51,7 @@ export interface PropertyCard {
   id: string;
   property_type: "house" | "apartment";
   listing_type: "sale" | "rent";
-  status: "draft" | "active" | "inactive" | "sold" | "rented";
+  status: ListingStatus;
   price: number;
   currency: "COP" | "USD" | "EUR" | "MXN" | "PEN" | "CLP" | "ARS";
   area_m2: number;

@@ -38,26 +38,13 @@
         </div>
 
         <!-- pagination -->
-        <div class="flex justify-center items-center gap-4 mt-10">
-          <button
-            :class="[
-              'px-5 py-2 rounded-xl border border-brand-border text-sm font-medium text-brand-text transition hover:bg-brand-primary-light',
-              isFirstPage ? 'invisible' : '',
-            ]"
-            @click="loadPrev"
-          >
-            ← Anterior
-          </button>
-          <button
-            :class="[
-              'px-5 py-2 rounded-xl border border-brand-border text-sm font-medium text-brand-text transition hover:bg-brand-primary-light',
-              !nextCursor ? 'invisible' : '',
-            ]"
-            @click="() => loadNext(nextCursor!)"
-          >
-            Siguiente →
-          </button>
-        </div>
+        <PaginationArrows
+          class="mt-10"
+          :has-prev="!isFirstPage"
+          :has-next="!!nextCursor"
+          @prev="loadPrev"
+          @next="() => loadNext(nextCursor!)"
+        />
       </div>
     </div>
   </div>
@@ -67,6 +54,7 @@
 import { onMounted } from "vue";
 import router from "@/router";
 import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
+import PaginationArrows from "@/components/shared/PaginationArrows.vue";
 import { useFeed } from "@/composables/feed/useFeed";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import type {

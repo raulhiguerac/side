@@ -1,7 +1,9 @@
 <template>
   <div class="max-w-2xl mx-auto px-6 py-10">
     <StepImagenes v-model="files" />
-    <pre class="mt-6 text-xs text-brand-muted">{{ files.map(f => f.name) }}</pre>
+    <pre class="mt-6 text-xs text-brand-muted">{{
+      files.map((f) => f.name)
+    }}</pre>
   </div>
 </template>
 

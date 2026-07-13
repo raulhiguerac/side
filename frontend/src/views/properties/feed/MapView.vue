@@ -19,58 +19,13 @@
       </div>
 
       <!-- flechas de paginación -->
-      <div class="flex items-center justify-center gap-3 pb-2 shrink-0">
-        <button
-          :disabled="!hasPrev"
-          @click="prev"
-          class="flex items-center gap-1 px-4 py-2 rounded-xl border border-brand-border text-sm font-medium transition"
-          :class="
-            hasPrev
-              ? 'bg-brand-primary text-white hover:bg-green-600 cursor-pointer'
-              : 'opacity-40 cursor-not-allowed'
-          "
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          Anterior
-        </button>
-        <button
-          :disabled="!hasNext"
-          @click="next"
-          class="flex items-center gap-1 px-4 py-2 rounded-xl border border-brand-border text-sm font-medium transition"
-          :class="
-            hasNext
-              ? 'bg-brand-primary text-white hover:bg-green-600 cursor-pointer'
-              : 'opacity-40 cursor-not-allowed'
-          "
-        >
-          Siguiente
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
-      </div>
+      <PaginationArrows
+        class="pb-2 shrink-0"
+        :has-prev="hasPrev"
+        :has-next="hasNext"
+        @prev="prev"
+        @next="next"
+      />
     </div>
 
     <!-- mapa lado derecho -->
@@ -92,6 +47,7 @@
 import { ref, computed, onMounted } from "vue";
 import MapUser from "@/components/map/MapUser.vue";
 import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
+import PaginationArrows from "@/components/shared/PaginationArrows.vue";
 import { useFeedMap } from "@/composables/feed/useFeedMap";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import { useUserStore } from "@/stores/user";

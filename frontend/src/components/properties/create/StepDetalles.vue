@@ -271,19 +271,10 @@
 import { ref, watch } from "vue";
 import { DollarSign, Car, Layers, Calendar } from "@lucide/vue";
 import type { CreatePropertyForm } from "@/types/properties";
+import { formatMoney, parseMoney } from "@/utils/money";
 
 const props = defineProps<{ form: CreatePropertyForm; attempted?: boolean }>();
 const emit = defineEmits<{ (e: "update:form", v: CreatePropertyForm): void }>();
-
-function formatMoney(value: number | null): string {
-  if (!value) return "";
-  return value.toLocaleString("es-CO");
-}
-
-function parseMoney(raw: string): number | null {
-  const n = parseInt(raw.replace(/\D/g, ""), 10);
-  return isNaN(n) ? null : n;
-}
 
 const displayPrice = ref(formatMoney(props.form.price));
 const displayAdminFee = ref(formatMoney(props.form.admin_fee));

@@ -64,27 +64,13 @@
       Este usuario no tiene propiedades publicadas.
     </div>
 
-    <!-- Pagination -->
-    <div class="flex justify-center items-center gap-4 mt-10">
-      <button
-        :class="[
-          'px-5 py-2 rounded-xl border border-brand-border text-sm font-medium text-brand-text transition hover:bg-brand-primary-light',
-          { invisible: !hasPrev },
-        ]"
-        @click="prev"
-      >
-        ← Anterior
-      </button>
-      <button
-        :class="[
-          'px-5 py-2 rounded-xl border border-brand-border text-sm font-medium text-brand-text transition hover:bg-brand-primary-light',
-          { invisible: !hasNext },
-        ]"
-        @click="next"
-      >
-        Siguiente →
-      </button>
-    </div>
+    <PaginationArrows
+      class="mt-10"
+      :has-prev="hasPrev"
+      :has-next="hasNext"
+      @prev="prev"
+      @next="next(fetchNextPage)"
+    />
   </div>
 </template>
 
@@ -95,21 +81,27 @@ import usersApi from "@/api/usersApi";
 import { BadgeCheck, MessageCircle, MessageSquare, Phone } from "@lucide/vue";
 
 import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
-import { useProfileListings } from "@/composables/users/useProfileListings";
+import PaginationArrows from "@/components/shared/PaginationArrows.vue";
+import { fetchUserListings } from "@/composables/users/useProfileListings";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
-import { API } from "@/config";
+import { usePagination } from "@/composables/shared/usePagination";
+import { PAGE_SIZE } from "@/constants/pagination";
 import type { CurrentUserProfileOut } from "@/types/user";
+import type { PropertyCard as PropertyCardData } from "@/types/feed";
 
 const route = useRoute();
 const router = useRouter();
 const userId = route.params.userId as string;
 
-const page = ref(0);
 const profile = ref<CurrentUserProfileOut>();
 
-const { listings, hasMore, fetchUserListings, previousListings } =
-  useProfileListings();
-const { cards } = usePropertyMapper(listings);
+const { pagedItems, hasPrev, hasNext, hasMore, total, setItems, next, prev } =
+  usePagination<PropertyCardData>(PAGE_SIZE.PUBLIC_PROFILE);
+const { cards } = usePropertyMapper(pagedItems);
+
+function fetchNextPage() {
+  return fetchUserListings(userId, total.value);
+}
 
 onMounted(async () => {
   try {
@@ -121,8 +113,8 @@ onMounted(async () => {
     console.error("Error al obtener el perfil:", error);
   }
 
-  await fetchUserListings(userId, page.value * 20);
-  page.value++;
+  const first = await fetchUserListings(userId, 0);
+  setItems(first.items, first.hasMore);
 });
 
 const displayName = computed(() => {
@@ -143,20 +135,6 @@ const memberSince = computed(() => {
 });
 
 const activeListingsCount = computed(() =>
-  hasMore.value ? "+20" : listings.value.length
+  hasMore.value ? `+${PAGE_SIZE.PUBLIC_PROFILE}` : pagedItems.value.length
 );
-const hasPrev = computed(() => page.value > 1);
-const hasNext = computed(() => hasMore.value);
-
-async function next() {
-  if (!hasMore.value) return;
-  await fetchUserListings(userId, page.value * 20);
-  page.value++;
-}
-
-function prev() {
-  if (!hasPrev.value) return;
-  previousListings(page.value);
-  page.value--;
-}
 </script>

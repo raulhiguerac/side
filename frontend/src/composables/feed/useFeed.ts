@@ -16,13 +16,10 @@ async function fetchFeed(
   cursor?: string | null
 ): Promise<FeedPage> {
   try {
-    const { data } = await propertiesApi.get(
-      "/v1/search/feed",
-      {
-        params: { ...preferences, ...filters, ...(cursor ? { cursor } : {}) },
-        paramsSerializer: { indexes: null },
-      }
-    );
+    const { data } = await propertiesApi.get("/v1/search/feed", {
+      params: { ...preferences, ...filters, ...(cursor ? { cursor } : {}) },
+      paramsSerializer: { indexes: null },
+    });
     return data as FeedPage;
   } catch (error) {
     console.error("Error al obtener listings:", error);

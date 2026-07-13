@@ -28,6 +28,7 @@ export function usePropertyMapper(items: Ref<FeedCard[]>) {
         neighborhoodLookup.value[p.location?.neighborhood_id ?? ""] ?? "",
       image: p.images.find((i) => i.is_cover)?.url ?? p.images[0]?.url,
       type: p.listing_type,
+      status: p.status,
       bedrooms: p.bedrooms,
       bathrooms: Number(p.bathrooms),
       area: Number(p.area_m2),

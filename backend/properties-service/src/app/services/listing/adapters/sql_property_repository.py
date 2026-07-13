@@ -31,6 +31,7 @@ class SqlPropertyRepository(PropertyRepository):
             select(Property)
             .where(Property.owner_id == user_id)
             .where(Property.deleted_at.is_(None))
+            .order_by(Property.created_at.desc())
         )
 
         return self.session.exec(stmt).all()
@@ -46,6 +47,7 @@ class SqlPropertyRepository(PropertyRepository):
             .where(Property.owner_id == user_id)
             .where(Property.status == ListingStatus.active)
             .where(Property.deleted_at.is_(None))
+            .order_by(Property.created_at.desc())
             .limit(settings.PUBLIC_PROPERTIES_PAGE_SIZE)
             .offset(offset)
         )

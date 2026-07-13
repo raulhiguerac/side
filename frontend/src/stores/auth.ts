@@ -5,6 +5,7 @@
 import { defineStore } from "pinia";
 import axios from "axios";
 import router from "@/router";
+import { API } from "@/config";
 import { useUserStore } from "./user";
 
 // =========================================================
@@ -78,7 +79,7 @@ export const useAuthStore = defineStore("auth", {
 
       try {
         const response = await axios.get<ProfileResponse>(
-          "http://localhost:8000/v1/users/me/profile",
+          `${API.USERS_BASE_URL}/v1/users/me/profile`,
           { withCredentials: true }
         );
 
@@ -96,7 +97,7 @@ export const useAuthStore = defineStore("auth", {
     async login(email: string, password: string): Promise<boolean> {
       try {
         await axios.post(
-          "http://localhost:8000/v1/auth/login",
+          `${API.USERS_BASE_URL}/v1/auth/login`,
           { email, password },
           { withCredentials: true }
         );
@@ -112,7 +113,7 @@ export const useAuthStore = defineStore("auth", {
 
     async register(userData: any): Promise<boolean> {
       try {
-        await axios.post("http://localhost:8000/v1/auth/register", userData, {
+        await axios.post(`${API.USERS_BASE_URL}/v1/auth/register`, userData, {
           withCredentials: true,
         });
 
@@ -130,7 +131,7 @@ export const useAuthStore = defineStore("auth", {
     async logout(): Promise<void> {
       try {
         await axios.post(
-          "http://localhost:8000/v1/auth/logout",
+          `${API.USERS_BASE_URL}/v1/auth/logout`,
           {},
           { withCredentials: true }
         );

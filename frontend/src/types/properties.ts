@@ -1,4 +1,4 @@
-import type { PropertyImageCard } from "@/types/feed";
+import type { ListingStatus, PropertyImageCard } from "@/types/feed";
 
 export interface CreatePropertyForm {
   property_type: string;
@@ -33,12 +33,23 @@ export interface PropertyLocationDetail {
   longitude: number;
 }
 
+export interface PresignedUrlItem {
+  upload_url: string;
+  public_url: string;
+  key: string;
+}
+
+export interface PresignedUrlsResponse {
+  batch_id: string;
+  items: PresignedUrlItem[];
+}
+
 export interface PropertyDetail {
   id: string;
   property_type: "house" | "apartment";
   listing_type: "sale" | "rent";
   condition: "new" | "used" | "remodeled";
-  status: "draft" | "active" | "inactive" | "sold" | "rented";
+  status: ListingStatus;
   verification_status: "unverified" | "pending" | "verified" | "rejected";
 
   price: number;
@@ -60,4 +71,12 @@ export interface PropertyDetail {
 
   location: PropertyLocationDetail | null;
   images: PropertyImageCard[];
+}
+
+export interface PropertyEditForm {
+  condition: PropertyDetail["condition"];
+  currency: PropertyDetail["currency"];
+  price: number;
+  admin_fee: number | null;
+  description: string;
 }

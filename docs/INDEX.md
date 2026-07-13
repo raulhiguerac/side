@@ -88,9 +88,10 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [frontend-onboarding-flow](wiki/frontend/flows/frontend-onboarding-flow.md) — modal wizard de 4 pasos, state machine, persistencia dual server+client, refactor users-service ↔ catalog pendiente
 - [frontend-poi-reachable](wiki/frontend/flows/frontend-poi-reachable.md) — sección "Cerca del lugar": useReachablePois (1 POST × 9 resultados), acordeón por rango, isocronas + cluster markers, CATEGORY_META/PRIORITY; spinner v-show + resize fix para Leaflet
 - [frontend-property-create-form](wiki/frontend/flows/frontend-property-create-form.md) — form multi-step 4 pasos (Tipo/Detalles/Ubicación/Imágenes), patrón update:form, Google Places + NearbyPlaces en step 2, previewId UUID
+- [frontend-property-edit-form](wiki/frontend/flows/frontend-property-edit-form.md) — vista de edición en 2 columnas, split en 5 tarjetas presentacionales, campos fijos vs editables, gotcha de `Decimal` serializado como string
 
 ### runbook/
-- [frontend-local-dev](wiki/frontend/runbook/frontend-local-dev.md) — `npm run serve` port 8080, env vars, levantar backends a mano, 8 known gaps
+- [frontend-local-dev](wiki/frontend/runbook/frontend-local-dev.md) — `npm run serve` port 8080, env vars, levantar backends a mano, 10 known gaps
 
 ### adrs/
 - [ADR-0001 — Vue CLI hoy, migración a Vite diferida](wiki/frontend/adrs/adr-vue-cli-deferred-vite-migration.md)
@@ -98,6 +99,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0003 — Mapbox solo para geocoding, Leaflet+D3 para render](wiki/frontend/adrs/adr-mapbox-geocoding-leaflet-rendering.md)
 - [ADR-0004 — Remover Firebase del frontend](wiki/frontend/adrs/adr-firebase-removal.md)
 - [ADR-0005 — Google Maps Places API (New) para geocoding](wiki/frontend/adrs/adr-gmaps-places-geocoding.md)
+- [ADR-0006 — Campos fijos vs. editables al editar una propiedad](wiki/frontend/adrs/adr-property-edit-fixed-fields.md)
 
 ## properties-service
 
@@ -122,6 +124,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0004 — H3 dual-resolution para el feed-mapa](wiki/properties-service/adrs/adr-h3-dual-resolution-map.md)
 - [ADR-0005 — Cursor de paginación opaco (base64url)](wiki/properties-service/adrs/adr-feed-opaque-cursor.md)
 - [ADR-0006 — Invalidación por prefijo del cache de la vitrina pública](wiki/properties-service/adrs/adr-owner-list-cache-invalidation.md)
+- [ADR-0007 — Property es 1 fila = 1 listing_type, sin soporte para venta+arriendo simultáneo](wiki/properties-service/adrs/adr-single-listing-type-per-property.md)
 
 ## users-service
 

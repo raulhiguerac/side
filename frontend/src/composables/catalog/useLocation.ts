@@ -7,12 +7,9 @@ export async function getCitiesByCountry(id: string) {
     const key = STORAGE_KEYS.CITIES_BY_COUNTRY(id);
     const raw = sessionStorage.getItem(key);
     if (raw) return JSON.parse(raw);
-    const { data } = await catalogApi.get(
-      `/v1/localities/by-country`,
-      {
-        params: { country_id: id },
-      }
-    );
+    const { data } = await catalogApi.get(`/v1/localities/by-country`, {
+      params: { country_id: id },
+    });
     sessionStorage.setItem(key, JSON.stringify(data));
     return data;
   } catch (error) {
@@ -38,10 +35,9 @@ export async function getNeighborhoodsByLocalities(localityIds: string[]) {
   if (missing.length === 0) return cached;
 
   try {
-    const { data } = await catalogApi.get(
-      `/v1/neighborhoods/by-localities`,
-      { params: new URLSearchParams(missing.map((id) => ["locality_ids", id])) }
-    );
+    const { data } = await catalogApi.get(`/v1/neighborhoods/by-localities`, {
+      params: new URLSearchParams(missing.map((id) => ["locality_ids", id])),
+    });
 
     for (const [lid, neighborhoods] of Object.entries(
       data.neighborhoods as Record<string, any[]>
@@ -100,10 +96,9 @@ export async function getNeighborhood(
       `/v1/geo-resolution/by-coordinates`,
       { params: { lat, lon } }
     );
-    const { data: nbh } = await catalogApi.get(
-      `/v1/neighborhoods/by-id`,
-      { params: { neighborhood_id: coords.neighborhood_id } }
-    );
+    const { data: nbh } = await catalogApi.get(`/v1/neighborhoods/by-id`, {
+      params: { neighborhood_id: coords.neighborhood_id },
+    });
 
     return {
       name: nbh.name,

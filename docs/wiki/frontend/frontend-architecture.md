@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-06-28
+last-verified: 2026-07-13
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -10,6 +10,7 @@ related:
   - "[[frontend-map-component]]"
   - "[[frontend-poi-reachable]]"
   - "[[frontend-property-create-form]]"
+  - "[[frontend-property-edit-form]]"
   - "[[properties-service-search]]"
   - "[[open-items]]"
 sources:
@@ -27,6 +28,8 @@ sources:
   - ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md
   - ../../sources/frontend/2026-06-25-property-create-form-and-nearby-fixes.md
   - ../../sources/frontend/2026-06-28-devcontainer-proxy-chrome-fix.md
+  - ../../sources/frontend/2026-07-13-view-decoupling-composables-and-cards.md
+  - ../../sources/frontend/2026-07-13-decimal-serialized-as-string.md
 ---
 
 ## TL;DR
@@ -61,15 +64,25 @@ frontend/
 │   │   ├── Location.ts
 │   │   ├── pois/
 │   │   │   └── useReachablePois.ts    # POIs alcanzables desde una propiedad (3 perfiles × 3 rangos)
+│   │   ├── shared/
+│   │   │   └── usePagination.ts       # slice client-side genérico; opcionalmente pagina por red vía fetchMore
 │   │   ├── properties/
 │   │   │   ├── usePropertyDetail.ts   # computed logic de PropertyDetailView
-│   │   │   └── usePropertyMapper.ts   # PropertyCard → PropertyCardUI con lookup de barrio
+│   │   │   ├── usePropertyMapper.ts   # PropertyCard → PropertyCardUI con lookup de barrio
+│   │   │   ├── usePropertyVisibility.ts  # toggleVisibility(id): Promise<boolean>, sin estado
+│   │   │   └── useMyProperties.ts     # { properties, isLoading, fetchProperties } — mismo molde que useFeed
 │   │   └── users/
-│   │       └── useProfileListings.ts  # vitrina pública: acumulador + paginación por página
+│   │       └── useProfileListings.ts  # fetchUserListings(id, offset) — función pura, sin estado (la paginación vive en usePagination)
+│   ├── utils/
+│   │   └── money.ts               # formatMoney / parseMoney — compartido entre create y edit form
+│   ├── constants/
+│   │   ├── propertyStatus.ts      # LISTING_STATUS_LABELS / LISTING_STATUS_BADGE_CLASSES
+│   │   ├── pagination.ts          # PAGE_SIZE por vista (MY_PROPERTIES, PUBLIC_PROFILE)
+│   │   └── propertiesEndpoints.ts # paths de properties-service (me, byId, byUser, visibility)
 │   ├── types/
 │   │   ├── user.ts
-│   │   ├── feed.ts               # PropertyCard (API shape), PropertyCardUI (UI shape), PropertyImageCard
-│   │   ├── properties.ts         # PropertyDetail, PropertyLocationDetail, CreatePropertyForm
+│   │   ├── feed.ts               # PropertyCard (API shape), PropertyCardUI (UI shape), PropertyImageCard, ListingStatus
+│   │   ├── properties.ts         # PropertyDetail, PropertyLocationDetail, CreatePropertyForm, PropertyEditForm
 │   │   └── pois.ts               # OrsProfile, GeoJsonPolygon, ReachablePoiItem, RangeGroup, CATEGORY_META, CATEGORY_PRIORITY
 │   ├── views/                    # páginas-ruta
 │   │   ├── public/{HomeView, AboutView, PublicProfileView}  # /users/:userId
@@ -79,15 +92,18 @@ frontend/
 │   │   │   ├── PropertiesView.vue          # parent feed con toggle lista/mapa
 │   │   │   ├── feed/{FeedView, MapView}
 │   │   │   ├── dashboard/MyPropertiesView
-│   │   │   └── detail/PropertyDetailView   # /listing/:id
+│   │   │   ├── detail/PropertyDetailView   # /listing/:id
+│   │   │   └── edit/EditPropertyView       # /properties/:id/edit — ver [[frontend-property-edit-form]]
 │   │   └── dev/{DevPlaygroundView, CreatePropertyDevView}  # sin auth, dev only
 │   └── components/
-│       ├── shared/{NavBar, NavGuest, NavUser, BaseModal}
+│       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState}
 │       ├── onboarding/{IntentSelector, LocalitySelector, NeighborhoodSelector, PropertyTypeSelector}
 │       ├── properties/
 │       │   ├── cards/{PropertyCard, HouseCard}      # HouseCard sin uso actual
 │       │   ├── photos/{PropertyPhotoGrid, PhotoGalleryPopup}
 │       │   ├── detail/{PropertyOverview, NearbyPlaces}
+│       │   ├── dashboard/DeletePropertyModal        # envuelve BaseModal, autocontenido (DELETE + loading)
+│       │   ├── edit/{PropertyHeaderCard, PropertyPhotosCard, PropertyInfoCard, PropertyEditForm, PropertyEditActions}
 │       │   └── feed/FeedFilters
 │       ├── settings/SettingsSidebar
 │       └── map/MapUser
@@ -418,19 +434,20 @@ Vista de detalle del listing en `/listing/:id` (`views/properties/detail/Propert
 
 ## PublicProfileView
 
-Vista pública del perfil de un publicante en `/users/:userId` (`views/public/PublicProfileView.vue`). El header (foto, nombre, badge verificado, rating, stats, CTAs) sigue siendo mock — no hay endpoint público de perfil en `users-service` todavía. El listado de propiedades ya está cableado al backend real via `useProfileListings` + `usePropertyMapper`.
+Vista pública del perfil de un publicante en `/users/:userId` (`views/public/PublicProfileView.vue`). El header (foto, nombre, badge verificado, rating, stats, CTAs) sigue siendo mock — no hay endpoint público de perfil en `users-service` todavía. El listado de propiedades ya está cableado al backend real via `fetchUserListings` + `usePropertyMapper` + `usePagination`.
 
-### `useProfileListings` (`composables/users/useProfileListings.ts`)
+### Paginación: `useProfileListings` (fetch puro) + `usePagination` (estado, compartido)
 
-Gestiona la paginación de la vitrina pública con patrón acumulador:
+`useProfileListings.ts` se redujo a una sola función pura sin estado — `fetchUserListings(account_id, offset): Promise<{ items, hasMore }>` (`GET /v1/properties/users/{id}?offset=...`). El estado de paginación (qué página se ve, si hay anterior/siguiente, cuántos items van cargados) se movió al composable genérico `composables/shared/usePagination.ts`.
 
-- `all_listings: PropertyCard[]` — array interno (no reactivo) que acumula todas las páginas fetched.
-- `listings: Ref<PropertyCard[]>` — slice de la página actual mostrada en pantalla.
-- `hasMore: Ref<boolean>` — viene del backend (`PublicUserPropertiesResponse.has_more`).
-- `fetchUserListings(account_id, offset)` — `GET /v1/properties/users/{id}?offset=...` → acumula en `all_listings`, actualiza `listings` con los items de la página, setea `hasMore`.
-- `previousListings(page)` — guard `page < 2`; slice `all_listings[(page-2)*20 : (page-1)*20]` sin hit al backend.
+`usePagination<T>(pageSize)` expone `{ pagedItems, page, hasPrev, hasNext, hasMore, total, setItems, next, prev, reset }`:
+- `setItems(items, hasMore?)` — carga (o recarga) el array completo; resetea a página 1.
+- `next(fetchMore?)` — si la página siguiente ya está en memoria, solo avanza el índice (slice puro, sin red). Si está en la última página cargada y `hasMore` es `true`, espera el callback `fetchMore` (que el consumidor define — ej. un fetch por offset), acumula el resultado y recién ahí avanza. `prev()` siempre es local.
+- Con esto, un mismo composable cubre tanto paginación **client-side pura** (`MyPropertiesView`, que carga todo de una vez, `fetchMore` nunca se dispara) como paginación **por red bajo demanda** (`PublicProfileView`, que sí pasa `fetchMore` porque el backend pagina por offset).
 
-En `PublicProfileView`: `page` ref arranca en 0, se incrementa tras el primer fetch en `onMounted`. `next()` llama `fetchUserListings(userId, page * 20); page++`. `prev()` llama `previousListings(page); page--`. `activeListingsCount` muestra `"+20"` si `hasMore`, si no `listings.length` — evita mostrar conteos mentirosos en páginas intermedias. Todas las cards tienen `@click="router.push('/listing/${card.id}')"` igual que `FeedView`/`MapView`/`MyPropertiesView`.
+En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` — usa `total.value` (cantidad ya cargada) como offset del siguiente fetch, más robusto que llevar un contador de páginas aparte.
+
+**`usePagination` solo lo consumen `MyPropertiesView` y `PublicProfileView`** — `FeedView` sigue con el estado propio de `useFeed` (cursor) y `MapView` con el de `useFeedMap` (bbox + slice local), cada uno con su propia noción de "página". Lo que **sí** comparten los cuatro es el componente visual `PaginationArrows.vue` (`components/shared/`) — botones con estilo relleno/atenuado + íconos, cada view le pasa su propio `hasPrev`/`hasNext`/`@prev`/`@next` sin importar el mecanismo de paginación de fondo.
 
 ## Claims
 
@@ -466,7 +483,10 @@ En `PublicProfileView`: `page` ref arranca en 0, se incrementa tras el primer fe
 - `toggleType(type)` en `FeedFilters` quita el tipo con `filter` si ya está en `selectedTypes` o lo agrega con `push` si no ([components/properties/feed/FeedFilters.vue:259-267](frontend/src/components/properties/feed/FeedFilters.vue#L259-L267)).
 - `useFeed.load(preferences?, filters?)` usa los args si llegan y cae a `userStore.userInterests` con `preferences ?? (ternario)` si no; `fetchFeed` hace spread `{ ...preferences, ...filters, cursor? }` en los params ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
 - `useFeed` expone `nextCursor`, `isFirstPage`, `loadNext(cursor)` y `loadPrev()` para paginación — `loadPrev` es siempre local (sin petición al back) ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
-- `useProfileListings` usa un acumulador `all_listings[]` no-reactivo; `listings` es el slice de la página actual; `previousListings(page)` es siempre local con guard `page < 2` ([composables/users/useProfileListings.ts](frontend/src/composables/users/useProfileListings.ts)).
+- `useProfileListings.ts` exporta solo `fetchUserListings(account_id, offset)` — función async pura, sin `ref` ni estado propio ([composables/users/useProfileListings.ts](frontend/src/composables/users/useProfileListings.ts)).
+- `usePagination<T>(pageSize)` cubre paginación client-side pura y paginación por red con un mismo composable: `next(fetchMore?)` solo dispara `fetchMore` si la página pedida excede lo ya cargado y `hasMore` es `true`; si no, es un slice local ([composables/shared/usePagination.ts](frontend/src/composables/shared/usePagination.ts)).
+- Solo `MyPropertiesView` y `PublicProfileView` usan `usePagination` como fuente de estado — `MyPropertiesView` nunca pasa `fetchMore` (ya tiene todo cargado), `PublicProfileView` sí, porque el backend pagina por offset. `FeedView` (cursor, `useFeed`) y `MapView` (bbox + slice, `useFeedMap`) mantienen su propio estado de paginación ([composables/shared/usePagination.ts](frontend/src/composables/shared/usePagination.ts)).
+- Las 4 views (`MyPropertiesView`, `FeedView`, `MapView`, `PublicProfileView`) comparten el componente visual `PaginationArrows.vue`, independiente del composable de estado que use cada una ([components/shared/PaginationArrows.vue](frontend/src/components/shared/PaginationArrows.vue)).
 - `FeedView`, `MapView`, `MyPropertiesView` y `PublicProfileView` tienen `@click="router.push('/listing/${card.id}')"` en el `v-for` de cards ([views/properties/feed/FeedView.vue](frontend/src/views/properties/feed/FeedView.vue), [views/public/PublicProfileView.vue](frontend/src/views/public/PublicProfileView.vue)).
 - `types/properties.ts` contiene `CreatePropertyForm` — shape del body `POST /v1/properties`, incluye `location: { neighborhood_id, city_id, country_id, latitude, longitude }` ([types/properties.ts](frontend/src/types/properties.ts)).
 - `GET /v1/search/feed` retorna `FeedPage { items: PropertyCard[], next_cursor: string | null }` — el composable desempaqueta `.items` ([types/feed.ts](frontend/src/types/feed.ts)).

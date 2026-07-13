@@ -10,26 +10,7 @@
     </p>
 
     <div v-if="isLoading" class="flex justify-center items-center py-10">
-      <svg
-        class="animate-spin h-6 w-6 text-brand-primary"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          class="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          stroke-width="4"
-        />
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-        />
-      </svg>
+      <BaseSpinner class="h-6 w-6 text-brand-primary" />
     </div>
 
     <template v-else>
@@ -89,27 +70,7 @@
           :disabled="isSaving"
           class="w-3/5 bg-brand-primary text-white text-sm font-semibold py-2.5 rounded-full hover:bg-green-500 hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          <svg
-            v-if="isSaving"
-            class="animate-spin h-4 w-4"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            />
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
-          </svg>
+          <BaseSpinner v-if="isSaving" class="h-4 w-4" />
           {{ isSaving ? "Guardando..." : "Continuar" }}
         </button>
       </div>
@@ -123,6 +84,7 @@ import houseIcon from "@/assets/house.svg";
 import apartmentIcon from "@/assets/apartment.svg";
 import { useOnboarding } from "@/composables/onboarding/useOnboarding";
 import { useLocalitiesWithNames } from "@/composables/catalog/useLocalitiesWithNames";
+import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 
 interface City {
   id: string;

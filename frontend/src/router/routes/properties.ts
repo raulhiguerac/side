@@ -15,6 +15,12 @@ export const propertiesRoutes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/properties/:id/edit",
+    name: "edit-property",
+    component: () => import("@/views/properties/edit/EditPropertyView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/listing/:id",
     name: "property-detail",
     component: () => import("@/views/properties/detail/PropertyDetailView.vue"),

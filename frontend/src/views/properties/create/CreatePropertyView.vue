@@ -108,9 +108,26 @@
           ← Volver a editar
         </button>
         <div v-else />
+        <!-- Botón paso 3 sin error: Publicar con upload -->
         <button
+          v-if="currentStep === 3 && !error"
+          @click="upload()"
+          :disabled="uploadLoading || selectedFiles.length === 0"
+          class="px-7 py-2.5 rounded-xl text-white text-sm font-bold transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center gap-2"
+          style="
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
+          "
+        >
+          <BaseSpinner v-if="uploadLoading" class="w-4 h-4" />
+          {{ uploadLoading ? "Publicando..." : "Publicar" }}
+        </button>
+
+        <!-- Botón resto de pasos -->
+        <button
+          v-else
           @click="handleNext()"
-          :disabled="loading || (currentStep === 3 && !error && selectedFiles.length === 0)"
+          :disabled="loading"
           class="px-7 py-2.5 rounded-xl text-white text-sm font-bold transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
           style="
             background: linear-gradient(90deg, #22c55e, #16a34a);
@@ -135,6 +152,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { AlertTriangle } from "@lucide/vue";
+import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import StepIndicator from "@/components/properties/create/StepIndicator.vue";
 import StepTipo from "@/components/properties/create/StepTipo.vue";
 import StepDetalles from "@/components/properties/create/StepDetalles.vue";
@@ -142,6 +160,7 @@ import StepUbicacion from "@/components/properties/create/StepUbicacion.vue";
 import StepImagenes from "@/components/properties/create/StepImagenes.vue";
 import CreateSummary from "@/components/properties/create/CreateSummary.vue";
 import { useCreatePropertyForm } from "@/composables/properties/useCreatePropertyForm";
+import { useImageUpload } from "@/composables/properties/useImageUpload";
 
 const steps = ["Tipo y condición", "Detalles", "Ubicación", "Imágenes"];
 const currentStep = ref(0);
@@ -156,6 +175,12 @@ const {
   selectedPlace,
   createListing,
 } = useCreatePropertyForm();
+
+const {
+  loading: uploadLoading,
+  error: uploadError,
+  uploadImages,
+} = useImageUpload();
 
 const propertyId = ref<string | null>(null);
 const selectedFiles = ref<File[]>([]);
@@ -202,5 +227,10 @@ async function submitAndContinue() {
   } finally {
     currentStep.value = 3;
   }
+}
+
+async function upload() {
+  await uploadImages(selectedFiles.value, propertyId.value!);
+  selectedFiles.value = [];
 }
 </script>

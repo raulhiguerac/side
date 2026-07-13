@@ -145,6 +145,35 @@
         </div>
       </div>
 
+      <!-- Toggle de visibilidad (para propiedades del usuario) -->
+      <div
+        v-if="showVisibilityToggle"
+        class="flex items-center justify-between mt-4 pt-4 border-t border-brand-divider"
+      >
+        <span class="text-sm text-brand-text font-medium">
+          {{ property.status === "active" ? "Activa" : "Borrador" }}
+        </span>
+        <button
+          type="button"
+          role="switch"
+          :aria-checked="property.status === 'active'"
+          @click.stop="$emit('toggle-visibility', property.id)"
+          class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+          :class="
+            property.status === 'active'
+              ? 'bg-brand-primary'
+              : 'bg-brand-border'
+          "
+        >
+          <span
+            class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+            :class="
+              property.status === 'active' ? 'translate-x-6' : 'translate-x-1'
+            "
+          />
+        </button>
+      </div>
+
       <!-- Actions (para propiedades del usuario) -->
       <div
         v-if="showActions"
@@ -182,6 +211,10 @@
 <script lang="ts" setup>
 import { computed } from "vue";
 import type { PropertyCardUI } from "@/types/feed";
+import {
+  LISTING_STATUS_LABELS,
+  LISTING_STATUS_BADGE_CLASSES,
+} from "@/constants/propertyStatus";
 
 const props = withDefaults(
   defineProps<{
@@ -189,11 +222,13 @@ const props = withDefaults(
     showFavorite?: boolean;
     showStatus?: boolean;
     showActions?: boolean;
+    showVisibilityToggle?: boolean;
   }>(),
   {
     showFavorite: true,
     showStatus: false,
     showActions: false,
+    showVisibilityToggle: false,
   }
 );
 
@@ -201,6 +236,7 @@ defineEmits<{
   (e: "toggle-favorite", id: string): void;
   (e: "edit", id: string): void;
   (e: "delete", id: string): void;
+  (e: "toggle-visibility", id: string): void;
 }>();
 
 const defaultImage =
@@ -216,31 +252,18 @@ const typeBadgeClass = computed(() =>
     : "bg-blue-500 text-white"
 );
 
-const statusLabel = computed(() => {
-  switch (props.property.status) {
-    case "active":
-      return "Activa";
-    case "inactive":
-      return "Inactiva";
-    case "pending":
-      return "Pendiente";
-    default:
-      return "";
-  }
-});
+const statusLabel = computed(
+  () =>
+    (props.property.status && LISTING_STATUS_LABELS[props.property.status]) ??
+    ""
+);
 
-const statusBadgeClass = computed(() => {
-  switch (props.property.status) {
-    case "active":
-      return "bg-green-500 text-white";
-    case "inactive":
-      return "bg-gray-500 text-white";
-    case "pending":
-      return "bg-yellow-500 text-white";
-    default:
-      return "";
-  }
-});
+const statusBadgeClass = computed(
+  () =>
+    (props.property.status &&
+      LISTING_STATUS_BADGE_CLASSES[props.property.status]) ??
+    ""
+);
 
 const formatPrice = (price: number) => {
   return price.toLocaleString("es-CO");

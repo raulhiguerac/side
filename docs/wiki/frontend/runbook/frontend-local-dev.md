@@ -1,7 +1,7 @@
 ---
 title: Runbook — frontend local dev
 status: draft
-last-verified: 2026-06-28
+last-verified: 2026-07-13
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -11,6 +11,7 @@ related:
 sources:
   - ../../../sources/frontend/2026-05-21-foundational-qa.md
   - ../../../sources/frontend/2026-06-28-devcontainer-proxy-chrome-fix.md
+  - ../../../sources/frontend/2026-07-13-vscode-port-forwarding-breaks-requests.md
 ---
 
 ## TL;DR
@@ -168,6 +169,7 @@ Worth flag para cuando se priorice testing — gap conocido.
 7. **`leaflet` y `@vue-leaflet/vue-leaflet` en devDependencies** — debería ser `dependencies` si se usa en runtime.
 8. **Onboarding completo en frontend, pausado en backend** — ver [[frontend-onboarding-flow]] "El refactor pendiente".
 9. **Cursor de paginación del feed no vive en `route.query`** — paginación in-memory, no compartible por URL.
+10. **VS Code port-forwarding puede hijackear un puerto de backend individual** (distinto del gotcha de Chrome+proxy de arriba, que ya está resuelto). Síntoma: un endpoint devuelve 400 con body vacío y el log de ese microservicio muestra `WARNING uvicorn.error: Invalid HTTP request received.` sin ninguna línea de acceso normal para esa request — la request nunca llega a FastAPI, se corta a nivel de transporte. Diagnóstico: `lsof -iTCP:<puerto>` — si el proceso que escucha es `code` (VS Code) y no el `fastapi dev`/`uvicorn` esperado, el auto-port-forwarding del devcontainer tomó el puerto y actúa de proxy intermedio que no maneja bien todas las requests (particularmente con cookies/credentials). Fix: panel "Ports" de VS Code → quitar el forward de ese puerto → reiniciar el proceso backend si hace falta para que lo recupere.
 
 ## Comandos útiles
 
@@ -197,3 +199,4 @@ npm run build -- --report   # genera dist/report.html (webpack-bundle-analyzer)
 - El `develop` service del compose forwarda los ports 8000, 5173, 8080 — el 8080 es justo el que usa Vue CLI por default ([docker-compose.yml:10-12](docker-compose.yml#L10-L12)).
 - Backends NO están como service en el compose — se corren manualmente desde dentro del devcontainer (mismo patrón que [[analytics-service-local-dev]] y [[catalog-service-local-dev]]).
 - No hay tests configurados (ningún framework de test en `devDependencies`).
+- Un `WARNING uvicorn.error: Invalid HTTP request received.` en el log de un backend, junto con un 400 de body vacío en el frontend, indica un problema de transporte (proxy/port-forwarding) antes de descartar el código de la app — verificar con `lsof -iTCP:<puerto>` quién escucha realmente ese puerto.
