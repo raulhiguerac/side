@@ -3,4 +3,5 @@ export const PROPERTIES_ENDPOINTS = {
   byId: (id: string) => `/v1/properties/${id}`,
   byUser: (userId: string) => `/v1/properties/users/${userId}`,
   visibility: (id: string) => `/v1/properties/${id}/visibility`,
+  images: (id: string) => `/v1/properties/${id}/images`,
 };

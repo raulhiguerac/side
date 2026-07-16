@@ -6,6 +6,10 @@ export const API = {
   IPAPI_URL: process.env.VUE_APP_IPAPI_URL ?? "https://ipapi.co/json/",
 };
 
+export const LIMITS = {
+  MAX_IMAGES_PER_PROPERTY: 20,
+};
+
 export const STORAGE_KEYS = {
   USER_LOCATION: "userLocation",
   COUNTRIES: "countries",

@@ -25,7 +25,7 @@
         </p>
         <p class="text-xs text-brand-muted">o haz click para seleccionar</p>
         <p v-if="!files.length" class="text-xs text-brand-muted mt-0.5">
-          JPG, PNG o WEBP · máx. {{ MAX }} fotos
+          JPG, PNG o WEBP · máx. {{ max }} fotos
         </p>
       </div>
     </div>
@@ -33,7 +33,7 @@
     <!-- Counter -->
     <p v-if="files.length" class="text-sm text-brand-muted mt-3">
       <span class="font-semibold text-brand-text">{{ files.length }}</span>
-      / {{ MAX }} fotos seleccionadas
+      / {{ max }} fotos seleccionadas
     </p>
 
     <!-- Preview grid -->
@@ -60,7 +60,7 @@
         </button>
 
         <span
-          v-if="i === 0"
+          v-if="i === 0 && !hasExistingPhotos"
           class="absolute bottom-1.5 left-1.5 text-[10px] font-semibold bg-brand-primary text-white px-1.5 py-0.5 rounded-md"
         >
           Portada
@@ -84,7 +84,10 @@
 import { computed, ref, onUnmounted } from "vue";
 import { Camera, X } from "@lucide/vue";
 
-const MAX = 20;
+const props = defineProps<{
+  max: number;
+  hasExistingPhotos: boolean;
+}>();
 
 const files = defineModel<File[]>({ default: () => [] });
 
@@ -101,7 +104,7 @@ const previews = computed(() => {
 
 function addFiles(list: FileList | null) {
   if (!list) return;
-  const slots = MAX - files.value.length;
+  const slots = props.max - files.value.length;
   if (slots <= 0) return;
   const incoming = Array.from(list)
     .filter((f) => f.type.startsWith("image/"))

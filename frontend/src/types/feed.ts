@@ -30,6 +30,7 @@ export interface FeedPreferences {
 }
 
 export interface PropertyImageCard {
+  id: string;
   url: string;
   is_cover: boolean;
   display_order: number;

@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full px-[5%] sm:px-[8%] lg:px-[10%] py-10">
+  <PageContainer class="w-full py-10">
     <div
       class="bg-white border border-brand-divider rounded-2xl overflow-hidden"
     >
@@ -90,7 +90,12 @@
                 ¿El problema continúa? Contactar soporte
               </a>
             </div>
-            <StepImagenes v-else v-model="selectedFiles" />
+            <StepImagenes
+              v-else
+              v-model="selectedFiles"
+              :max="LIMITS.MAX_IMAGES_PER_PROPERTY"
+              :has-existing-photos="false"
+            />
           </div>
         </div>
         <CreateSummary v-if="currentStep < 2" :form="form" />
@@ -146,13 +151,15 @@
         </button>
       </div>
     </div>
-  </div>
+  </PageContainer>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import { AlertTriangle } from "@lucide/vue";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
+import PageContainer from "@/components/shared/PageContainer.vue";
 import StepIndicator from "@/components/properties/create/StepIndicator.vue";
 import StepTipo from "@/components/properties/create/StepTipo.vue";
 import StepDetalles from "@/components/properties/create/StepDetalles.vue";
@@ -161,9 +168,11 @@ import StepImagenes from "@/components/properties/create/StepImagenes.vue";
 import CreateSummary from "@/components/properties/create/CreateSummary.vue";
 import { useCreatePropertyForm } from "@/composables/properties/useCreatePropertyForm";
 import { useImageUpload } from "@/composables/properties/useImageUpload";
+import { LIMITS } from "@/config";
 
 const steps = ["Tipo y condición", "Detalles", "Ubicación", "Imágenes"];
 const currentStep = ref(0);
+const router = useRouter();
 
 const {
   form,
@@ -230,7 +239,8 @@ async function submitAndContinue() {
 }
 
 async function upload() {
-  await uploadImages(selectedFiles.value, propertyId.value!);
+  const success = await uploadImages(selectedFiles.value, propertyId.value!);
   selectedFiles.value = [];
+  if (success) router.push("/properties");
 }
 </script>

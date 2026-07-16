@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-07-13
+last-verified: 2026-07-15
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -30,6 +30,7 @@ sources:
   - ../../sources/frontend/2026-06-28-devcontainer-proxy-chrome-fix.md
   - ../../sources/frontend/2026-07-13-view-decoupling-composables-and-cards.md
   - ../../sources/frontend/2026-07-13-decimal-serialized-as-string.md
+  - ../../sources/frontend/2026-07-15-property-edit-photos-upload-delete.md
 ---
 
 ## TL;DR
@@ -78,7 +79,7 @@ frontend/
 │   ├── constants/
 │   │   ├── propertyStatus.ts      # LISTING_STATUS_LABELS / LISTING_STATUS_BADGE_CLASSES
 │   │   ├── pagination.ts          # PAGE_SIZE por vista (MY_PROPERTIES, PUBLIC_PROFILE)
-│   │   └── propertiesEndpoints.ts # paths de properties-service (me, byId, byUser, visibility)
+│   │   └── propertiesEndpoints.ts # paths de properties-service (me, byId, byUser, visibility, images)
 │   ├── types/
 │   │   ├── user.ts
 │   │   ├── feed.ts               # PropertyCard (API shape), PropertyCardUI (UI shape), PropertyImageCard, ListingStatus
@@ -96,14 +97,14 @@ frontend/
 │   │   │   └── edit/EditPropertyView       # /properties/:id/edit — ver [[frontend-property-edit-form]]
 │   │   └── dev/{DevPlaygroundView, CreatePropertyDevView}  # sin auth, dev only
 │   └── components/
-│       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState}
+│       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState, PrimaryButton}
 │       ├── onboarding/{IntentSelector, LocalitySelector, NeighborhoodSelector, PropertyTypeSelector}
 │       ├── properties/
 │       │   ├── cards/{PropertyCard, HouseCard}      # HouseCard sin uso actual
 │       │   ├── photos/{PropertyPhotoGrid, PhotoGalleryPopup}
 │       │   ├── detail/{PropertyOverview, NearbyPlaces}
 │       │   ├── dashboard/DeletePropertyModal        # envuelve BaseModal, autocontenido (DELETE + loading)
-│       │   ├── edit/{PropertyHeaderCard, PropertyPhotosCard, PropertyInfoCard, PropertyEditForm, PropertyEditActions}
+│       │   ├── edit/{PropertyHeaderCard, PropertyPhotosCard, PropertyInfoCard, PropertyEditForm, PropertyEditActions, UploadPropertyImagesModal, DeletePropertyImagesModal}
 │       │   └── feed/FeedFilters
 │       ├── settings/SettingsSidebar
 │       └── map/MapUser
@@ -366,7 +367,7 @@ Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. No hay invalidación
 
 | Carpeta | Propósito |
 |---|---|
-| `shared/` | NavBar, NavGuest (no-logged), NavUser (logged), BaseModal — reusables transversales. |
+| `shared/` | NavBar, NavGuest (no-logged), NavUser (logged), BaseModal, PrimaryButton (botón gradiente verde reusable, presentacional puro) — reusables transversales. |
 | `onboarding/` | 4 selectors (Intent, Locality, Neighborhood, PropertyType) — usados desde el modal. |
 | `properties/` | Organizado en subcarpetas por dominio desde 2026-06-21. `cards/{PropertyCard, HouseCard}` — cards para feed (`HouseCard` sin uso actual). `photos/{PropertyPhotoGrid, PhotoGalleryPopup}`. `detail/{PropertyOverview, NearbyPlaces}`. `feed/FeedFilters` — sidebar de filtros con secciones Preferencias (ciudad, barrio, tipo) y Filtros (precio, área, habitaciones, baños); se pre-pobla con ciudades de `useCities`, barrios cargados dinámicamente al seleccionar ciudad vía `watch`. Mantiene estado local (`selected`, `selectedNeighborhoods`, `selectedTypes`, `filters: ref<FeedFilters>({})` con `v-model.number`); `property_types` se togglea con `toggleType(type)` (push/filter sobre el array). **Emite un solo `submit` con `{preferences, filters}` al click en "Aplicar"** — no reactivo con `watch`, decisión para evitar una petición por cada cambio de campo. El objeto `preferences` se arma en `onSubmit` leyendo los refs (`selected.value`, etc.), sin ref `preferences` duplicado. |
 | `settings/` | SettingsSidebar — navegación lateral del SettingsLayout. |
@@ -489,6 +490,8 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 - Las 4 views (`MyPropertiesView`, `FeedView`, `MapView`, `PublicProfileView`) comparten el componente visual `PaginationArrows.vue`, independiente del composable de estado que use cada una ([components/shared/PaginationArrows.vue](frontend/src/components/shared/PaginationArrows.vue)).
 - `FeedView`, `MapView`, `MyPropertiesView` y `PublicProfileView` tienen `@click="router.push('/listing/${card.id}')"` en el `v-for` de cards ([views/properties/feed/FeedView.vue](frontend/src/views/properties/feed/FeedView.vue), [views/public/PublicProfileView.vue](frontend/src/views/public/PublicProfileView.vue)).
 - `types/properties.ts` contiene `CreatePropertyForm` — shape del body `POST /v1/properties`, incluye `location: { neighborhood_id, city_id, country_id, latitude, longitude }` ([types/properties.ts](frontend/src/types/properties.ts)).
+- `PrimaryButton.vue` (`components/shared/`) encapsula el gradiente verde reusado en botones de acción principal (Guardar cambios, Subir fotos, Agregar fotos) — recibe `disabled` + slot; `class` y `@click` se reenvían al `<button>` interno vía attrs fallthrough de Vue, sin declararlos como props explícitos ([components/shared/PrimaryButton.vue](frontend/src/components/shared/PrimaryButton.vue)).
+- `PROPERTIES_ENDPOINTS` incluye `images(id)` para el batch delete de fotos — los endpoints de presigned-urls/confirm siguen inline como string literals en `useImageUpload.ts`, no centralizados en este archivo de constants ([constants/propertiesEndpoints.ts](frontend/src/constants/propertiesEndpoints.ts)).
 - `GET /v1/search/feed` retorna `FeedPage { items: PropertyCard[], next_cursor: string | null }` — el composable desempaqueta `.items` ([types/feed.ts](frontend/src/types/feed.ts)).
 - `PropertiesView` es la vista padre en `/feed` con el header y toggle Lista/Mapa; el estado activo del toggle se deriva de `route.name` (computed), no de un ref local ([views/properties/PropertiesView.vue](frontend/src/views/properties/PropertiesView.vue)).
 - El `<router-view />` de `PropertiesView` está fuera del div con padding del header para evitar doble padding en las vistas hijas ([views/properties/PropertiesView.vue](frontend/src/views/properties/PropertiesView.vue)).

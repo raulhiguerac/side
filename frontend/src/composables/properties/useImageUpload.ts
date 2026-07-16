@@ -1,14 +1,15 @@
 import { ref } from "vue";
-import { useRouter } from "vue-router";
 import propertiesApi from "@/api/propertiesApi";
 import type { PresignedUrlsResponse } from "@/types/properties";
 
 export function useImageUpload() {
   const loading = ref(false);
   const error = ref<string | null>(null);
-  const router = useRouter();
 
-  async function uploadImages(files: File[], propertyId: string) {
+  async function uploadImages(
+    files: File[],
+    propertyId: string
+  ): Promise<boolean> {
     loading.value = true;
     error.value = null;
     try {
@@ -38,7 +39,7 @@ export function useImageUpload() {
 
       if (confirmed_keys.length === 0) {
         error.value = "No se pudo subir ninguna imagen";
-        return;
+        return false;
       }
 
       await propertiesApi.post(`/v1/properties/${propertyId}/images/confirm`, {
@@ -46,9 +47,10 @@ export function useImageUpload() {
         confirmed_keys,
       });
 
-      router.push("/properties");
+      return true;
     } catch {
       error.value = "Error al subir las imágenes";
+      return false;
     } finally {
       loading.value = false;
     }

@@ -8,22 +8,16 @@
     >
       ← Volver
     </button>
-    <button
-      @click="emit('save')"
-      class="flex items-center gap-2 px-7 py-2.5 rounded-xl text-white text-sm font-bold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
-      style="
-        background: linear-gradient(90deg, #22c55e, #16a34a);
-        box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
-      "
-    >
+    <PrimaryButton @click="emit('save')" class="px-7 py-2.5">
       <Save class="w-4 h-4" />
       Guardar cambios
-    </button>
+    </PrimaryButton>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { Save } from "@lucide/vue";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 const emit = defineEmits<{
   (e: "back"): void;

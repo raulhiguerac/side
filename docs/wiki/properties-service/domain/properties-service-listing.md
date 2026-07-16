@@ -1,7 +1,7 @@
 ---
 title: Dominio listing — properties-service
 status: draft
-last-verified: 2026-07-13
+last-verified: 2026-07-15
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -17,6 +17,7 @@ sources:
   - ../../../sources/properties-service/2026-06-22-public-storefront-cache-invalidation.md
   - ../../../sources/properties-service/2026-06-25-public-user-properties-pagination.md
   - ../../../sources/properties-service/2026-07-13-owner-listings-order-by-created-at.md
+  - ../../../sources/properties-service/2026-07-15-property-images-status-leak-fix.md
 ---
 
 ## TL;DR
@@ -97,6 +98,8 @@ Protocolo en tres pasos para subir directo a MinIO sin pasar bytes por el servic
 
 Estados del batch: `pending → ready → confirmed`, con ramas `expired` (TTL vencido) y `failed` (error de storage o confirm sobre batch pending).
 
+**Delete es soft.** `DeletePropertyImagesUseCase` solo marca `status=pending_delete`, nunca borra la fila ni el objeto en storage. Por eso la relación `Property.images` filtra por `status='active'` vía `primaryjoin` + `viewonly=True` (mismo patrón que `Property.promotions` filtrando `is_active`) — sin ese filtro, imágenes recién borradas seguían apareciendo en detail/`/me`/feed/mapa porque esos paths leen `property.images` directo del ORM, no vía el repo filtrado.
+
 ## Errores de dominio
 
 `core/exceptions/listing.py` define ~25 errores. Relevantes a listing: `PropertyNotFoundError`, `PropertyForbiddenError`, `InconsistentLocationError`, `InvalidLocationError`, `LocationNotResolvedError`, `ImageCountExceededError`, `ImageNotOwnedError`, `BatchNotFoundError`, `BatchExpiredError`, `BatchInvalidStateError`, `BatchNotConsistentError`, `CreatePropertyError`, `DeletePropertyError`.
@@ -119,3 +122,5 @@ Estados del batch: `pending → ready → confirmed`, con ramas `expired` (TTL v
 - El endpoint público acota el offset a `>= 0` vía `Query(ge=0)` y default 0 ([properties.py](backend/properties-service/src/app/api/routes/properties.py)).
 - `get_user_properties` y `get_public_user_properties` ordenan por `Property.created_at.desc()` — en la paginada, el `order_by` va antes de `limit()`/`offset()`, necesario para que la paginación por offset sea estable ([sql_property_repository.py](backend/properties-service/src/app/services/listing/adapters/sql_property_repository.py)).
 - `Property` es 1 fila = 1 `listing_type` fijo; no hay relación entre filas que representen el mismo inmueble bajo distintas modalidades (venta/arriendo) — ver [[adr-single-listing-type-per-property]] ([models/property.py](backend/properties-service/src/app/models/property.py)).
+- `Property.images` filtra `PropertyImage.status == 'active'` vía `primaryjoin` + `viewonly=True`, igual patrón que `Property.promotions` con `is_active` ([models/property.py:175-183](backend/properties-service/src/app/models/property.py#L175-L183)).
+- Antes del fix del 2026-07-15, 7 endpoints (detail, admin detail, `/properties/mine`, perfil público, admin list, feed, mapa) leían `property.images` sin filtro y podían devolver imágenes en `pending_delete` — reproducible siempre justo después de un delete porque `delete_property_images.py` invalida el cache de detail/`/me` en el mismo request, forzando un cache-miss que re-dispara la relación sin filtrar.

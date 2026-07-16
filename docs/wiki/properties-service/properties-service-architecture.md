@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna de properties-service
 status: draft
-last-verified: 2026-05-28
+last-verified: 2026-07-15
 owners: [properties-service]
 related:
   - "[[architecture]]"
@@ -10,7 +10,9 @@ related:
   - "[[properties-service-search]]"
   - "[[properties-service-admin]]"
   - "[[properties-service-catalog]]"
-sources: [../../sources/properties-service/2026-05-28-foundational-exploration.md]
+sources:
+  - ../../sources/properties-service/2026-05-28-foundational-exploration.md
+  - ../../sources/properties-service/2026-07-15-property-images-status-leak-fix.md
 ---
 
 ## TL;DR
@@ -68,7 +70,7 @@ Una sola migración materializa 5 tablas ([models/property.py](backend/propertie
 |---|---|
 | `properties` | Agregado raíz. Atributos del inmueble, precio, status, verificación, H3 (`h3_r9`/`h3_r7`), y precios estimados (`admin_estimated_price`, `ml_estimated_price`). |
 | `property_locations` | 1:1 con property. PostGIS `POINT` SRID 4326 + IDs geográficos (`neighborhood_id`, `city_id`, `country_id`). Índice GiST. FK `ON DELETE CASCADE`. |
-| `property_images` | N:1. URL pública, `status`, `display_order`, `is_cover`. Índice único parcial: una sola cover activa por property. |
+| `property_images` | N:1. URL pública, `status`, `display_order`, `is_cover`. Índice único parcial: una sola cover activa por property. Relación viewonly filtrada por `status='active'` desde `Property.images` — delete es soft (`pending_delete`), nunca borra la fila. |
 | `property_image_upload_batches` | Transacción de subida: `expected_keys`, `status` (pending→ready→confirmed/expired/failed), `expires_at`. |
 | `promoted_listings` | Promociones pagas con `starts_at`/`ends_at`/`priority`. Relación viewonly filtrada por `is_active` desde `Property.promotions`. |
 
@@ -127,3 +129,4 @@ Jerarquía en `core/exceptions/`: `base.py` (BaseError con `code`/`http_status`/
 - `Property` guarda `admin_estimated_price` y `ml_estimated_price` en columnas separadas ([models/property.py:162-173](backend/properties-service/src/app/models/property.py#L162-L173)).
 - Los precios estimados **no** se exponen en `PropertyDetailSchema` ([property_detail.py:40-70](backend/properties-service/src/app/services/shared/schemas/property_detail.py#L40-L70)).
 - Las operaciones SQL bloqueantes se envuelven en `run_in_threadpool` dentro de los UCs ([create_property.py:42-44](backend/properties-service/src/app/services/listing/use_cases/property_core/create_property.py#L42-L44)).
+- `Property.images` usa `primaryjoin="and_(Property.id == foreign(PropertyImage.property_id), PropertyImage.status == 'active')"` + `viewonly=True` + `overlaps="property"`, mismo patrón que `Property.promotions` ([models/property.py:175-183](backend/properties-service/src/app/models/property.py#L175-L183)).

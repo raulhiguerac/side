@@ -8,7 +8,9 @@
 
     <div class="grid grid-cols-2 gap-3 mb-4">
       <div>
-        <label class="block text-xs text-brand-muted mb-1.5">Precio</label>
+        <label class="block text-xs text-brand-muted mb-1.5"
+          >Precio <span class="text-red-500">*</span></label
+        >
         <div class="relative">
           <DollarSign
             class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted"
@@ -111,7 +113,7 @@
             description: ($event.target as HTMLTextAreaElement).value,
           })
         "
-        rows="3"
+        rows="6"
         maxlength="2000"
         class="w-full border-2 border-brand-border rounded-xl px-4 py-3 text-sm text-brand-text resize-none focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
       />
