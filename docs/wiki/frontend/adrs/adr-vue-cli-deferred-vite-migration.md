@@ -1,7 +1,7 @@
 ---
 title: ADR-0001 — Vue CLI hoy, migración a Vite diferida
 status: stable
-last-verified: 2026-05-21
+last-verified: 2026-07-15
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -64,7 +64,7 @@ Cuando se ejecute (post-backend):
 
 ## Claims
 
-- `package.json` declara `@vue/cli-service ~5.0.0` y plugins `@vue/cli-plugin-{babel,eslint,router,typescript}` ([package.json:33-37](frontend/package.json#L33-L37)).
-- `vue.config.js` carga `@vue/cli-service` y aplica un `DefinePlugin` que el comment reconoce como workaround de un bug no parcheado upstream ([vue.config.js:1-22](frontend/vue.config.js#L1-L22)).
+- `package.json` declara `@vue/cli-service ~5.0.0` y plugins `@vue/cli-plugin-{babel,eslint,router,typescript}` ([package.json:41-45](frontend/package.json#L41-L45)).
+- `vue.config.js` carga `@vue/cli-service` y aplica un `DefinePlugin` que el comment reconoce como workaround de un bug no parcheado upstream ([vue.config.js:34-41](frontend/vue.config.js#L34-L41)) — un bloque `devServer.proxy` se agregó antes de este código (2026-06-15), moviendo las líneas.
 - Scripts del `package.json`: `serve`, `build`, `lint` — todos `vue-cli-service`, no Vite ([package.json:5-9](frontend/package.json#L5-L9)).
 - Env vars actuales con prefijo `VUE_APP_*` ([.env.example](frontend/.env.example)).

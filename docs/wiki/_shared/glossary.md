@@ -10,7 +10,7 @@ sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md]
 
 ## TL;DR
 
-Términos del proyecto `side` (negocio, dominio inmobiliario, infra) que son **cross-cutting** entre servicios. Los términos específicos de un servicio viven en su propio glossary (ej: `[[analytics-service-glossary]]`).
+Términos del proyecto `side` (negocio, dominio inmobiliario, infra) que son **cross-cutting** entre servicios. Los términos específicos de un servicio viven en su propio glossary (ej: `analytics-service-glossary`, página aún no creada — ver `_shared/glossary.md` de `INDEX.md`).
 
 ## Términos
 

@@ -1,7 +1,7 @@
 ---
 title: ADR-0001 — LightGBM con target log10 y categóricas nativas
 status: stable
-last-verified: 2026-05-28
+last-verified: 2026-07-15
 owners: [data]
 related:
   - "[[avm-training]]"

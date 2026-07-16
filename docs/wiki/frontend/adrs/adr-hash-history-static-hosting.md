@@ -1,7 +1,7 @@
 ---
 title: ADR-0002 — Hash history para deployment en bucket estático
 status: stable
-last-verified: 2026-05-21
+last-verified: 2026-07-15
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -54,7 +54,7 @@ Triggers para revisar esta decisión:
 
 ## Claims
 
-- `vue-router` se crea con `createWebHashHistory()` ([router/index.ts:1](frontend/src/router/index.ts#L1), [router/index.ts:89](frontend/src/router/index.ts#L89)).
+- `vue-router` se crea con `createWebHashHistory()` ([router/index.ts:1](frontend/src/router/index.ts#L1) import, [router/index.ts:11](frontend/src/router/index.ts#L11) instanciación) — `index.ts` se achicó a ~46 líneas tras modularizar las rutas en `router/routes/*.ts`.
 - URLs visibles en el browser tienen el patrón `<base>/#/<path>` (ej. `http://localhost:8080/#/login`).
 - Deploy planificado: bucket público estático con build compilado (per autor, 2026-05-21).
 - SEO marcado como "no prioridad MVP" en este ADR; diferenciador futuro en [[project-roadmap-2026]] pero no en scope inmediato.

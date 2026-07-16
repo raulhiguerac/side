@@ -1,7 +1,7 @@
 ---
 title: ADR-0006 — Librería interna compartida para clientes de infra (Redis/MinIO)
 status: stable
-last-verified: 2026-06-12
+last-verified: 2026-07-15
 owners: [_shared]
 related:
   - "[[architecture]]"

@@ -1,7 +1,7 @@
 ---
 title: catalog-service
 status: draft
-last-verified: 2026-05-28
+last-verified: 2026-07-15
 owners: [catalog-service]
 related:
   - "[[architecture]]"
@@ -47,6 +47,7 @@ Tres jobs distintos:
 | GET | `/v1/neighborhoods/by-id?neighborhood_id` | frontend, otros services | público |
 | GET | `/v1/geo-resolution/resolve-neighborhood?query&locality_id` | frontend (legacy — refactor pendiente) | público |
 | GET | `/v1/geo-resolution/by-coordinates?lat&lon` | frontend / properties-service | público |
+| POST | `/v1/geo-resolution/reachable-pois` | frontend (`NearbyPlaces.vue`, "Cerca del lugar") | público |
 | POST/PATCH | `/v1/admin/{countries,admin-divisions,localities,neighborhoods}` | UI admin futura, scripts | `require_admin` |
 | POST | `/v1/admin/localities/{id}/neighborhoods/bulk` (CSV upload) | UI admin | `require_admin` |
 | POST | `/v1/admin/.../bulk/geometry` (GeoJSON FeatureCollection) | UI admin | `require_admin` |
@@ -55,15 +56,14 @@ Tres jobs distintos:
 
 - **frontend Vue**: GETs con debounce para autocomplete; futura UI admin para uploads de catálogo.
 - **properties-service**: `/geo-resolution/by-coordinates` al crear listing (geo-enrichment at write time). Recibe el barrio y persiste su UUID como `barrio_ideca` del listing.
+- **frontend Vue**: también consume `/geo-resolution/reachable-pois` desde `NearbyPlaces.vue` (vista de detalle de propiedad) vía `composables/pois/useReachablePois.ts` — isócronas ORS + POIs por H3 alrededor del listing.
 - **analytics-service** (futuro): consumirá la tabla `points_of_interest` directamente como feature store del modelo AVM. Hoy training usa CSV de OSM manual — ver Open items.
 
 ## Refactor pendiente — `/geo-resolution/resolve-neighborhood`
 
 El endpoint actual recibe `query: str` (address) y hace forward geocoding con Mapbox + point-in-polygon. Esto **duplica** lo que el frontend ya hace con Mapbox SDK (ver [[glossary#forward-geocoding]]).
 
-**Estado deseado**: deprecar `resolve-neighborhood` y dejar solo `/by-coordinates` (que ya hace reverse-only). Para que `/by-coordinates` sea drop-in replacement falta:
-
-- Agregarle el `BackgroundTasks.add_task(poi_uc.execute, ...)` que hoy solo dispara `resolve-neighborhood`.
+**Estado deseado**: deprecar `resolve-neighborhood` y dejar solo `/by-coordinates` (que ya hace reverse-only). `/by-coordinates` ya es drop-in replacement funcional — dispara `BackgroundTasks.add_task(poi_uc.execute, ...)` desde 2026-06-11, y `properties-service` ya lo consume en vez de `resolve-neighborhood`. Falta el paso 3 (wrapper deprecado temporal) y el paso 4 (borrar el código Mapbox legacy) — ver [[adr-mapbox-frontend-only]] para el detalle de qué queda.
 
 Beneficios: menos latencia, sin costo Mapbox en backend, sin cache de forward geocode, un único punto de entrada. Ver `[[adr-mapbox-frontend-only]]`.
 
@@ -71,7 +71,7 @@ Beneficios: menos latencia, sin costo Mapbox en backend, sin cache de forward ge
 
 - **No emite tokens** — auth la centraliza `users-service`/Keycloak. catalog solo valida.
 - **No persiste listings** — `properties-service` los maneja; catalog devuelve UUID de barrio para que listings lo guarden.
-- **No expone POIs vía endpoint** — la tabla `points_of_interest` la consumirá `analytics-service` por read directo a la BD, no vía API de catalog.
+- **Sí expone POIs vía endpoint** desde la implementación de `reachable-pois` (2026-06-15) — `POST /geo-resolution/reachable-pois` devuelve POIs por isócrona (`ReachablePoiItem`: nombre, categoría, lat/lon, dirección, teléfono, sitio web). `analytics-service` seguirá consumiendo la tabla `points_of_interest` por read directo a la BD para el feature store del AVM — son dos consumos distintos, no se contradicen.
 - **No hace forward geocoding del lado server** (post-refactor) — el SDK de Mapbox en el SPA hace ese hop (user types address → sees point → submits lat/lon).
 - **No tiene comm async** — el único side-effect async hoy es el `BackgroundTasks` del POI fetch dentro del mismo request.
 
@@ -82,6 +82,7 @@ Beneficios: menos latencia, sin costo Mapbox en backend, sin cache de forward ge
 - **Redis** — caché de forward geocoding + caché + lock de POI fetch zones
 - **Mapbox** — forward geocoding (legacy en `resolve-neighborhood`)
 - **Overpass API** — POIs desde OpenStreetMap por bbox
+- **OpenRouteService (ORS)**, self-hosted — isócronas para `reachable-pois` (ver [[adr-isochrone-ors-h3]])
 - **h3** — indexación espacial (resolución 9, ~300 m)
 - **PyJWT + cryptography** — validación de JWT contra JWKS de Keycloak
 
@@ -92,7 +93,7 @@ Beneficios: menos latencia, sin costo Mapbox en backend, sin cache de forward ge
 - [x] Conciliar tag set Overpass con tag set del training del AVM — `category_map.py` (2026-06-11)
 - [ ] FetchZone refresh batch (cron / worker) para zonas stale
 - [ ] UI admin frontend para uploads de catálogo
-- [ ] Implementar `ReachablePoiUseCase` — isócronas ORS + H3 (ver [[adr-isochrone-ors-h3]])
+- [x] Implementar `ReachablePoiUseCase` — isócronas ORS + H3, wired a `POST /geo-resolution/reachable-pois` y consumido por `NearbyPlaces.vue` en el frontend (ver [[adr-isochrone-ors-h3]])
 
 ## Related
 
@@ -113,4 +114,5 @@ Beneficios: menos latencia, sin costo Mapbox en backend, sin cache de forward ge
 - `/geo-resolution/resolve-neighborhood` dispara la población de POIs vía `BackgroundTasks.add_task(poi_uc.execute, ...)` fire-and-forget ([api/routes/geo_resolution.py:32-38](backend/catalog-service/src/app/api/routes/geo_resolution.py#L32-L38)).
 - `/geo-resolution/by-coordinates` dispara el background task de POIs desde 2026-06-11 ([api/routes/geo_resolution.py](backend/catalog-service/src/app/api/routes/geo_resolution.py#L43-L59)).
 - catalog-service y properties-service usan la imagen `postgis/postgis:17-master` en el `docker-compose.yml`; los Postgres de users-service y keycloak son `postgres:17` plano.
-- 6 routers, ~15 endpoints en total al 2026-05-21.
+- 6 routers, 21 endpoints en total al 2026-07-15 (contados directo de los decoradores `@router.get/post/patch` en `src/app/api/routes/*.py`: admin 11, countries 1, geo_resolution 3, health 1, localities 3, neighborhoods 2).
+- `POST /geo-resolution/reachable-pois` está implementado y wireado end-to-end: `services/geo_resolution/use_cases/resolve_isochrone.py` + integración ORS en `integrations/georef/ors/routing.py` ([api/routes/geo_resolution.py:67-72](backend/catalog-service/src/app/api/routes/geo_resolution.py#L67-L72)).

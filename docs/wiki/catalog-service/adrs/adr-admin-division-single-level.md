@@ -1,7 +1,7 @@
 ---
 title: ADR-0002 — AdminDivision de un solo nivel (sin recursión)
 status: stable
-last-verified: 2026-05-21
+last-verified: 2026-07-15
 owners: [catalog-service]
 related:
   - "[[catalog-service]]"

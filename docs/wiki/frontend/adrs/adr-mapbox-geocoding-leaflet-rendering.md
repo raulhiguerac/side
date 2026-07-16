@@ -1,7 +1,7 @@
 ---
 title: ADR-0003 — Mapbox solo para geocoding, Leaflet+D3 para render
 status: stable
-last-verified: 2026-05-28
+last-verified: 2026-07-15
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -73,7 +73,7 @@ Iconos de marker: SVGs en `public/icons/<imageType>.svg` (no `src/assets/`, porq
 ## Estado en código
 
 - `leaflet` y `@vue-leaflet/vue-leaflet` están en **devDependencies** del `package.json` — **probable bug**, deberían estar en `dependencies` si se usan en runtime. Verificar al refactorear.
-- `MapUser.vue` es el componente de mapa actual — dumb/reusable, documentado en [[frontend-map-component]].
+- `MapUser.vue` es el componente de mapa actual — dumb/reusable, documentado en [[frontend-map-component]]. Ya no es un componente huérfano: se usa en `MapView.vue` (feed-mapa), `AvmView.vue` y `NearbyPlaces.vue`.
 - Mapbox SDK no está en `dependencies` del `package.json` al 2026-05-21 — habrá que agregarlo cuando se implemente el autocomplete de address.
 - `vue-google-autocomplete` está en deps — **probable zombie** de cuando se evaluó Google Maps; se eliminará en cleanup.
 
@@ -86,8 +86,9 @@ Iconos de marker: SVGs en `public/icons/<imageType>.svg` (no `src/assets/`, porq
 
 ## Claims
 
-- `leaflet` (^1.9.4) y `@vue-leaflet/vue-leaflet` (^0.10.1) están en `devDependencies` del `package.json` ([package.json:32-33](frontend/package.json#L32-L33), [package.json:43](frontend/package.json#L43)).
-- `vue-google-autocomplete` está en `dependencies` (^1.1.4) — origen residual a confirmar ([package.json:23](frontend/package.json#L23)).
-- Mapbox SDK **NO** está en `package.json` al 2026-05-21 — pendiente agregar cuando se implemente el autocomplete.
-- `MapUser.vue` existe en `components/map/` pero su uso no aparece en las views revisadas en este pase del wiki.
+- `leaflet` (^1.9.4) y `@vue-leaflet/vue-leaflet` (^0.10.1) siguen en `devDependencies` del `package.json` ([package.json:51](frontend/package.json#L51), [package.json:40](frontend/package.json#L40)) — el "probable bug" de Open Items sigue sin resolver.
+- `vue-google-autocomplete` está en `dependencies` (^1.1.4) — zombie confirmado: Google Places (New) vía `@googlemaps/js-api-loader` ya lo reemplazó ([package.json:28](frontend/package.json#L28)).
+- Mapbox SDK **NO** está en `package.json` — confirmado que sigue sin agregarse (Google Places (New) cubrió el forward geocoding en su lugar, ver [[adr-gmaps-places-geocoding]]).
+- `MapUser.vue` ya no es un componente huérfano — se usa activamente en `MapView.vue`, `AvmView.vue` y `NearbyPlaces.vue`.
+- D3.js sigue sin instalarse ni usarse en el repo (cero referencias en `package.json`/`src/`) — el pattern D3↔Leaflet sigue definido pero no implementado.
 - Reverse geocoding lo hace `catalog-service` via `/v1/geo-resolution/by-coordinates`, sin proveedor externo ([[adr-mapbox-frontend-only]]).

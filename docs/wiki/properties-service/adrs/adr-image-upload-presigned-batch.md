@@ -1,7 +1,7 @@
 ---
 title: ADR-0001 — Upload de imágenes vía presigned URLs + batch
 status: stable
-last-verified: 2026-05-28
+last-verified: 2026-07-15
 owners: [properties-service]
 related:
   - "[[properties-service-listing]]"
@@ -50,6 +50,6 @@ Cada propiedad lleva hasta `MAX_IMAGES_PER_PROPERTY` (20) fotos. Dos preguntas d
 
 - El flujo crea un `PropertyImageUploadBatch` con `expected_keys` y `expires_at` antes de devolver las URLs ([request_presigned_urls.py:51-59](backend/properties-service/src/app/services/listing/use_cases/images/request_presigned_urls.py#L51-L59)).
 - El batch pasa por `pending → ready` antes de retornar; un error de storage lo marca `failed` ([request_presigned_urls.py:74-87](backend/properties-service/src/app/services/listing/use_cases/images/request_presigned_urls.py#L74-L87)).
-- Confirm exige estado `ready` y que `confirmed_keys` sea subconjunto de `expected_keys` ([confirm_image_uploads.py:65-81](backend/properties-service/src/app/services/listing/use_cases/images/confirm_image_uploads.py#L65-L81)).
-- El TTL del batch es `IMAGE_UPLOAD_BATCH_TTL_SECONDS` = 300s ([settings.py:31](backend/properties-service/src/app/core/config/settings.py#L31)).
-- No hay GC de objetos subidos pero no confirmados al 2026-05-28.
+- Confirm exige estado `ready` y que `confirmed_keys` sea subconjunto de `expected_keys` ([confirm_image_uploads.py:70-86](backend/properties-service/src/app/services/listing/use_cases/images/confirm_image_uploads.py#L70-L86)).
+- El TTL del batch es `IMAGE_UPLOAD_BATCH_TTL_SECONDS` = 300s ([settings.py:39](backend/properties-service/src/app/core/config/settings.py#L39)).
+- No hay GC de objetos subidos pero no confirmados al 2026-07-15.

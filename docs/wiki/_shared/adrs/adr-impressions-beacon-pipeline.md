@@ -1,7 +1,7 @@
 ---
 title: ADR-0004 — Impresiones y clicks vía beacon de cliente + collector + Kafka
 status: draft
-last-verified: 2026-06-04
+last-verified: 2026-07-15
 owners: [_shared, frontend, properties-service, analytics-service]
 related:
   - "[[open-items]]"

@@ -1,7 +1,7 @@
 ---
 title: Runbook — properties-service local dev
 status: draft
-last-verified: 2026-05-28
+last-verified: 2026-07-15
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -59,7 +59,7 @@ curl http://localhost:8000/health
 
 ```bash
 # Persistencia (la DB que levanta el compose)
-DATABASE_URL=postgresql://admin:admin@properties-ms-db:5432/properties-ms-db
+DATABASE_PROPERTIES_URL=postgresql://admin:admin@properties-ms-db:5432/properties-ms-db
 REDIS_URL=redis://redis:6379/2
 
 # Auth (Keycloak del compose)
@@ -80,7 +80,7 @@ STORAGE_PUBLIC_BASE_URL=http://localhost:9000
 ```
 
 Notas:
-- **`DATABASE_URL`** (plano, no `DATABASE_PROPERTIES_URL`) — el settings lo lee así ([core/config/settings.py:7](backend/properties-service/src/app/core/config/settings.py#L7)).
+- **`DATABASE_PROPERTIES_URL`** (renombrado desde `DATABASE_URL` el 2026-05-31, commit `e5938ad`) — el settings lo lee así ([core/config/settings.py:7](backend/properties-service/src/app/core/config/settings.py#L7)).
 - `CATALOG_URL` se lee directo de env en `CatalogClient.__init__`, no vía settings — si falta, el cliente falla al construirse.
 - Keycloak apunta al host interno del compose (`keycloak:8080`), no a `localhost:8180`.
 
@@ -137,7 +137,7 @@ curl -X POST http://localhost:8000/properties/<id>/images/confirm \
 
 ## Known gaps (2026-05-28)
 
-1. **`.env.example` incompleto** — solo `DATABASE_URL` y `REDIS_URL`; faltan Keycloak, `CATALOG_URL`, las de MinIO, y `ADMIN_ROLE`.
+1. **`.env.example` con nombre de variable incorrecto, no solo incompleto** — sigue declarando `DATABASE_URL`, pero el settings actual lee `DATABASE_PROPERTIES_URL` (renombrado 2026-05-31) — llenar el `.env.example` tal cual no funciona. Además faltan Keycloak, `CATALOG_URL`, las de MinIO, y `ADMIN_ROLE`.
 2. **Dependencia dura de catalog con seed** — no se puede crear listing sin un barrio válido; si catalog no está sembrado, create falla con error de location.
 3. **Path ML de precio estimado huérfano** — sin worker que consuma `price-predicted`; `ml_estimated_price` solo se puede escribir manualmente invocando el UC sin principal.
 4. **Role `admin` no auto-asignado** al user `admin` del realm — setearlo a mano para `/admin/*`.
@@ -147,7 +147,7 @@ curl -X POST http://localhost:8000/properties/<id>/images/confirm \
 ## Comandos útiles
 
 ```bash
-uv run pytest                      # tests (13 archivos de test unit)
+uv run pytest                      # tests (14 archivos de test unit)
 uv run alembic current             # migración aplicada
 psql -h properties-ms-db -U admin -d properties-ms-db
 docker exec -it $(docker ps -qf name=redis) redis-cli
@@ -159,9 +159,9 @@ docker exec -it $(docker ps -qf name=redis) redis-cli
 ## Claims
 
 - properties-service usa la imagen `postgis/postgis:17-master` para `properties-ms-db` ([docker-compose.yml:41-42](docker-compose.yml#L41-L42)).
-- El servicio lee la connection string desde `DATABASE_URL` (plano) ([core/config/settings.py:7](backend/properties-service/src/app/core/config/settings.py#L7)).
+- El servicio lee la connection string desde `DATABASE_PROPERTIES_URL` (renombrado desde `DATABASE_URL` el 2026-05-31, commit `e5938ad`) ([core/config/settings.py:7](backend/properties-service/src/app/core/config/settings.py#L7)).
 - `CATALOG_URL` se lee directamente de env en el constructor de `CatalogClient`, no vía settings ([catalog_client.py:12-14](backend/properties-service/src/app/integrations/catalog/catalog_client.py#L12-L14)).
 - Auth lee el JWT desde la cookie `access_token` ([api/deps/auth.py:46](backend/properties-service/src/app/api/deps/auth.py#L46)).
-- El `.env.example` solo declara `DATABASE_URL` y `REDIS_URL` ([backend/properties-service/.env.example](backend/properties-service/.env.example)).
-- Hay 13 archivos de test unit bajo `tests/unit/` al 2026-05-28 ([backend/properties-service/tests/](backend/properties-service/tests)).
+- El `.env.example` declara `DATABASE_URL` (nombre viejo, ya no matchea el settings) y `REDIS_URL` ([backend/properties-service/.env.example](backend/properties-service/.env.example)).
+- Hay 14 archivos de test unit bajo `tests/unit/` al 2026-07-15 ([backend/properties-service/tests/](backend/properties-service/tests)).
 - El servicio se arranca con `uvicorn app.main:app` en el Dockerfile ([backend/properties-service/Dockerfile](backend/properties-service/Dockerfile)).

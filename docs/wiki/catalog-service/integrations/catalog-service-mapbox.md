@@ -1,7 +1,7 @@
 ---
 title: Integración Mapbox (catalog-service)
 status: draft
-last-verified: 2026-05-21
+last-verified: 2026-07-15
 owners: [catalog-service]
 related:
   - "[[catalog-service-architecture]]"
@@ -49,9 +49,9 @@ async def forward_geocoding(
 
 ### Port + adapter: `GeocodingGateway` + `GeocodingAdapter`
 
-El UC (`ResolveNeighborhoodUseCase`) no toca el cliente bajo nivel — depende del port [`GeocodingGateway`](backend/catalog-service/src/app/services/geo_resolution/ports/geocoding_gateway.py).
+El UC (`ResolveNeighborhoodUseCase`) no toca el cliente bajo nivel — depende del port [`GeocodingGateway`](backend/catalog-service/src/app/services/geo_resolution/ports/geocoding/gateway.py) (movido de `ports/geocoding_gateway.py` a `ports/geocoding/gateway.py` en la reorganización de `geo_resolution`).
 
-[`GeocodingAdapter`](backend/catalog-service/src/app/services/geo_resolution/adapters/geocoding.py) implementa el port:
+[`GeocodingAdapter`](backend/catalog-service/src/app/services/geo_resolution/adapters/geocoding/mapbox.py) implementa el port (movido de `adapters/geocoding.py` a `adapters/geocoding/mapbox.py`):
 
 1. Llama `GeoreferentiationClient.forward_geocoding(...)`.
 2. Extrae el primer feature del response.
@@ -69,7 +69,7 @@ El cliente captura excepciones de la librería + `requests` y las traduce a erro
 | `mapbox.errors.ValidationError` | `GeoResolutionBadRequestError` | 400 |
 | `requests.exceptions.ConnectionError`, `Timeout` | `GeoResolutionUnavailableError` | 503 |
 | `requests.exceptions.HTTPError` (cualquier status) | `GeoResolutionUnavailableError` | 503 |
-| (faltante) `MAPBOX_API_KEY` | `GeoResolutionMisconfiguredError` | 500 |
+| (faltante) `MAPBOX_API_KEY` | `GeoResolutionMisconfiguredError` | 503 |
 | Response sin `features` | `GeoResolutionNotFoundError` | 404 |
 
 Todos extienden `BaseError` de `core/exceptions/base.py` (mismo handler global).
@@ -101,3 +101,5 @@ Hasta entonces, esta página describe lo que hay.
 - `MAPBOX_API_KEY` no está en el `Settings` modelo — se lee directo de `os.getenv` ([mapbox/georeferentiation.py:21](backend/catalog-service/src/app/integrations/georef/mapbox/georeferentiation.py#L21)).
 - El cache de forward geocode (30 días) vive en el UC, no en el adapter ni en el cliente ([resolve_neighborhood.py:56-87](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_neighborhood.py#L56-L87)).
 - Esta integración está marcada como **deprecada** post-refactor de `/geo-resolution` (ver [[adr-mapbox-frontend-only]]).
+- El port/adapter de geocoding se movieron a subcarpetas propias en la reorganización de `geo_resolution`: `ports/geocoding/gateway.py` y `adapters/geocoding/mapbox.py` (antes `ports/geocoding_gateway.py` y `adapters/geocoding.py`).
+- La ausencia de `MAPBOX_API_KEY` mapea a HTTP **503** (no 500) vía `GeoResolutionMisconfiguredError` ([exception_handlers.py:15](backend/catalog-service/src/app/api/handlers/exception_handlers.py#L15)).

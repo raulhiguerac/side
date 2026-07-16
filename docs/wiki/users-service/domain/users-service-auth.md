@@ -1,7 +1,7 @@
 ---
 title: Dominio auth — users-service
 status: draft
-last-verified: 2026-05-28
+last-verified: 2026-07-15
 owners: [users-service]
 related:
   - "[[users-service]]"

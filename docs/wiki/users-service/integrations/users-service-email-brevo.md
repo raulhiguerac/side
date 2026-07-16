@@ -1,7 +1,7 @@
 ---
 title: Integración users → Brevo (email transaccional)
 status: draft
-last-verified: 2026-05-28
+last-verified: 2026-07-15
 owners: [users-service]
 related:
   - "[[users-service]]"

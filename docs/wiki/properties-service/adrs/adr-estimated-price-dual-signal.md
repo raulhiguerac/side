@@ -1,7 +1,7 @@
 ---
 title: ADR-0003 — Precio estimado dual (admin vs ML) en columnas separadas
 status: stable
-last-verified: 2026-05-28
+last-verified: 2026-07-15
 owners: [properties-service]
 related:
   - "[[properties-service-admin]]"
