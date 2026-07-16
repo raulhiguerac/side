@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-brand-bg px-[5%] sm:px-[8%] lg:px-[10%] pt-6 pb-12">
+  <PageContainer class="bg-brand-bg pt-6 pb-12">
     <!-- Hero card -->
     <div
       class="w-full min-h-[70vh] rounded-3xl overflow-hidden shadow-2xl bg-brand-dark flex flex-col md:flex-row"
@@ -269,13 +269,14 @@
         </router-link>
       </div>
     </div>
-  </div>
+  </PageContainer>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
 import { Carousel, Slide } from "vue3-carousel";
 import "vue3-carousel/dist/carousel.css";
+import PageContainer from "@/components/shared/PageContainer.vue";
 
 const currentSlide = ref(0);
 

@@ -1,6 +1,6 @@
 <template>
   <div class="bg-brand-bg min-h-screen">
-    <div class="px-[5%] sm:px-[8%] lg:px-[10%] py-12">
+    <PageContainer class="py-12">
       <!-- Header -->
       <div class="mb-8 flex flex-col gap-1">
         <span
@@ -62,7 +62,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </PageContainer>
   </div>
 </template>
 
@@ -72,6 +72,7 @@ import { ref } from "vue";
 import AvmForm from "@/components/avm/AvmForm.vue";
 import AvmResult from "@/components/avm/AvmResult.vue";
 import MapUser from "@/components/map/MapUser.vue";
+import PageContainer from "@/components/shared/PageContainer.vue";
 import type {
   AvmPredictRequest,
   AvmFormPayload,

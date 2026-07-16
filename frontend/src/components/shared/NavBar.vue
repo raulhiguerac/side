@@ -1,8 +1,6 @@
 <template>
   <nav class="bg-brand-dark w-full relative z-50">
-    <div
-      class="flex items-center justify-between py-1 px-[5%] sm:px-[8%] lg:px-[10%]"
-    >
+    <PageContainer class="flex items-center justify-between py-1">
       <!-- Logo -->
       <router-link to="/" class="flex items-center">
         <img src="@/assets/logo.svg" alt="Logo" class="h-8 sm:h-10" />
@@ -11,7 +9,7 @@
       <!-- Componente condicional según autenticación -->
       <NavGuest v-if="!isAuthenticated" />
       <NavUser v-else />
-    </div>
+    </PageContainer>
   </nav>
 </template>
 
@@ -28,6 +26,7 @@
 import { computed } from "vue";
 import NavGuest from "./NavGuest.vue";
 import NavUser from "./NavUser.vue";
+import PageContainer from "./PageContainer.vue";
 import { useAuthStore } from "@/stores/auth";
 
 // 🔌 Conectamos con el store

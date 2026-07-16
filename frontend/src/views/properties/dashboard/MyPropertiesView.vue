@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-brand-bg">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <PageContainer class="py-8">
       <!-- Header -->
       <div
         class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8"
@@ -93,7 +93,7 @@
         @prev="prev"
         @next="next()"
       />
-    </div>
+    </PageContainer>
 
     <DeletePropertyModal
       :property-id="propertyToDelete"
@@ -113,6 +113,7 @@ import EmptyState from "@/components/shared/EmptyState.vue";
 import FilterTabs from "@/components/shared/FilterTabs.vue";
 import PaginationArrows from "@/components/shared/PaginationArrows.vue";
 import DeletePropertyModal from "@/components/properties/dashboard/DeletePropertyModal.vue";
+import PageContainer from "@/components/shared/PageContainer.vue";
 import type { ListingStatus, PropertyCardUI } from "@/types/feed";
 import { usePagination } from "@/composables/shared/usePagination";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";

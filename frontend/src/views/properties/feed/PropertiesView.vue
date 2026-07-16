@@ -1,6 +1,6 @@
 <template>
   <div class="w-full">
-    <div class="px-[5%] sm:px-[8%] lg:px-[10%] pt-8 pb-2">
+    <PageContainer class="pt-8 pb-2">
       <!-- header + toggle -->
       <div class="flex items-start justify-between mb-6">
         <div>
@@ -69,7 +69,7 @@
           </router-link>
         </div>
       </div>
-    </div>
+    </PageContainer>
 
     <router-view />
   </div>
@@ -79,6 +79,7 @@
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import PageContainer from "@/components/shared/PageContainer.vue";
 
 const route = useRoute();
 const { isAuthenticated } = useAuthStore();

@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full px-[5%] sm:px-[8%] lg:px-[10%] pb-8">
+  <PageContainer class="w-full pb-8">
     <div class="flex flex-col lg:flex-row gap-6 items-start">
       <!-- sidebar filters — hidden on mobile, shown on lg+ -->
       <aside
@@ -47,7 +47,7 @@
         />
       </div>
     </div>
-  </div>
+  </PageContainer>
 </template>
 
 <script lang="ts" setup>
@@ -55,6 +55,7 @@ import { onMounted } from "vue";
 import router from "@/router";
 import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
 import PaginationArrows from "@/components/shared/PaginationArrows.vue";
+import PageContainer from "@/components/shared/PageContainer.vue";
 import { useFeed } from "@/composables/feed/useFeed";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import type {

@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full px-[5%] sm:px-[8%] lg:px-[10%] py-8">
+  <PageContainer class="w-full py-8">
     <!-- Profile header -->
     <div
       class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 bg-white border border-brand-divider rounded-2xl p-5"
@@ -71,7 +71,7 @@
       @prev="prev"
       @next="next(fetchNextPage)"
     />
-  </div>
+  </PageContainer>
 </template>
 
 <script setup lang="ts">
@@ -82,6 +82,7 @@ import { BadgeCheck, MessageCircle, MessageSquare, Phone } from "@lucide/vue";
 
 import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
 import PaginationArrows from "@/components/shared/PaginationArrows.vue";
+import PageContainer from "@/components/shared/PageContainer.vue";
 import { fetchUserListings } from "@/composables/users/useProfileListings";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import { usePagination } from "@/composables/shared/usePagination";

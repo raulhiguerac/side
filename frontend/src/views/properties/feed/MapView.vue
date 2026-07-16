@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-[80vh] min-h-[360px] px-[5%] sm:px-[8%] lg:px-[10%] gap-4">
+  <PageContainer class="flex h-[80vh] min-h-[360px] gap-4">
     <!-- lista lado izquierdo -->
     <div class="w-1/2 flex flex-col gap-3 overflow-hidden">
       <div
@@ -40,7 +40,7 @@
         @bbox="onBbox"
       />
     </div>
-  </div>
+  </PageContainer>
 </template>
 
 <script lang="ts" setup>
@@ -48,6 +48,7 @@ import { ref, computed, onMounted } from "vue";
 import MapUser from "@/components/map/MapUser.vue";
 import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
 import PaginationArrows from "@/components/shared/PaginationArrows.vue";
+import PageContainer from "@/components/shared/PageContainer.vue";
 import { useFeedMap } from "@/composables/feed/useFeedMap";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import { useUserStore } from "@/stores/user";

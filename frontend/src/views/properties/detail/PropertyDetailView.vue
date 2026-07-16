@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full px-[8%] sm:px-[12%] lg:px-[18%] py-8 space-y-6">
+  <PageContainer class="w-full py-8 space-y-6">
     <!-- Loading skeleton -->
     <div v-if="loading" class="animate-pulse space-y-4">
       <div class="h-[400px] bg-brand-divider rounded-2xl" />
@@ -40,7 +40,7 @@
     <div v-else class="text-brand-muted text-center py-16">
       Propiedad no encontrada.
     </div>
-  </div>
+  </PageContainer>
 </template>
 
 <script setup lang="ts">
@@ -53,6 +53,7 @@ import propertiesApi from "@/api/propertiesApi";
 import PropertyPhotoGrid from "@/components/properties/photos/PropertyPhotoGrid.vue";
 import PropertyOverview from "@/components/properties/detail/PropertyOverview.vue";
 import NearbyPlaces from "@/components/properties/detail/NearbyPlaces.vue";
+import PageContainer from "@/components/shared/PageContainer.vue";
 
 const route = useRoute();
 const property = ref<PropertyDetail | null>(null);
