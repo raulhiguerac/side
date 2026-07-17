@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna de users-service
 status: draft
-last-verified: 2026-07-15
+last-verified: 2026-07-16
 owners: [users-service]
 related:
   - "[[architecture]]"
@@ -10,7 +10,7 @@ related:
   - "[[users-service-user]]"
   - "[[users-service-keycloak]]"
   - "[[users-service-kc-compensation]]"
-sources: [../../sources/users-service/2026-05-28-foundational-exploration.md]
+sources: [../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-07-16-jwt-roles-is-admin.md]
 ---
 
 ## TL;DR
@@ -35,7 +35,7 @@ src/app/
 │   ├── middleware/correlation_id.py
 │   └── routes/{account,user,onboarding,health}.py
 ├── core/
-│   ├── config/settings.py          # FRONT_BASE_URL, TTLs
+│   ├── config/settings.py          # FRONT_BASE_URL, TTLs, ADMIN_ROLE
 │   ├── exceptions/                 # base, auth, account, user, identity_provider, email, storage, cache, validation
 │   ├── files/{policies,validators}.py  # validación de uploads
 │   ├── scheduler.py                # APScheduler lifespan → worker
@@ -100,7 +100,7 @@ Cuenta (get/deactivate/reactivate), perfil (get/update/foto), onboarding (4 paso
 - **Sesión**: `get_current_principal` lee la cookie `access_token`, valida el JWT contra el JWKS de Keycloak (`PyJWKClient`), cachea el `Principal` en `request.state`. `refresh_token` también va en cookie.
 - **Cookies**: `api/http/cookies.py` setea/borra ambas en login/refresh/logout/change-password.
 - **Action tokens**: reset-password-confirm y reactivation-confirm reciben el token vía **Bearer header** (`HTTPBearer`), no cookie — son one-shot, no sesiones.
-- A diferencia de properties/catalog, el `Principal` lleva `scope` (de `claims.scope`), no `roles`.
+- El `Principal` lleva tanto `scope` (de `claims.scope`) como `roles` (de `claims.realm_access.roles`), igual que en properties/catalog. `require_admin`-equivalente vía `settings.ADMIN_ROLE in principal.roles`, consumido hoy solo por `GetCurrentAccountUseCase` para poblar `is_admin` en `CurrentUserOut` — ver [[users-service-user]].
 
 ## Worker de compensación
 
@@ -115,7 +115,8 @@ Jerarquía amplia en `core/exceptions/`: `base`, `auth`, `account`, `user`, `ide
 - `account_id` de `accounts` es el UUID generado por Keycloak (se usa como PK) ([register_account.py:77-84](backend/users-service/src/app/services/auth/use_cases/register_account.py#L77-L84)).
 - Hay 9 tablas: accounts, user_profile, company_profile, user_consents, onboarding_completions, user_interest, user_neighborhood_interest, user_property_type_interest, kc_compensation_tasks ([models/](backend/users-service/src/app/models)).
 - `user_neighborhood_interest.interest_rank` está acotado a 1-5 por `CheckConstraint` ([interests.py:66](backend/users-service/src/app/models/interests.py#L66)).
-- El `Principal` lleva `scope` extraído de `claims.scope`, no roles ([auth.py:94-102](backend/users-service/src/app/api/deps/auth.py#L94-L102)).
+- El `Principal` lleva `scope` y `roles` extraídos de `claims.scope`/`claims.realm_access.roles` ([auth.py:94-102](backend/users-service/src/app/api/deps/auth.py#L94-L102)).
+- `ADMIN_ROLE` (default `"admin"`) vive en `core/config/settings.py`, mismo nombre y default que en `catalog-service`/`properties-service`.
 - Hay dos clientes Keycloak: `KeycloakAdminClient` (admin secret) y `KeycloakAuthClient` (auth client secret) ([admin_client.py:18-46](backend/users-service/src/app/integrations/identity_provider/keycloak/admin_client.py#L18-L46), [auth_client.py:15-43](backend/users-service/src/app/integrations/identity_provider/keycloak/auth_client.py#L15-L43)).
 - El scheduler se inicia en el lifespan de la app y se apaga al cerrar ([scheduler.py:11-33](backend/users-service/src/app/core/scheduler.py#L11-L33)).
 - Hay 6 migraciones Alembic y 40 archivos de test al 2026-05-28 ([migrations/versions/](backend/users-service/src/app/migrations/versions), [tests/](backend/users-service/tests)).

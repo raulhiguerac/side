@@ -6,6 +6,7 @@ import { settingsRoutes } from "./routes/settings";
 import { propertiesRoutes } from "./routes/properties";
 import { analyticsRoutes } from "./routes/analytics";
 import { devRoutes } from "./routes/dev";
+import { adminRoutes } from "./routes/admin";
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -16,6 +17,7 @@ const router = createRouter({
     ...propertiesRoutes,
     ...analyticsRoutes,
     ...devRoutes,
+    ...adminRoutes,
   ],
 });
 
@@ -23,6 +25,7 @@ router.beforeEach(async (to) => {
   const authStore = useAuthStore();
 
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+  const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin);
   const isGuestRoute = to.matched.some((record) => record.meta.isLogged);
 
   if (isGuestRoute) {
@@ -40,6 +43,20 @@ router.beforeEach(async (to) => {
 
   if (requiresAuth && !authStore.isAuthenticated) {
     return { name: "login" };
+  }
+
+  if (requiresAdmin) {
+    if (!authStore.accountId) {
+      try {
+        await authStore.fillUserData();
+      } catch (e) {
+        console.error("🚫 Error verificando rol de administrador");
+      }
+    }
+
+    if (!authStore.isAdmin) {
+      return { name: "home" };
+    }
   }
 });
 

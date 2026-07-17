@@ -1,7 +1,7 @@
 ---
 title: Onboarding flow (frontend)
 status: stable
-last-verified: 2026-07-13
+last-verified: 2026-07-16
 owners: [frontend, users-service]
 related:
   - "[[frontend]]"
@@ -10,34 +10,42 @@ related:
 sources:
   - docs/sources/frontend/2026-05-21-foundational-qa.md
   - docs/sources/frontend/2026-05-26-onboarding-wiring.md
+  - docs/sources/frontend/2026-07-16-auth-user-store-consolidation.md
 ---
 
 ## TL;DR
 
-Modal-based wizard de 4 pasos que dispara automáticamente cuando el usuario autenticado entra a la app y no completó (ni dismisseó) el onboarding. Estado persistido server-side (`users.onboarding_step`) y client-side (`sessionStorage` para el dismiss). Los 4 pasos están completamente conectados end-to-end: frontend ↔ users-service ↔ catalog-service.
+Modal-based wizard de 4 pasos que dispara automáticamente cuando el usuario autenticado entra a la app y no completó (ni dismisseó) el onboarding. Estado persistido server-side (`accounts.onboarding_step`, expuesto en `CurrentUserOut`) y client-side (`sessionStorage`, scoped por cuenta, para el dismiss). Los 4 pasos están completamente conectados end-to-end: frontend ↔ users-service ↔ catalog-service.
 
 ## Trigger
 
 Vive en [`App.vue`](frontend/src/App.vue) con un `watch` sobre `authStore.isAuthenticated`:
 
 ```ts
+onMounted(async () => {
+  await authStore.checkAuth();
+});
+
 watch(
   () => authStore.isAuthenticated,
   async (isLogged) => {
     if (!isLogged) return;
-    await userStore.checkInterests();
-    const manualCheck =
-      sessionStorage.getItem("onboarding_dismissed") === "true";
-    if (!manualCheck) startFlow();
+    try {
+      await authStore.fillUserData();
+      await userStore.checkInterests();
+      startFlow();
+    } catch (e) {
+      console.error("Error al inicializar la sesión", e);
+    }
   },
   { immediate: true }
 );
 ```
 
-También hay un `onMounted` separado que llama `authStore.checkAuth()` y, si ya está autenticado, `userStore.checkInterests()` — cubre el caso de refresh de página con sesión ya activa (el `watch` con `immediate: true` no dispara si `isAuthenticated` nunca cambia de valor).
+`onMounted` solo dispara `checkAuth()` — todo lo que depende de estar autenticado (`fillUserData`, `checkInterests`, `startFlow`) vive únicamente en el `watch`, que reacciona a cualquier cambio de `isAuthenticated` sin importar qué código lo disparó (boot inicial vía `immediate: true`, o un `login()`/`register()` posterior sin recargar la página). Antes había una llamada duplicada a `checkInterests()` en ambos lados — se eliminó (2026-07-16).
 
-- Dispara `startFlow()` **una vez** post-login si el usuario no dismisseó el modal en esta sesión.
-- `startFlow()` viene del composable [`useOnboarding`](frontend/src/composables/onboarding/useOnboarding.ts).
+- `fillUserData()` (en `authStore`) es la que trae `onboarding_step` desde el back — sin ella, `startFlow()` no tiene de dónde leer el step.
+- `startFlow()` viene del composable [`useOnboarding`](frontend/src/composables/onboarding/useOnboarding.ts) y ya no es async ni hace fetch propio — solo lee `authStore.onboardingStep`, ya poblado por `fillUserData()`.
 
 ## State machine — 4 pasos
 
@@ -68,9 +76,8 @@ También hay un `onMounted` separado que llama `authStore.checkAuth()` y, si ya 
 ```
 
 El step actual se determina así:
-- Si `userDismissedModal === true` → `done` (no se abre modal en esta sesión).
-- Si `hasCheckedOnboarding === true` → usa el step en memoria.
-- Si no, GET `/v1/users/me/` → `data.onboarding_step ?? "intent"`.
+- Si `userStore.isOnboardingDismissed()` (lee `sessionStorage` scoped por `accountId`) → no se abre el modal.
+- Si no, usa `authStore.onboardingStep` — ya poblado por `fillUserData()` (`GET /v1/users/me/` → `data.onboarding_step ?? "intent"`) antes de que `startFlow()` corra.
 
 ## Componentes (4 selectors)
 
@@ -95,11 +102,11 @@ El step actual se determina así:
 
 | Estado | Dónde vive | Para qué |
 |---|---|---|
-| `onboarding_step` | server-side, `users.users` table en users-service | Source-of-truth del progreso; sobrevive logout/relog |
-| `userDismissedModal` | `sessionStorage["onboarding_dismissed"]` | Si el usuario dismisseó el modal en esta sesión, no re-aparece hasta logout o nueva ventana |
+| `onboarding_step` | server-side, `accounts.onboarding_step` en users-service | Source-of-truth del progreso; sobrevive logout/relog |
+| dismissal del modal | `sessionStorage["onboarding_dismissed:{accountId}"]` | Si el usuario dismisseó el modal sin terminarlo, no re-aparece **mientras el browser siga abierto** — sobrevive logout/login en el mismo tab/ventana |
 | `userInterests.localities` | Pinia `useUserStore` (memoria del tab) | Cache de locality UUIDs — evita re-fetch durante la sesión |
 
-`logoutReset()` borra el sessionStorage al cerrar sesión — siguiente login, si quedó incompleto, vuelve a aparecer.
+**Cambio de comportamiento (2026-07-16):** el dismissal **ya no se borra en logout** — antes sí, lo cual causaba que un usuario que cerraba el modal, hacía logout y volvía a entrar al rato en el mismo browser viera el modal de nuevo, aunque hubiese dicho que no. La semántica correcta es "no me vuelvas a preguntar hoy, pero si cerrás el browser te vuelvo a preguntar por si cambiaste de opinión" — eso es exactamente lo que da `sessionStorage` sin borrarlo nosotros. La key está parametrizada por `accountId` (`STORAGE_KEYS.ONBOARDING_DISMISSED(accountId)`) para que dos cuentas distintas en el mismo browser no hereden el dismissal una de la otra. Si la cuenta **sí completó** el onboarding (`onboarding_step === "done"` en el back), el modal no se muestra sin importar el dismissal — la finalización real es la única fuente de verdad que persiste entre logins, no el dismiss del cliente.
 
 ## Endpoints backend involucrados
 
@@ -134,11 +141,12 @@ IntentSelector (componente propio)
 LocalitySelector → saveCity(localities)
        │ POST /v1/onboarding/city { locality_ids }
        │ userStore.userInterests.localities = [uuid, ...]
+       │ authStore.onboardingStep = "neighborhood"
        │ activeComponent = NeighborhoodSelector
        ▼
 NeighborhoodSelector → saveNeighborhoods(payload)
        │ POST /v1/onboarding/neighborhood
-       │ userStore.onboardingStep = "property_type"
+       │ authStore.onboardingStep = "property_type"
        │ activeComponent = PropertyTypeSelector
        ▼
 PropertyTypeSelector → savePropertyTypes(selections)
@@ -166,12 +174,12 @@ PropertyTypeSelector → savePropertyTypes(selections)
 
 - **catalog-service down** al abrir el modal: `LocalitySelector` no carga opciones → user no puede avanzar. Sin retry visible al user hoy.
 - **users-service down** al guardar: las funciones `save*` solo loggean `console.error` y dejan el modal abierto. No hay toast/error UI hoy — gap.
-- **401 en cualquier endpoint**: `userStore` llama `authStore.logout()` automáticamente. El modal queda huérfano hasta el próximo login.
-- **Doble apertura del modal**: protegido por `hasCheckedOnboarding` (no se re-llama a `/users/me/` en cada navegación), pero si dos tabs se abren simultáneos, ambos disparan el flujo (sessionStorage es per-tab).
+- **401 en cualquier endpoint**: ya no lo maneja cada store manualmente — el interceptor centralizado de `usersApi` (ver [[frontend-architecture]]) intenta un refresh silencioso y, si falla, hace logout real + redirect. El modal queda huérfano hasta el próximo login.
+- **Doble apertura del modal**: si dos tabs se abren simultáneos, ambos disparan el flujo — `sessionStorage` es per-tab (una pestaña nueva, no duplicada, arranca sin el dismissal aunque el browser siga abierto).
 
 ## Boundaries — lo que el flujo **NO** hace
 
-- **No fuerza completion**: el user puede dismissear el modal (✗ esquina superior). `dismissModal()` setea `userDismissedModal = true`, ocultando el modal hasta logout/nueva sesión.
+- **No fuerza completion**: el user puede dismissear el modal (✗ esquina superior). `dismissModal()` escribe la key de `sessionStorage` scoped por cuenta, ocultando el modal mientras el browser siga abierto (no hasta logout — ver sección Persistencia).
 - **No valida los IDs** contra catalog antes del POST — eso vive en users-service.
 - **No re-popula** el feed después de guardar — los componentes de feed lo harán cuando se implementen.
 
@@ -183,11 +191,11 @@ PropertyTypeSelector → savePropertyTypes(selections)
 
 ## Claims
 
-- El `watch` sobre `isAuthenticated` con `immediate: true` dispara `startFlow()` automáticamente post-login; el mismo handler también llama `userStore.checkInterests()` antes de decidir si abre el modal ([App.vue](frontend/src/App.vue)).
+- El `watch` sobre `isAuthenticated` con `immediate: true` dispara `startFlow()` automáticamente post-login; el mismo handler llama `authStore.fillUserData()` y `userStore.checkInterests()` antes, envuelto en un try/catch ([App.vue](frontend/src/App.vue)).
 - `isModalOpen` y `activeComponent` son **estado a nivel de módulo** (`ref`/`shallowRef` declarados fuera de la función `useOnboarding()`, no dentro) — singleton entre todos los componentes que llamen al composable, mismo patrón que `useCities` ([composables/onboarding/useOnboarding.ts](frontend/src/composables/onboarding/useOnboarding.ts)).
 - `STEP_MAP` define los 4 selectors y mapea exactamente a los strings del campo `onboarding_step` del backend ([composables/onboarding/useOnboarding.ts](frontend/src/composables/onboarding/useOnboarding.ts)).
-- El step inicial por default es `"intent"` si el backend no devuelve uno ([stores/user.ts](frontend/src/stores/user.ts)).
-- `dismissModal()` setea `STORAGE_KEYS.ONBOARDING_DISMISSED = "true"` en `sessionStorage` (per-tab, no `localStorage`) y fuerza `onboardingStep = "done"` ([stores/user.ts](frontend/src/stores/user.ts)).
+- El step inicial por default es `"intent"` si el backend no devuelve uno ([stores/auth.ts](frontend/src/stores/auth.ts)).
+- `dismissModal()` setea `STORAGE_KEYS.ONBOARDING_DISMISSED(accountId) = "true"` en `sessionStorage` (per-tab y per-cuenta, no `localStorage`) — ya no toca `onboardingStep` ([stores/user.ts](frontend/src/stores/user.ts)).
 - `IntentSelector` llama `POST /v1/onboarding/intent` directamente y emite el evento `saved`; `App.vue` lo escucha via el prop dinámico `onSaved: advanceToCity` que solo se pasa cuando `activeComponent === IntentSelector` ([components/onboarding/IntentSelector.vue](frontend/src/components/onboarding/IntentSelector.vue), [App.vue](frontend/src/App.vue)).
 - `saveCity` envía `{ locality_ids: string[] }` y guarda solo UUIDs en `userStore.userInterests.localities` ([composables/onboarding/useOnboarding.ts](frontend/src/composables/onboarding/useOnboarding.ts)).
 - `savePropertyTypes` llama `POST /v1/onboarding/property-type` en paralelo, una vez por ciudad, via `Promise.all` ([composables/onboarding/useOnboarding.ts](frontend/src/composables/onboarding/useOnboarding.ts)).

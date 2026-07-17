@@ -81,21 +81,18 @@ const navigationLinks = [
 
 onMounted(async () => {
   await authStore.checkAuth();
-  if (authStore.isAuthenticated) {
-    await userStore.checkInterests();
-  }
 });
 
 watch(
   () => authStore.isAuthenticated,
   async (isLogged) => {
     if (!isLogged) return;
-    await userStore.checkInterests();
-    const manualCheck =
-      sessionStorage.getItem("onboarding_dismissed") === "true";
-
-    if (!manualCheck) {
+    try {
+      await authStore.fillUserData();
+      await userStore.checkInterests();
       startFlow();
+    } catch (e) {
+      console.error("Error al inicializar la sesión", e);
     }
   },
   { immediate: true }

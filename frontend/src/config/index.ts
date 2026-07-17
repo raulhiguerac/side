@@ -15,5 +15,5 @@ export const STORAGE_KEYS = {
   COUNTRIES: "countries",
   CITIES_BY_COUNTRY: (id: string) => `cities:${id}`,
   NEIGHBORHOODS_BY_LOCALITY: (id: string) => `neighborhoods:${id}`, // sessionStorage
-  ONBOARDING_DISMISSED: "onboarding_dismissed",
+  ONBOARDING_DISMISSED: (accountId: string) => `onboarding_dismissed:${accountId}`, // sessionStorage
 };

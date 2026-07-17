@@ -1,7 +1,7 @@
 ---
 title: Dominio user — users-service
 status: draft
-last-verified: 2026-06-23
+last-verified: 2026-07-16
 owners: [users-service]
 related:
   - "[[users-service]]"
@@ -9,7 +9,7 @@ related:
   - "[[frontend-onboarding-flow]]"
   - "[[adr-soft-deactivation]]"
   - "[[properties-service-search]]"
-sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/users-service/2026-06-23-public-profile-endpoint.md]
+sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/users-service/2026-06-23-public-profile-endpoint.md, ../../../sources/users-service/2026-07-16-jwt-roles-is-admin.md]
 ---
 
 ## TL;DR
@@ -20,7 +20,7 @@ El dominio de **perfil y ciclo de cuenta**: leer/editar el perfil propio, subir 
 
 | UC | Archivo | Qué hace |
 |---|---|---|
-| `GetCurrentAccountUseCase` | `use_cases/account/get_current_account.py` | Datos de cuenta del usuario actual. |
+| `GetCurrentAccountUseCase` | `use_cases/account/get_current_account.py` | Datos de cuenta del usuario actual, incluyendo `is_admin`. |
 | `GetCurrentProfileUseCase` | `use_cases/profile/get_current_profile.py` | Perfil propio (cache-aside, `principal.sub`). |
 | `GetProfileByIdUseCase` | `use_cases/profile/get_profile_by_id.py` | Perfil público de **otra** cuenta, por `account_id` (sin auth). |
 | `UpdateCurrentProfileUseCase` | `use_cases/profile/update_current_profile.py` | Patch de perfil; invalida cache. |
@@ -37,6 +37,12 @@ El dominio de **perfil y ciclo de cuenta**: leer/editar el perfil propio, subir 
 ## Perfil — persona vs empresa
 
 `accounts.account_type` define si el perfil vive en `user_profile` (persona) o `company_profile` (organización). Los readers (`CurrentProfileReader`, `CurrentAccountReader`) resuelven la tabla correcta según el tipo. El orquestador `ProfileApplicationService` expone `get_profile` (permite cuentas inactivas: reactivación/admin) y `get_active_profile` (solo activas, usado tanto por `/me/profile` como por la vista pública), ambos con cache-aside.
+
+## `is_admin` en `CurrentUserOut` (`GET /v1/users/me/`)
+
+`GetCurrentAccountUseCase` computa `is_admin` **después** de leer el `CurrentUserOut` cacheado (`CurrentAccountReader.get_active`), mergeándolo vía `model_copy(update={"is_admin": settings.ADMIN_ROLE in principal.roles})`. El objeto que se cachea es puro-DB (`is_admin` nunca viaja al cache) — se recalcula fresco en cada request contra el `principal.roles` del JWT vigente. Bundleado en `/me/` en vez de un endpoint dedicado (patrón "session bootstrap", igual que `request.user` en Django o `current_user` en Rails).
+
+**Guardrail**: `is_admin` NO vive en `CurrentUserProfileOut` (`/me/profile`) — ese schema y su orquestador (`get_active_profile`) son los mismos que usa la ruta pública `GET /v1/users/profiles/{account_id}` (ver abajo). Ponerlo ahí filtraría si una cuenta de un tercero es admin.
 
 ## Perfil público (`GET /v1/users/profiles/{account_id}`)
 
@@ -78,3 +84,5 @@ Estos intereses alimentan las `FeedPreferences` del feed de [[properties-service
 - La deactivación es soft: `is_active=False` + metadata, sin borrar el usuario de Keycloak ([deactivate_current_account.py:27-30](backend/users-service/src/app/services/user/use_cases/account/deactivate_current_account.py#L27-L30)).
 - El interés por ciudad es único por `(account_id, city_id)` ([interests.py:30-36](backend/users-service/src/app/models/interests.py#L30-L36)).
 - La deactivación dispara un logout best-effort que nunca bloquea la operación ([user.py:177-183](backend/users-service/src/app/api/routes/user.py#L177-L183)).
+- `CurrentUserOut.is_admin` tiene default `False` y se recalcula post-cache en `GetCurrentAccountUseCase.execute` vía `model_copy`, nunca se cachea el flag en sí ([get_current_account.py](backend/users-service/src/app/services/user/use_cases/account/get_current_account.py)).
+- `CurrentUserProfileOut` (`/me/profile` y el perfil público) no incluye `is_admin` — solo `CurrentUserOut` (`/me/`) lo expone.

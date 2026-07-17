@@ -39,6 +39,7 @@ class CurrentUserOut(StrictBase):
     account_type: Literal["person", "organization"]
     onboarding_step: OnboardingStep
     is_active: bool
+    is_admin: bool = False
 
 
 class UserInterestsResponse(StrictBase):

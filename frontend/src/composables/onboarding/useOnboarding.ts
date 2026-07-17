@@ -1,7 +1,7 @@
 import { ref, shallowRef, type Component } from "vue";
-import { STORAGE_KEYS } from "@/config";
 import usersApi from "@/api/usersApi";
 import { useUserStore } from "@/stores/user";
+import { useAuthStore } from "@/stores/auth";
 import IntentSelector from "@/components/onboarding/IntentSelector.vue";
 import LocalitySelector from "@/components/onboarding/LocalitySelector.vue";
 import NeighborhoodSelector from "@/components/onboarding/NeighborhoodSelector.vue";
@@ -19,24 +19,18 @@ const activeComponent = shallowRef<Component | null>(null);
 
 export function useOnboarding() {
   const userStore = useUserStore();
+  const authStore = useAuthStore();
 
-  const startFlow = async () => {
-    if (
-      sessionStorage.getItem(STORAGE_KEYS.ONBOARDING_DISMISSED) === "true" ||
-      userStore.userDismissedModal
-    ) {
+  const startFlow = () => {
+    if (userStore.isOnboardingDismissed()) {
       return;
     }
 
-    try {
-      const step = await userStore.checkOnboardingStep();
+    const step = authStore.onboardingStep;
 
-      if (step != "done" && STEP_MAP[step]) {
-        activeComponent.value = STEP_MAP[step];
-        isModalOpen.value = true;
-      }
-    } catch (e) {
-      console.error("Onboarding error", e);
+    if (step != "done" && STEP_MAP[step]) {
+      activeComponent.value = STEP_MAP[step];
+      isModalOpen.value = true;
     }
   };
 
@@ -46,7 +40,7 @@ export function useOnboarding() {
   };
 
   const advanceToCity = () => {
-    userStore.onboardingStep = "city";
+    authStore.onboardingStep = "city";
     activeComponent.value = STEP_MAP["city"];
   };
 
@@ -56,7 +50,7 @@ export function useOnboarding() {
         locality_ids: localities.map((l) => l.id),
       });
       userStore.userInterests.localities = localities.map((l) => l.id);
-      userStore.onboardingStep = "neighborhood";
+      authStore.onboardingStep = "neighborhood";
       activeComponent.value = STEP_MAP["neighborhood"];
     } catch (e) {
       console.error("Onboarding saveCity error", e);
@@ -68,7 +62,7 @@ export function useOnboarding() {
   ) => {
     try {
       await usersApi.post("/v1/onboarding/neighborhood", { localities });
-      userStore.onboardingStep = "property_type";
+      authStore.onboardingStep = "property_type";
       activeComponent.value = STEP_MAP["property_type"];
     } catch (e) {
       console.error("Onboarding saveNeighborhoods error", e);

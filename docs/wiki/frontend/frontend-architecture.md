@@ -1,12 +1,13 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-07-15
+last-verified: 2026-07-16
 owners: [frontend]
 related:
   - "[[architecture]]"
   - "[[frontend]]"
   - "[[frontend-onboarding-flow]]"
+  - "[[frontend-admin-panel]]"
   - "[[frontend-map-component]]"
   - "[[frontend-poi-reachable]]"
   - "[[frontend-property-create-form]]"
@@ -31,6 +32,8 @@ sources:
   - ../../sources/frontend/2026-07-13-view-decoupling-composables-and-cards.md
   - ../../sources/frontend/2026-07-13-decimal-serialized-as-string.md
   - ../../sources/frontend/2026-07-15-property-edit-photos-upload-delete.md
+  - ../../sources/frontend/2026-07-16-auth-user-store-consolidation.md
+  - ../../sources/frontend/2026-07-16-admin-panel-nav-and-hub.md
 ---
 
 ## TL;DR
@@ -50,13 +53,18 @@ frontend/
 │   ├── config/
 │   │   └── index.ts              # API.USERS_BASE_URL, CATALOG_BASE_URL, AVM_BASE_URL (port 8002), STORAGE_KEYS
 │   ├── router/
-│   │   ├── index.ts              # instancia router + beforeEach guard; importa 5 módulos
+│   │   ├── index.ts              # instancia router + beforeEach guard; importa 6 módulos
 │   │   └── routes/
 │   │       ├── public.ts         # /, /about, /users/:userId
 │   │       ├── auth.ts           # /login, /register, /forgot-password
 │   │       ├── settings.ts       # /settings + children
 │   │       ├── properties.ts     # /properties, /listing/:id, /feed + children
-│   │       └── analytics.ts      # /avm
+│   │       ├── analytics.ts      # /avm
+│   │       └── admin/            # /admin, /admin/properties, /admin/catalog — ver [[frontend-admin-panel]]
+│   │           ├── home.ts
+│   │           ├── properties.ts
+│   │           ├── catalog.ts
+│   │           └── index.ts      # barrel: adminRoutes
 │   ├── stores/                   # Pinia
 │   │   ├── auth.ts
 │   │   └── user.ts
@@ -95,7 +103,8 @@ frontend/
 │   │   │   ├── dashboard/MyPropertiesView
 │   │   │   ├── detail/PropertyDetailView   # /listing/:id
 │   │   │   └── edit/EditPropertyView       # /properties/:id/edit — ver [[frontend-property-edit-form]]
-│   │   └── dev/{DevPlaygroundView, CreatePropertyDevView}  # sin auth, dev only
+│   │   ├── dev/{DevPlaygroundView, CreatePropertyDevView}  # sin auth, dev only
+│   │   └── admin/{AdminHomeView, properties/AdminPropertiesView, catalog/AdminCatalogView}  # requiresAdmin — ver [[frontend-admin-panel]]
 │   └── components/
 │       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState, PrimaryButton}
 │       ├── onboarding/{IntentSelector, LocalitySelector, NeighborhoodSelector, PropertyTypeSelector}
@@ -107,7 +116,8 @@ frontend/
 │       │   ├── edit/{PropertyHeaderCard, PropertyPhotosCard, PropertyInfoCard, PropertyEditForm, PropertyEditActions, UploadPropertyImagesModal, DeletePropertyImagesModal}
 │       │   └── feed/FeedFilters
 │       ├── settings/SettingsSidebar
-│       └── map/MapUser
+│       ├── map/MapUser
+│       └── admin/properties/BulkUploadPropertiesModal  # ver [[frontend-admin-panel]]
 ├── package.json
 ├── vue.config.js                 # webpack tweaks (Vue CLI)
 ├── tailwind.config.js
@@ -137,42 +147,44 @@ Notas:
 
 ### `useAuthStore` ([stores/auth.ts](frontend/src/stores/auth.ts))
 
+Única fuente de verdad de identidad/sesión/rol — desde 2026-07-16 absorbió los campos de cuenta que antes vivían en `useUserStore`.
+
 State:
 ```ts
-user: User | null
+user: AuthUser | null
 isAuthenticated: boolean
 isLoading: boolean
 _authChecked: boolean    // guard contra checkAuth duplicado en navegación
+onboardingStep: string   // "intent" | "city" | "neighborhood" | "property_type" | "done"
+isAdmin: boolean
+accountId: string | null
 ```
 
 Actions:
-- `checkAuth(force=false)`: GET `/v1/users/me/profile` con `withCredentials`. Setea `_authChecked` para no re-llamar en cada navegación.
-- `login(email, password)`: POST `/v1/auth/login` → cookie llega del backend → `checkAuth(force=true)`.
-- `register(userData)`: POST `/v1/auth/register` → idem login post-success.
-- `logout()`: POST `/v1/auth/logout` → resetea ambos stores → `router.push("/")`. Marca `_authChecked=true` post-logout para evitar que el guard re-dispare durante la transición.
+- `checkAuth(force=false)`: GET `/v1/users/me/profile` con `axios` puro (no `usersApi`) — **a propósito**: un 401 acá es "no autenticado", resultado normal para cualquier visitante anónimo en cualquier página; si pasara por el interceptor de `usersApi`, intentaría refresh y en caso de fallo dispararía `forceLogout()` (ver interceptor), redirigiendo a Home a cualquier anónimo que cargue la app. Setea `_authChecked` para no re-llamar en cada navegación.
+- `fillUserData()`: GET `/v1/users/me/` (vía `usersApi`, sí pasa por el interceptor) → setea `onboardingStep`, `isAdmin`, `accountId` desde el `CurrentUserOut` del back. Se llama solo **después** de que `checkAuth` confirmó sesión — nunca en el boot anónimo.
+- `login(email, password)` / `register(userData)`: POST vía `usersApi` (excluidos del retry-refresh del interceptor, ver abajo) → `checkAuth(force=true)`.
+- `logout()`: POST `/v1/auth/logout` con `axios` puro (evita que el interceptor intente un refresh solo para destruir la sesión) → resetea `onboardingStep`/`isAdmin`/`accountId`/`user`/`isAuthenticated`, llama `userStore.resetInterests()`, `router.push("/")`.
 
 Getters: `fullName`, `isOrganization`, `userAvatar` (default a `ui-avatars.com`).
 
-> ⚠ URLs hardcoded en `localhost:8000` — no usa el `API.USERS_BASE_URL` del config. Pendiente de centralizar.
-
 ### `useUserStore` ([stores/user.ts](frontend/src/stores/user.ts))
 
-State del onboarding y datos derivados:
+Reducido a **preferencias + estado de UI del onboarding** — ya no tiene nada de identidad/sesión.
+
+State:
 ```ts
-onboardingStep: "intent" | "city" | "neighborhood" | "property_type" | "done"
-hasCheckedOnboarding: boolean
-userDismissedModal: boolean    // hidratado de sessionStorage
 userInterests: { localities, neighborhoods, properties }
 ```
 
 Actions clave:
-- `checkOnboardingStep()`: GET `/v1/users/me/` → setea `onboardingStep` desde `data.onboarding_step`. Si 401 → llama `authStore.logout()`.
-- `checkInterests()`: GET `/v1/users/me/interests` → cachea en store.
+- `checkInterests()`: GET `/v1/users/me/interests` vía `usersApi` → cachea en store.
 - `detectLocation()`: usa **ipapi.co** (third-party) para inferir país por IP. Cachea en `localStorage`.
-- `dismissModal()`: marca onboarding como dismiss en sessionStorage.
-- `logoutReset()`: limpia todo (usado desde `useAuthStore.logout`).
+- `isOnboardingDismissed()`: lee `sessionStorage` con key `STORAGE_KEYS.ONBOARDING_DISMISSED(authStore.accountId)` — scoped por cuenta, no global al browser.
+- `dismissModal()`: escribe esa misma key con `"true"`.
+- `resetInterests()`: limpia `userInterests` — llamado desde `authStore.logout()` para que una cuenta distinta en el mismo tab no herede intereses de la anterior.
 
-> Patrón de manejo de 401: en cada action, si 401 → `authStore.logout()`. Acoplamiento entre stores.
+> El dismissal del onboarding **ya no se borra en logout** (antes sí) — es intencional: "no me vuelvas a preguntar hoy" debe sobrevivir un logout/login en el mismo browser, y solo resetearse si el browser se cierra de verdad (`sessionStorage` nativo). Ver [[frontend-onboarding-flow]].
 
 ## Composables
 
@@ -289,6 +301,9 @@ Funciones puras (no es composable Vue strictly hablando, son helpers que aceptan
 1. Si la ruta es `isLogged: true` (guest-only) y `isAuthenticated` → redirige a `/`.
 2. Si `requiresAuth: true` y `!_authChecked` → `await authStore.checkAuth()`.
 3. Si `requiresAuth && !isAuthenticated` → redirige a `/login`.
+4. Si `requiresAdmin: true` → si `!authStore.accountId` (todavía no corrió `fillUserData`), `await authStore.fillUserData()` primero; si `!authStore.isAdmin` → redirige a `/`.
+
+El paso 4 existe por una race real: `authStore.isAdmin` normalmente solo se llena vía el `watch` de `App.vue` **después** de que el guard ya resolvió la navegación — sin este paso, un admin real entrando por link directo a una ruta `requiresAdmin` sería rebotado a Home. Ver [[frontend-admin-panel]].
 
 Hash history (`createWebHashHistory`) — ver [[adr-hash-history-static-hosting]].
 
@@ -303,7 +318,7 @@ Hash history (`createWebHashHistory`) — ver [[adr-hash-history-static-hosting]
 | `usersApi.ts` | `/api/users` | Sí | Sí |
 | `propertiesApi.ts` | `/api/properties` | Sí | Sí |
 
-`auth.ts` (store Pinia) sigue usando `usersApi` directamente para login/register/logout/checkAuth.
+`auth.ts` (store Pinia) usa `usersApi` para `fillUserData`/`login`/`register`. `checkAuth` y el POST de `logout` usan `axios` puro a propósito (ver sección de stores) — no pasan por el interceptor.
 
 Las baseURLs son rutas relativas (proxy en dev) — ver sección "Webpack devServer proxy".
 
@@ -315,15 +330,20 @@ Las baseURLs son rutas relativas (proxy en dev) — ver sección "Webpack devSer
 response 401
   └─ !error.config → reject inmediato (error sin config = cancelado/red)
   └─ original._retry → reject (evita loop infinito en el retry)
+  └─ url matchea AUTH_ENTRYPOINTS (/auth/login, /auth/register) → reject inmediato
   └─ isRefreshing === true → encolar en failedQueue; resolver/rechazar cuando termine el refresh en curso
   └─ isRefreshing === false →
        original._retry = true
        isRefreshing = true
-       POST /v1/auth/refresh (timeout 3s, withCredentials)
+       POST /v1/auth/refresh (timeout 3s, withCredentials, axios puro — no pasa por este mismo interceptor)
          ├─ éxito → processQueue(null) → retry instance(original)
-         └─ fallo → processQueue(error) → redirectToLogin() → reject
+         └─ fallo → processQueue(error) → forceLogout() → reject
        finally: isRefreshing = false
 ```
+
+**`AUTH_ENTRYPOINTS`** excluye `/auth/login`/`/auth/register` del retry-refresh — un 401 ahí es "credenciales inválidas", no "sesión expirada"; intentar un refresh (que tampoco tiene con qué autenticar) solo enmascararía el error real de login.
+
+**`forceLogout()`** reemplazó al viejo `redirectToLogin()` (`window.location.href` hardcodeado a `/#/login`, hard reload). Ahora hace `const { useAuthStore } = await import("@/stores/auth"); await useAuthStore().logout()` — invalida el refresh token en el back de verdad y limpia el estado de Pinia antes de redirigir, en vez de solo tirar un reload. El `import()` dinámico es deliberado: evita un ciclo de imports estático (`auth.ts → usersApi.ts → interceptors.ts → auth.ts`), ya que `auth.ts` importa `usersApi` para sus propias llamadas.
 
 **`isRefreshing` y `failedQueue` son module-level** (declarados fuera de cualquier función o composable Vue), no instancia-por-componente. Esto es intencional: sobreviven al desmonte/remonte de componentes. Si fueran `ref` dentro de un composable, cada componente tendría su propio flag y podrían dispararse múltiples refresh concurrentes.
 
@@ -359,9 +379,9 @@ Para producción: setear `VUE_APP_USERS_URL`, `VUE_APP_CATALOG_URL`, `VUE_APP_AV
 | Neighborhoods by locality | `sessionStorage` | Por sesión |
 | Neighborhood lookup (`id → name`) | en memoria (`ref`) | Por instancia de `useFeed` — se reconstruye en cada `load()` |
 | User location (IP) | `localStorage` | Permanente hasta clear |
-| `onboarding_dismissed` | `sessionStorage` | Por sesión |
+| `onboarding_dismissed:{accountId}` | `sessionStorage` | Por sesión del browser, scoped por cuenta — **no se borra en logout** (a propósito, ver [[frontend-onboarding-flow]]) |
 
-Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. No hay invalidación explícita — depende del clear del browser.
+Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. `ONBOARDING_DISMISSED` es una función `(accountId) => key`, no un string fijo — mismo patrón que `CITIES_BY_COUNTRY`/`NEIGHBORHOODS_BY_LOCALITY`. No hay invalidación explícita — depende del clear del browser.
 
 ## Components organization
 
@@ -454,13 +474,15 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 
 - `main.ts` registra Pinia, vue-router, vue3-cookies y Vueform — sin axios instance global ([main.ts:15-20](frontend/src/main.ts#L15-L20)).
 - `useAuthStore.checkAuth` envía `withCredentials: true` y usa `_authChecked` para no re-disparar en cada navegación protegida ([stores/auth.ts:73-94](frontend/src/stores/auth.ts#L73-L94)).
-- `useUserStore.checkOnboardingStep` llama `authStore.logout()` si recibe 401 — acoplamiento entre stores para manejar expiración de sesión ([stores/user.ts:42-43](frontend/src/stores/user.ts#L42-L43)).
+- `useAuthStore.fillUserData()` no tiene try/catch propio — un 401 (con refresh fallido) lo maneja el interceptor de `usersApi` centralizadamente; el error que llegue a propagarse lo atrapa el `watch` de `App.vue` ([stores/auth.ts](frontend/src/stores/auth.ts), [App.vue](frontend/src/App.vue)).
 - `composables/Location.ts` cachea countries en `localStorage` y cities/neighborhoods en `sessionStorage` ([composables/Location.ts:7-9](frontend/src/composables/Location.ts#L7-L9), [composables/Location.ts:28-30](frontend/src/composables/Location.ts#L28-L30)).
 - `detectLocation` usa el provider externo `ipapi.co` para inferir país por IP ([stores/user.ts:69](frontend/src/stores/user.ts#L69)).
 - El guard del router llama `checkAuth()` solo si `_authChecked === false` ([router/index.ts:104-110](frontend/src/router/index.ts#L104-L110)).
 - `useOnboarding` mantiene `activeComponent` como `shallowRef<Component | null>` — `shallowRef` porque los componentes Vue son reactivos por sí solos ([composables/useOnboarding.ts:19](frontend/src/composables/useOnboarding.ts#L19)).
 - Hay 4 instancias de axios dedicadas por servicio: `catalogApi` y `avmApi` (sin `withCredentials`, sin interceptor — son APIs públicas); `usersApi` y `propertiesApi` (con `withCredentials: true` y `applyAuthInterceptor`) ([api/](frontend/src/api/)).
-- `applyAuthInterceptor` intercepta 401, refresca token con POST `/v1/auth/refresh` (timeout 3s), reintenta la request original; si el refresh falla, redirige a login ([api/interceptors.ts](frontend/src/api/interceptors.ts)).
+- `applyAuthInterceptor` intercepta 401, refresca token con POST `/v1/auth/refresh` (timeout 3s), reintenta la request original; si el refresh falla, llama `forceLogout()` (logout real vía `authStore`, no un hard redirect) ([api/interceptors.ts](frontend/src/api/interceptors.ts)).
+- `AUTH_ENTRYPOINTS` (`/auth/login`, `/auth/register`) están excluidos del retry-refresh del interceptor — un 401 ahí es credenciales inválidas, no sesión expirada ([api/interceptors.ts](frontend/src/api/interceptors.ts)).
+- `checkAuth()` es la única llamada de `auth.ts` que usa `axios` puro en vez de `usersApi` — un 401 ahí es "no autenticado" (normal para anónimos), y pasarla por el interceptor dispararía `forceLogout()`/redirect para cualquier visitante sin sesión ([stores/auth.ts](frontend/src/stores/auth.ts)).
 - `isRefreshing` y `failedQueue` en `interceptors.ts` son variables de módulo (no Vue ref ni composable) — sobreviven al ciclo de vida de los componentes y garantizan que solo se dispare un refresh concurrente aunque múltiples requests fallen con 401 simultáneamente ([api/interceptors.ts:6-11](frontend/src/api/interceptors.ts#L6-L11)).
 - El guard `!error.config` en el interceptor evita TypeError cuando `error.config` es `undefined` (request cancelada o error de red antes de que axios termine de construirla) ([api/interceptors.ts:39](frontend/src/api/interceptors.ts#L39)).
 - Las baseURLs usan rutas relativas (`/api/*`) en dev — el proxy de `vue.config.js` las reenvía a cada backend dentro del container; en prod se sobreescriben con `VUE_APP_*_URL` ([config/index.ts](frontend/src/config/index.ts), [vue.config.js](frontend/vue.config.js)).

@@ -4,6 +4,7 @@ export interface User {
   account_type: string;
   onboarding_step: string;
   is_active: boolean;
+  is_admin: boolean;
 }
 
 export interface UserLocation {
@@ -19,9 +20,6 @@ export interface UserInterests {
 }
 
 export interface UserState {
-  onboardingStep: string;
-  hasCheckedOnboarding: boolean;
-  userDismissedModal: boolean;
   userInterests: UserInterests;
 }
 
@@ -50,4 +48,19 @@ export interface CurrentUserOrganization {
 
 export interface CurrentUserProfileOut {
   profile: CurrentUserPerson | CurrentUserOrganization;
+}
+
+export interface AuthProfile {
+  first_name: string;
+  last_name: string;
+  phone: string;
+  photo_url?: string;
+  description?: string;
+  intent?: AccountIntent;
+  account_type: "person" | "organization";
+}
+
+export interface AuthUser extends AuthProfile {
+  id?: string;
+  email?: string;
 }

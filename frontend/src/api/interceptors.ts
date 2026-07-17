@@ -25,8 +25,11 @@ async function refreshTokens() {
   });
 }
 
-function redirectToLogin() {
-  window.location.href = "/#/login";
+const AUTH_ENTRYPOINTS = ["/auth/login", "/auth/register"];
+
+async function forceLogout() {
+  const { useAuthStore } = await import("@/stores/auth");
+  await useAuthStore().logout();
 }
 
 export function applyAuthInterceptor(instance: AxiosInstance) {
@@ -36,7 +39,16 @@ export function applyAuthInterceptor(instance: AxiosInstance) {
       const original: InternalAxiosRequestConfig & { _retry?: boolean } =
         error.config;
 
-      if (!error.config || error.response?.status !== 401 || original._retry) {
+      const isAuthEntrypoint = AUTH_ENTRYPOINTS.some((path) =>
+        original?.url?.includes(path)
+      );
+
+      if (
+        !error.config ||
+        error.response?.status !== 401 ||
+        original._retry ||
+        isAuthEntrypoint
+      ) {
         return Promise.reject(error);
       }
 
@@ -55,7 +67,7 @@ export function applyAuthInterceptor(instance: AxiosInstance) {
         return instance(original);
       } catch (refreshError) {
         processQueue(refreshError);
-        redirectToLogin();
+        await forceLogout();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
