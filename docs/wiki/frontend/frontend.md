@@ -1,10 +1,14 @@
 ---
 title: frontend
 status: draft
-last-verified: 2026-05-21
+last-verified: 2026-06-28
 owners: [frontend]
-related: [[architecture]], [[frontend-architecture]], [[frontend-onboarding-flow]], [[frontend-local-dev]]
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md]
+related:
+  - "[[architecture]]"
+  - "[[frontend-architecture]]"
+  - "[[frontend-onboarding-flow]]"
+  - "[[frontend-local-dev]]"
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md, ../../sources/frontend/2026-06-20-property-detail-view-refactor.md, ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md, ../../sources/frontend/2026-06-28-endpoint-coverage-and-stepimages.md]
 ---
 
 ## TL;DR
@@ -29,7 +33,8 @@ Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con pro
 | `/forgot-password` | ⚠ scaffolded | desconocido |
 | `/settings/{profile,security,account}` | ✅ con UCs en users-service | users-service (wiki pendiente) |
 | `/about`, `/` (home) | ⚠ scaffolded — sin data dinámica | n/a |
-| `/properties` (`my-properties`) | ⚠ ruta existe, sin endpoint | properties-service `/v1/properties/mine` **no existe** |
+| `/feed/list` (feed lista) | ✅ feed funcional — sidebar filtros + neighborhood lookup + paginación por cursor | properties-service `GET /v1/search/feed` |
+| `/feed/map` (feed mapa) | ⚠ stub placeholder — pendiente implementación con Leaflet | properties-service `GET /v1/search/feed/map` |
 | `/dev` (DevPlayground) | sandbox interno | n/a — no es producto |
 | Onboarding modal (4 pasos) | ⚠ front completo, backend pausado | users-service `/v1/onboarding/{city,neighborhood}` — pausado |
 
@@ -42,13 +47,13 @@ Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con pro
 - **Tailwind 3** + **Vueform** (forms complejos) + **Vuelidate** (validación)
 - **Axios** (sin instance central hoy — ver [[frontend-architecture]])
 - **Mapa**: `leaflet` + `@vue-leaflet/vue-leaflet` + **D3.js** para overlays — ver [[adr-mapbox-geocoding-leaflet-rendering]]
-- **Forward geocoding**: Mapbox SDK + `vue-google-autocomplete` (este último probablemente residual)
+- **Forward geocoding**: Google Maps Places API (New) — `PlaceAutocompleteElement` web component, key en `.env.local`. Ver [[adr-gmaps-places-geocoding]].
 
 ### A remover (tracked)
 - **Firebase 10** + Google sign-in: spike-out, no funcionó. Ver [[adr-firebase-removal]].
 - `vue-class-component`: alpha de Vue 2 era — sospecha de zombie, no se importa en el código revisado.
 
-## Routes (10)
+## Routes (11)
 
 | Path | Auth | Componente |
 |---|---|---|
@@ -59,7 +64,12 @@ Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con pro
 | `/forgot-password` | sin auth meta | `ResetPasswordView` |
 | `/settings` → `/settings/profile` | auth required | `SettingsLayout` + 3 children |
 | `/dev` | público | `DevPlaygroundView` |
+| `/dev/imagenes` | público | `StepImagenesDevView` — preview del step 3 sin auth ni form |
 | `/properties` | auth required | `MyPropertiesView` |
+| `/listing/:id` | público | `PropertyDetailView` |
+| `/feed` → `/feed/list` | público | `PropertiesView` (parent con toggle) + `FeedView` |
+| `/feed/map` | público | `PropertiesView` (parent) + `MapView` |
+| `/users/:userId` | público | `PublicProfileView` — ⚠ scaffolded, todo mock (perfil + listings), endpoint real `GET /v1/properties/users/{user_id}` existe pero aún no está cableado |
 
 Guard global en `router.beforeEach`: si la ruta `requiresAuth` y `_authChecked === false`, llama `authStore.checkAuth()`. Si tras eso `!isAuthenticated`, redirige a `/login`.
 
@@ -67,8 +77,8 @@ Guard global en `router.beforeEach`: si la ruta `requiresAuth` y `_authChecked =
 
 - **users-service** (`API.USERS_BASE_URL` default `localhost:8000`): auth, profile, settings, onboarding endpoints.
 - **catalog-service** (`API.CATALOG_BASE_URL` default `localhost:8001`): countries, localities by-country, neighborhoods by-locality.
-- **properties-service**: planeado, ningún consumo activo.
-- **analytics-service**: planeado (badge de precio, habímetro), ningún consumo activo.
+- **properties-service** (`API.PROPERTIES_BASE_URL` default `/api/properties`): `GET /v1/search/feed`, `GET /v1/search/feed/map`, `GET /v1/properties/me`, `GET /v1/properties/users/{id}`, `POST /v1/properties/create`, `GET /v1/properties/{id}`, `DELETE /v1/properties/{id}`. Pendiente cablear: presigned-urls + confirm (imágenes), PATCH (edición), visibility. Cobertura al 2026-06-28: **26/63 endpoints** totales entre los 4 servicios.
+- **analytics-service**: form AVM en `DevPlaygroundView` — `PlaceAutocompleteElement` + `POST /v1/predict` cableado end-to-end.
 
 ## Patrones — resumen alto nivel
 
@@ -89,8 +99,7 @@ Detalle de cada patrón en [[frontend-architecture]].
 ## Roadmap inmediato (deuda técnica tracked)
 
 - [ ] **Remover Firebase** — imports en `LoginView.vue`, dep `firebase` del `package.json`, eventual cleanup del endpoint backend (`/v1/auth/login/google` si solo lo usaba esta integración).
-- [ ] **Centralizar axios** — instance única con `baseURL` y `withCredentials`, interceptor 401 → logout. Eliminar URLs hardcoded en `auth.ts`.
-- [ ] **Onboarding refactor en users-service** — acoplar a catalog como source-of-truth de localities/neighborhoods.
+- [x] **Centralizar axios** ✅ resuelto 2026-06-28 — instancias dedicadas por servicio + interceptor silent refresh + webpack proxy. Ver [[frontend-architecture]].
 - [ ] **Vite migration** — post-cierre de todos los microservicios backend.
 - [ ] **Cerrar CORS** en backends pre-producción — hoy `allow_origins=["*"]` en catalog.
 - [ ] **Implementar `/v1/properties/mine`** en properties-service para activar `/properties` end-to-end.
@@ -100,7 +109,7 @@ Detalle de cada patrón en [[frontend-architecture]].
 
 - **No autentica directamente** — Keycloak vía users-service, frontend solo recibe cookie.
 - **No persiste datos críticos en el cliente** — solo cachea catálogos read-only (countries/cities/neighborhoods). Estado de usuario y onboarding vive en backend.
-- **No resuelve barrio_ideca por sí solo** — usa Mapbox SDK para `address → lat/lon`, después pasa el `(lat, lon)` a properties-service o catalog-service para el reverse.
+- **No resuelve barrio_ideca por sí solo** — usa Google Maps Places API para `address → lat/lon`, después pasa el `(lat, lon)` a catalog-service para el reverse por coordenadas. Ver [[adr-gmaps-places-geocoding]].
 - **No hostea POIs ni geometrías** — los consume vía catalog-service.
 
 ## Related
@@ -109,12 +118,13 @@ Detalle de cada patrón en [[frontend-architecture]].
 - [[frontend-architecture]] — layout interno, stores, composables, routing, axios
 - [[frontend-onboarding-flow]] — modal-based wizard, 4 pasos
 - [[frontend-local-dev]] — runbook
-- [[adr-vue-cli-deferred-vite-migration]], [[adr-hash-history-static-hosting]], [[adr-mapbox-geocoding-leaflet-rendering]], [[adr-firebase-removal]]
+- [[adr-vue-cli-deferred-vite-migration]], [[adr-hash-history-static-hosting]], [[adr-mapbox-geocoding-leaflet-rendering]], [[adr-gmaps-places-geocoding]], [[adr-firebase-removal]]
 - [[adr-mapbox-frontend-only]] (cross-service, vive en catalog-service)
 
 ## Claims
 
-- 10 rutas definidas en `src/router/index.ts` ([router/index.ts:5-86](frontend/src/router/index.ts#L5-L86)).
+- El router está modularizado en 5 archivos bajo `router/routes/` (public, auth, settings, properties, analytics) — `router/index.ts` solo instancia y aplica el guard ([router/routes/](frontend/src/router/routes/)).
+- `PropertyDetailView` existe en `views/properties/detail/`, refactorizada en 3 componentes hijos (`PropertyPhotoGrid`/`PropertyOverview`/`NearbyPlaces`) y con fetch real a `GET /v1/properties/{id}` ([views/properties/detail/PropertyDetailView.vue](frontend/src/views/properties/detail/PropertyDetailView.vue)).
 - `vue-router` corre en `createWebHashHistory` (URL pattern `/#/...`) ([router/index.ts:89](frontend/src/router/index.ts#L89)).
 - `auth.ts` store hardcodea `http://localhost:8000/v1/...` en login/register/logout/checkAuth ([stores/auth.ts:80-83](frontend/src/stores/auth.ts#L80-L83), [stores/auth.ts:98-101](frontend/src/stores/auth.ts#L98-L101)).
 - `config/index.ts` define `API.USERS_BASE_URL` y `API.CATALOG_BASE_URL` pero solo `user.ts` y los composables lo usan; `auth.ts` ignora la config ([config/index.ts:1-5](frontend/src/config/index.ts#L1-L5)).
@@ -122,5 +132,5 @@ Detalle de cada patrón en [[frontend-architecture]].
 - `leaflet` + `@vue-leaflet/vue-leaflet` están en **devDependencies** del package.json (probablemente debería ser dependencies si se usa en runtime) ([package.json:32-33](frontend/package.json#L32-L33), [package.json:43](frontend/package.json#L43)).
 - `vue.config.js` reconoce que Vue CLI está en maintenance ("Vue CLI is in maintenance mode") ([vue.config.js:13](frontend/vue.config.js#L13)).
 - Onboarding tiene 4 pasos definidos en `useOnboarding.ts` (`STEP_MAP`): intent, city, neighborhood, property_type ([composables/useOnboarding.ts:11-16](frontend/src/composables/useOnboarding.ts#L11-L16)).
-- Endpoint `/v1/properties/mine` **no existe** en properties-service al 2026-05-21 (per autor).
 - CORS del backend hoy está `allow_origins=["*"]` (catalog-service), temporal pre-producción ([backend/catalog-service/src/app/main.py:18-23](backend/catalog-service/src/app/main.py#L18-L23)).
+- El feed de propiedades en `/properties` consume `GET /v1/search/feed` (properties-service puerto 8003) con `paramsSerializer: { indexes: null }` para evitar bracket notation que FastAPI no parsea ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).

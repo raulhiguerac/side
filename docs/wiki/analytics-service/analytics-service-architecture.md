@@ -1,9 +1,14 @@
 ---
 title: Arquitectura interna de analytics-service
 status: draft
-last-verified: 2026-05-25
+last-verified: 2026-06-16
 owners: [analytics-service]
-related: [[architecture]], [[analytics-service]], [[analytics-service-prediction]], [[analytics-service-mlflow]], [[analytics-service-kafka-consumer]]
+related:
+  - "[[architecture]]"
+  - "[[analytics-service]]"
+  - "[[analytics-service-prediction]]"
+  - "[[analytics-service-mlflow]]"
+  - "[[analytics-service-kafka-consumer]]"
 sources:
   - ../../sources/analytics-service/2026-05-19-foundational-qa.md
   - ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md
@@ -141,11 +146,11 @@ Postgres vía SQLModel. Una sola tabla activa hoy:
 
 - **`predictions`** ([models/prediction.py:46](backend/analytics-service/src/app/models/prediction.py#L46)): guarda cada predicción con sus inputs, output, `model_version`, `source` (online|batch), `feedback` (5 niveles, opcional), `feedback_comment`. Audit fields heredados de `AuditMixin` (`created_at`, `updated_at`, `created_by`, `updated_by`). Índices en `model_version` y `created_at`.
 
-Alembic está configurado en `pyproject.toml` pero **no hay migraciones aplicadas al 2026-05-19** — la tabla todavía no se materializa via Alembic. Pendiente.
+> ✅ **Resuelto (2026-05-25)**: al 2026-05-19 Alembic estaba configurado en `pyproject.toml` pero sin migraciones aplicadas — la tabla no se materializaba via Alembic. Ya no: la migración `976082b7f322_first_migration_including_predictions_.py` existe y está aplicada (`alembic upgrade head`), tabla `predictions` activa ([migrations/versions/](backend/analytics-service/src/app/migrations/versions/)).
 
 ## Auth en el servicio
 
-JWT del usuario llega vía `Authorization: Bearer <token>`. Una FastAPI dependency en `api/deps/` resuelve el token contra Keycloak y entrega un `principal: uuid.UUID` al UC. Los UCs **nunca ven el token** ni hablan con Keycloak — operan sobre el UUID resuelto.
+JWT del usuario llega vía la cookie `access_token` (mismo patrón que catalog/properties/users). Una FastAPI dependency en `api/deps/` resuelve el token contra Keycloak y entrega un `principal: uuid.UUID` al UC. Los UCs **nunca ven el token** ni hablan con Keycloak — operan sobre el UUID resuelto.
 
 Para el flujo server-to-server (Kafka), el `principal` es `SYSTEM_PRINCIPAL_ID` (UUID fijo en settings), no el usuario real. Ver `[[adr-auth-keycloak-jwt]]`.
 

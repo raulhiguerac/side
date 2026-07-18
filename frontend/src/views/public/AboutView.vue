@@ -1,36 +1,5 @@
 <template>
-  <div class="mt-20"></div>
-  <div class="grid grid-cols-4 justify-items-center">
-    <HouseCard v-for="prop in properties" :key="prop.PropertyId" :="prop" />
-  </div>
-  <div>
-    <MapUser />
+  <div class="flex items-center justify-center flex-1 min-h-[60vh]">
+    <h1 class="text-2xl font-bold text-brand-text">Hola mundo</h1>
   </div>
 </template>
-
-<script lang="ts" setup>
-// import HouseCard from "@/components/properties/HouseCard.vue";
-import MapUser from "@/components/map/MapUser.vue";
-import Properties from "@/types/properties";
-import axios from "axios";
-import { onMounted, ref } from "vue";
-
-const properties = ref<Properties[]>([]);
-
-const getProperties = async () => {
-  await axios
-    .get("http://localhost:8000/properties", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-      },
-    })
-    .then((response) => {
-      properties.value = response.data;
-    })
-    .catch((error) => console.log(error));
-};
-
-onMounted(() => {
-  getProperties();
-});
-</script>

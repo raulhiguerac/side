@@ -24,8 +24,8 @@
     </div>
 
     <!-- Desktop layout -->
-    <div
-      class="flex items-start px-[5%] sm:px-[8%] lg:px-[10%] flex-1 py-4 md:py-6 lg:overflow-hidden"
+    <PageContainer
+      class="flex items-start flex-1 py-4 md:py-6 lg:overflow-hidden"
     >
       <!-- Sidebar (solo desktop) -->
       <SettingsSidebar class="hidden md:block flex-shrink-0" />
@@ -34,13 +34,14 @@
       <main class="flex-1 md:pl-8 flex flex-col lg:overflow-hidden lg:h-full">
         <router-view class="lg:h-full" />
       </main>
-    </div>
+    </PageContainer>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { useRoute } from "vue-router";
 import SettingsSidebar from "@/components/settings/SettingsSidebar.vue";
+import PageContainer from "@/components/shared/PageContainer.vue";
 
 const route = useRoute();
 

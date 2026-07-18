@@ -48,6 +48,7 @@ class SqlOnboardingCompletionRepository(OnboardingCompletionRepository):
 
     def mark_completed(self, *, account_id: uuid.UUID, key: OnboardingStep) -> bool:
         try:
+            savepoint = self._session.begin_nested()
             self._session.add(
                 OnboardingCompletions(account_id=account_id, key=key)
             )
@@ -55,6 +56,7 @@ class SqlOnboardingCompletionRepository(OnboardingCompletionRepository):
             return True
 
         except IntegrityError as exc:
+            savepoint.rollback()
             pgcode, constraint_name, _ = self._db_errors._extract_pg_details(exc)
 
             if pgcode == "23505" and constraint_name in {
@@ -89,7 +91,7 @@ class SqlOnboardingCompletionRepository(OnboardingCompletionRepository):
                 )
                 .on_conflict_do_update(
                     constraint="uq_user_interest_user_city",
-                    set_={"is_active": True},
+                    set_={"is_active": True, "updated_at": func.now()},
                 )
             )
             self._session.execute(stmt)

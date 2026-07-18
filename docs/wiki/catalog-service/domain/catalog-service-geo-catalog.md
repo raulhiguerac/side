@@ -1,9 +1,12 @@
 ---
 title: Dominio geo_catalog (catalog-service)
 status: draft
-last-verified: 2026-05-21
+last-verified: 2026-07-15
 owners: [catalog-service]
-related: [[catalog-service]], [[catalog-service-architecture]], [[catalog-service-catalog-admin]]
+related:
+  - "[[catalog-service]]"
+  - "[[catalog-service-architecture]]"
+  - "[[catalog-service-catalog-admin]]"
 sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
 ---
 
@@ -19,9 +22,9 @@ Todos públicos (sin auth), bajo `/v1/`:
 |---|---|---|---|
 | GET | `/countries` | `GetCountriesUseCase` | `cache_key_countries()` |
 | GET | `/localities/by-country?country_id` | `GetLocalitiesUseCase` (filter) | `cache_key_localities(country_id)` |
-| GET | `/localities/by-admin-division?admin_division_id` | `GetLocalitiesUseCase` (filter) | (sin cache hoy) |
+| GET | `/localities/by-admin-division?admin_division_id` | `GetLocalitiesUseCase` (filter) | `cache_key_localities_by_admin_division(admin_division_id)` |
 | GET | `/localities/by-id?locality_id` | `GetLocalityByIdUseCase` | `cache_key_locality(locality_id)` |
-| GET | `/neighborhoods/by-locality?locality_id` (acepta múltiples) | `GetNeighborhoodsByLocalityUseCase` | `cache_key_neighborhoods(locality_id)` |
+| GET | `/neighborhoods/by-localities?locality_ids` (acepta múltiples) | `GetNeighborhoodsByLocalityUseCase` | `cache_key_neighborhoods(locality_id)` |
 | GET | `/neighborhoods/by-id?neighborhood_id` | `GetNeighborhoodByIdUseCase` | `cache_key_neighborhood(neighborhood_id)` |
 
 ## Componentes
@@ -87,7 +90,6 @@ Ejemplos:
 
 ## Open items
 
-- `/localities/by-admin-division` no tiene cache hoy. Decidir si vale agregarla con `cache_key_localities_by_admin_division(admin_division_id)` o si el patrón de query es lo bastante variado para que no aporte.
 - `NeighborhoodInfo` (en geo_resolution) y `NeighborhoodListItem` (en geo_catalog) tienen overlap parcial — evaluar si conviene unificar o mantener separadas por dominio.
 
 ## Claims
@@ -99,3 +101,4 @@ Ejemplos:
 - Llamadas a Redis están en `try/except pass` — caída de Redis degrada a "todo DB" sin romper el read.
 - Endpoints de geo_catalog son **públicos** (sin `require_admin` ni auth) ([countries.py:7](backend/catalog-service/src/app/api/routes/countries.py#L7), [localities.py:10](backend/catalog-service/src/app/api/routes/localities.py#L10), [neighborhoods.py:17](backend/catalog-service/src/app/api/routes/neighborhoods.py#L17)).
 - `GetLocalitiesUseCase` se reusa para 2 endpoints distintos (`by-country`, `by-admin-division`) inyectando filtros diferentes desde la ruta ([localities.py:13-26](backend/catalog-service/src/app/api/routes/localities.py#L13-L26)).
+- `/localities/by-admin-division` sí tiene cache-aside, igual patrón que `by-country`, con `cache_key_localities_by_admin_division(admin_division_id)` ([get_locality.py:13,42](backend/catalog-service/src/app/services/geo_catalog/use_cases/get_locality.py#L13)).

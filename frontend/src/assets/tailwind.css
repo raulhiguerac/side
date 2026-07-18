@@ -8,4 +8,40 @@
 
 @tailwind components;
 
+@layer components {
+  gmp-place-autocomplete {
+    color-scheme: light;
+    --gmp-color-surface: #ffffff;
+    --gmp-color-surface-variant: #ffffff;
+    --gmp-color-surface-container: #ffffff;
+    --gmp-color-surface-container-low: #ffffff;
+    --gmp-color-surface-container-high: #ffffff;
+    --gmp-color-surface-container-highest: #ffffff;
+    --gmp-color-on-surface: #2F3E3A;
+    --gmp-color-on-surface-variant: #6B7280;
+    --gmp-color-primary: #22C55E;
+    --gmp-color-on-primary: #ffffff;
+    --gmp-color-primary-container: #DCFCE7;
+    --gmp-color-on-primary-container: #2F3E3A;
+    --gmp-color-secondary: #22C55E;
+    --gmp-color-on-secondary: #ffffff;
+    --gmp-color-secondary-container: #DCFCE7;
+    --gmp-color-on-secondary-container: #2F3E3A;
+    --gmp-color-outline: #D1D5DB;
+    --gmp-color-outline-variant: #E5E7EB;
+    background-color: #ffffff;
+    border: 1.5px solid #D1D5DB;
+    border-radius: 0.75rem;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-size: 0.875rem;
+    width: 100%;
+  }
+
+  gmp-place-autocomplete:focus-within {
+    border-color: #22C55E;
+    outline: 2px solid #22C55E;
+    outline-offset: -1px;
+  }
+}
+
 @tailwind utilities;

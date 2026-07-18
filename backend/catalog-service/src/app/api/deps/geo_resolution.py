@@ -6,14 +6,17 @@ from sqlmodel import Session
 from app.api.deps.db import get_session
 from app.api.deps.geo_catalog import get_cache_port
 from app.integrations.georef.mapbox.georeferentiation import GeoreferentiationClient
+from app.integrations.georef.ors.routing import OrsRoutingClient
 from app.integrations.georef.pois.overpass import PoiClient
-from app.services.geo_resolution.adapters.geocoding import GeocodingAdapter
-from app.services.geo_resolution.adapters.poi_provider import PoiProviderAdapter
-from app.services.geo_resolution.adapters.sql_unit_of_work import (
+from app.services.geo_resolution.adapters.geocoding.mapbox import GeocodingAdapter
+from app.services.geo_resolution.adapters.poi.overpass import PoiProviderAdapter
+from app.services.geo_resolution.adapters.routing.ors import OrsRoutingAdapter
+from app.services.geo_resolution.adapters.sql.unit_of_work import (
     SqlGeoResolutionUnitOfWork,
 )
-from app.services.geo_resolution.ports.geocoding_gateway import GeocodingGateway
-from app.services.geo_resolution.ports.poi_provider_gateway import PoiProviderGateway
+from app.services.geo_resolution.ports.geocoding.gateway import GeocodingGateway
+from app.services.geo_resolution.ports.poi.gateway import PoiProviderGateway
+from app.services.geo_resolution.ports.routing.gateway import RoutingGateway
 from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWork
 from app.services.geo_resolution.use_cases.resolve_location_by_coordinates import (
     ResolveLocationByCoordinatesUseCase,
@@ -21,6 +24,7 @@ from app.services.geo_resolution.use_cases.resolve_location_by_coordinates impor
 from app.services.geo_resolution.use_cases.resolve_neighborhood import (
     ResolveNeighborhoodUseCase,
 )
+from app.services.geo_resolution.use_cases.resolve_isochrone import ResolveIsochroneUseCase
 from app.services.geo_resolution.use_cases.resolve_poi import ResolvePoiUseCase
 from app.services.shared.ports.cache import CachePort
 
@@ -46,6 +50,16 @@ def get_poi_client() -> PoiClient:
 @lru_cache(maxsize=1)
 def get_poi_provider() -> PoiProviderGateway:
     return PoiProviderAdapter(client=get_poi_client())
+
+
+@lru_cache(maxsize=1)
+def get_ors_client() -> OrsRoutingClient:
+    return OrsRoutingClient()
+
+
+@lru_cache(maxsize=1)
+def get_routing_gateway() -> RoutingGateway:
+    return OrsRoutingAdapter(client=get_ors_client())
 
 
 # -------------------------------------------------------------------------
@@ -80,3 +94,11 @@ def resolve_location_by_coordinates_uc(
     uow: GeoResolutionUnitOfWork = Depends(get_uow),
 ) -> ResolveLocationByCoordinatesUseCase:
     return ResolveLocationByCoordinatesUseCase(uow=uow)
+
+
+def resolve_isochrone_uc(
+    uow: GeoResolutionUnitOfWork = Depends(get_uow),
+    gateway: RoutingGateway = Depends(get_routing_gateway),
+    cache: CachePort = Depends(get_cache_port),
+) -> ResolveIsochroneUseCase:
+    return ResolveIsochroneUseCase(uow=uow, gateway=gateway, cache=cache)

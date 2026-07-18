@@ -10,7 +10,11 @@ from app.services.listing.helpers.db_error_translator import translate_db_error
 from app.services.listing.helpers.property_guard import get_owned_property
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork
 from app.services.listing.schemas.listing_schemas import UpdatePropertyRequest
-from app.services.shared.helpers.cache_keys import cache_property, client_properties
+from app.services.shared.helpers.cache_keys import (
+    cache_property,
+    client_properties,
+    public_user_properties_pattern,
+)
 from app.services.shared.helpers.geometry import compute_h3
 from app.services.shared.ports.cache import CachePort
 from app.services.shared.ports.catalog_gateway import CatalogGateway
@@ -68,5 +72,8 @@ class UpdatePropertyUseCase:
                 cache_property(property_id=db_model.id),
                 client_properties(user_id=db_model.owner_id),
             ])
+            await self.cache_client.delete_pattern(
+                pattern=public_user_properties_pattern(user_id=db_model.owner_id)
+            )
         except Exception:
             pass

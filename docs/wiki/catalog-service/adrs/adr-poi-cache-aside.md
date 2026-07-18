@@ -1,9 +1,13 @@
 ---
 title: ADR-0003 — POI cache-aside, never on-demand
 status: stable
-last-verified: 2026-05-21
+last-verified: 2026-06-16
 owners: [catalog-service]
-related: [[catalog-service-poi-lifecycle]], [[catalog-service-architecture]], [[glossary]]
+related:
+  - "[[catalog-service-poi-lifecycle]]"
+  - "[[catalog-service-architecture]]"
+  - "[[adr-h3-resolution-per-use-case]]"
+  - "[[glossary]]"
 sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
 decision-date: 2026-05-21
 decision-status: accepted
@@ -30,6 +34,10 @@ Dos preguntas de diseño:
 - **Lazy-fill por tráfico**: las zonas se pueblan solo si alguien las "visita" georeferenciando un listing en ellas. Las zonas frías quedan vacías.
 - **Refresh por staleness**: cuando una `FetchZone` excede `POI_STALE_THRESHOLD_DAYS` (30 d), el próximo geo-resolution la refetchea; o un batch nocturno (diseñado, **no implementado**) la marca para refresh.
 
+### Por qué r9 como unidad de fetch
+
+La celda H3 es la **unidad de fetch** a Overpass: `_h3_to_bbox` convierte la celda en el bbox que se consulta ([resolve_poi.py:44-49](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_poi.py#L44-L49)), y `FetchZone` registra qué celdas ya se poblaron. r9 (~300m) mantiene cada bbox lo bastante chico para que la query a Overpass sea acotada (pocos nodos, baja latencia) y el fire-and-forget no sobrecargue el provider gratuito. Una resolución más gruesa (r7/r8) traería bboxes grandes con miles de nodos por request; una más fina multiplicaría el número de celdas a poblar. r9 es el equilibrio entre tamaño de query y cantidad de fetches. Esto complementa a [[adr-h3-resolution-per-use-case]], que justifica r9 como clave de lookup espacial granular pero no aborda el límite del provider.
+
 ## Alternativas consideradas
 
 - **On-demand al request del frontend** — UX más rica ("acabamos de fetchear todos los POIs cerca!") pero hits a Overpass en el path crítico, latencia alta, rate-limit de Overpass se vuelve user-facing.
@@ -51,6 +59,7 @@ Dos preguntas de diseño:
 ## Claims
 
 - `ResolvePoiUseCase` solo se invoca como `BackgroundTasks.add_task(...)`, nunca expuesto vía HTTP ([api/routes/geo_resolution.py:32-38](backend/catalog-service/src/app/api/routes/geo_resolution.py#L32-L38)).
+- El bbox consultado a Overpass es el bounding box de una sola celda r9, derivado con `cell_to_boundary` en `_h3_to_bbox` ([resolve_poi.py:44-49](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_poi.py#L44-L49), [resolve_poi.py:126-133](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_poi.py#L126-L133)).
 - Las 3 capas de dedup: cache short-circuit, `set_nx` lock, `FetchZone` freshness ([resolve_poi.py:62-103](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_poi.py#L62-L103)).
 - `POI_STALE_THRESHOLD_DAYS=30` y `POI_LOCK_TTL_SECONDS=30` ([core/config/settings.py:22-23](backend/catalog-service/src/app/core/config/settings.py#L22-L23)).
 - Batch de refresh de zonas stale: **diseñado pero no implementado** al 2026-05-21.

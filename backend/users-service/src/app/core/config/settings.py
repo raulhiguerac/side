@@ -4,6 +4,7 @@ import os
 class Settings:
     FRONT_BASE_URL: str
     CACHE_REACTIVATION_TTL_SECONDS: int
+    ADMIN_ROLE: str
 
     def __init__(self) -> None:
         self.FRONT_BASE_URL = os.getenv("FRONT_BASE_URL")
@@ -13,6 +14,8 @@ class Settings:
         self.CACHE_REACTIVATION_TTL_SECONDS = int(
             os.getenv("CACHE_REACTIVATION_TTL_SECONDS", "900")
         )
+
+        self.ADMIN_ROLE = os.getenv("ADMIN_ROLE", "admin")
 
 
 settings = Settings()

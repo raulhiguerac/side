@@ -5,7 +5,7 @@
       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       @click.self="$emit('update:modelValue', false)"
     >
-      <div class="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+      <div :class="['bg-white rounded-lg shadow-xl w-full p-6', sizeClass]">
         <slot />
       </div>
     </div>
@@ -13,9 +13,21 @@
 </template>
 
 <script lang="ts" setup>
-defineProps<{
+import { computed } from "vue";
+
+const props = defineProps<{
   modelValue: boolean;
+  size?: "lg" | "xl" | "3xl";
 }>();
+
+const sizeClass = computed(
+  () =>
+    ({
+      lg: "max-w-lg",
+      xl: "max-w-xl",
+      "3xl": "max-w-3xl",
+    }[props.size ?? "lg"])
+);
 
 defineEmits(["update:modelValue"]);
 </script>

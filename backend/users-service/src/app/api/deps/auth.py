@@ -93,12 +93,14 @@ async def get_current_principal(request: Request) -> Principal:
 
     scope_str = claims.get("scope", "") or ""
     scope = scope_str.split() if isinstance(scope_str, str) and scope_str else []
+    roles: list[str] = claims.get("realm_access", {}).get("roles", [])
 
     principal = Principal(
         sub=sub,
         email=claims.get("email"),
         email_verified=bool(claims.get("email_verified", False)),
         scope=scope,
+        roles=roles,
     )
 
     request.state.principal = principal

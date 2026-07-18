@@ -13,6 +13,7 @@ Esta carpeta es un wiki versionado del proyecto. Está pensado para que un dev n
 3. **Links con `[[slug]]`.** Usa el nombre del archivo sin extensión (`[[mlflow]]`, no `[mlflow](../integrations/mlflow.md)`). Permite renombrar/mover sin romper enlaces y le da al lint algo que indexar.
 4. **Claims atómicos al final.** Cada página termina con una sección `## Claims` — una frase verificable por línea. Es lo que `/wiki-lint` chequea contra el código.
 5. **No dupliques.** Antes de crear una página nueva, busca con grep si el concepto ya vive en `_shared/` o en otro servicio.
+6. **Cerrar ítems en `open-items.md`: marcar `[x]` en su lugar y mover a `## Cerrados`. Nunca borrar el texto.** El historial de por qué existía el ítem y qué alternativas se consideraron tiene valor aunque esté cerrado.
 
 ## Skills del wiki
 
@@ -25,4 +26,4 @@ Viven en `.claude/skills/`. Se invocan con `/<nombre>`.
 
 ## Estado del piloto
 
-El wiki vive en piloto sobre `wiki/analytics-service/`. No extender el patrón a otros microservicios (`properties-service`, `catalog-service`, `users-service`, `frontend`) hasta haberlo usado **al menos 2-3 semanas** y haber iterado la estructura. Decisión registrada el 2026-05-19.
+El piloto arrancó sobre `wiki/analytics-service/` (2026-05-19). Tras validar el patrón, se extendió a `catalog-service`, `frontend`, `properties-service` y `users-service` (este último par el 2026-05-28). Todos los microservicios del backend + el frontend + el workload `avm` están documentados. La estructura (overview, architecture, domain/, integrations/, runbook/, adrs/) se considera estable; mantenerla para nuevas páginas.

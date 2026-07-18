@@ -1,9 +1,12 @@
 ---
 title: Kafka consumer — listing-created (analytics-service)
 status: stable
-last-verified: 2026-05-25
+last-verified: 2026-07-13
 owners: [analytics-service]
-related: [[analytics-service]], [[analytics-service-architecture]], [[analytics-service-prediction]]
+related:
+  - "[[analytics-service]]"
+  - "[[analytics-service-architecture]]"
+  - "[[analytics-service-prediction]]"
 sources:
   - ../../../sources/analytics-service/2026-05-20-kafka-consumer-design.md
   - ../../../sources/analytics-service/2026-05-22-listing-consumer-worker-design.md
@@ -106,7 +109,7 @@ class ListingWorkerRunner:
                     await asyncio.sleep(900)      # batch cada 15 min
 ```
 
-Arranque: `asyncio.run(ListingWorkerRunner().run())` — en CMD separado del Dockerfile (misma imagen, distinto entrypoint que uvicorn).
+Arranque: `asyncio.run(ListingWorkerRunner().run())`. **No hay ningún CMD/entrypoint separado que lo dispare** — el `Dockerfile` de analytics-service solo define un `CMD` (uvicorn) y no existe servicio de worker en `docker-compose.yml` ni script en `pyproject.toml`. El worker está implementado pero no arranca en ningún entorno de este repo — confirma el gap ya conocido de "Kafka worker no se levanta en startup".
 
 ### `serialize`
 
@@ -162,12 +165,12 @@ Múltiples predicciones por `property_id` son datos válidos de negocio (evoluci
 | `KAFKA_DLQ_TOPIC` | `listing-created-dlq` |
 | `WORKER_PRINCIPAL` | UUID del principal de sistema |
 
-`WorkerConfigurationError` se lanza al inicio si alguna de las primeras 5 falta.
+`WorkerConfigurationError` se lanza al inicio si **cualquiera de las 6** falta (incluyendo `WORKER_PRINCIPAL`). Hay un segundo chequeo separado: si `WORKER_PRINCIPAL` está presente pero no es un UUID válido, también lanza `WorkerConfigurationError` (con `missing=["WORKER_PRINCIPAL (invalid UUID: ...)"]`).
 
 ## Claims
 
 - Clase se llama `ListingConsumer` (no `ListingCreatedConsumer`) ([consumer.py](backend/analytics-service/src/app/workers/listing_created/consumer.py)).
-- `enable.auto.commit: False` configurado en el consumer — offset se commitea manualmente al final de `consume_batch` ([consumer.py:41](backend/analytics-service/src/app/workers/listing_created/consumer.py#L41)).
+- `enable.auto.commit: False` configurado en el consumer — offset se commitea manualmente al final de `consume_batch` ([consumer.py:45](backend/analytics-service/src/app/workers/listing_created/consumer.py#L45)).
 - `max.poll.interval.ms: 1200000` configurado en el consumer — necesario porque el worker duerme 900s entre ciclos, superando el default de 300s ([consumer.py](backend/analytics-service/src/app/workers/listing_created/consumer.py)).
 - `WorkerMessage` es un Pydantic `StrictBase` con campos `id: UUID`, `attempts: int = Field(ge=1, strict=True)`, `model: PredictionRequest` ([helpers/types.py](backend/analytics-service/src/app/workers/listing_created/helpers/types.py)).
 - `WorkerMessage.id` es el `property_id` del listing — el consumer setea `message.model.property_id = message.id` tras validar cada mensaje ([consumer.py](backend/analytics-service/src/app/workers/listing_created/consumer.py)).

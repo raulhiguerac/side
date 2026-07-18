@@ -1,9 +1,14 @@
 ---
 title: Arquitectura del monorepo
 status: draft
-last-verified: 2026-05-19
+last-verified: 2026-07-15
 owners: [_shared]
-related: [[glossary]], [[dev-workflow]], [[adr-auth-keycloak-jwt]], [[adr-geo-enrichment-at-write-time]]
+related:
+  - "[[glossary]]"
+  - "[[dev-workflow]]"
+  - "[[adr-auth-keycloak-jwt]]"
+  - "[[adr-geo-enrichment-at-write-time]]"
+  - "[[adr-cache-optional-layer]]"
 sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md]
 ---
 
@@ -79,12 +84,12 @@ src/app/
 ## Patrones de comunicación
 
 ### Síncrono (HTTP REST) — default
-Casi todas las llamadas entre servicios son HTTP REST hoy. El JWT del usuario se propaga en el header `Authorization`. Ejemplos:
+Casi todas las llamadas entre servicios son HTTP REST hoy. El JWT del usuario se propaga en la cookie `access_token` (todos los servicios la leen de la cookie, no del header `Authorization`). Ejemplos:
 - frontend → cualquier microservicio
 - properties-service → users-service para validar permisos
 - properties-service → catalog-service para resolver geo
 
-### Asíncrono — solo `properties` ↔ `analytics` (en definición)
+### Asíncrono — solo `properties` ↔ `analytics` (a medio construir)
 Único flujo async planificado hoy. Caso de uso: cálculo de `estimated_price` para un listing recién creado.
 
 ```
@@ -97,7 +102,10 @@ properties-service              [topic: listing-created]              analytics-
  estimated_price del listing)
 ```
 
-- Mecanismo concreto (Kafka u otro) **aún no decidido**. El scaffolding `src/app/workers/` en analytics-service anticipa la implementación.
+- **Mecanismo decidido: Kafka**, ya provisionado — `docker-compose.yml` corre `kafka-broker` y un `topic-init` que crea `listing-created`, `price-predicted`, `listing-created-dlq`.
+- **Lado consumer implementado y funcional** en analytics-service: `workers/listing_created/consumer.py` (confluent_kafka, DLQ, retry-with-attempts, offset commits) + `runner.py` (poll cada 900s, dispara `BatchPrediction` UC). No es scaffolding.
+- **Lado producer NO existe**: `properties-service` no tiene código Kafka (`Producer`, `confluent`, etc.) — nunca publica a `listing-created`. El flujo está construido de un solo lado.
+- **El worker no arranca con el servicio**: `analytics-service/src/app/main.py` solo construye la app FastAPI; el consumer es un script standalone (`python workers/listing_created/runner.py`), no se levanta automáticamente.
 - En este flujo el [[glossary#principal]] que llega al UC de analytics es un **system ID**, no el usuario que creó el listing — el caso es feedback al modelo, no acción del usuario.
 
 ## Decisiones cross-cutting
@@ -111,6 +119,9 @@ Sin créditos en ninguna nube hoy. Stack elegido para correr en cualquier docker
 ### Geo-enrichment at write time
 La resolución `(lat, lon) → barrio_ideca` ocurre **al crear el listing en `properties-service`**, no al consumirlo en analytics u otros servicios. Principio: enriquecimiento geográfico al momento de escribir, no leer. Reduce calls de red en el path crítico de cada lectura y permite cachear/indexar por barrio. Ver `[[adr-geo-enrichment-at-write-time]]`.
 
+### Cache como capa opcional (degradación silenciosa)
+Redis es optimización, no dependencia crítica. Todos los servicios envuelven las operaciones de cache en `except Exception: pass` — si Redis cae, degradan a lectura directa de DB sin propagar error al cliente. El TTL de cada servicio actúa como red de seguridad contra datos stale. Ver `[[adr-cache-optional-layer]]`.
+
 ### Dev environment unificado
 Todo el desarrollo local ocurre dentro de un [[glossary#devcontainer]] levantado por `docker-compose.yml` en el root. Los servicios no contaminan el host del developer. Ver el runbook de cada servicio (ej: `[[analytics-service-local-dev]]`).
 
@@ -121,6 +132,8 @@ Todo el desarrollo local ocurre dentro de un [[glossary#devcontainer]] levantado
 - El training ML vive en `data/ml/AVM/`, fuera de `backend/`.
 - Cada servicio backend sigue el layout `src/app/{api,core,services/<domain>/{adapters,ports,schemas,use_cases},...}` (verificable comparando estructuras de `catalog-service` y `analytics-service`).
 - Los ports en `services/<domain>/ports/` están declarados como `typing.Protocol` (ver [model_gateway.py:6](backend/analytics-service/src/app/services/prediction/ports/model_gateway.py#L6)).
+- El consumer Kafka `listing-created` en analytics-service está completo (`workers/listing_created/consumer.py` + `runner.py`), pero `properties-service` no tiene código productor — el topic nunca recibe mensajes en la práctica al 2026-07-15.
+- `analytics-service/src/app/main.py` no arranca el worker Kafka — es un proceso standalone separado del servidor FastAPI.
 - La comunicación entre servicios es HTTP sincrónico, excepto el flujo async entre `properties-service` y `analytics-service` (aún sin código de consumer al 2026-05-19).
 - Auth centralizada en Keycloak; cada UC recibe `principal: uuid.UUID` resuelto por una FastAPI dependency.
 - `barrio_ideca` se resuelve en `properties-service` y se propaga río abajo; analytics-service lo recibe como dato del request, no lo resuelve.

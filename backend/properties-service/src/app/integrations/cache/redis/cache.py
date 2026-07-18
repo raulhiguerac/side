@@ -122,3 +122,11 @@ class CacheClient:
             await self.client.delete(*keys)
         except Exception as exc:
             log_cache_error(exc=exc, operation="delete", key=key)
+
+    async def delete_pattern(self, pattern: str) -> None:
+        try:
+            keys = [key async for key in self.client.scan_iter(match=pattern)]
+            if keys:
+                await self.client.delete(*keys)
+        except Exception as exc:
+            log_cache_error(exc=exc, operation="delete_pattern", key=pattern)

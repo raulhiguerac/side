@@ -9,6 +9,7 @@ from pydantic import Field
 from app.models.property import PropertyType
 from app.schemas.base import StrictBase
 
+from app.services.shared.schemas.property_card import PropertyCardSchema
 
 class FeedCursor(StrictBase):
     created_at: datetime
@@ -21,6 +22,10 @@ class FeedPreferences(StrictBase):
     neighborhood_ids: list[uuid.UUID]
     property_types: list[PropertyType]
 
+class FeedPage(StrictBase):
+    items: list[PropertyCardSchema]
+    next_cursor: str | None = None
+
 
 class BoundingBox(StrictBase):
     min_lat: float
@@ -28,8 +33,8 @@ class BoundingBox(StrictBase):
     min_lon: float
     max_lon: float
 
-    def to_polygon(self) -> h3.H3Shape:
-        return h3.H3Shape(
+    def to_polygon(self) -> h3.LatLngPoly:
+        return h3.LatLngPoly(
             outer=[
                 (self.min_lat, self.min_lon),
                 (self.min_lat, self.max_lon),

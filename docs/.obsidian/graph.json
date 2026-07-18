@@ -1,0 +1,72 @@
+{
+  "collapse-filter": true,
+  "search": "",
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "collapse-color-groups": true,
+  "colorGroups": [
+    {
+      "query": "path:wiki/_shared",
+      "color": {
+        "a": 1,
+        "rgb": 8947848
+      }
+    },
+    {
+      "query": "path:wiki/analytics-service",
+      "color": {
+        "a": 1,
+        "rgb": 4076245
+      }
+    },
+    {
+      "query": "path:wiki/catalog-service",
+      "color": {
+        "a": 1,
+        "rgb": 3776614
+      }
+    },
+    {
+      "query": "path:wiki/properties-service",
+      "color": {
+        "a": 1,
+        "rgb": 16742144
+      }
+    },
+    {
+      "query": "path:wiki/users-service",
+      "color": {
+        "a": 1,
+        "rgb": 14424613
+      }
+    },
+    {
+      "query": "path:wiki/frontend",
+      "color": {
+        "a": 1,
+        "rgb": 9699539
+      }
+    },
+    {
+      "query": "path:wiki/avm",
+      "color": {
+        "a": 1,
+        "rgb": 16769536
+      }
+    }
+  ],
+  "collapse-display": true,
+  "showArrow": false,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 1,
+  "lineSizeMultiplier": 1,
+  "collapse-forces": true,
+  "centerStrength": 0.518713248970312,
+  "repelStrength": 10,
+  "linkStrength": 1,
+  "linkDistance": 250,
+  "scale": 0.24186525507646986,
+  "close": true
+}

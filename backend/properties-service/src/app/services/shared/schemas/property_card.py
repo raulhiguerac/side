@@ -12,6 +12,7 @@ from app.services.shared.helpers.geometry import point_to_lat_lon
 class PropertyImageCard(StrictBase):
     model_config = ConfigDict(extra="ignore", from_attributes=True)
 
+    id: uuid.UUID
     url: str
     is_cover: bool
     display_order: int
@@ -67,3 +68,8 @@ class PropertyCardSchema(StrictBase):
         if hasattr(data, "promotions"):
             data.__dict__["is_promoted"] = bool(data.promotions)
         return data
+
+
+class PublicUserPropertiesResponse(StrictBase):
+    items: list[PropertyCardSchema]
+    has_more: bool

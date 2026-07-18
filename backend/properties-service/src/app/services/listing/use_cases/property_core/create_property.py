@@ -59,6 +59,7 @@ class CreatePropertyUseCase:
         property_id = uuid.uuid4()
         loc = property_fields.location
 
+        # TODO: refactor — repo should build the ORM model from the domain schema, not the UC
         prop = Property(
             id=property_id,
             owner_id=principal.sub,

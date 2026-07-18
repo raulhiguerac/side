@@ -21,6 +21,7 @@ dependencies = [
     "pyjwt[cryptography]>=2.8.0",
     "cryptography>=46.0.5",
     "ruff>=0.15.6",
+    "osmium>=3.7.0",
 ]
 
 [project.optional-dependencies]

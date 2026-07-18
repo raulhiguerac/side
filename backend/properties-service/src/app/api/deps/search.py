@@ -63,17 +63,6 @@ def parse_feed_filters(
         return None
     return filters
 
-
-def parse_feed_cursor(
-    cursor_created_at: Optional[datetime] = None,
-    cursor_id: Optional[uuid.UUID] = None,
-    cursor_position: Optional[int] = Query(default=None, ge=0),
-) -> Optional[FeedCursor]:
-    if cursor_created_at is None or cursor_id is None or cursor_position is None:
-        return None
-    return FeedCursor(created_at=cursor_created_at, id=cursor_id, position=cursor_position)
-
-
 # -------------------------------------------------------------------------
 # Use cases
 # -------------------------------------------------------------------------

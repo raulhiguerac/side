@@ -1,8 +1,9 @@
 from app.integrations.ml.mlflow.model import ModelClient
+from app.services.prediction.ports.model_gateway import ModelGateway
 from app.services.prediction.schemas.prediction import PredictionRequest
 
 
-class AVMModelAdapter:
+class AVMModelAdapter(ModelGateway):
     def __init__(self, *, client: ModelClient) -> None:
         self.client = client
 

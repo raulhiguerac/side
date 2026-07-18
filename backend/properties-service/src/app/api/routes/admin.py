@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, UploadFile
 
 from app.api.deps.admin import (
     get_admin_properties_uc,
@@ -16,6 +16,7 @@ from app.api.deps.admin import (
     get_verify_property_uc,
 )
 from app.api.deps.auth import require_admin
+from app.api.deps.upload_validation import validate_properties_bulk_upload
 from app.schemas.principal import Principal
 from app.services.admin.schemas.admin_schemas import (
     BulkCreatePropertiesResult,
@@ -25,6 +26,7 @@ from app.services.admin.schemas.admin_schemas import (
     SetStatusRequest,
     VerifyPropertyRequest,
 )
+from app.services.admin.helpers.file_parser import PropertyFileParser
 from app.services.admin.use_cases.bulk_create_properties import BulkCreatePropertiesUseCase
 from app.services.admin.use_cases.estimated_price.set_estimated_price import SetEstimatedPriceUseCase
 from app.services.admin.use_cases.get_properties import GetPropertiesAdminUseCase
@@ -55,10 +57,13 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def bulk_create_properties(
-    records: list[dict],
+    file: UploadFile,
     principal: Annotated[Principal, Depends(require_admin)],
     uc: Annotated[BulkCreatePropertiesUseCase, Depends(get_bulk_create_properties_uc)],
+    _: None = Depends(validate_properties_bulk_upload)
 ) -> BulkCreatePropertiesResult:
+    content = await file.read()
+    records = PropertyFileParser().parse(file=content, filename=file.filename)
     return await uc.execute(principal=principal, records=records)
 
 

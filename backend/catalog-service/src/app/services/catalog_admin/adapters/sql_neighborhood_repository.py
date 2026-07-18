@@ -31,7 +31,9 @@ class SqlNeighborhoodAdminRepository(NeighborhoodAdminRepository):
         return self.session.exec(stmt).all()
 
     def bulk_insert(self, *, neighborhoods: list[Neighborhood]) -> None:
-        stmt = insert(Neighborhood).values([n.model_dump() for n in neighborhoods])
+        stmt = insert(Neighborhood).values(
+            [n.model_dump(exclude={"created_at", "updated_at"}) for n in neighborhoods]
+        )
         stmt = stmt.on_conflict_do_update(
             constraint="uq_neighborhood_locality_code",
             set_={k: stmt.excluded[k] for k in _UPSERT_FIELDS},

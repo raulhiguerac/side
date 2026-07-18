@@ -77,40 +77,20 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import Multiselect from "@vueform/multiselect";
-import { useOnboarding } from "@/composables/useOnboarding";
-import { locations, getCitiesByCountry } from "@/composables/Location";
+import { useOnboarding } from "@/composables/onboarding/useOnboarding";
+import { load, cities } from "@/composables/catalog/useCities";
+import { useCityMultiselect } from "@/composables/shared/useMultiselect";
 
 const { saveCity } = useOnboarding();
+const { selected, removeCity } = useCityMultiselect();
 
-interface Locality {
-  id: string;
-  name: string;
-  admin_division: {
-    id: string;
-    name: string;
-  };
-}
-
-const countryUser = ref<string | undefined>(undefined);
-const cities = ref<Map<string, string>>(new Map());
-
-onMounted(async () => {
-  const result = await locations();
-  countryUser.value = result.countryUser;
-  if (result.countryUser) {
-    const data = await getCitiesByCountry(result.countryUser);
-    cities.value = new Map(data.map((city: Locality) => [city.id, city.name]));
-  }
-});
-
-const selected = ref<string[]>([]);
-
-function removeCity(city: string) {
-  selected.value = selected.value.filter((c) => c !== city);
-}
+onMounted(() => load());
 
 async function handleNext() {
-  const localities = selected.value.map((id) => ({ id, name: cities.value.get(id) ?? "" }));
+  const localities = selected.value.map((id) => ({
+    id,
+    name: cities.value.get(id) ?? "",
+  }));
   await saveCity(localities);
 }
 </script>

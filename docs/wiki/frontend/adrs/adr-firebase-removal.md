@@ -1,9 +1,12 @@
 ---
 title: ADR-0004 — Remover Firebase del frontend
 status: stable
-last-verified: 2026-05-21
+last-verified: 2026-07-15
 owners: [frontend]
-related: [[frontend]], [[frontend-architecture]], [[adr-auth-keycloak-jwt]]
+related:
+  - "[[frontend]]"
+  - "[[frontend-architecture]]"
+  - "[[adr-auth-keycloak-jwt]]"
 sources: [../../../sources/frontend/2026-05-21-foundational-qa.md]
 decision-date: 2026-05-21
 decision-status: accepted
@@ -13,7 +16,7 @@ decision-status: accepted
 
 ## Contexto
 
-`package.json` tiene `firebase: ^10.12.2` como dependencia, usada únicamente en [`LoginView.loginWithGoogle()`](frontend/src/views/auth/LoginView.vue#L301-L326):
+`package.json` tiene `firebase: ^10.12.2` como dependencia, usada únicamente en `LoginView.loginWithGoogle()`:
 
 ```ts
 const auth = getAuth();
@@ -21,8 +24,10 @@ const provider = new GoogleAuthProvider();
 const result = await signInWithPopup(auth, provider);
 const idToken = await result.user.getIdToken();
 // envía idToken al backend
-await axios.post("http://localhost:8000/v1/auth/login/google", { token: idToken }, ...);
+await usersApi.post("/v1/auth/login/google", { token: idToken });
 ```
+
+(La llamada al backend usaba `axios.post` con URL hardcodeada `http://localhost:8000`; tras la centralización de axios en instancias por servicio, ahora usa `usersApi.post` con path relativo — mismo endpoint y shape, solo cambió el transporte.)
 
 El flujo era: Firebase maneja el popup de Google → devuelve un `idToken` de Firebase → backend lo valida y crea/vincula la cuenta del usuario.
 

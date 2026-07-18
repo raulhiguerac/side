@@ -173,8 +173,13 @@ class Property(AuditMixin, table=True):
     )
 
     images: list["PropertyImage"] = Relationship(
-        back_populates="property",
-        sa_relationship_kwargs={"lazy": "selectin", "order_by": "PropertyImage.display_order"},
+        sa_relationship_kwargs={
+            "lazy": "selectin",
+            "order_by": "PropertyImage.display_order",
+            "primaryjoin": "and_(Property.id == foreign(PropertyImage.property_id), PropertyImage.status == 'active')",
+            "viewonly": True,
+            "overlaps": "property",
+        },
     )
     location: Optional["PropertyLocation"] = Relationship(
         back_populates="property",
@@ -248,7 +253,7 @@ class PropertyImage(AuditMixin, table=True):
     display_order: int = Field(nullable=False, default=0)
     is_cover: bool = Field(nullable=False, default=False)
 
-    property: Optional["Property"] = Relationship(back_populates="images")
+    property: Optional["Property"] = Relationship(sa_relationship_kwargs={"overlaps": "images"})
 
 
 class PropertyImageUploadBatch(AuditMixin, table=True):

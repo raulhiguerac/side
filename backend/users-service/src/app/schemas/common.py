@@ -11,3 +11,4 @@ class Principal(StrictBase):
     email: Optional[EmailStr]
     email_verified: bool = False
     scope: List[str] = []
+    roles: List[str] = []

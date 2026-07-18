@@ -18,7 +18,8 @@
         "vue.volar",
         "mariorodeghiero.vue-theme",
         "ms-toolsai.jupyter",
-        "dbcode.dbcode"
+        "dbcode.dbcode",
+        "bradlc.vscode-tailwindcss"
       ]
     }
   },

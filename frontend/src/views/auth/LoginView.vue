@@ -174,27 +174,7 @@
                     : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
                 "
               >
-                <svg
-                  v-if="isLoading"
-                  class="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  />
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
+                <BaseSpinner v-if="isLoading" class="h-5 w-5 text-white" />
                 <span v-else>Iniciar sesión</span>
               </button>
 
@@ -248,10 +228,11 @@
  * 4. Si falla → mostramos error
  */
 import { ref } from "vue";
-import axios from "axios";
+import usersApi from "@/api/usersApi";
 import router from "@/router";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useAuthStore } from "@/stores/auth";
+import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 
 // 🔌 Conectamos con el store de autenticación
 const authStore = useAuthStore();
@@ -307,11 +288,9 @@ const loginWithGoogle = async () => {
 
     // El login con Google todavía usa axios porque
     // el flujo es diferente (token de Firebase)
-    const response = await axios.post(
-      "http://localhost:8000/v1/auth/login/google",
-      { token: idToken },
-      { withCredentials: true }
-    );
+    const response = await usersApi.post("/v1/auth/login/google", {
+      token: idToken,
+    });
 
     if (response.status === 200) {
       // Después del login con Google, verificamos la sesión

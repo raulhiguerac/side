@@ -1,9 +1,16 @@
 ---
 title: Arquitectura interna de catalog-service
-status: draft
-last-verified: 2026-05-21
+status: stable
+last-verified: 2026-07-13
 owners: [catalog-service]
-related: [[architecture]], [[catalog-service]], [[catalog-service-poi-lifecycle]], [[adr-postgis-h3-hybrid]], [[adr-poi-cache-aside]]
+related:
+  - "[[architecture]]"
+  - "[[catalog-service]]"
+  - "[[catalog-service-poi-lifecycle]]"
+  - "[[adr-postgis-h3-hybrid]]"
+  - "[[adr-poi-cache-aside]]"
+  - "[[adr-isochrone-ors-h3]]"
+  - "[[adr-geospatial-feature-engineering]]"
 sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md]
 ---
 
@@ -82,14 +89,14 @@ Reads para frontend / consumers read-only:
 | `GetCountriesUseCase` | `GET /countries` |
 | `GetLocalitiesUseCase` | `GET /localities/by-country`, `/by-admin-division` |
 | `GetLocalityByIdUseCase` | `GET /localities/by-id` |
-| `GetNeighborhoodsByLocalityUseCase` | `GET /neighborhoods/by-locality` (acepta múltiples `locality_id`) |
+| `GetNeighborhoodsByLocalityUseCase` | `GET /neighborhoods/by-localities` (acepta múltiples `locality_ids`) |
 | `GetNeighborhoodByIdUseCase` | `GET /neighborhoods/by-id` |
 
 Ports y adapters separados de `catalog_admin` (distintos repos read-optimized). Helpers: `cache_keys.py` con constructores de keys de Redis. Ver [[catalog-service-geo-catalog]].
 
 ## Dominio `geo_resolution`
 
-El más interesante. Tres UCs.
+El más interesante. Cuatro UCs.
 
 ### `ResolveNeighborhoodUseCase` (legacy — refactor pendiente)
 Endpoint `/geo-resolution/resolve-neighborhood?query&locality_id`. Flujo:
@@ -104,7 +111,10 @@ Endpoint `/geo-resolution/by-coordinates?lat&lon`. Flujo simple:
 
 1. `uow.georef.get_location_by_point(lat, lon)` → `LocationByCoordinates`.
 
-Hoy **no dispara** el POI background task. Es el destino del refactor pendiente (ver [[catalog-service]] roadmap).
+Desde 2026-06-14 **también dispara** el POI background task — `routes/geo_resolution.py` inyecta `ResolvePoiUseCase` y hace `background_tasks.add_task(poi_uc.execute, lat=lat, lon=lon, locality_id=result.locality_id, neighborhood_id=result.neighborhood_id)`, igual que `/resolve-neighborhood`. El refactor que unificaba ambos endpoints en este punto ya aterrizó.
+
+### `ResolveIsochroneUseCase` (reachable POIs vía ORS)
+Endpoint `POST /geo-resolution/reachable-pois` (agregado 2026-06-20). Usa `OrsRoutingClient` para calcular isócronas y devolver POIs alcanzables — ver [[adr-isochrone-ors-h3]].
 
 ### `ResolvePoiUseCase` (side-effect fire-and-forget)
 Nunca se invoca directo desde HTTP — solo como background task del UC de arriba. Detalle completo en [[catalog-service-poi-lifecycle]]. Resumen:
@@ -120,9 +130,9 @@ Nunca se invoca directo desde HTTP — solo como background task del UC de arrib
 El adapter `geo_resolution/adapters/geocoding.py` traduce entre el GeoJSON crudo y un `GeocodingResult` (lat, lon, formatted_address).
 
 ### Overpass ([integrations/georef/pois/overpass.py](backend/catalog-service/src/app/integrations/georef/pois/overpass.py))
-`PoiClient`. Wrappea lib `overpass`. Solo `get_pois_by_bbox(bbox)` implementado. Query Overpass QL hardcodeada con tag set fijo: ~15 tags entre `amenity` (restaurant, school, hospital, etc.), `leisure` (park, sports_centre, etc.), `shop` (supermarket, mall, convenience). Timeout configurable vía `OVERPASS_TIMEOUT_SECONDS` (default 30s).
+`PoiClient`. Wrappea lib `overpass`. Solo `get_pois_by_bbox(bbox)` implementado. Query Overpass QL consulta 5 keys OSM (`amenity`, `shop`, `public_transport`, `leisure`, `healthcare`, como `node` y `way`), con los valores de cada key definidos en `integrations/georef/pois/category_map.py` (no inline en `overpass.py`) — ~207 tags en total (48 amenity + 116 shop + 3 public_transport + 25 leisure + 15 healthcare), agrupados en 15 categorías semánticas (transport, food, education, health, finance, commerce, recreation, worship, adult, fashion, home, electronics, auto, services) vía `extract_category()`. Timeout configurable vía `OVERPASS_TIMEOUT_SECONDS` (default 30s).
 
-⚠️ Tag set diverge del que usa el training del AVM ([[avm-training]] usa ~150 tags categorizados). Conciliación pendiente — ver Open items en [[catalog-service]].
+✅ **Conciliado** (2026-06-11): el tag set ya no diverge del training del AVM — mismo `category_map.py`/`extract_category()` en ambos lados. Ver [[adr-geospatial-feature-engineering]].
 
 ### Redis ([integrations/cache/redis/cache.py](backend/catalog-service/src/app/integrations/cache/redis/cache.py))
 `CacheClient` (lib infra). Expone `get`, `set`, `set_nx`, `get_json`, `set_json`, `delete`, `get_del`. El `RedisCacheAdapter` en `services/shared/adapters/` implementa el port `CachePort` consumido por los UCs.
@@ -206,10 +216,11 @@ Familias en `core/exceptions/`:
 - Auth lee el JWT desde la **cookie** `access_token`, no del header `Authorization` ([auth.py:45](backend/catalog-service/src/app/api/deps/auth.py#L45)).
 - `PyJWKClient(settings.KC_JWKS_URL)` se inicializa **al import** del módulo `auth.py`, no por request ([auth.py:37](backend/catalog-service/src/app/api/deps/auth.py#L37)).
 - `require_admin` chequea `settings.ADMIN_ROLE in principal.roles` con `roles` extraídos de `realm_access.roles` del JWT ([auth.py:87-103](backend/catalog-service/src/app/api/deps/auth.py#L87-L103)).
-- `ResolveNeighborhoodUseCase` hace forward geocode con cache de 30 días (`CACHE_TTL_ENTITY_SECONDS`) en Redis antes de llamar Mapbox ([resolve_neighborhood.py:56-87](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_neighborhood.py#L56-L87)).
+- `ResolveNeighborhoodUseCase` hace forward geocode con cache de 30 días (`CACHE_TTL_ENTITY_SECONDS`) en Redis antes de llamar Mapbox ([resolve_neighborhood.py:56-81](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_neighborhood.py#L56-L81)).
 - `ResolvePoiUseCase` usa Redis `set_nx` como lock distribuido con TTL `POI_LOCK_TTL_SECONDS` (30s) para evitar fetches concurrentes a la misma zona ([resolve_poi.py:68-74](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_poi.py#L68-L74)).
 - El POI fetch appendea el `h3_index` al array `h3_cells` del neighborhood después de persistir POIs — esa es la mecánica lazy-fill ([resolve_poi.py:150-156](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_poi.py#L150-L156)).
-- El tag set Overpass está hardcodeado en `integrations/georef/pois/overpass.py` (~15 tags: amenity, leisure, shop subset).
+- El tag set Overpass vive en `integrations/georef/pois/category_map.py` (~207 tags entre 5 keys OSM: amenity, shop, public_transport, leisure, healthcare), no inline en `overpass.py` ([category_map.py](backend/catalog-service/src/app/integrations/georef/pois/category_map.py)).
+- `ResolveIsochroneUseCase` es el 4to UC de `geo_resolution`, expuesto en `POST /geo-resolution/reachable-pois` ([use_cases/resolve_isochrone.py](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_isochrone.py)).
 - `CORSMiddleware` está configurado con `allow_origins=["*"]` ([main.py:18-23](backend/catalog-service/src/app/main.py#L18-L23)).
 - Las llamadas a Redis en `geo_resolution` están envueltas en `try/except` para no romper el flujo si Redis está caído (cache best-effort).
 - 2 migraciones Alembic aplicadas al 2026-05-21 ([migrations/versions/](backend/catalog-service/src/app/migrations/versions)).

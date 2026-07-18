@@ -5,7 +5,11 @@ from app.models.property import ListingStatus
 from app.schemas.principal import Principal
 from app.services.listing.helpers.property_guard import get_owned_property
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork
-from app.services.shared.helpers.cache_keys import cache_property, client_properties
+from app.services.shared.helpers.cache_keys import (
+    cache_property,
+    client_properties,
+    public_user_properties_pattern,
+)
 from app.services.shared.ports.cache import CachePort
 
 _ALLOWED_TRANSITIONS = {
@@ -42,5 +46,8 @@ class SetPropertyVisibilityUseCase:
                 cache_property(property_id=property_id),
                 client_properties(user_id=principal.sub)
             ])
+            await self.cache.delete_pattern(
+                pattern=public_user_properties_pattern(user_id=principal.sub)
+            )
         except Exception:
             pass

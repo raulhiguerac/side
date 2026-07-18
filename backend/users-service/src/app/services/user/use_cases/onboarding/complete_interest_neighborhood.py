@@ -71,7 +71,7 @@ class CompleteNeighborhoodInterestUseCase:
                 account_type=account.account_type,
             )
 
-            await run_in_threadpool(
+            first_time = await run_in_threadpool(
                 partial(
                     self.uow.onboarding.mark_completed,
                     account_id=account.account_id,
@@ -79,15 +79,17 @@ class CompleteNeighborhoodInterestUseCase:
                 )
             )
 
-            account.onboarding_step = OnboardingStep.property_type
-            profile.profile_score += 10
+            if first_time:
+                account.onboarding_step = OnboardingStep.property_type
+                profile.profile_score += 10
 
-        await run_in_threadpool(
-            partial(
-                self.uow.onboarding.save_neighborhoods,
-                neighborhoods=neighborhoods_list,
+        if neighborhoods_list:
+            await run_in_threadpool(
+                partial(
+                    self.uow.onboarding.save_neighborhoods,
+                    neighborhoods=neighborhoods_list,
+                )
             )
-        )
 
         try:
             await self.uow.commit()

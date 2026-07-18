@@ -1,10 +1,13 @@
 ---
 title: Dominio catalog_admin (catalog-service)
 status: draft
-last-verified: 2026-05-21
+last-verified: 2026-06-23
 owners: [catalog-service]
-related: [[catalog-service]], [[catalog-service-architecture]], [[catalog-service-geo-catalog]]
-sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
+related:
+  - "[[catalog-service]]"
+  - "[[catalog-service-architecture]]"
+  - "[[catalog-service-geo-catalog]]"
+sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md]
 ---
 
 ## TL;DR
@@ -65,7 +68,7 @@ Endpoint recibe `UploadFile`. La ruta llama [`NeighborhoodFileParser().parse(fil
 Flujo del UC ([bulk_create_neighborhoods.py](backend/catalog-service/src/app/services/catalog_admin/use_cases/bulk_create_neighborhoods.py)):
 
 1. Mapea cada dict a `Neighborhood(locality_id, code, postal_code, name, search_name=_normalize(name), latitude, longitude, is_active)` con `_normalize` (NFKD + lowercase + strip de tildes).
-2. **Happy path**: `uow.neighborhoods.bulk_insert(model_list)` + `commit()`. Devuelve `BulkCreateNeighborhoodsResult(created=N, errors=[])`.
+2. **Happy path**: `uow.neighborhoods.bulk_insert(model_list)` + `commit()`. Devuelve `BulkCreateNeighborhoodsResult(created=N, errors=[])`. **Bug encontrado y corregido 2026-06-23**: `bulk_insert` armaba el `INSERT` con `n.model_dump()`, que serializa `created_at`/`updated_at` como `NULL` explícito (son `server_default`, sin default de Python) — violaba el `NOT NULL` y hacía que el happy path **siempre** fallara, cayendo siempre al fallback fila-por-fila sin que nadie lo notara (el fallback "funcionaba", así que el bug quedaba invisible). Fix: `model_dump(exclude={"created_at", "updated_at"})`.
 3. **Fallback row-by-row** si bulk falla:
    - `rollback()`.
    - Por cada neighborhood: `begin_nested()` (savepoint) → `add(neighborhood)` → si falla, `rollback_to_savepoint()` + agrega `neighborhood.name` a `errors`.
@@ -146,6 +149,7 @@ Llamadas a `cache_client.*` siempre wrapeadas en `try/except pass` — cache bes
 
 - Todo `/admin/*` está protegido vía `Depends(require_admin)` en el `APIRouter` ([admin.py:74](backend/catalog-service/src/app/api/routes/admin.py#L74)).
 - `BulkCreateNeighborhoodsUseCase` intenta bulk insert primero y cae a row-by-row con savepoints (`begin_nested`/`rollback_to_savepoint`) si el bulk falla ([bulk_create_neighborhoods.py:45-83](backend/catalog-service/src/app/services/catalog_admin/use_cases/bulk_create_neighborhoods.py#L45-L83)).
+- `SqlNeighborhoodAdminRepository.bulk_insert` excluye `created_at`/`updated_at` del `model_dump()` antes del `INSERT` — sin esto, el `NOT NULL` de esas columnas (`server_default`, sin default Python) rechazaba el insert y el happy path nunca corría ([sql_neighborhood_repository.py:33-37](backend/catalog-service/src/app/services/catalog_admin/adapters/sql_neighborhood_repository.py#L33-L37)). Corregido 2026-06-23.
 - `BulkEnrichNeighborhoodGeometriesUseCase` matchea features de GeoJSON con barrios por `search_name` normalizado (NFKD + lowercase + strip) y reporta `unmatched` ([bulk_enrich_neighborhood_geometries.py:37-99](backend/catalog-service/src/app/services/catalog_admin/use_cases/bulk_enrich_neighborhood_geometries.py#L37-L99)).
 - `db_error_translator.translate_db_error` mapea constraints PG → errores de dominio vía regex sobre el message string ([db_error_translator.py:25-62](backend/catalog-service/src/app/services/catalog_admin/helpers/db_error_translator.py#L25-L62)).
 - Las llamadas a `cache_client` están envueltas en `try/except pass` — cache es best-effort, su caída no rompe writes ([update_country.py:42-48](backend/catalog-service/src/app/services/catalog_admin/use_cases/update_country.py#L42-L48)).

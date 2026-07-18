@@ -4,7 +4,10 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    DATABASE_PROPERTIES_URL: str = os.getenv("DATABASE_PROPERTIES_URL", "")
+
+    # Catalog service
+    CATALOG_URL: str = os.getenv("CATALOG_URL", "http://localhost:8001")
 
     # Auth (Keycloak)
     KC_JWKS_URL: str = os.getenv("KC_JWKS_URL", "")
@@ -23,6 +26,11 @@ class Settings(BaseSettings):
     FEED_PAGE_SIZE: int = 20
     FEED_MAX_RESULTS: int = 300
     FEED_AD_INTERVAL: int = 5  # 1 ad every N organic results
+    FEED_PAGE_CACHE_TTL_SECONDS: int = 300  # 5 min
+
+    # Public user properties (storefront del publicante)
+    # 21 = page_size 20 + 1 extra para detectar has_more sin COUNT(*)
+    PUBLIC_PROPERTIES_PAGE_SIZE: int = 21
 
     # Storage
     BUCKET_PHOTOS_PROPERTIES: str = ""

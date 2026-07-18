@@ -1,20 +1,18 @@
 <template>
-  <div
-    class="flex flex-col min-h-screen xl:h-screen xl:overflow-hidden bg-gray-50"
-  >
+  <div class="flex flex-col min-h-screen bg-gray-50">
     <NavBar
       v-if="!$route.meta.hideNavbar"
       :links="navigationLinks"
       class="flex-none shadow-sm z-10"
     />
 
-    <main
-      class="flex flex-col flex-1 min-h-0 overflow-y-auto xl:overflow-hidden"
-    >
+    <main class="flex flex-col flex-1">
       <router-view v-slot="{ Component }">
         <component :is="Component" class="flex-1" />
       </router-view>
     </main>
+
+    <AppFooter />
 
     <BaseModal
       v-model="isModalOpen"
@@ -58,9 +56,10 @@
 import { watch } from "vue";
 import { onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
-import { useOnboarding } from "@/composables/useOnboarding";
+import { useOnboarding } from "@/composables/onboarding/useOnboarding";
 import NavBar from "@/components/shared/NavBar.vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
+import AppFooter from "@/components/shared/AppFooter.vue";
 import { useUserStore } from "./stores/user";
 import { ref } from "vue";
 import IntentSelector, {
@@ -70,7 +69,8 @@ import { computed } from "vue";
 
 const authStore = useAuthStore();
 const userStore = useUserStore();
-const { activeComponent, isModalOpen, startFlow, closeFlow } = useOnboarding();
+const { activeComponent, isModalOpen, startFlow, closeFlow, advanceToCity } =
+  useOnboarding();
 
 const navigationLinks = [
   { names: "Home", router: "/" },
@@ -85,13 +85,14 @@ onMounted(async () => {
 
 watch(
   () => authStore.isAuthenticated,
-  (isLogged) => {
+  async (isLogged) => {
     if (!isLogged) return;
-    const manualCheck =
-      sessionStorage.getItem("onboarding_dismissed") === "true";
-
-    if (!manualCheck) {
+    try {
+      await authStore.fillUserData();
+      await userStore.checkInterests();
       startFlow();
+    } catch (e) {
+      console.error("Error al inicializar la sesión", e);
     }
   },
   { immediate: true }
@@ -103,7 +104,7 @@ const dynamicProps = computed(() => {
     return {
       modelValue: intent.value,
       "onUpdate:modelValue": (val: Intent) => (intent.value = val),
-      onSaved: closeFlow,
+      onSaved: advanceToCity,
     };
   }
   return {};

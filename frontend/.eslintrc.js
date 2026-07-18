@@ -19,5 +19,6 @@ module.exports = {
   },
   globals: {
     google: "readonly",
+    defineModel: "readonly",
   },
 };

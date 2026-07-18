@@ -78,27 +78,7 @@
                     : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
                 "
               >
-                <svg
-                  v-if="isLoading"
-                  class="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  />
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
+                <BaseSpinner v-if="isLoading" class="h-5 w-5 text-white" />
                 <span v-else>Recupera las llaves</span>
               </button>
             </div>
@@ -127,8 +107,9 @@
  * 4. Si falla → mostramos error
  */
 import { ref } from "vue";
-import axios from "axios";
+import usersApi from "@/api/usersApi";
 import router from "@/router";
+import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 
 // 📝 Datos del formulario (locales, no van al store)
 const user = ref({
@@ -152,11 +133,9 @@ const resetPasswordUser = async () => {
 
   try {
     // 1. Hacemos la petición
-    await axios.post(
-      "http://localhost:8000/v1/auth/reset-password/request",
-      { email: user.value.email }, // Asegúrate de usar .value si es un ref de Vue
-      { withCredentials: true }
-    );
+    await usersApi.post("/v1/auth/reset-password/request", {
+      email: user.value.email,
+    });
 
     // 2. Si llega aquí, es que fue exitoso (status 200)
     // Normalmente el reset no te loguea de inmediato,

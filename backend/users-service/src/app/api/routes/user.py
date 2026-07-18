@@ -1,3 +1,4 @@
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, UploadFile, status
@@ -14,6 +15,7 @@ from app.api.deps.user_use_cases import (
     get_current_account_uc,
     get_current_profile_uc,
     get_deactivate_current_account_uc,
+    get_profile_by_id_uc,
     get_request_reactivation_uc,
     get_update_current_profile_photo_uc,
     get_update_current_profile_uc,
@@ -45,6 +47,9 @@ from app.services.user.use_cases.account.request_account_reactivation import (
 )
 from app.services.user.use_cases.profile.get_current_profile import (
     GetCurrentProfileUseCase,
+)
+from app.services.user.use_cases.profile.get_profile_by_id import (
+    GetProfileByIdUseCase,
 )
 from app.services.user.use_cases.profile.update_current_profile import (
     UpdateCurrentProfileUseCase,
@@ -105,6 +110,23 @@ async def get_current_user_profile(
     uc: Annotated[GetCurrentProfileUseCase, Depends(get_current_profile_uc)],
 ) -> CurrentUserProfileOut:
     return await uc.execute(account_id=principal.sub)
+
+
+# -------------------------------------------------------------------------
+# Profile (public read)
+# -------------------------------------------------------------------------
+
+
+@router.get(
+    "/profiles/{account_id}",
+    response_model=CurrentUserProfileOut,
+    status_code=status.HTTP_200_OK,
+)
+async def get_user_profile_by_id(
+    account_id: uuid.UUID,
+    uc: Annotated[GetProfileByIdUseCase, Depends(get_profile_by_id_uc)],
+) -> CurrentUserProfileOut:
+    return await uc.execute(account_id=account_id)
 
 
 # -------------------------------------------------------------------------

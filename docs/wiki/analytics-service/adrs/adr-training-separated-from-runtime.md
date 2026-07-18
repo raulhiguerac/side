@@ -1,9 +1,13 @@
 ---
 title: ADR-0002 — Training separado del runtime
 status: stable
-last-verified: 2026-05-19
+last-verified: 2026-06-20
 owners: [analytics-service]
-related: [[architecture]], [[analytics-service]], [[avm-training]], [[adr-mlflow-minio-stack]]
+related:
+  - "[[architecture]]"
+  - "[[analytics-service]]"
+  - "[[avm-training]]"
+  - "[[adr-mlflow-minio-stack]]"
 sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md]
 decision-date: 2026-05-19
 decision-status: accepted

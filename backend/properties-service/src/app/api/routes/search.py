@@ -5,11 +5,10 @@ from fastapi import APIRouter, Depends, Query, status
 from app.api.deps.search import (
     get_feed_map_uc,
     get_feed_uc,
-    parse_feed_cursor,
     parse_feed_filters,
     parse_feed_preferences,
 )
-from app.services.search.schemas.feed_schemas import BoundingBox, FeedCursor, FeedFilters, FeedPreferences
+from app.services.search.schemas.feed_schemas import BoundingBox, FeedPage, FeedFilters, FeedPreferences
 from app.services.search.use_cases.get_feed import GetFeedUseCase
 from app.services.search.use_cases.get_feed_map import GetFeedMapUseCase
 from app.services.shared.schemas.property_card import PropertyCardSchema
@@ -19,16 +18,16 @@ router = APIRouter(prefix="/search", tags=["search"])
 
 @router.get(
     "/feed",
-    response_model=list[PropertyCardSchema],
+    response_model=FeedPage,
     status_code=status.HTTP_200_OK,
 )
 async def get_feed(
     preferences: Annotated[Optional[FeedPreferences], Depends(parse_feed_preferences)],
     filters: Annotated[Optional[FeedFilters], Depends(parse_feed_filters)],
-    cursor: Annotated[Optional[FeedCursor], Depends(parse_feed_cursor)],
     uc: Annotated[GetFeedUseCase, Depends(get_feed_uc)],
-) -> list[PropertyCardSchema]:
-    return await uc.execute(preferences=preferences, filters=filters, cursor=cursor)
+    cursor: Optional[str] = Query(default=None)
+) -> FeedPage:
+    return await uc.execute(preferences=preferences, filters=filters, cursor_str=cursor)
 
 
 @router.get(

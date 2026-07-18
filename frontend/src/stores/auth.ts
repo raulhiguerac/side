@@ -1,45 +1,24 @@
-/**
- * 🏪 AUTH STORE - La "memoria" de autenticación de tu app
- */
-
 import { defineStore } from "pinia";
 import axios from "axios";
 import router from "@/router";
+import { API } from "@/config";
+import usersApi from "@/api/usersApi";
 import { useUserStore } from "./user";
-
-// =========================================================
-// 📦 TIPOS Y ENUMERACIONES
-// =========================================================
-
-interface UserProfile {
-  first_name: string;
-  last_name: string;
-  phone: string;
-  photo_url?: string;
-  description?: string;
-  intent?: "buyer" | "seller" | "renter" | "explorer";
-  account_type: "person" | "organization";
-}
-
-interface User extends UserProfile {
-  id?: string;
-  email?: string;
-}
+import type { AuthProfile, AuthUser, User as AccountUser } from "@/types/user";
 
 interface ProfileResponse {
-  profile: UserProfile;
+  profile: AuthProfile;
 }
 
 interface AuthState {
-  user: User | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   _authChecked: boolean;
+  onboardingStep: string;
+  isAdmin: boolean;
+  accountId: string | null;
 }
-
-// =========================================================
-// 🏪 STORE DEFINITION
-// =========================================================
 
 export const useAuthStore = defineStore("auth", {
   state: (): AuthState => ({
@@ -47,6 +26,9 @@ export const useAuthStore = defineStore("auth", {
     isAuthenticated: false,
     isLoading: true,
     _authChecked: false,
+    onboardingStep: "intent",
+    isAdmin: false,
+    accountId: null,
   }),
 
   getters: {
@@ -78,7 +60,7 @@ export const useAuthStore = defineStore("auth", {
 
       try {
         const response = await axios.get<ProfileResponse>(
-          "http://localhost:8000/v1/users/me/profile",
+          `${API.USERS_BASE_URL}/v1/users/me/profile`,
           { withCredentials: true }
         );
 
@@ -93,13 +75,17 @@ export const useAuthStore = defineStore("auth", {
       }
     },
 
+    async fillUserData() {
+      const { data } = await usersApi.get<AccountUser>("/v1/users/me/");
+
+      this.onboardingStep = data.onboarding_step ?? "intent";
+      this.isAdmin = data.is_admin;
+      this.accountId = data.account_id;
+    },
+
     async login(email: string, password: string): Promise<boolean> {
       try {
-        await axios.post(
-          "http://localhost:8000/v1/auth/login",
-          { email, password },
-          { withCredentials: true }
-        );
+        await usersApi.post("/v1/auth/login", { email, password });
 
         await this.checkAuth(true);
         return this.isAuthenticated;
@@ -112,9 +98,7 @@ export const useAuthStore = defineStore("auth", {
 
     async register(userData: any): Promise<boolean> {
       try {
-        await axios.post("http://localhost:8000/v1/auth/register", userData, {
-          withCredentials: true,
-        });
+        await usersApi.post("/v1/auth/register", userData);
 
         await this.checkAuth(true);
         return this.isAuthenticated;
@@ -130,20 +114,20 @@ export const useAuthStore = defineStore("auth", {
     async logout(): Promise<void> {
       try {
         await axios.post(
-          "http://localhost:8000/v1/auth/logout",
+          `${API.USERS_BASE_URL}/v1/auth/logout`,
           {},
           { withCredentials: true }
         );
       } catch (error) {
         console.error("Error en logout:", error);
       } finally {
-        // 1. Reseteamos el store de usuario (onboarding) primero
-        const userStore = useUserStore();
-        userStore.logoutReset();
-
-        // 2. Limpiamos datos locales
+        // Limpiamos datos locales
+        useUserStore().resetInterests();
         this.user = null;
         this.isAuthenticated = false;
+        this.onboardingStep = "intent";
+        this.isAdmin = false;
+        this.accountId = null;
 
         /**
          * 💡 EL TRUCO: Marcamos _authChecked como true.
@@ -152,12 +136,12 @@ export const useAuthStore = defineStore("auth", {
          */
         this._authChecked = true;
 
-        // 3. Redirigimos al Home o Login
+        // Redirigimos al Home o Login
         router.push("/");
       }
     },
 
-    updateUser(userData: Partial<User>): void {
+    updateUser(userData: Partial<AuthUser>): void {
       if (this.user) {
         this.user = { ...this.user, ...userData };
       }

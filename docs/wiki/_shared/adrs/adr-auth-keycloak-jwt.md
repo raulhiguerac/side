@@ -1,9 +1,11 @@
 ---
 title: ADR-0001 — Auth vía Keycloak JWT
 status: stable
-last-verified: 2026-05-20
+last-verified: 2026-06-20
 owners: [_shared]
-related: [[architecture]], [[analytics-service-architecture]]
+related:
+  - "[[architecture]]"
+  - "[[analytics-service-architecture]]"
 sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md]
 decision-date: 2026-05-19
 decision-status: accepted

@@ -14,6 +14,13 @@
       >
         Mis propiedades
       </router-link>
+      <router-link
+        v-if="authStore.isAdmin"
+        to="/admin"
+        class="text-white/80 text-sm font-medium hover:text-white transition-colors"
+      >
+        Admin
+      </router-link>
     </div>
 
     <!-- Avatar y dropdown -->

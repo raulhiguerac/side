@@ -14,3 +14,9 @@ def cache_key_fetch_zone(h3_index: str) -> str:
 
 def lock_key_fetch_zone(h3_index: str) -> str:
     return f"geo:fetch_zone:lock:{h3_index}"
+
+
+def get_isochrone_key(*, property_id: uuid.UUID | None = None, h3_cell: str | None = None) -> str:
+    if property_id is not None:
+        return f"geo:reachable:property:{property_id}"
+    return f"geo:reachable:cell:{h3_cell}"

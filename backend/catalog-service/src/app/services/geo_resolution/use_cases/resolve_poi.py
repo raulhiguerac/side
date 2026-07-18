@@ -12,7 +12,7 @@ from app.services.geo_resolution.helpers.cache_keys import (
     cache_key_fetch_zone,
     lock_key_fetch_zone,
 )
-from app.services.geo_resolution.ports.poi_provider_gateway import PoiProviderGateway
+from app.services.geo_resolution.ports.poi.gateway import PoiProviderGateway
 from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWork
 from app.services.shared.ports.cache import CachePort
 
@@ -109,7 +109,7 @@ class ResolvePoiUseCase:
             )
 
         except Exception as exc:
-            logger.error("resolve_poi_error", extra={"extra": {"h3_index": h3_index, "reason": str(exc)}})
+            logger.error("resolve_poi_error h3_index=%s reason=%s: %s", h3_index, exc.__class__.__name__, exc)
             await self.uow.rollback()
         finally:
             await self.cache_client.delete(key=lock_key)
@@ -160,7 +160,4 @@ class ResolvePoiUseCase:
         await self._set_cache(key=cache_key, ttl=STALE_THRESHOLD_DAYS * 86400)
 
     async def _set_cache(self, *, key: str, ttl: int) -> None:
-        try:
-            await self.cache_client.set(key=key, value="1", ttl=ttl)
-        except Exception:
-            pass
+        await self.cache_client.set(key=key, value="1", ttl=ttl)

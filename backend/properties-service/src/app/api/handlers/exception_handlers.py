@@ -10,6 +10,9 @@ ERROR_CODE_TO_HTTP_STATUS: dict[str, int] = {
     # Auth
     "UNAUTHORIZED": 401,
     "FORBIDDEN": 403,
+    # Upload validation
+    "FILE_TOO_LARGE": 413,
+    "UNSUPPORTED_FILE_TYPE": 415,
     # Property CRUD
     "CREATE_PROPERTY_ERROR": 422,
     "DELETE_PROPERTY_ERROR": 422,
@@ -28,6 +31,8 @@ ERROR_CODE_TO_HTTP_STATUS: dict[str, int] = {
     "INVALID_LOCATION": 422,
     "INCONSISTENT_LOCATION": 422,
     "LOCATION_NOT_RESOLVED": 404,
+    # Pagination
+    "INVALID_CURSOR": 400,
     # Images
     "IMAGE_COUNT_EXCEEDED": 400,
     "IMAGE_NOT_OWNED": 403,

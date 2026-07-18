@@ -23,6 +23,9 @@ class RedisCacheAdapter(CachePort):
     async def delete(self, *, key: str | list[str]) -> None:
         await self._client.delete(key)
 
+    async def delete_pattern(self, *, pattern: str) -> None:
+        await self._client.delete_pattern(pattern)
+
     async def get_json(self, *, key: str) -> dict | list | None:
         return await self._client.get_json(key)
 

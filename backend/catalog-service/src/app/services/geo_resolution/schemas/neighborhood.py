@@ -19,5 +19,5 @@ class ResolvedNeighborhood(StrictBase):
 
 class LocationByCoordinates(StrictBase):
     neighborhood_id: uuid.UUID
-    city_id: uuid.UUID
+    locality_id: uuid.UUID
     country_id: uuid.UUID
