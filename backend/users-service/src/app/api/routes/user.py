@@ -20,6 +20,7 @@ from app.api.deps.user_use_cases import (
     get_update_current_profile_photo_uc,
     get_update_current_profile_uc,
     get_user_interests_uc,
+    resolve_accounts_bulk_uc,
 )
 from app.schemas.common import Principal
 from app.services.auth.schemas.tokens import RefreshToken
@@ -44,6 +45,9 @@ from app.services.user.use_cases.account.reactivate_current_account import (
 )
 from app.services.user.use_cases.account.request_account_reactivation import (
     RequestReactivationUseCase,
+)
+from app.services.user.use_cases.account.resolve_accounts_bulk import (
+    ResolveAccountsBulkUseCase,
 )
 from app.services.user.use_cases.profile.get_current_profile import (
     GetCurrentProfileUseCase,
@@ -234,3 +238,19 @@ async def confirm_account_reactivation(
 ) -> dict[str, str]:
     await uc.execute(token=token)
     return {"status": "reactivated"}
+
+
+# -------------------------------------------------------------------------
+# Account (bulk resolve)
+# -------------------------------------------------------------------------
+
+
+@router.post(
+    "/resolve",
+    status_code=status.HTTP_200_OK,
+)
+async def resolve_accounts_bulk(
+    account_ids: list[uuid.UUID],
+    uc: Annotated[ResolveAccountsBulkUseCase, Depends(resolve_accounts_bulk_uc)],
+) -> list[tuple[uuid.UUID, str]]:
+    return await uc.execute(account_ids=account_ids)
