@@ -21,3 +21,22 @@ class LocationByCoordinates(StrictBase):
     neighborhood_id: uuid.UUID
     locality_id: uuid.UUID
     country_id: uuid.UUID
+
+
+class PointToResolveBase(StrictBase):
+    id: str
+    lat: float
+    lon: float
+
+
+class PointToResolve(PointToResolveBase):
+    cell: str
+
+
+class ResolvedPoint(StrictBase):
+    id: str
+    location: Optional[LocationByCoordinates]
+
+
+class BulkResolveLocationsRequest(StrictBase):
+    points: list[PointToResolveBase]

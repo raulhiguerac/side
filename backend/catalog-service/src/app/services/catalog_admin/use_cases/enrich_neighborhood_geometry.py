@@ -15,7 +15,11 @@ from app.services.shared.helpers.cache_keys import (
     cache_key_neighborhood,
     cache_key_neighborhoods,
 )
-from app.services.shared.helpers.geometry import geom_from_geojson, geom_to_geojson
+from app.services.shared.helpers.geometry import (
+    geom_from_geojson,
+    geom_to_geojson,
+    h3_cells_for_geojson,
+)
 from app.services.shared.ports.cache import CachePort
 
 
@@ -39,8 +43,12 @@ class EnrichNeighborhoodGeometryUseCase:
             raise NeighborhoodInvalidGeometryError(geometry_type=geometry_type or "unknown")
 
         neighborhood_geometry = await run_in_threadpool(partial(geom_from_geojson, geometry))
+        h3_cells = await run_in_threadpool(
+            partial(h3_cells_for_geojson, geometry, resolution=settings.H3_RESOLUTION)
+        )
 
         db_model.geom = neighborhood_geometry
+        db_model.h3_cells = h3_cells
 
         try:
             await self.uow.commit()
