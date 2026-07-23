@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Protocol
 
-from app.models.property import Property, PropertyType
+from app.models.listing import Property, PropertyType
 
 
 class PropertySearchRepository(Protocol):

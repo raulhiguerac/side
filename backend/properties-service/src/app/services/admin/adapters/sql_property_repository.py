@@ -4,13 +4,9 @@ from typing import Optional
 from sqlmodel import Session, select
 from sqlalchemy.dialects.postgresql import insert
 
-from app.models.property import (
-    ListingStatus,
-    Property,
-    PropertyImage,
-    PropertyLocation,
-    VerificationStatus,
-)
+from app.models.listing import ListingStatus, Property, PropertyLocation, VerificationStatus
+from app.models.image import PropertyImage
+from app.services.admin.ports.property_repository import AdminPropertyRepository
 
 _PROPERTY_UPSERT_FIELDS = [
     "owner_id", "property_type", "listing_type", "condition", "status",
@@ -31,7 +27,7 @@ _IMAGE_UPSERT_FIELDS = [
 ]
 
 
-class SqlAdminPropertyRepository:
+class SqlAdminPropertyRepository(AdminPropertyRepository):
     def __init__(self, session: Session) -> None:
         self.session = session
 

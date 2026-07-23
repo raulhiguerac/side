@@ -1,7 +1,7 @@
 ---
 title: Dominio admin — properties-service
-status: stable
-last-verified: 2026-07-16
+status: draft
+last-verified: 2026-07-19
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -10,7 +10,8 @@ related:
   - "[[analytics-service]]"
   - "[[frontend-admin-panel]]"
   - "[[open-items]]"
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md]
+  - "[[properties-service-bulk-create-worker]]"
+sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md]
 ---
 
 ## TL;DR
@@ -72,17 +73,20 @@ Ambas señales se preservan por separado para servir como labels de training del
 
 ## Bulk create
 
-`BulkCreatePropertiesUseCase` ([bulk_create_properties.py](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py)):
+`BulkCreatePropertiesUseCase` — **relocada** de `services/admin/use_cases/bulk_create_properties.py` a [`workers/bulk_create_properties.py`](backend/properties-service/src/app/workers/bulk_create_properties.py) (2026-07-19), en reconstrucción activa. Ver [[properties-service-bulk-create-worker]] para el detalle técnico (streaming desde MinIO, parseo CSV, algoritmo de paridad de comillas).
 
-1. **Geo-enrichment concurrente**: por cada record, `catalog.get_location_by_point(lat, lon)` bajo un `asyncio.Semaphore(50)`.
-2. Mapea filas a modelos (`row_to_item` + `build_models`), acumulando errores por fila sin abortar el lote.
-3. **Happy path**: `bulk_insert` + `commit`.
-4. **Fallback**: si el bulk falla, reintenta fila por fila con `begin_nested()` / `rollback_to_savepoint()` y un solo `commit` al final.
-5. Devuelve `BulkCreatePropertiesResult(inserted, errors)`.
+**Flujo nuevo, parcialmente conectado**:
 
-Mismo patrón bulk-then-row-by-row que el UC batch de [[analytics-service-architecture]].
+1. Lee el CSV desde MinIO en streaming (`iter_csv_rows`) — nunca carga el archivo completo en memoria, y ya devuelve dicts resueltos (no líneas crudas).
+2. Acumula filas en batches de 2500, con flush final para el remanente.
+3. Por batch, `_process_batch` arma un `id` de correlación por fila (índice dentro del batch), llama `catalog.get_locations_bulk(points)` **una vez por batch** (no una llamada HTTP por fila), y mergea el resultado de vuelta en cada dict por `id`. Filas con lat/lon inválido o sin match de ubicación van a `errors` sin abortar el batch.
+4. **Sin conectar todavía**: el output de `_process_batch` (`enriched: list[dict], errors: list[str]`) no se pasa a `row_to_item`/`build_models`/`bulk_insert` — el código viejo que hacía eso (`asyncio.gather` + `Semaphore(50)` + `_enrich_location`) sigue debajo en `execute()`, ahora referenciando variables que no existen (`records`, `sem`) — es código muerto pendiente de reconciliar, no un fallback funcional.
+
+El patrón bulk-then-row-by-row para el insert final (`bulk_insert` con fallback `begin_nested`/`rollback_to_savepoint`, mismo patrón que el UC batch de [[analytics-service-architecture]]) sigue existiendo en el archivo pero **desconectado** de la nueva ruta de entrada — mirá el código del archivo, no asumas que este flujo end-to-end ya funciona.
 
 > **Riesgo detectado (2026-07-16), pendiente de refactor — ver `open-items.md`, marcado IMPORTANTE**: `execute()` corre **síncrono end-to-end dentro del ciclo del request HTTP**, incluyendo el geo-enrichment contra catalog-service (paso 1) y el `commit()` (paso 3/4) — la respuesta al front solo llega después de que el commit ya se ejecutó. El timeout del cliente (`propertiesApi`, 8s) puede no alcanzar para CSVs de más de un puñado de filas, dado el acumulado de latencia de red hacia catalog-service por cada fila. Refactor propuesto (no implementado): patrón `202 { batch_id }` + procesamiento en background + endpoint de polling de status, con el gotcha de que las dependencias `yield` (UoW/sesión) de FastAPI se cierran antes de que corra un `BackgroundTask` — el worker necesitaría abrir su propia sesión. Ver [[frontend-admin-panel]] para el lado consumidor (el modal de importación que expuso el problema).
+>
+> **Update 2026-07-19**: la clase se movió a `workers/bulk_create_properties.py` (antes vivía en `services/admin/use_cases/`) — el nombre del módulo sugiere el refactor a background, pero **no hay confirmación** de que la ruta HTTP ya la invoque vía `BackgroundTasks` en vez de `await`-earla inline. No asumir resuelto hasta verificar `api/routes/admin.py`.
 
 > **Segundo hallazgo (2026-07-16), también pendiente — marcado IMPORTANTE**: `build_models()` (`seed_mapper.py`) llama `Property(owner_id=owner_id, ...)` con `owner_id=principal.sub` — el mismo UUID que `created_by`. Todas las propiedades importadas en bloque quedan "de propiedad" del admin que corrió el import, apareciendo en su propio `GET /properties/me`. `created_by=principal.sub` está bien (audita quién ejecutó el import). `owner_id` está mal: debería resolver a la cuenta real del dueño. **Decisión tomada**: resolver por **email** contra `Account.email` en users-service (único+indexado, sin migración) — se descartó cédula porque ese campo no existe hoy en `users-service` (solo `account_id`/`email` son identificadores únicos en `models/account.py`). El CSV necesitaría una columna de email por fila; qué pasa si no matchea ninguna cuenta (¿crear placeholder? ¿rechazar fila?) queda sin decidir. La trazabilidad de qué `property_id`s salieron de qué import puede resolverse con la misma entidad de batch del refactor async de arriba, sin mecanismo aparte.
 
@@ -96,10 +100,9 @@ Mismo patrón bulk-then-row-by-row que el UC batch de [[analytics-service-archit
 - `set_status` valida transiciones contra `_ALLOWED_TRANSITIONS` y lanza `InvalidStatusTransitionError` si no aplica ([set_status.py:39-44](backend/properties-service/src/app/services/admin/use_cases/moderation/set_status.py#L39-L44)).
 - `SetEstimatedPriceUseCase` escribe `admin_estimated_price` si hay principal, `ml_estimated_price` si no ([set_estimated_price.py:26-32](backend/properties-service/src/app/services/admin/use_cases/estimated_price/set_estimated_price.py#L26-L32)).
 - El path ML de `set_estimated_price` no tiene caller — `workers/` está vacío al 2026-05-28 ([workers/](backend/properties-service/src/app/workers)).
-- El bulk enriquece ubicación contra catalog con un `Semaphore(50)` de concurrencia ([bulk_create_properties.py:22-23](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py#L22-L23), [bulk_create_properties.py:97-101](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py#L97-L101)).
-- El bulk hace `bulk_insert` con fallback row-by-row vía `begin_nested`/`rollback_to_savepoint` ([bulk_create_properties.py:62-94](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py#L62-L94)).
-- La ruta `bulk_create_properties` hace `return await uc.execute(...)` — la respuesta HTTP espera a que el `commit()` (real, vía `session.commit()` en threadpool) termine antes de responder; un `201` implica filas ya comiteadas, no un ack especulativo ([admin.py:59-67](backend/properties-service/src/app/api/routes/admin.py#L59-L67), [sql_unit_of_work.py:15-16](backend/properties-service/src/app/services/admin/adapters/sql_unit_of_work.py#L15-L16)).
-- No hay `BackgroundTasks` en la ruta de bulk create — todo el geo-enrichment + insert + commit corre dentro del ciclo de vida del request ([admin.py](backend/properties-service/src/app/api/routes/admin.py)).
+- **Desactualizado desde 2026-07-19, no confirmado contra código actual**: `BulkCreatePropertiesUseCase` se relocó a `workers/bulk_create_properties.py`; los claims de abajo sobre `Semaphore(50)` por fila, la ruta síncrona (`admin.py`) y ausencia de `BackgroundTasks` describían el archivo en su ubicación/forma vieja (`services/admin/use_cases/`) y **no fueron re-verificados** contra el nuevo flujo de streaming+batch — ver [[properties-service-bulk-create-worker]] para lo que sí está verificado del código nuevo.
+- El bulk enriquece ubicación contra catalog con un `Semaphore(50)` de concurrencia — **código viejo, ver nota de arriba; el flujo nuevo llama `catalog.get_locations_bulk` una vez por batch de 2500, no una vez por fila** ([bulk_create_properties.py](backend/properties-service/src/app/workers/bulk_create_properties.py)).
+- El bulk hace `bulk_insert` con fallback row-by-row vía `begin_nested`/`rollback_to_savepoint` — sigue en el archivo pero desconectado del nuevo entry point (`execute()` no llega a este código todavía) ([bulk_create_properties.py](backend/properties-service/src/app/workers/bulk_create_properties.py)).
 - `build_models()` setea `owner_id=owner_id` con el valor `principal.sub` pasado desde `execute()` — el mismo UUID que `created_by` ([seed_mapper.py:210-212](backend/properties-service/src/app/services/admin/helpers/seed_mapper.py#L210-L212), [bulk_create_properties.py:54-56](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py#L54-L56)).
 - `Account` en users-service tiene `account_id` y `email` como únicos identificadores indexados/únicos — no existe ningún campo de documento de identidad (cédula) ([account.py:37-53](backend/users-service/src/app/models/account.py#L37-L53)).
 - `Property.promotions` es una relación viewonly filtrada por `is_active=True` ([property.py:183-190](backend/properties-service/src/app/models/property.py#L183-L190)).

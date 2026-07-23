@@ -6,7 +6,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from app.core.config.settings import settings
 from app.core.exceptions.storage import StorageMisconfiguredError
-from app.models.property import BatchStatus, PropertyImageUploadBatch
+from app.models.image import BatchStatus, PropertyImageUploadBatch
 from app.schemas.principal import Principal
 from app.services.listing.helpers.db_error_translator import translate_db_error
 from app.services.listing.helpers.image_count_guard import check_image_count

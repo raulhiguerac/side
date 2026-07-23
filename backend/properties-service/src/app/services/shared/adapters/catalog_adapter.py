@@ -4,7 +4,12 @@ from app.core.exceptions.listing import CatalogServiceUnavailableError, InvalidL
 from app.integrations.catalog.catalog_client import CatalogClient
 from app.integrations.catalog.exceptions import NeighborhoodNotFoundError
 from app.services.shared.ports.catalog_gateway import CatalogGateway
-from app.services.shared.schemas.catalog_schemas import LocationInfo, NeighborhoodInfo
+from app.services.shared.schemas.catalog_schemas import (
+    LocationInfo,
+    NeighborhoodInfo,
+    PointToResolve,
+    ResolvedPoint,
+)
 
 
 class CatalogAdapter(CatalogGateway):
@@ -26,5 +31,14 @@ class CatalogAdapter(CatalogGateway):
             return LocationInfo.model_validate(data)
         except NeighborhoodNotFoundError as e:
             raise LocationNotResolvedError(lat=lat, lon=lon) from e
+        except Exception as e:
+            raise CatalogServiceUnavailableError(cause=e) from e
+
+    async def get_locations_bulk(self, *, points: list[PointToResolve]) -> list[ResolvedPoint]:
+        try:
+            raw = await self._client.get_locations_bulk(
+                points=[p.model_dump() for p in points]
+            )
+            return [ResolvedPoint.model_validate(item) for item in raw]
         except Exception as e:
             raise CatalogServiceUnavailableError(cause=e) from e

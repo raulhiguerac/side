@@ -4,7 +4,7 @@ from typing import Optional
 
 from sqlmodel import Session, select
 
-from app.models.property import BatchStatus, ImageStatus, PropertyImage, PropertyImageUploadBatch
+from app.models.image import BatchStatus, ImageStatus, PropertyImage, PropertyImageUploadBatch
 from app.services.listing.ports.property_images_repository import PropertyImageRepository
 
 

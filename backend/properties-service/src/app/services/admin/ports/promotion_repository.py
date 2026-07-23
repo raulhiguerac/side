@@ -1,7 +1,7 @@
 import uuid
 from typing import Protocol
 
-from app.models.property import PromotedListing
+from app.models.promotion import PromotedListing
 
 
 class PromotionRepository(Protocol):

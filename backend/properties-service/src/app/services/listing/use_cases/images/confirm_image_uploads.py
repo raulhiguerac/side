@@ -12,7 +12,7 @@ from app.core.exceptions.listing import (
     BatchNotFoundError,
 )
 from app.core.exceptions.storage import StorageMisconfiguredError
-from app.models.property import BatchStatus, PropertyImage
+from app.models.image import BatchStatus, PropertyImage
 from app.schemas.principal import Principal
 from app.services.listing.helpers.db_error_translator import translate_db_error
 from app.services.listing.helpers.property_guard import get_owned_property_for_update

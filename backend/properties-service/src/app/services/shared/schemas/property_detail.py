@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from pydantic import ConfigDict, Field, model_validator
 
-from app.models.property import (
+from app.models.listing import (
     Currency,
     ListingStatus,
     ListingType,

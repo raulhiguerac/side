@@ -183,6 +183,15 @@ class CatalogServiceUnavailableError(BaseError):
         )
 
 
+class UsersServiceUnavailableError(BaseError):
+    def __init__(self, *, cause: Optional[Exception] = None):
+        super().__init__(
+            message="Users service is unavailable",
+            code="USERS_SERVICE_UNAVAILABLE",
+            cause=cause,
+        )
+
+
 class ImageCountExceededError(BaseError):
     def __init__(self, *, max: int, requested: int):
         super().__init__(
@@ -235,4 +244,34 @@ class BatchNotConsistentError(BaseError):
             message="Batch key count does not match the requested create count",
             code="BATCH_NOT_CONSISTENT",
             context={"batch_id": str(batch_id) if batch_id else None, "expected": expected, "got": got},
+        )
+
+
+class BulkJobNotFoundError(BaseError):
+    def __init__(self, *, job_id: Any = None):
+        super().__init__(
+            message="Bulk job not found",
+            code="BULK_JOB_NOT_FOUND",
+            http_status=404,
+            context={"job_id": str(job_id)} if job_id else {},
+        )
+
+
+class RetryOfRetryNotAllowedError(BaseError):
+    def __init__(self, *, job_id: Any = None):
+        super().__init__(
+            message="Cannot retry a job that is itself a retry — retry the original job instead",
+            code="RETRY_OF_RETRY_NOT_ALLOWED",
+            http_status=409,
+            context={"job_id": str(job_id)} if job_id else {},
+        )
+
+
+class BulkJobCreationError(BaseError):
+    def __init__(self, *, cause: Optional[Exception] = None, context: Optional[dict[str, Any]] = None):
+        super().__init__(
+            message="Error while creating bulk job",
+            code="BULK_JOB_CREATION_ERROR",
+            cause=cause,
+            context=context,
         )

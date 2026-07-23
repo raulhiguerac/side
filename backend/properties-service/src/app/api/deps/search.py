@@ -8,7 +8,7 @@ from sqlmodel import Session
 
 from app.api.deps.db import get_session
 from app.api.deps.listing import get_cache_port
-from app.models.property import PropertyType
+from app.models.listing import PropertyType
 from app.services.search.adapters.sql_unit_of_work import SqlSearchUnitOfWork
 from app.services.search.ports.unit_of_work import SearchUnitOfWork
 from app.services.search.schemas.feed_schemas import FeedCursor, FeedFilters, FeedPreferences

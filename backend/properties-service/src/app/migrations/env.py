@@ -2,13 +2,10 @@ import os
 from logging.config import fileConfig
 
 from alembic import context
-from models.property import (  # noqa: F401
-    Property,
-    PropertyLocation,
-    PropertyImage,
-    PropertyImageUploadBatch,
-    PromotedListing
-)
+from models.listing import Property, PropertyLocation  # noqa: F401
+from models.image import PropertyImage, PropertyImageUploadBatch  # noqa: F401
+from models.promotion import PromotedListing  # noqa: F401
+from models.bulk_job import BulkJob  # noqa: F401
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 

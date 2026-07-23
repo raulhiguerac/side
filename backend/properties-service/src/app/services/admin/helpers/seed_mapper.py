@@ -5,17 +5,16 @@ from typing import Optional
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 
-from app.models.property import (
-    ImageStatus,
+from app.models.listing import (
     ListingStatus,
     ListingType,
     Property,
     PropertyCondition,
-    PropertyImage,
     PropertyLocation,
     PropertyType,
     VerificationStatus,
 )
+from app.models.image import ImageStatus, PropertyImage
 from app.services.admin.schemas.admin_schemas import BulkCreatePropertyItem
 from app.services.shared.helpers.geometry import compute_h3
 

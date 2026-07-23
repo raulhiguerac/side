@@ -1,0 +1,2 @@
+class UsersClientError(Exception):
+    pass

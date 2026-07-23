@@ -9,7 +9,8 @@ from app.core.exceptions.listing import (
     PropertyNotFoundError,
     PropertyNotReadyForPromotionError,
 )
-from app.models.property import PromotedListing, ListingStatus
+from app.models.listing import ListingStatus
+from app.models.promotion import PromotedListing
 from app.schemas.principal import Principal
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork
 from app.services.admin.schemas.admin_schemas import CreatePromotionRequest

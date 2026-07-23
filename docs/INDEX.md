@@ -111,9 +111,11 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [properties-service-listing](wiki/properties-service/domain/properties-service-listing.md) — CRUD del dueño + flujo de imágenes presigned/batch + visibilidad
 - [properties-service-search](wiki/properties-service/domain/properties-service-search.md) — feed orgánico+ads con fallback de preferencias + feed-mapa por H3
 - [properties-service-admin](wiki/properties-service/domain/properties-service-admin.md) — moderación (state machine), precios estimados dual, promociones, bulk
+- [properties-service-bulk-create-worker](wiki/properties-service/domain/properties-service-bulk-create-worker.md) — streaming CSV desde MinIO, paridad de comillas para campos multilínea, batching de 2500 filas contra catalog bulk
 
 ### integrations/
 - [properties-service-catalog](wiki/properties-service/integrations/properties-service-catalog.md) — geo síncrono en write time (validación barrio↔ciudad, bulk geo-enrichment)
+- [properties-service-users](wiki/properties-service/integrations/properties-service-users.md) — cliente hacia users-service para resolución bulk de cuentas, dirección id→email (no conectado al bulk-create todavía)
 
 ### runbook/
 - [properties-service-local-dev](wiki/properties-service/runbook/properties-service-local-dev.md) — devcontainer, env vars, create + imágenes end-to-end, 6 known gaps

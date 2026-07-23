@@ -1,13 +1,8 @@
 import uuid
 from typing import Optional, Protocol
 
-from app.models.property import (
-    ListingStatus,
-    Property,
-    PropertyImage,
-    PropertyLocation,
-    VerificationStatus,
-)
+from app.models.listing import ListingStatus, Property, PropertyLocation, VerificationStatus
+from app.models.image import PropertyImage
 
 
 class AdminPropertyRepository(Protocol):

@@ -2,11 +2,13 @@ from typing import Protocol
 
 from app.services.admin.ports.property_repository import AdminPropertyRepository
 from app.services.admin.ports.promotion_repository import PromotionRepository
+from app.services.admin.ports.bulk_job_repository import BulkJobRepository
 
 
 class AdminUnitOfWork(Protocol):
     properties: AdminPropertyRepository
     promotions: PromotionRepository
+    bulk_jobs: BulkJobRepository
 
     async def commit(self) -> None: ...
     async def rollback(self) -> None: ...

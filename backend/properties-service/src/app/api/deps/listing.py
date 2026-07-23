@@ -7,6 +7,7 @@ from app.api.deps.db import get_session
 from app.integrations.cache.redis.cache import CacheClient
 from app.integrations.catalog.catalog_client import CatalogClient
 from app.integrations.storage.minio.storage import StorageClient
+from app.integrations.users.users_client import UsersClient
 from app.services.listing.adapters.sql_unit_of_work import SqlListingUnitOfWork
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork
 from app.services.listing.use_cases.images.confirm_image_uploads import ConfirmImageUploadsUseCase
@@ -22,9 +23,11 @@ from app.services.listing.use_cases.property_core.update_property import UpdateP
 from app.services.shared.adapters.catalog_adapter import CatalogAdapter
 from app.services.shared.adapters.minio_storage_adapter import MinioStorageAdapter
 from app.services.shared.adapters.redis_cache_adapter import RedisCacheAdapter
+from app.services.shared.adapters.users_adapter import UsersAdapter
 from app.services.shared.ports.cache import CachePort
 from app.services.shared.ports.catalog_gateway import CatalogGateway
 from app.services.shared.ports.storage import StoragePort
+from app.services.shared.ports.users_gateway import UsersGateway
 
 
 # -------------------------------------------------------------------------
@@ -39,6 +42,11 @@ def get_cache_port() -> CachePort:
 @lru_cache(maxsize=1)
 def get_catalog_gateway() -> CatalogGateway:
     return CatalogAdapter(CatalogClient())
+
+
+@lru_cache(maxsize=1)
+def get_users_gateway() -> UsersGateway:
+    return UsersAdapter(UsersClient())
 
 
 @lru_cache(maxsize=1)

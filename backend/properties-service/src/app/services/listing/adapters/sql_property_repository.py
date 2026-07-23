@@ -4,7 +4,7 @@ from typing import List
 from sqlmodel import Session, select
 
 from app.core.config.settings import settings
-from app.models.property import ListingStatus, Property
+from app.models.listing import ListingStatus, Property
 from app.services.listing.ports.property_repository import (
     PropertyRepository,
 )

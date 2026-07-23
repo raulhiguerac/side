@@ -6,7 +6,7 @@ from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 
 from app.core.exceptions.listing import InconsistentLocationError
-from app.models.property import ListingStatus, Property, PropertyLocation, VerificationStatus
+from app.models.listing import ListingStatus, Property, PropertyLocation, VerificationStatus
 from app.schemas.principal import Principal
 from app.services.listing.helpers.db_error_translator import translate_db_error
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork

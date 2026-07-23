@@ -1,8 +1,10 @@
 import asyncio
 from functools import partial
+from typing import AsyncIterator
 
 from fastapi.concurrency import run_in_threadpool
 
+from app.core.config.settings import settings
 from app.integrations.storage.minio.storage import StorageClient
 from app.services.shared.ports.storage import StoragePort
 
@@ -26,3 +28,13 @@ class MinioStorageAdapter(StoragePort):
             )
             for key in keys
         ])
+    
+    async def chunk_file(self, *, bucket: str, key: str) -> AsyncIterator[bytes]:
+        body = await run_in_threadpool(
+            lambda: self._client.get_object(Bucket=bucket, Key=key)["Body"]
+        )
+        while True:
+            chunk = await run_in_threadpool(body.read, settings.STORAGE_CHUNK_SIZE_BYTES)
+            if chunk == b"":
+                break
+            yield chunk

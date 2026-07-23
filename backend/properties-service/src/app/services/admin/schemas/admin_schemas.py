@@ -1,10 +1,11 @@
 import uuid
+from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
 from pydantic import Field
 
-from app.models.property import ListingStatus, ListingType, PropertyCondition, PropertyType, VerificationStatus
+from app.models.listing import ListingStatus, ListingType, PropertyCondition, PropertyType, VerificationStatus
 from app.schemas.base import StrictBase
 
 class VerifyPropertyRequest(StrictBase):
@@ -33,6 +34,36 @@ class SetStatusRequest(StrictBase):
 
 class SetEstimatedPriceRequest(StrictBase):
     estimated_price: Decimal = Field(gt=0, decimal_places=2)
+
+
+class BulkPropertyCsvRow(StrictBase):
+    """
+    Raw CSV row, before catalog/owner enrichment — mirrors the header of
+    seed_bogota_500.csv plus `email` (owner's account email, resolved to
+    owner_id via the users-service bulk endpoint downstream).
+
+    Fields that can carry non-numeric placeholder values in the source data
+    ("Sin especificar", "Más de 10", "16 a 30 años", etc.) stay as `str` on
+    purpose — they're parsed by the tolerant helpers in seed_mapper.py
+    (parse_parking, parse_bathrooms, parse_stratum, ...), not here.
+    """
+
+    area_m2: str
+    cuartos: str
+    estrato: str
+    tipo: str
+    parqueaderos: str
+    banios: str
+    piso: str
+    precio: str
+    precio_admin: str
+    tipo_propiedad: str
+    lat: float
+    lon: float
+    antiguedad: str
+    descripcion: str = ""
+    image_urls: str = ""
+    email: str
 
 
 class BulkCreatePropertyItem(StrictBase):
@@ -66,6 +97,20 @@ class BulkCreatePropertyItem(StrictBase):
     image_urls: list[str] = Field(default_factory=list)
 
 
+class BulkRowError(StrictBase):
+    line: int
+    ref: str
+    issues: list[str]
+
+
 class BulkCreatePropertiesResult(StrictBase):
     inserted: int
-    errors: list[str] = Field(default_factory=list)
+    errors: list[BulkRowError] = Field(default_factory=list)
+
+
+class BulkJobCreate(StrictBase):
+    batch_id: uuid.UUID
+    storage_key: str
+    retry_of_job_id: Optional[uuid.UUID] = None
+    expiration: datetime
+    created_by: uuid.UUID

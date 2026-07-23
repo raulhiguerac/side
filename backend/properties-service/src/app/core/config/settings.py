@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     IMAGE_UPLOAD_BATCH_TTL_SECONDS: int = 300  # 5 min
     PROPERTY_IMAGE_IDS_CACHE_TTL_SECONDS: int = 300  # 5 min
     MAX_IMAGES_PER_PROPERTY: int = 20
+    STORAGE_CHUNK_SIZE_BYTES: int = 10_000_000  # 10 MB, usado por chunk_file
 
     class Config:
         env_file = ".env"

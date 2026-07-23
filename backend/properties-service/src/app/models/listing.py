@@ -4,37 +4,11 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 
-import sqlalchemy as sa
 from geoalchemy2 import Geometry
 from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, Numeric
-from sqlalchemy.sql import func
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship
 
-
-# =============================================================================
-# MIXINS
-# =============================================================================
-
-
-class AuditMixin(SQLModel):
-    """Audit + soft-delete fields for all entities."""
-
-    created_at: datetime = Field(
-        sa_type=DateTime(timezone=True),
-        sa_column_kwargs={"server_default": func.now(), "nullable": False},
-    )
-    updated_at: datetime = Field(
-        sa_type=DateTime(timezone=True),
-        sa_column_kwargs={"server_default": func.now(), "onupdate": func.now(), "nullable": False},
-    )
-    created_by: Optional[uuid.UUID] = Field(default=None)
-    updated_by: Optional[uuid.UUID] = Field(default=None)
-    deleted_at: Optional[datetime] = Field(
-        default=None,
-        sa_type=DateTime(timezone=True),
-        sa_column_kwargs={"nullable": True},
-    )
-    deleted_by: Optional[uuid.UUID] = Field(default=None)
+from app.models.mixins import AuditMixin
 
 
 # =============================================================================
@@ -82,21 +56,6 @@ class VerificationStatus(str, Enum):
     rejected = "rejected"
 
 
-class ImageStatus(str, Enum):
-    active = "active"
-    pending_delete = "pending_delete"
-    deleted = "deleted"
-
-
-class BatchStatus(str, Enum):
-    pending = "pending"
-    ready = "ready"
-    confirmed = "confirmed"
-    expired = "expired"
-    failed = "failed"
-
-
-
 # =============================================================================
 # MODELS
 # =============================================================================
@@ -128,6 +87,7 @@ class Property(AuditMixin, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
     owner_id: uuid.UUID = Field(nullable=False, index=True)
+    bulk_job_id: Optional[uuid.UUID] = Field(default=None, foreign_key="bulk_jobs.id", index=True)
 
     property_type: PropertyType = Field(nullable=False)
     listing_type: ListingType = Field(nullable=False)
@@ -222,102 +182,3 @@ class PropertyLocation(AuditMixin, table=True):
     )
 
     property: Optional["Property"] = Relationship(back_populates="location")
-
-
-class PropertyImage(AuditMixin, table=True):
-
-    __tablename__ = "property_images"
-
-    __table_args__ = (
-        # Only one cover image per property (partial unique index)
-        Index(
-            "uix_property_images_cover",
-            "property_id",
-            unique=True,
-            postgresql_where=sa.text("is_cover = true AND status = 'active'"),
-        ),
-        Index("ix_property_images_property_id_status", "property_id", "status"),
-        Index("ix_property_images_url", "url", unique=True),
-    )
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
-    property_id: uuid.UUID = Field(
-        sa_column=Column(
-            ForeignKey("properties.id", ondelete="CASCADE"),
-            nullable=False,
-            index=True,
-        )
-    )
-    url: str = Field(nullable=False)
-    status: ImageStatus = Field(nullable=False, default=ImageStatus.active)
-    display_order: int = Field(nullable=False, default=0)
-    is_cover: bool = Field(nullable=False, default=False)
-
-    property: Optional["Property"] = Relationship(sa_relationship_kwargs={"overlaps": "images"})
-
-
-class PropertyImageUploadBatch(AuditMixin, table=True):
-
-    __tablename__ = "property_image_upload_batches"
-
-    __table_args__ = (
-        Index("ix_upload_batches_property_id", "property_id"),
-        Index("ix_upload_batches_owner_id", "owner_id"),
-    )
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
-    property_id: uuid.UUID = Field(
-        sa_column=Column(
-            ForeignKey("properties.id", ondelete="CASCADE"),
-            nullable=False,
-        )
-    )
-    owner_id: uuid.UUID = Field(nullable=False)
-    status: BatchStatus = Field(nullable=False, default=BatchStatus.pending)
-    expected_keys: list[str] = Field(sa_column=Column(sa.ARRAY(sa.Text), nullable=False))
-    expires_at: datetime = Field(
-        sa_type=DateTime(timezone=True),
-        sa_column_kwargs={"nullable": False},
-    )
-    confirmed_at: Optional[datetime] = Field(
-        default=None,
-        sa_type=DateTime(timezone=True),
-        sa_column_kwargs={"nullable": True},
-    )
-
-
-class PromotedListing(AuditMixin, table=True):
-
-    __tablename__ = "promoted_listings"
-
-    __table_args__ = (
-        CheckConstraint("ends_at > starts_at", name="ck_promoted_listing_ends_after_starts"),
-        Index("ix_promoted_listings_property_id_ends_at", "property_id", "ends_at"),
-    )
-
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
-    property_id: uuid.UUID = Field(
-        sa_column=Column(
-            ForeignKey("properties.id", ondelete="CASCADE"),
-            nullable=False,
-            index=True,
-        )
-    )
-
-    property: Optional["Property"] = Relationship(
-        sa_relationship_kwargs={
-            "lazy": "selectin",
-            "overlaps": "promotions",
-        }
-    )
-
-    is_active: bool = Field(nullable=False, default=True)
-    starts_at: datetime = Field(
-        sa_type=DateTime(timezone=True),
-        sa_column_kwargs={"nullable": False},
-    )
-    ends_at: datetime = Field(
-        sa_type=DateTime(timezone=True),
-        sa_column_kwargs={"nullable": False},
-    )
-    priority: int = Field(nullable=False, default=0)

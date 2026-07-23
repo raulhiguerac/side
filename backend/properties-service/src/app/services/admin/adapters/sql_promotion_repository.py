@@ -2,10 +2,11 @@ import uuid
 
 from sqlmodel import Session, select
 
-from app.models.property import PromotedListing
+from app.models.promotion import PromotedListing
+from app.services.admin.ports.promotion_repository import PromotionRepository
 
 
-class SqlPromotionRepository:
+class SqlPromotionRepository(PromotionRepository):
     def __init__(self, session: Session) -> None:
         self.session = session
 
