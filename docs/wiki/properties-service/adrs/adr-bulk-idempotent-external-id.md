@@ -25,7 +25,7 @@ Al conectar el worker end-to-end (2026-07-27) se encontró que esa aceptación e
 - `build_models` generaba `uuid.uuid4()` por fila, mientras `bulk_insert` hace upsert con `index_elements=["id"]`. El conflict target **nunca podía dispararse**, así que el `ON CONFLICT DO UPDATE` era decorativo para `Property`.
 - `Property` no tiene ningún `UniqueConstraint` de negocio que atrapara el duplicado por otra vía.
 - La persistencia pasó a ser **por chunk** (commit cada 2500 filas), así que "el import falló a mitad de camino con parte ya persistida" dejó de ser el caso raro y pasó a ser el normal. Un retry sobre ese estado duplicaba todo lo ya insertado.
-- La mitigación en la que se apoyaba la decisión vieja no existe: `Property.bulk_job_id` está declarada ([listing.py:90](backend/properties-service/src/app/models/listing.py#L90)) pero **ningún código la escribe**, y la acción de redo nunca se implementó.
+- La mitigación en la que se apoyaba la decisión vieja no existía: `Property.bulk_job_id` estaba declarada pero ningún código la escribía, y la acción de redo nunca se implementó.
 
 ## Decisión
 
@@ -44,7 +44,7 @@ El mismo `external_id` produce siempre el mismo `property_id`, lo que hace que e
 ## Alternativas consideradas
 
 - **`UniqueConstraint` de negocio en `properties`** (p. ej. owner + lat/lon + precio) y conflictuar por ahí — descartado: define "propiedad duplicada" a nivel de schema y es probablemente falso (un edificio tiene N apartamentos en la misma coordenada).
-- **Que el retry borre lo insertado por el job original** antes de arrancar — es el camino de la decisión de julio (`bulk_job_id` + redo). Requiere poblar `bulk_job_id` (hoy muerta) y construir la acción de redo. No descartado en el fondo: sigue siendo la respuesta correcta para "deshacer un import", que es un problema distinto de "reintentar sin duplicar".
+- **Que el retry borre lo insertado por el job original** antes de arrancar — es el camino de la decisión de julio (`bulk_job_id` + redo). Descartado, y con él la columna `Property.bulk_job_id`, que se **eliminó del modelo el 2026-07-27** sin haber llegado nunca a una migración. El razonamiento: con ids determinísticos, el set de properties que creó un import se reconstruye desde el CSV mismo (`uuid5(namespace, external_id)` por fila), y el CSV sigue en storage referenciado por `bulk_jobs.storage_key` — o sea que "deshacer un import" no necesita la columna.
 - **Dejarlo como estaba** — descartado: con commits por chunk el duplicado deja de ser hipotético.
 
 ## Consecuencias
@@ -55,7 +55,8 @@ El mismo `external_id` produce siempre el mismo `property_id`, lo que hace que e
 - ❌ **Los CSV existentes dejan de servir**: `seed_bogota_500.csv` y `seed_bogota_5k.csv` no tienen la columna, y con `StrictBase(extra="forbid")` + campo requerido, fallan el 100% de las filas.
 - ❌ Un `external_id` reusado entre archivos distintos **sobreescribe** la property anterior en vez de crear una nueva. Si la numeración se reinicia por archivo, se pisan datos.
 - ❌ Al vivir en `settings`, el namespace quedó override-able por env var — un valor distinto entre entornos rompe la idempotencia en silencio. Costo aceptado a cambio de no hardcodearlo.
-- ⚠️ Esto resuelve "reintentar sin duplicar", **no** "deshacer un import". `bulk_job_id` sigue muerta y la acción de redo sigue sin existir.
+- ⚠️ Esto resuelve "reintentar sin duplicar"; "deshacer un import" sigue sin implementarse, aunque ahora es derivable del CSV en vez de necesitar una columna.
+- ❌ Se pierde poder consultar en SQL directo qué properties salieron de qué import: hay que releer el CSV y derivar los ids. Si en el futuro se le pone TTL al archivo en storage, ese camino se cierra.
 
 ## Claims
 
@@ -65,4 +66,4 @@ El mismo `external_id` produce siempre el mismo `property_id`, lo que hace que e
 - `row_to_item` devuelve `None` si `external_id` viene vacío o solo espacios, convirtiendo la fila en un `BulkRowError` en vez de abortar el chunk ([seed_mapper.py](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py)).
 - `settings.BULK_PROPERTY_ID_NAMESPACE` es un `uuid.UUID` con default `d1bbd361-a2e7-44b9-b6e3-2a9d699dcdb5` ([settings.py](backend/properties-service/src/app/core/config/settings.py)).
 - `_PROPERTY_UPSERT_FIELDS` no incluye `created_at` ni `created_by`, solo `updated_at`/`updated_by` ([sql_property_repository.py:11-17](backend/properties-service/src/app/services/admin/adapters/sql_property_repository.py#L11-L17)).
-- `Property.bulk_job_id` está declarada como FK nullable indexada pero ningún código del servicio la escribe ([listing.py:90](backend/properties-service/src/app/models/listing.py#L90)).
+- `Property` no tiene ninguna columna que la vincule a un `BulkJob`; la trazabilidad import→properties se deriva del CSV vía `derive_property_id` ([listing.py](backend/properties-service/src/app/models/listing.py)).

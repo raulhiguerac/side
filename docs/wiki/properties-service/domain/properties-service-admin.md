@@ -90,7 +90,7 @@ Responsabilidades del UC de encolado:
 
 > **`owner_id` = el admin importador (2026-07-16) — cerrado.** El CSV ahora trae una columna `email` por fila y el worker resuelve `email → account_id` contra users-service (ver [[properties-service-users]]), poblando `Property.owner_id` con la cuenta real. `created_by` sigue siendo `principal.sub` (auditoría de quién ejecutó el import), que siempre estuvo bien. Un email sin cuenta activa **no** se asigna a nadie: la fila falla con `"owner not resolved for email"` y queda registrada en `bulk_jobs.errors`.
 
-> **Trazabilidad — sigue abierta.** `Property.bulk_job_id` existe como FK nullable indexada ([listing.py:90](backend/properties-service/src/app/models/listing.py#L90)) pero **ningún código la escribe**, así que hoy no se puede saber qué properties salieron de qué import. Es también la pieza que faltaba para la acción de "redo" (soft-delete por batch) que nunca se construyó — ver [[adr-bulk-idempotent-external-id]].
+> **Trazabilidad — se deriva, no se almacena.** `Property.bulk_job_id` se declaró en `f3a0c4d` y se **eliminó el 2026-07-27** sin haber llegado nunca a una migración: nadie la escribía, y con ids determinísticos el set de properties de un import se reconstruye desde el CSV (`uuid5` por `external_id`), que sigue en storage vía `bulk_jobs.storage_key`. Ver [[adr-bulk-idempotent-external-id]]. Costo asumido: no hay forma de consultar en SQL directo qué properties salieron de qué import.
 
 ## Promociones
 
@@ -106,7 +106,7 @@ Responsabilidades del UC de encolado:
 - Un retry hereda `expires_at` del job original en vez de recibir una ventana nueva, y se rechaza con `RetryOfRetryNotAllowedError` si el target ya es un retry o con `BulkJobExpiredError` si está vencido ([bulk_create_properties.py](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py)).
 - `POST /admin/properties/bulk` responde `202` con `batch_id` y agenda el worker vía `BackgroundTasks`; el procesamiento no ocurre dentro del request ([admin.py](backend/properties-service/src/app/api/routes/admin.py)).
 - `build_models()` recibe `owner_id` resuelto desde el `email` de la fila del CSV vía `email_cache`, y `created_by=principal.sub` — ya no son el mismo UUID ([orm_objects.py](backend/properties-service/src/app/workers/helpers/mapping/orm_objects.py), [seed_mapper.py](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py)).
-- `Property.bulk_job_id` está declarada como FK nullable indexada pero ningún código del servicio la escribe ([listing.py:90](backend/properties-service/src/app/models/listing.py#L90)).
+- `Property` no tiene columna de vínculo a `BulkJob` — `bulk_job_id` se removió del modelo sin haberse migrado nunca ([listing.py](backend/properties-service/src/app/models/listing.py)).
 - `Account` en users-service tiene `account_id` y `email` como únicos identificadores indexados/únicos — no existe ningún campo de documento de identidad (cédula) ([account.py:37-53](backend/users-service/src/app/models/account.py#L37-L53)).
 - `Property.promotions` es una relación viewonly filtrada por `is_active=True` ([listing.py](backend/properties-service/src/app/models/listing.py)).
 - `is_promoted` en `PropertyCardSchema` se calcula desde la presencia de promociones activas ([property_card.py:64-69](backend/properties-service/src/app/services/shared/schemas/property_card.py#L64-L69)).

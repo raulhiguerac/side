@@ -87,7 +87,6 @@ class Property(AuditMixin, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
     owner_id: uuid.UUID = Field(nullable=False, index=True)
-    bulk_job_id: Optional[uuid.UUID] = Field(default=None, foreign_key="bulk_jobs.id", index=True)
 
     property_type: PropertyType = Field(nullable=False)
     listing_type: ListingType = Field(nullable=False)
