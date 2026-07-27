@@ -11,7 +11,7 @@ from app.core.exceptions.listing import (
     BatchNotFoundError,
 )
 from app.core.exceptions.storage import StorageMisconfiguredError
-from app.models.property import BatchStatus
+from app.models.image import BatchStatus
 from app.schemas.principal import Principal
 from app.services.listing.use_cases.images.confirm_image_uploads import ConfirmImageUploadsUseCase
 

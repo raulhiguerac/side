@@ -6,14 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.core.exceptions.listing import PropertyNotFoundError
-from app.models.property import (
-    Currency,
-    ListingStatus,
-    ListingType,
-    PropertyCondition,
-    PropertyType,
-    VerificationStatus,
-)
+from app.models.listing import Currency, ListingStatus, ListingType, PropertyCondition, PropertyType, VerificationStatus
 from app.schemas.principal import Principal
 from app.services.listing.use_cases.property_core.get_property import GetPropertyUseCase
 from app.services.shared.schemas.property_detail import PropertyDetailSchema

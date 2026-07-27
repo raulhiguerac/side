@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.property import Currency, ListingStatus, ListingType, PropertyType
+from app.models.listing import Currency, ListingStatus, ListingType, PropertyType
 from app.services.search.schemas.feed_schemas import FeedCursor, FeedFilters, FeedPage, FeedPreferences
 from app.services.search.use_cases.get_feed import GetFeedUseCase
 from app.services.shared.schemas.property_card import PropertyCardSchema
@@ -41,7 +41,12 @@ def mock_uow():
 
 @pytest.fixture
 def mock_cache():
-    return AsyncMock()
+    cache = AsyncMock()
+    # Default to a cache miss: a bare AsyncMock returns a truthy MagicMock, which
+    # would send every test down the cache-hit branch instead of the one it means
+    # to exercise.
+    cache.get_json.return_value = None
+    return cache
 
 
 @pytest.fixture

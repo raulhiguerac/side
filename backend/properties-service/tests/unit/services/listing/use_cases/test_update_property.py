@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.core.exceptions.listing import CreatePropertyError, InconsistentLocationError, PropertyForbiddenError, PropertyNotFoundError
-from app.models.property import Currency, ListingStatus, ListingType, PropertyCondition, PropertyType, VerificationStatus
+from app.models.listing import Currency, ListingStatus, ListingType, PropertyCondition, PropertyType, VerificationStatus
 from app.schemas.principal import Principal
 from app.services.listing.schemas.listing_schemas import LocationField, UpdatePropertyRequest
 from app.services.listing.use_cases.property_core.update_property import UpdatePropertyUseCase

@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.core.exceptions.listing import DeletePropertyError, PropertyForbiddenError, PropertyNotFoundError
-from app.models.property import ListingStatus
+from app.models.listing import ListingStatus
 from app.schemas.principal import Principal
 from app.services.listing.use_cases.property_core.delete_property import DeletePropertyUseCase
 
