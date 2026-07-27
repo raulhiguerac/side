@@ -26,6 +26,13 @@ class SqlAdminUnitOfWork(AdminUnitOfWork):
     async def begin_nested(self) -> None:
         self._savepoint = await run_in_threadpool(self.session.begin_nested)
 
+    async def release_savepoint(self) -> None:
+        """Releases the current savepoint on the happy path — without this each
+        begin_nested() would open a savepoint inside the previous still-open one."""
+        if self._savepoint is not None:
+            await run_in_threadpool(self._savepoint.commit)
+            self._savepoint = None
+
     async def rollback_to_savepoint(self) -> None:
         if self._savepoint is not None:
             await run_in_threadpool(self._savepoint.rollback)

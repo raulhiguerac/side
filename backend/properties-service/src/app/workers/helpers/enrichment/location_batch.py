@@ -1,7 +1,7 @@
-from app.services.admin.schemas.admin_schemas import BulkRowError
 from app.services.shared.ports.catalog_gateway import CatalogGateway
 from app.services.shared.schemas.catalog_schemas import PointToResolve
 from app.workers.helpers.row_ref import row_ref
+from app.workers.schemas.bulk_schemas import BulkRowError
 
 
 async def process_location_batch(

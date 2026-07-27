@@ -14,11 +14,13 @@ class UsersClient:
             raise UsersClientError("USERS_URL is not set")
         self.timeout = 30.0
 
-    async def get_user_ids(self, *, ids: list[uuid.UUID]) -> list[tuple[uuid.UUID, str]]:
+    async def resolve_by_emails(self, *, emails: list[str]) -> list[tuple[uuid.UUID, str]]:
+        """Returns (account_id, email) pairs for the active accounts among `emails`.
+        Unknown or inactive emails are simply absent from the response."""
         url = f"{self.base_url}/v1/users/resolve"
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(url, json=[str(i) for i in ids])
+                response = await client.post(url, json=emails)
 
             map_response_error(response)
 

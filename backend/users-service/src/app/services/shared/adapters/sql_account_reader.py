@@ -44,12 +44,12 @@ class SqlAccountReader(AccountReaderPort):
         )
 
     async def get_accounts_bulk(
-        self, *, account_ids: list[uuid.UUID]
+        self, *, emails: list[str]
     ) -> list[tuple[uuid.UUID, str]]:
         return await run_in_threadpool(
             get_active_accounts_bulk,
             self._session,
-            account_ids,
+            emails,
         )
 
     async def get_interests_by_account(self, *, account_id: uuid.UUID) -> dict:

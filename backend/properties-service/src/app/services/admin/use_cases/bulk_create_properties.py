@@ -7,6 +7,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from app.core.exceptions.listing import (
     BulkJobCreationError,
+    BulkJobExpiredError,
     BulkJobNotFoundError,
     RetryOfRetryNotAllowedError,
 )
@@ -36,6 +37,10 @@ class BulkCreatePropertiesUseCase:
                 raise BulkJobNotFoundError(job_id=retry_job_id)
             if target_job.retry_of_job_id is not None:
                 raise RetryOfRetryNotAllowedError(job_id=retry_job_id)
+            # The retry inherits the original's deadline instead of getting a
+            # fresh one, so chaining retries can't extend the window forever.
+            if datetime.now(timezone.utc) > target_job.expires_at:
+                raise BulkJobExpiredError(job_id=retry_job_id)
             expiration = target_job.expires_at
         else:
             expiration = datetime.now(timezone.utc) + _RETRY_WINDOW

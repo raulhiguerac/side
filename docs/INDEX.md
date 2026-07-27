@@ -110,12 +110,12 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 ### domain/
 - [properties-service-listing](wiki/properties-service/domain/properties-service-listing.md) — CRUD del dueño + flujo de imágenes presigned/batch + visibilidad
 - [properties-service-search](wiki/properties-service/domain/properties-service-search.md) — feed orgánico+ads con fallback de preferencias + feed-mapa por H3
-- [properties-service-admin](wiki/properties-service/domain/properties-service-admin.md) — moderación (state machine), precios estimados dual, promociones, bulk
-- [properties-service-bulk-create-worker](wiki/properties-service/domain/properties-service-bulk-create-worker.md) — streaming CSV desde MinIO, paridad de comillas para campos multilínea, batching de 2500 filas contra catalog bulk
+- [properties-service-admin](wiki/properties-service/domain/properties-service-admin.md) — moderación (state machine), precios estimados dual, promociones, encolado del bulk import
+- [properties-service-bulk-create-worker](wiki/properties-service/domain/properties-service-bulk-create-worker.md) — import async end-to-end: presigned PUT, BackgroundTasks con sesión propia, persistencia por chunk de 2500, cierre del BulkJob
 
 ### integrations/
 - [properties-service-catalog](wiki/properties-service/integrations/properties-service-catalog.md) — geo síncrono en write time (validación barrio↔ciudad, bulk geo-enrichment)
-- [properties-service-users](wiki/properties-service/integrations/properties-service-users.md) — cliente hacia users-service para resolución bulk de cuentas, dirección id→email (no conectado al bulk-create todavía)
+- [properties-service-users](wiki/properties-service/integrations/properties-service-users.md) — cliente hacia users-service para resolución bulk de cuentas por email→account_id, consumido por el bulk-create worker
 
 ### runbook/
 - [properties-service-local-dev](wiki/properties-service/runbook/properties-service-local-dev.md) — devcontainer, env vars, create + imágenes end-to-end, 6 known gaps
@@ -128,15 +128,16 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0005 — Cursor de paginación opaco (base64url)](wiki/properties-service/adrs/adr-feed-opaque-cursor.md)
 - [ADR-0006 — Invalidación por prefijo del cache de la vitrina pública](wiki/properties-service/adrs/adr-owner-list-cache-invalidation.md)
 - [ADR-0007 — Property es 1 fila = 1 listing_type, sin soporte para venta+arriendo simultáneo](wiki/properties-service/adrs/adr-single-listing-type-per-property.md)
+- [ADR-0008 — Idempotencia del bulk create vía external_id determinístico](wiki/properties-service/adrs/adr-bulk-idempotent-external-id.md)
 
 ## users-service
 
-- [users-service](wiki/users-service/users-service.md) — overview: identidad y perfiles, 2 dominios (`auth`/`user`), único servicio que gestiona usuarios en Keycloak
+- [users-service](wiki/users-service/users-service.md) — overview: identidad y perfiles, 2 dominios (`auth`/`user`), único servicio que gestiona usuarios en Keycloak, resolve bulk consumido por properties
 - [users-service-architecture](wiki/users-service/users-service-architecture.md) — layout interno, 9 tablas, identidad compartida con Keycloak, worker in-process
 
 ### domain/
 - [users-service-auth](wiki/users-service/domain/users-service-auth.md) — registro (saga + compensación), sesiones por cookie, reset password
-- [users-service-user](wiki/users-service/domain/users-service-user.md) — perfil persona/empresa, onboarding 4 pasos, intereses, deactivación soft
+- [users-service-user](wiki/users-service/domain/users-service-user.md) — perfil persona/empresa, onboarding 4 pasos, intereses, deactivación soft, resolución bulk de cuentas por email
 
 ### integrations/
 - [users-service-keycloak](wiki/users-service/integrations/users-service-keycloak.md) — dos clientes (admin + auth), identidad compartida, traducción de errores

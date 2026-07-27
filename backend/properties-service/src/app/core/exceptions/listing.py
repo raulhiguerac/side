@@ -257,6 +257,16 @@ class BulkJobNotFoundError(BaseError):
         )
 
 
+class BulkJobExpiredError(BaseError):
+    def __init__(self, *, job_id: Any = None):
+        super().__init__(
+            message="Bulk job is past its retry window",
+            code="BULK_JOB_EXPIRED",
+            http_status=409,
+            context={"job_id": str(job_id)} if job_id else {},
+        )
+
+
 class RetryOfRetryNotAllowedError(BaseError):
     def __init__(self, *, job_id: Any = None):
         super().__init__(

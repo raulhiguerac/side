@@ -1,4 +1,6 @@
 import os
+import uuid
+
 from pydantic_settings import BaseSettings
 
 
@@ -34,6 +36,18 @@ class Settings(BaseSettings):
 
     # Storage
     BUCKET_PHOTOS_PROPERTIES: str = ""
+    BUCKET_BULK_PROPERTIES: str = ""
+
+    # Bulk jobs
+    # A job still pending past this is assumed dead (the process that ran the
+    # background task died), so status reads report it as failed.
+    BULK_JOB_TIMEOUT_SECONDS: int = 600  # 10 min
+
+    # Namespace for deriving property ids from the CSV external_id, which is what
+    # makes a re-import upsert instead of duplicating. Treat as frozen: changing
+    # it re-keys every property, so previously imported rows would come back in
+    # as new records.
+    BULK_PROPERTY_ID_NAMESPACE: uuid.UUID = uuid.UUID("d1bbd361-a2e7-44b9-b6e3-2a9d699dcdb5")
     STORAGE_PUBLIC_BASE_URL: str = ""
     PRESIGNED_URL_TTL_SECONDS: int = 300  # 5 min
     IMAGE_UPLOAD_BATCH_TTL_SECONDS: int = 300  # 5 min

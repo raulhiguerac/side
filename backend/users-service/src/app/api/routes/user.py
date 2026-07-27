@@ -250,7 +250,7 @@ async def confirm_account_reactivation(
     status_code=status.HTTP_200_OK,
 )
 async def resolve_accounts_bulk(
-    account_ids: list[uuid.UUID],
+    emails: list[str],
     uc: Annotated[ResolveAccountsBulkUseCase, Depends(resolve_accounts_bulk_uc)],
 ) -> list[tuple[uuid.UUID, str]]:
-    return await uc.execute(account_ids=account_ids)
+    return await uc.execute(emails=emails)
