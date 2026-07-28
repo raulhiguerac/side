@@ -3,12 +3,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.workers.helpers.persistence.property_writer import persist_chunk
+from app.workers.helpers.persistence.property_writer import collapse_duplicate_ids, persist_chunk
 
 
-def _built_row(line: int) -> dict:
+def _built_row(line: int, property_id: uuid.UUID | None = None) -> dict:
     prop = MagicMock()
-    prop.id = uuid.uuid4()
+    prop.id = property_id or uuid.uuid4()
     return {
         "line": line,
         "id": str(uuid.uuid4()),
@@ -57,6 +57,60 @@ async def test_bulk_insert_commits_once_and_reports_every_row(uow):
     assert errors == []
     uow.commit.assert_awaited_once()
     uow.begin_nested.assert_not_awaited()  # no fallback needed
+
+
+# ---------------------------------------------------------------------------
+# Duplicate ids inside one chunk
+#
+# Postgres rejects an INSERT whose ON CONFLICT target appears twice, so without
+# collapsing them the whole chunk fails and silently degrades to row-by-row.
+# ---------------------------------------------------------------------------
+
+def test_collapse_keeps_the_last_row_sharing_an_id():
+    shared = uuid.uuid4()
+    rows = [_built_row(2, shared), _built_row(3), _built_row(9, shared)]
+
+    kept = collapse_duplicate_ids(rows)
+
+    assert len(kept) == 2
+    # last occurrence wins, matching what a later chunk's upsert would do
+    assert 9 in [row["line"] for row in kept]
+    assert 2 not in [row["line"] for row in kept]
+
+
+def test_collapse_is_a_no_op_without_duplicates():
+    rows = [_built_row(2), _built_row(3)]
+
+    assert collapse_duplicate_ids(rows) == rows
+
+
+async def test_duplicate_ids_do_not_reach_the_bulk_insert(uow):
+    shared = uuid.uuid4()
+    rows = [_built_row(2, shared), _built_row(3), _built_row(4, shared)]
+
+    with _patch_threadpool():
+        inserted, errors = await persist_chunk(rows, uow=uow)
+
+    sent = uow.properties.bulk_insert.call_args.kwargs["properties"]
+    ids = [prop.id for prop, _, _ in sent]
+    assert len(ids) == len(set(ids)), "the same id reached one INSERT twice"
+    assert inserted == 2, "inserted counts rows written, not rows read"
+    assert errors == []
+    uow.begin_nested.assert_not_awaited(), "should not have degraded to row-by-row"
+
+
+async def test_the_row_by_row_fallback_also_sees_deduped_rows(uow):
+    """Otherwise a retried chunk would write the same id twice and the count
+    would disagree with the bulk path."""
+    shared = uuid.uuid4()
+    rows = [_built_row(2, shared), _built_row(3), _built_row(4, shared)]
+    uow.properties.bulk_insert.side_effect = Exception("boom")
+
+    with _patch_threadpool():
+        inserted, _ = await persist_chunk(rows, uow=uow)
+
+    assert inserted == 2
+    assert uow.begin_nested.await_count == 2
 
 
 async def test_passes_only_the_orm_tuples_to_the_repo(uow):
