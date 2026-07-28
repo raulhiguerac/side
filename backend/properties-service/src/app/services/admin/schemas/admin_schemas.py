@@ -74,4 +74,7 @@ class BulkJobAccepted(StrictBase):
 class BulkJobStatusResponse(StrictBase):
     batch_id: uuid.UUID
     status: JobStatus
+    # Every row either lands or produces an error, so inserted + len(errors)
+    # is the total the run read.
+    inserted: int = 0
     errors: list[dict[str, Any]] = Field(default_factory=list)

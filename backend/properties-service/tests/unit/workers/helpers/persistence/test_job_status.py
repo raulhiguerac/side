@@ -39,7 +39,7 @@ def _update_kwargs(uow):
 
 async def test_finalize_marks_completed_and_stamps_confirmed_at(uow):
     with _patch_threadpool():
-        await finalize_job(uow=uow, job_id=JOB_ID, errors=[])
+        await finalize_job(uow=uow, job_id=JOB_ID, inserted=0, errors=[])
 
     kwargs = _update_kwargs(uow)
     assert kwargs["job_id"] == JOB_ID
@@ -55,7 +55,7 @@ async def test_finalize_serializes_row_errors_for_the_jsonb_column(uow):
     ]
 
     with _patch_threadpool():
-        await finalize_job(uow=uow, job_id=JOB_ID, errors=errors)
+        await finalize_job(uow=uow, job_id=JOB_ID, inserted=1998, errors=errors)
 
     persisted = _update_kwargs(uow)["errors"]
     assert persisted == [
@@ -67,9 +67,27 @@ async def test_finalize_serializes_row_errors_for_the_jsonb_column(uow):
 async def test_a_run_with_errors_still_completes(uow):
     """`completed` means the run finished, not that every row succeeded."""
     with _patch_threadpool():
-        await finalize_job(uow=uow, job_id=JOB_ID, errors=[BulkRowError(line=2, ref="x", issues=["y"])])
+        await finalize_job(uow=uow, job_id=JOB_ID, inserted=42, errors=[BulkRowError(line=2, ref="x", issues=["y"])])
 
     assert _update_kwargs(uow)["status"] == JobStatus.completed
+
+
+async def test_finalize_persists_the_inserted_count(uow):
+    """Without this the status endpoint reports errors with no denominator."""
+    errors = [BulkRowError(line=n, ref="x", issues=["y"]) for n in range(3)]
+
+    with _patch_threadpool():
+        await finalize_job(uow=uow, job_id=JOB_ID, inserted=1997, errors=errors)
+
+    assert _update_kwargs(uow)["inserted"] == 1997
+
+
+async def test_mark_failed_leaves_the_inserted_count_alone(uow):
+    """A crash mid-run must not reset the count of what already landed."""
+    with _patch_threadpool():
+        await mark_job_failed(uow=uow, job_id=JOB_ID)
+
+    assert "inserted" not in _update_kwargs(uow)
 
 
 # ---------------------------------------------------------------------------

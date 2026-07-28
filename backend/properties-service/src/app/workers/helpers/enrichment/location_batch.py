@@ -1,7 +1,12 @@
+import logging
+import time
+
 from app.services.shared.ports.catalog_gateway import CatalogGateway
 from app.services.shared.schemas.catalog_schemas import PointToResolve
 from app.workers.helpers.row_ref import row_ref
 from app.workers.schemas.bulk_schemas import BulkRowError
+
+logger = logging.getLogger(__name__)
 
 
 async def process_location_batch(
@@ -30,7 +35,16 @@ async def process_location_batch(
                 )
             )
 
+    started = time.monotonic()
     resolved = await catalog.get_locations_bulk(points=points)
+    logger.info(
+        "catalog geo resolve",
+        extra={
+            "points": len(points),
+            "returned": len(resolved),
+            "elapsed_s": round(time.monotonic() - started, 2),
+        },
+    )
 
     enriched: list[dict] = []
     for result in resolved:

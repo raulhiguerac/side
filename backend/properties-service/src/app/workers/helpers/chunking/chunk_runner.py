@@ -1,3 +1,5 @@
+import logging
+
 from app.schemas.principal import Principal
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork
 from app.services.shared.ports.catalog_gateway import CatalogGateway
@@ -6,6 +8,8 @@ from app.workers.helpers.enrichment.chunk_enricher import ResolveEmails, enrich_
 from app.workers.helpers.mapping.orm_objects import build_orm_objects
 from app.workers.helpers.persistence.property_writer import persist_chunk
 from app.workers.schemas.bulk_schemas import BulkRowError
+
+logger = logging.getLogger(__name__)
 
 
 async def process_chunk(
@@ -33,8 +37,13 @@ async def process_chunk(
         created_by = principal.sub,
     )
     errors.extend(build_errors)
+    logger.info(
+        "mapped chunk to orm",
+        extra={"built": len(built_rows), "map_errors": len(build_errors)},
+    )
 
     if not built_rows:
+        logger.warning("chunk produced no rows to insert", extra={"errors": len(errors)})
         return 0, errors
 
     inserted, insert_errors = await persist_chunk(built_rows, uow=uow)

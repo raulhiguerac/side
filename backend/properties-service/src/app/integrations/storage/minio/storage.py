@@ -10,8 +10,8 @@ from app.integrations.storage.minio.mappers.error_mapper import translate_storag
 class StorageClient:
     def __init__(self) -> None:
         minio_url = os.getenv("MINIO_URL")
-        access_key = os.getenv("ACCESS_KEY_PROPERTIES")
-        secret_key = os.getenv("SECRET_KEY_PROPERTIES")
+        access_key = os.getenv("AWS_ACCESS_KEY_ID")
+        secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
 
         if not minio_url:
             raise StorageMisconfiguredError(context={"missing": "MINIO_URL"})
@@ -49,3 +49,11 @@ class StorageClient:
             )
         except Exception as exc:
             translate_storage_error(error=exc, operation="presign", bucket=bucket, key=key)
+
+    def get_object_body(self, *, bucket: str, key: str):
+        """Returns the streaming body of an object, for callers that read it in
+        chunks instead of loading it whole."""
+        try:
+            return self.client.get_object(Bucket=bucket, Key=key)["Body"]
+        except Exception as exc:
+            translate_storage_error(error=exc, operation="get", bucket=bucket, key=key)

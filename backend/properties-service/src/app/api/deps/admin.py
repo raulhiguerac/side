@@ -1,3 +1,4 @@
+import logging
 import uuid
 from collections.abc import Awaitable, Callable
 
@@ -30,6 +31,8 @@ from app.services.admin.use_cases.promotions.list_by_property import ListPromoti
 from app.services.shared.ports.cache import CachePort
 from app.services.shared.ports.storage import StoragePort
 from app.workers.bulk_create_properties_worker import BulkCreatePropertiesWorker
+
+logger = logging.getLogger(__name__)
 
 
 # -------------------------------------------------------------------------
@@ -129,14 +132,25 @@ def get_request_bulk_upload_url_uc(
 
 async def run_bulk_create_properties(*, principal: Principal, job_id: uuid.UUID) -> None:
     # Own session scoped to the background task, not to the request that scheduled it.
-    with Session(engine) as session:
-        worker = BulkCreatePropertiesWorker(
-            uow = SqlAdminUnitOfWork(session=session),
-            catalog = get_catalog_gateway(),
-            users = get_users_gateway(),
-            storage = get_storage_port(),
-        )
-        await worker.execute(principal=principal, job_id=job_id)
+    logger.info("bulk runner entered", extra={"job_id": str(job_id)})
+    try:
+        with Session(engine) as session:
+            worker = BulkCreatePropertiesWorker(
+                uow = SqlAdminUnitOfWork(session=session),
+                catalog = get_catalog_gateway(),
+                users = get_users_gateway(),
+                storage = get_storage_port(),
+            )
+            await worker.execute(principal=principal, job_id=job_id)
+    except Exception as exc:
+        # Logged and swallowed on purpose. The 202 has already been sent, so
+        # re-raising reaches Starlette after the response started and turns one
+        # failure into "Caught handled exception, but response already started"
+        # plus two extra tracebacks. The job row already carries the outcome:
+        # the worker marks it failed before this point.
+        logger.error("bulk runner crashed", extra={"job_id": str(job_id)}, exc_info=exc)
+    finally:
+        logger.info("bulk runner exited", extra={"job_id": str(job_id)})
 
 
 def get_bulk_create_properties_runner() -> Callable[..., Awaitable[None]]:

@@ -1,5 +1,6 @@
 import uuid
 import logging
+import time
 from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
@@ -54,17 +55,36 @@ class BulkCreatePropertiesWorker:
         ) -> None:
         """Entry point for the background task. Nobody is left to receive a return
         value, so the outcome is written back to the bulk_jobs row instead."""
+        started = time.monotonic()
+        logger.info(
+            "background task picked up job",
+            extra={"job_id": str(job_id), "principal": str(principal.sub)},
+        )
         try:
             result = await self._process(principal=principal, job_id=job_id)
         except Exception as exc:
-            logger.error("bulk create properties failed", extra={"job_id": str(job_id)}, exc_info=exc)
+            logger.error(
+                "bulk create properties failed",
+                extra={"job_id": str(job_id), "elapsed_s": round(time.monotonic() - started, 2)},
+                exc_info=exc,
+            )
             await mark_job_failed(uow=self.uow, job_id=job_id)
             raise
 
-        await finalize_job(uow=self.uow, job_id=job_id, errors=result.errors)
+        await finalize_job(
+            uow = self.uow,
+            job_id = job_id,
+            inserted = result.inserted,
+            errors = result.errors,
+        )
         logger.info(
             "bulk create properties complete",
-            extra={"job_id": str(job_id), "inserted": result.inserted, "errors": len(result.errors)},
+            extra={
+                "job_id": str(job_id),
+                "inserted": result.inserted,
+                "errors": len(result.errors),
+                "elapsed_s": round(time.monotonic() - started, 2),
+            },
         )
 
     async def _process(
@@ -91,6 +111,7 @@ class BulkCreatePropertiesWorker:
         errors: list[BulkRowError] = []
         inserted = 0
         line = 1
+        chunk_no = 0
 
         rows = iter_csv_rows(storage=self.storage, bucket=self.bucket, key=key)
         async for row in rows:
@@ -117,22 +138,38 @@ class BulkCreatePropertiesWorker:
                 continue
 
             to_process, batch = batch, []
+            chunk_no += 1
             chunk_inserted, chunk_errors = await self._run_chunk(
                 to_process,
                 principal = principal,
                 email_cache = email_cache,
+                chunk_no = chunk_no,
             )
             inserted += chunk_inserted
             errors.extend(chunk_errors)
 
         if batch:
+            chunk_no += 1
             chunk_inserted, chunk_errors = await self._run_chunk(
                 batch,
                 principal = principal,
                 email_cache = email_cache,
+                chunk_no = chunk_no,
             )
             inserted += chunk_inserted
             errors.extend(chunk_errors)
+
+        logger.info(
+            "streaming done",
+            extra={
+                "job_id": str(job_id),
+                "lines_read": line - 1,
+                "chunks": chunk_no,
+                "inserted": inserted,
+                "errors": len(errors),
+                "owners_resolved": len(email_cache),
+            },
+        )
 
         return BulkCreatePropertiesResult(inserted=inserted, errors=errors)
 
@@ -142,8 +179,12 @@ class BulkCreatePropertiesWorker:
             *,
             principal: Principal,
             email_cache: dict[str, ResolvedAccount],
+            chunk_no: int,
         ) -> tuple[int, list[BulkRowError]]:
-        return await process_chunk(
+        started = time.monotonic()
+        logger.info("chunk start", extra={"chunk": chunk_no, "rows": len(rows)})
+
+        inserted, chunk_errors = await process_chunk(
             rows,
             principal = principal,
             uow = self.uow,
@@ -152,8 +193,30 @@ class BulkCreatePropertiesWorker:
             email_cache = email_cache,
         )
 
+        logger.info(
+            "chunk done",
+            extra={
+                "chunk": chunk_no,
+                "rows": len(rows),
+                "inserted": inserted,
+                "errors": len(chunk_errors),
+                "elapsed_s": round(time.monotonic() - started, 2),
+            },
+        )
+        return inserted, chunk_errors
+
     async def _process_users_batch(self, emails: set[str]) -> list[ResolvedAccount]:
         """Resolves owner emails to account ids in one call. Emails with no active
         account simply don't come back, so their rows fail later with an
         "owner not resolved" error instead of being silently assigned."""
-        return await self.users.resolve_accounts(emails=list(emails))
+        started = time.monotonic()
+        resolved = await self.users.resolve_accounts(emails=list(emails))
+        logger.info(
+            "users resolve",
+            extra={
+                "requested": len(emails),
+                "resolved": len(resolved),
+                "elapsed_s": round(time.monotonic() - started, 2),
+            },
+        )
+        return resolved

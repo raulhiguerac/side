@@ -1,4 +1,5 @@
 import logging
+import time
 from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
@@ -17,6 +18,7 @@ async def persist_chunk(
     """Bulk-inserts the chunk, falling back to row-by-row so one bad row doesn't
     cost the whole chunk. Each retry runs inside its own savepoint, released on
     success so savepoints don't nest across the loop."""
+    started = time.monotonic()
     try:
         await run_in_threadpool(
             partial(
@@ -25,6 +27,10 @@ async def persist_chunk(
             )
         )
         await uow.commit()
+        logger.info(
+            "bulk_insert committed",
+            extra={"inserted": len(built_rows), "elapsed_s": round(time.monotonic() - started, 2)},
+        )
         return len(built_rows), []
     except Exception as exc:
         await uow.rollback()
@@ -57,5 +63,14 @@ async def persist_chunk(
 
     if ok_count:
         await uow.commit()
+
+    logger.warning(
+        "row-by-row fallback done",
+        extra={
+            "inserted": ok_count,
+            "failed": len(errors),
+            "elapsed_s": round(time.monotonic() - started, 2),
+        },
+    )
 
     return ok_count, errors

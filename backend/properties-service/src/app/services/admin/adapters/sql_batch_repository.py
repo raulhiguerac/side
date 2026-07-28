@@ -37,6 +37,7 @@ class SqlBatchRepository(BulkJobRepository):
         status: JobStatus,
         errors: list[dict[str, Any]] | None = None,
         confirmed_at: datetime | None = None,
+        inserted: int | None = None,
     ) -> None:
         # Only the columns actually passed are written, so marking a job failed
         # can't wipe errors already recorded, nor blank out confirmed_at.
@@ -45,6 +46,8 @@ class SqlBatchRepository(BulkJobRepository):
             values["errors"] = errors
         if confirmed_at is not None:
             values["confirmed_at"] = confirmed_at
+        if inserted is not None:
+            values["inserted"] = inserted
 
         stmt = update(BulkJob).where(BulkJob.id == job_id).values(**values)
         self.session.exec(stmt)

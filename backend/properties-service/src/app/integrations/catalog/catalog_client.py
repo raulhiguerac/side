@@ -37,8 +37,10 @@ class CatalogClient:
     async def get_locations_bulk(self, *, points: list[dict]) -> list[dict]:
         url = f"{self.base_url}/v1/geo-resolution/by-coordinates/bulk"
         try:
+            # catalog expects BulkResolveLocationsRequest, i.e. the list wrapped
+            # under `points` — a bare array is rejected with 422
             async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(url, json=points)
+                response = await client.post(url, json={"points": points})
 
             map_response_error(response)
 

@@ -16,4 +16,5 @@ class BulkJobRepository(Protocol):
         status: JobStatus,
         errors: list[dict[str, Any]] | None = None,
         confirmed_at: datetime | None = None,
+        inserted: int | None = None,
     ) -> None: ...

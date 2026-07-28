@@ -1,3 +1,4 @@
+import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from typing import Annotated
@@ -48,6 +49,8 @@ from app.services.admin.use_cases.promotions.list_by_property import ListPromoti
 from app.services.shared.schemas.property_card import PropertyCardSchema
 from app.services.shared.schemas.property_detail import PropertyDetailSchema
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(
     prefix="/admin",
     tags=["admin"],
@@ -71,7 +74,14 @@ async def request_bulk_upload_url(
 ) -> BulkUploadUrlResponse:
     """Step 1 of the bulk import: get a presigned PUT, upload the CSV straight
     to storage, then POST the returned storage_key to /properties/bulk."""
-    return await uc.execute(principal=principal, request=req)
+    result = await uc.execute(principal=principal, request=req)
+    # `filename` is a reserved LogRecord attribute — passing it in `extra` raises
+    # KeyError inside logging.makeRecord, before any formatter runs.
+    logger.info(
+        "bulk upload url issued",
+        extra={"upload_filename": req.filename, "storage_key": result.storage_key, "ttl_s": result.expires_in},
+    )
+    return result
 
 
 @router.post(
@@ -94,6 +104,14 @@ async def bulk_create_properties(
         retry_job_id = payload.retry_of_job_id,
     )
     background_tasks.add_task(runner, principal=principal, job_id=batch_id)
+    logger.info(
+        "bulk job accepted, worker scheduled",
+        extra={
+            "job_id": str(batch_id),
+            "storage_key": payload.storage_key,
+            "retry_of": str(payload.retry_of_job_id) if payload.retry_of_job_id else None,
+        },
+    )
 
     return BulkJobAccepted(batch_id=batch_id)
 

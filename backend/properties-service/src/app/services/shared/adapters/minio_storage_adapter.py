@@ -31,7 +31,7 @@ class MinioStorageAdapter(StoragePort):
     
     async def chunk_file(self, *, bucket: str, key: str) -> AsyncIterator[bytes]:
         body = await run_in_threadpool(
-            lambda: self._client.get_object(Bucket=bucket, Key=key)["Body"]
+            partial(self._client.get_object_body, bucket=bucket, key=key)
         )
         while True:
             chunk = await run_in_threadpool(body.read, settings.STORAGE_CHUNK_SIZE_BYTES)

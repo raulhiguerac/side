@@ -30,6 +30,7 @@ async def finalize_job(
         *,
         uow: AdminUnitOfWork,
         job_id: uuid.UUID,
+        inserted: int,
         errors: list[BulkRowError],
     ) -> None:
     """Only reached when the run went through end to end, so this is the single
@@ -41,6 +42,7 @@ async def finalize_job(
             status = JobStatus.completed,
             errors = [error.model_dump() for error in errors],
             confirmed_at = datetime.now(timezone.utc),
+            inserted = inserted,
         )
     )
     await uow.commit()

@@ -35,4 +35,9 @@ class GetBulkJobStatusUseCase:
             )
             await self.uow.commit()
 
-        return BulkJobStatusResponse(batch_id=job.id, status=status, errors=job.errors or [])
+        return BulkJobStatusResponse(
+            batch_id = job.id,
+            status = status,
+            inserted = job.inserted or 0,
+            errors = job.errors or [],
+        )

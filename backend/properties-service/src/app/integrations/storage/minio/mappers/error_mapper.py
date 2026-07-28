@@ -24,7 +24,7 @@ from app.core.exceptions.storage import (
 def translate_storage_error(
     *,
     error: Exception,
-    operation: Literal["presign", "delete", "head"],
+    operation: Literal["presign", "delete", "head", "get"],
     bucket: str,
     key: str | None = None,
 ) -> NoReturn:
