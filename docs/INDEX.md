@@ -89,7 +89,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [frontend-poi-reachable](wiki/frontend/flows/frontend-poi-reachable.md) — sección "Cerca del lugar": useReachablePois (1 POST × 9 resultados), acordeón por rango, isocronas + cluster markers, CATEGORY_META/PRIORITY; spinner v-show + resize fix para Leaflet
 - [frontend-property-create-form](wiki/frontend/flows/frontend-property-create-form.md) — form multi-step 4 pasos (Tipo/Detalles/Ubicación/Imágenes), patrón update:form, Google Places + NearbyPlaces en step 2, previewId UUID
 - [frontend-property-edit-form](wiki/frontend/flows/frontend-property-edit-form.md) — vista de edición en 2 columnas, split en 5 tarjetas presentacionales, campos fijos vs editables, gotcha de `Decimal` serializado como string
-- [frontend-admin-panel](wiki/frontend/flows/frontend-admin-panel.md) — panel admin embebido: nav gating, rutas `requiresAdmin`, fix de race en el guard, hub view, modal de bulk upload, riesgo de timeout en el bulk endpoint
+- [frontend-admin-panel](wiki/frontend/flows/frontend-admin-panel.md) — panel admin embebido: nav gating, rutas `requiresAdmin`, fix de race en el guard, hub view, modal de bulk upload en 3 pasos (presigned PUT), forma de la tabla de moderación, 10 de 12 endpoints sin cablear
 
 ### runbook/
 - [frontend-local-dev](wiki/frontend/runbook/frontend-local-dev.md) — `npm run serve` port 8080, env vars, levantar backends a mano, 10 known gaps
@@ -101,6 +101,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0004 — Remover Firebase del frontend](wiki/frontend/adrs/adr-firebase-removal.md)
 - [ADR-0005 — Google Maps Places API (New) para geocoding](wiki/frontend/adrs/adr-gmaps-places-geocoding.md)
 - [ADR-0006 — Campos fijos vs. editables al editar una propiedad](wiki/frontend/adrs/adr-property-edit-fixed-fields.md)
+- [ADR-0007 — Sin librería de componentes: la tabla admin se construye a mano](wiki/frontend/adrs/adr-no-component-library.md)
 
 ## properties-service
 

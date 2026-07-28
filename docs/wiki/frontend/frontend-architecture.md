@@ -1,10 +1,12 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-07-16
+last-verified: 2026-07-28
 owners: [frontend]
 related:
   - "[[architecture]]"
+  - "[[adr-no-component-library]]"
+  - "[[adr-vue-cli-deferred-vite-migration]]"
   - "[[frontend]]"
   - "[[frontend-onboarding-flow]]"
   - "[[frontend-admin-panel]]"
@@ -34,6 +36,7 @@ sources:
   - ../../sources/frontend/2026-07-15-property-edit-photos-upload-delete.md
   - ../../sources/frontend/2026-07-16-auth-user-store-consolidation.md
   - ../../sources/frontend/2026-07-16-admin-panel-nav-and-hub.md
+  - ../../sources/frontend/2026-07-28-admin-panel-groundwork.md
 ---
 
 ## TL;DR
@@ -139,8 +142,8 @@ createApp(App)
 ```
 
 Notas:
-- **Firebase NO se inicializa acá** — la initialización está comentada (`initializeApp(firebaseConfig)`). Se llama on-demand desde `LoginView.loginWithGoogle()`.
-- **Vueform** se registra global; sus formularios se usan en views como `RegisterView`.
+- **Firebase NO se inicializa acá** — la initialización está comentada (`initializeApp(firebaseConfig)`). Se llama on-demand desde `LoginView.loginWithGoogle()`, hoy su único import en todo el `src/` ([[adr-firebase-removal]] ya decidió sacarlo; no se ejecutó).
+- **Vueform** se registra global, pero **ningún template usa sus componentes** — corregido 2026-07-28, ver §Forms. Lo que sí se usa es `@vueform/multiselect`.
 - Sin axios instance global — cada store/composable crea/usa el axios default.
 
 ## Stores Pinia
@@ -399,16 +402,22 @@ Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. `ONBOARDING_DISMISSE
 - Tailwind 3 con clases utility directas en templates.
 - Custom utilities/colors en `tailwind.config.js` — usa nombres tipo `brand-primary`, `brand-text`, `brand-bg`, `brand-muted`, `brand-divider`, `brand-placeholder`, `brand-border` (vistos en `LoginView`).
 - `assets/tailwind.css` y `main.css` cargados en `main.ts`.
-- Sin component library tipo Element Plus — todos los componentes son custom.
+- Sin component library tipo Element Plus — todos los componentes son custom, por decisión: ver [[adr-no-component-library]].
 
 ## Forms
 
-Dos sistemas conviven hoy:
+**Corregido 2026-07-28 tras auditar el código.** Esta sección afirmaba que convivían dos sistemas (Vueform + Vuelidate); una auditoría por grep mostró que **ninguno de los dos se usa**. Lo que hay es un solo sistema:
 
-1. **Vueform**: registrado global, se usa en views complejas (probable: register, settings forms). Es una librería con **plan free limitado** — uso comercial avanzado requiere licencia.
-2. **Custom inputs + Vuelidate**: vistos en `LoginView` (inputs nativos con clases Tailwind, validación con `@vuelidate/core` + `@vuelidate/validators`).
+- **Inputs nativos con clases Tailwind y validación a mano.** `LoginView` y `RegisterView` no importan ninguna librería de forms — solo `ref`, el store de auth y `BaseSpinner`.
+- **`@vueform/multiselect`** es la única pieza de Vueform realmente en uso, en `FeedFilters`, `LocalitySelector`, `NeighborhoodSelector` y `main.ts` (ver el composable `useMultiselect` más arriba).
 
-Coexistencia es deuda — pendiente decidir si todo va a Vueform (con consideración de licencia) o todo a custom.
+Consecuencias de la corrección:
+
+- `vuelidate`, `@vuelidate/core`, `@vuelidate/validators` y `@types/vuelidate` se **removieron** el 2026-07-28 — cero imports. El paquete `vuelidate` era además el build de **Vue 2**, incapaz de correr en esta app.
+- `@vueform/vueform` sigue registrado en `main.ts` pero ningún template usa sus componentes. La consideración de licencia que motivaba esta sección **no aplica** a lo que hay hoy.
+- ⚠️ **Trampa antes de desinstalarlo**: `@vueform/multiselect` no está declarado en `package.json` — llega como dependencia transitiva de `@vueform/vueform`. Sacar Vueform rompe esos tres componentes sin ningún aviso del bundler. Ver [[open-items]].
+
+También se removieron `vue-class-component` (API de Vue 2, sin imports) y `vue-google-autocomplete` — el input de ubicación ya usa el web component `gmp-place-autocomplete` ([[adr-gmaps-places-geocoding]]).
 
 ## Mapas y geocoding
 
@@ -424,9 +433,15 @@ El render lo encapsula `MapUser.vue` — un componente **dumb/reusable**: props 
 
 - **Vue 3.5.35** (upgrade completado 2026-05-29) — habilita `defineModel` y `useTemplateRef`. Es **independiente** de la migración a Vite, que sigue diferida (ver [[adr-vue-cli-deferred-vite-migration]]).
 - **`useTemplateRef`** (Vue 3.5): reemplaza `ref<HTMLElement>(null)` para refs de template. Sintaxis: `useTemplateRef<HTMLDivElement>('refName')` — el template usa `ref="refName"` (string, no binding dinámico).
-- **Build**: `npm run build` (vue-cli-service) → `dist/` estático.
+- **Build**: `npm run build` (vue-cli-service) → `dist/` estático. ⚠️ **Hoy falla**: `vue-cli-service build` corre ESLint y aborta ante errores; hay 9 pre-existentes (7 de formato auto-fixeables, un `vue/no-side-effects-in-computed-properties` real en `StepImagenes.vue`, y un bloque vacío). Ver [[open-items]].
 - **Deploy planeado**: bucket público (probable S3 / MinIO / GCS) sirviendo `index.html` + assets. Hash history evita necesidad de rewrites en el bucket.
 - **Sin SSR** — pura SPA client-side.
+
+### Costo medido de migrar a Vite (2026-07-28)
+
+La migración sigue diferida ([[adr-vue-cli-deferred-vite-migration]]), pero al evaluar Nuxt UI se midió el costo en vez de estimarlo: **116 archivos**, solo **5** usos de `process.env` (todos en `config/index.ts`), **una** API específica de webpack (`require("leaflet.markercluster")` en `MapUser.vue`), ningún `require.context`, y un proxy de 4 entradas que traduce directo. Es más barato de lo que suponía el ADR.
+
+**Tailwind v4 es el lado riesgoso y no depende de nosotros**: `tailwind.config.js` carga `@vueform/vueform/tailwind` y Vueform 1.13 apunta a v3. Además dos hojas cargan directivas `@tailwind` (`main.css` y `assets/tailwind.css`), la segunda con ~40 líneas de `@layer` que tematizan el web component de autocomplete de Google, cuya semántica cambió en v4.
 
 ## Tipos — separación UI vs API
 
@@ -521,3 +536,9 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 - `MapView` persiste el bbox en `route.query` con `router.replace` en cada `moveend` — el handler `onBbox` llama primero `router.replace({ query: bbox })` y luego `fetchByBbox`; no hay `watch` sobre `route.query` porque el mapa es el único que escribe la URL ([views/properties/MapView.vue](frontend/src/views/properties/MapView.vue)).
 - `MapView` inicializa `center` síncronamente desde `localStorage` (clave `STORAGE_KEYS.USER_LOCATION`) para evitar la race condition de vue-leaflet; el `onMounted` solo llama `fetchByBbox` alrededor de `loc ± 0.05°` ([views/properties/MapView.vue](frontend/src/views/properties/MapView.vue)).
 - El interface `FeedFilters`, `FeedPreferences`, `FeedPage` y `PageCache` viven en `types/feed.ts` ([types/feed.ts](frontend/src/types/feed.ts)).
+- No hay ningún import de `vuelidate` ni de `@vuelidate/*` en `src/`; `LoginView` y `RegisterView` validan con inputs nativos y `ref`, sin librería de forms ([views/auth/LoginView.vue](frontend/src/views/auth/LoginView.vue), [views/auth/RegisterView.vue](frontend/src/views/auth/RegisterView.vue)).
+- Ningún template usa componentes de `@vueform/vueform` pese a estar registrado en `main.ts`; `@vueform/multiselect` sí se importa en `main.ts`, `FeedFilters.vue`, `LocalitySelector.vue` y `NeighborhoodSelector.vue` ([main.ts](frontend/src/main.ts), [components/properties/feed/FeedFilters.vue](frontend/src/components/properties/feed/FeedFilters.vue)).
+- `@vueform/multiselect` no figura en `package.json` — llega como dependencia transitiva de `@vueform/vueform` ([package.json](frontend/package.json)).
+- `firebase` tiene un solo import en todo `src/`: `firebase/auth` en `LoginView.vue` ([views/auth/LoginView.vue](frontend/src/views/auth/LoginView.vue)).
+- `process.env` aparece 5 veces en `src/`, todas en `config/index.ts`; el único uso de una API específica de webpack es `require("leaflet.markercluster")` en `MapUser.vue` ([config/index.ts](frontend/src/config/index.ts), [components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- `tailwind.config.js` carga `require("@vueform/vueform/tailwind")` como plugin y escanea los temas de Vueform en `content`, lo que ata la versión de Tailwind a la que soporte Vueform ([tailwind.config.js:6-8,30](frontend/tailwind.config.js#L30)).
