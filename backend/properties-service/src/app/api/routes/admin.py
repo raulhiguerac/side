@@ -23,6 +23,7 @@ from app.api.deps.admin import (
 from app.api.deps.auth import require_admin
 from app.schemas.principal import Principal
 from app.services.admin.schemas.admin_schemas import (
+    AdminPropertiesPage,
     BulkCreatePropertiesRequest,
     BulkJobAccepted,
     BulkJobStatusResponse,
@@ -130,13 +131,13 @@ async def get_bulk_job_status(
 
 @router.get(
     "/properties",
-    response_model=list[PropertyCardSchema],
+    response_model=AdminPropertiesPage,
     status_code=status.HTTP_200_OK,
 )
 async def get_properties(
     filters: Annotated[GetPropertiesAdminRequest, Depends()],
     uc: Annotated[GetPropertiesAdminUseCase, Depends(get_admin_properties_uc)],
-) -> list[PropertyCardSchema]:
+) -> AdminPropertiesPage:
     return await uc.execute(request=filters)
 
 

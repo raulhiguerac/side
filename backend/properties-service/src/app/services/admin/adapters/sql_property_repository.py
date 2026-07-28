@@ -1,8 +1,9 @@
 import uuid
 from typing import Optional
 
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.orm import noload
 
 from app.models.listing import ListingStatus, Property, PropertyLocation, VerificationStatus
 from app.models.image import PropertyImage
@@ -96,6 +97,27 @@ class SqlAdminPropertyRepository(AdminPropertyRepository):
         stmt = select(Property).where(Property.id.in_(property_ids))
         return list(self.session.exec(stmt).all())
 
+    @staticmethod
+    def _apply_filters(
+        stmt,
+        *,
+        status: Optional[ListingStatus],
+        verification_status: Optional[VerificationStatus],
+        owner_id: Optional[uuid.UUID],
+    ):
+        """Shared by get_all and count_all on purpose: a filter added to one and
+        not the other would make the reported total disagree with the rows."""
+        stmt = stmt.where(Property.deleted_at.is_(None))
+
+        if status is not None:
+            stmt = stmt.where(Property.status == status)
+        if verification_status is not None:
+            stmt = stmt.where(Property.verification_status == verification_status)
+        if owner_id is not None:
+            stmt = stmt.where(Property.owner_id == owner_id)
+
+        return stmt
+
     def get_all(
         self,
         *,
@@ -105,14 +127,36 @@ class SqlAdminPropertyRepository(AdminPropertyRepository):
         offset: int = 0,
         limit: int = 20,
     ) -> list[Property]:
-        stmt = select(Property).where(Property.deleted_at.is_(None))
-
-        if status is not None:
-            stmt = stmt.where(Property.status == status)
-        if verification_status is not None:
-            stmt = stmt.where(Property.verification_status == verification_status)
-        if owner_id is not None:
-            stmt = stmt.where(Property.owner_id == owner_id)
-
+        stmt = self._apply_filters(
+            select(Property),
+            status=status,
+            verification_status=verification_status,
+            owner_id=owner_id,
+        )
+        # Property eager-loads images, location and promotions with selectin, so
+        # every page would also fetch image rows, PostGIS geometries and
+        # promotions — none of which AdminPropertyCardSchema reads. Listed one by
+        # one rather than raiseload("*") so re-enabling a single one (a thumbnail
+        # column, say) is an obvious edit.
+        stmt = stmt.options(
+            noload(Property.images),
+            noload(Property.location),
+            noload(Property.promotions),
+        )
         stmt = stmt.order_by(Property.created_at.desc()).offset(offset).limit(limit)
         return list(self.session.exec(stmt).all())
+
+    def count_all(
+        self,
+        *,
+        status: Optional[ListingStatus] = None,
+        verification_status: Optional[VerificationStatus] = None,
+        owner_id: Optional[uuid.UUID] = None,
+    ) -> int:
+        stmt = self._apply_filters(
+            select(func.count()).select_from(Property),
+            status=status,
+            verification_status=verification_status,
+            owner_id=owner_id,
+        )
+        return self.session.exec(stmt).one()

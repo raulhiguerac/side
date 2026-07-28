@@ -3,10 +3,10 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from app.models.bulk_job import JobStatus
-from app.models.listing import ListingStatus, VerificationStatus
+from app.models.listing import Currency, ListingStatus, ListingType, PropertyType, VerificationStatus
 from app.schemas.base import StrictBase
 
 class VerifyPropertyRequest(StrictBase):
@@ -27,6 +27,41 @@ class GetPropertiesAdminRequest(StrictBase):
     owner_id: Optional[uuid.UUID] = None
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=20, ge=1, le=100)
+
+
+class AdminPropertyCardSchema(StrictBase):
+    """Row of the moderation table.
+
+    Deliberately not PropertyCardSchema: that one is the public-facing card used
+    by the feed and the owner's list, and it hides exactly the fields moderation
+    works with (verification_status, owner_id, created_at, rejection_reason).
+    """
+
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    id: uuid.UUID
+    owner_id: uuid.UUID
+    property_type: PropertyType
+    listing_type: ListingType
+    status: ListingStatus
+    verification_status: VerificationStatus
+    rejection_reason: Optional[str] = None
+    price: Decimal
+    currency: Currency
+    area_m2: Decimal
+    bedrooms: int
+    bathrooms: Decimal
+    created_at: datetime
+
+
+class AdminPropertiesPage(StrictBase):
+    """`total` needs its own COUNT — a bare list can only tell the client
+    "there may be more", never how many pages there are."""
+
+    items: list[AdminPropertyCardSchema]
+    total: int
+    page: int
+    page_size: int
 
 
 class SetStatusRequest(StrictBase):
