@@ -1,14 +1,14 @@
 ---
 title: "ADR-0008 — Idempotencia del bulk create vía external_id determinístico (reemplaza la decisión de no deduplicar)"
 status: stable
-last-verified: 2026-07-27
+last-verified: 2026-07-28
 owners: [properties-service]
 related:
   - "[[properties-service-bulk-create-worker]]"
   - "[[properties-service-admin]]"
   - "[[adr-image-upload-presigned-batch]]"
   - "[[open-items]]"
-sources: [../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../../sources/properties-service/2026-07-17-bulk-async-redesign-presigned-retry.md]
+sources: [../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md, ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../../sources/properties-service/2026-07-17-bulk-async-redesign-presigned-retry.md]
 decision-date: 2026-07-27
 decision-status: accepted
 supersedes: decisión de dedup del 2026-07-17 (registrada en [[open-items]], fuente `2026-07-17-bulk-async-redesign-presigned-retry.md`)
@@ -50,13 +50,14 @@ El mismo `external_id` produce siempre el mismo `property_id`, lo que hace que e
 ## Consecuencias
 
 - ✅ El reintento es idempotente sin ninguna maquinaria extra: el upsert que ya estaba escrito empieza a hacer lo que decía hacer.
-- ✅ La cadena entera deduplica: `Property` por `id`, `PropertyLocation` por `property_id` (deriva del anterior), `PropertyImage` por `url`.
+- ✅ La cadena entera deduplica **entre corridas**: `Property` por `id`, `PropertyLocation` por `property_id` (deriva del anterior), `PropertyImage` por `url`. Dentro de una misma corrida hace falta colapsar antes del insert — ver la última consecuencia.
 - ✅ `_PROPERTY_UPSERT_FIELDS` excluye `created_at`/`created_by`, así que un re-import actualiza datos pero preserva la auditoría de creación original.
 - ❌ **Los CSV existentes dejan de servir**: `seed_bogota_500.csv` y `seed_bogota_5k.csv` no tienen la columna, y con `StrictBase(extra="forbid")` + campo requerido, fallan el 100% de las filas.
 - ❌ Un `external_id` reusado entre archivos distintos **sobreescribe** la property anterior en vez de crear una nueva. Si la numeración se reinicia por archivo, se pisan datos.
 - ❌ Al vivir en `settings`, el namespace quedó override-able por env var — un valor distinto entre entornos rompe la idempotencia en silencio. Costo aceptado a cambio de no hardcodearlo.
 - ⚠️ Esto resuelve "reintentar sin duplicar"; "deshacer un import" sigue sin implementarse, aunque ahora es derivable del CSV en vez de necesitar una columna.
 - ❌ Se pierde poder consultar en SQL directo qué properties salieron de qué import: hay que releer el CSV y derivar los ids. Si en el futuro se le pone TTL al archivo en storage, ese camino se cierra.
+- ❌ **Consecuencia no prevista, detectada al ejecutar (2026-07-28)**: la deduplicación funciona *entre* corridas pero rompe *dentro* de una. Postgres rechaza un `INSERT` cuyo target de `ON CONFLICT` aparece dos veces (`CardinalityViolation`), así que dos filas con el mismo `external_id` en el mismo chunk revientan el statement completo. En el import de 20k pasó en **los 8 chunks** (5-9 colisiones cada uno): ningún `bulk_insert` tuvo éxito, todo cayó al fallback fila-por-fila y la corrida tardó 164s insertando de a una. El resultado final fue correcto, que es justamente por qué pasó desapercibido. Se resolvió colapsando por id derivado antes del insert (`collapse_duplicate_ids`), no cambiando la decisión. Ver [[properties-service-bulk-create-worker]].
 
 ## Claims
 
@@ -67,3 +68,4 @@ El mismo `external_id` produce siempre el mismo `property_id`, lo que hace que e
 - `settings.BULK_PROPERTY_ID_NAMESPACE` es un `uuid.UUID` con default `d1bbd361-a2e7-44b9-b6e3-2a9d699dcdb5` ([settings.py](backend/properties-service/src/app/core/config/settings.py)).
 - `_PROPERTY_UPSERT_FIELDS` no incluye `created_at` ni `created_by`, solo `updated_at`/`updated_by` ([sql_property_repository.py:11-17](backend/properties-service/src/app/services/admin/adapters/sql_property_repository.py#L11-L17)).
 - `Property` no tiene ninguna columna que la vincule a un `BulkJob`; la trazabilidad import→properties se deriva del CSV vía `derive_property_id` ([listing.py](backend/properties-service/src/app/models/listing.py)).
+- `collapse_duplicate_ids` colapsa las filas que derivan el mismo `property_id` antes del `bulk_insert`, quedándose con la última ([property_writer.py](backend/properties-service/src/app/workers/helpers/persistence/property_writer.py)).

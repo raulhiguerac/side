@@ -129,6 +129,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0006 — Invalidación por prefijo del cache de la vitrina pública](wiki/properties-service/adrs/adr-owner-list-cache-invalidation.md)
 - [ADR-0007 — Property es 1 fila = 1 listing_type, sin soporte para venta+arriendo simultáneo](wiki/properties-service/adrs/adr-single-listing-type-per-property.md)
 - [ADR-0008 — Idempotencia del bulk create vía external_id determinístico](wiki/properties-service/adrs/adr-bulk-idempotent-external-id.md)
+- [ADR-0009 — El listado admin pagina por offset, no con el cursor del feed](wiki/properties-service/adrs/adr-admin-offset-pagination.md)
 
 ## users-service
 

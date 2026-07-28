@@ -1,19 +1,20 @@
 ---
 title: Dominio admin — properties-service
 status: draft
-last-verified: 2026-07-27
+last-verified: 2026-07-28
 owners: [properties-service]
 related:
   - "[[properties-service]]"
   - "[[properties-service-architecture]]"
   - "[[adr-estimated-price-dual-signal]]"
   - "[[adr-bulk-idempotent-external-id]]"
+  - "[[adr-admin-offset-pagination]]"
   - "[[analytics-service]]"
   - "[[frontend-admin-panel]]"
   - "[[open-items]]"
   - "[[properties-service-bulk-create-worker]]"
   - "[[properties-service-users]]"
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md]
+sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md]
 ---
 
 ## TL;DR
@@ -27,7 +28,7 @@ El dominio de **operación interna**: moderación (status + verificación), prec
 | `SetPropertyStatusUseCase` | `use_cases/moderation/set_status.py` | Cambia `status` validando la state machine; invalida cache. |
 | `VerifyPropertyUseCase` | `use_cases/moderation/verify.py` | Cambia `verification_status` validando su propia state machine; **no** setea `verified_by` (campo muerto — el UC no recibe `principal`). |
 | `SetEstimatedPriceUseCase` | `use_cases/estimated_price/set_estimated_price.py` | Escribe precio estimado admin **o** ML según haya principal. |
-| `GetPropertiesAdminUseCase` | `use_cases/get_properties.py` | Listado admin con filtros. |
+| `GetPropertiesAdminUseCase` | `use_cases/get_properties.py` | Listado admin paginado con filtros + `total`. |
 | `GetPropertyDetailAdminUseCase` | `use_cases/get_property_detail.py` | Detalle admin (sin reglas de visibilidad). |
 | `CreatePromotionUseCase` | `use_cases/promotions/create.py` | Crea promoción (exige property `active`). |
 | `DeletePromotionUseCase` | `use_cases/promotions/delete.py` | Desactiva la promoción activa. |
@@ -92,12 +93,29 @@ Responsabilidades del UC de encolado:
 
 > **Trazabilidad — se deriva, no se almacena.** `Property.bulk_job_id` se declaró en `f3a0c4d` y se **eliminó el 2026-07-27** sin haber llegado nunca a una migración: nadie la escribía, y con ids determinísticos el set de properties de un import se reconstruye desde el CSV (`uuid5` por `external_id`), que sigue en storage vía `bulk_jobs.storage_key`. Ver [[adr-bulk-idempotent-external-id]]. Costo asumido: no hay forma de consultar en SQL directo qué properties salieron de qué import.
 
+## Listado admin (`GET /admin/properties`)
+
+Devuelve `AdminPropertiesPage` — `{items, total, page, page_size}` — con filtros por `status`, `verification_status` y `owner_id`, todos como query params.
+
+**Por qué no reusa `PropertyCardSchema`**: ese es el card *público*, el que consumen el feed y "mis propiedades", y esconde justo lo que la moderación necesita — `verification_status`, `owner_id`, `created_at`, `rejection_reason`. Antes el endpoint devolvía una lista pelada de ese schema, así que una tabla de moderación podía **filtrar por campos que no podía mostrar**, y paginar sin saber cuántas páginas hay. `AdminPropertyCardSchema` es nuevo y no hereda del público, para que un cambio del feed no arrastre al panel.
+
+**Paginación por offset, no con el cursor opaco del feed** (ver [[adr-admin-offset-pagination]]).
+
+Dos detalles de implementación que valen la pena:
+
+- `get_all` y `count_all` comparten `_apply_filters`. Si cada uno armara su propio `WHERE`, agregar un filtro a uno y olvidarlo en el otro haría que el total mienta sin que nada falle.
+- El `noload` sobre `images`, `location` y `promotions` no es una micro-optimización: `Property` las carga con `selectin`, así que cada página traía filas de imágenes, geometrías PostGIS y promociones que el schema admin descarta. Pasó de 5 queries por request a 2.
+- La página y el conteo van **secuenciales, no con `asyncio.gather`**: comparten la `Session` del UoW y una `Session` de SQLAlchemy no es segura entre threads.
+
 ## Promociones
 
 `promoted_listings` modela campañas con `starts_at`/`ends_at`/`priority`/`is_active`. `Property.promotions` es una relación **viewonly** filtrada por `is_active=True`, lo que alimenta `is_promoted` en `PropertyCardSchema`. Crear una promoción exige que la property esté `active` (`PropertyNotReadyForPromotionError`); no se permite más de una activa (`DuplicateActivePromotionError`).
 
 ## Claims
 
+- `GET /admin/properties` devuelve `AdminPropertiesPage` con `items`, `total`, `page` y `page_size` ([admin.py](backend/properties-service/src/app/api/routes/admin.py), [admin_schemas.py](backend/properties-service/src/app/services/admin/schemas/admin_schemas.py)).
+- `AdminPropertyCardSchema` incluye `verification_status`, `owner_id`, `created_at` y `rejection_reason`, que `PropertyCardSchema` no expone ([admin_schemas.py](backend/properties-service/src/app/services/admin/schemas/admin_schemas.py)).
+- `get_all` y `count_all` comparten `_apply_filters`, y `get_all` aplica `noload` a `images`, `location` y `promotions` ([sql_property_repository.py](backend/properties-service/src/app/services/admin/adapters/sql_property_repository.py)).
 - Las rutas `/admin/*` están protegidas con `dependencies=[Depends(require_admin)]` a nivel router ([admin.py:43-47](backend/properties-service/src/app/api/routes/admin.py#L43-L47)).
 - `set_status` valida transiciones contra `_ALLOWED_TRANSITIONS` y lanza `InvalidStatusTransitionError` si no aplica ([set_status.py:39-44](backend/properties-service/src/app/services/admin/use_cases/moderation/set_status.py#L39-L44)).
 - `SetEstimatedPriceUseCase` escribe `admin_estimated_price` si hay principal, `ml_estimated_price` si no ([set_estimated_price.py:26-32](backend/properties-service/src/app/services/admin/use_cases/estimated_price/set_estimated_price.py#L26-L32)).

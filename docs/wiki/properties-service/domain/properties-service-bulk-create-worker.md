@@ -1,7 +1,7 @@
 ---
 title: Bulk-create worker — streaming CSV desde MinIO (properties-service)
 status: stable
-last-verified: 2026-07-27
+last-verified: 2026-07-28
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -15,6 +15,7 @@ sources:
   - ../../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md
   - ../../../sources/properties-service/2026-07-22-bulk-create-properties-refactor.md
   - ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md
+  - ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md
 ---
 
 ## TL;DR
@@ -107,7 +108,9 @@ Devuelve las filas conservando el sobre `{line, id, ref, value}` en lugar de sol
 
 ### Persistencia — bulk con fallback fila por fila
 
-`persist_chunk` intenta `bulk_insert` (upsert) y, si falla, reintenta fila por fila para que una sola fila mala no cueste el chunk entero. Cada reintento corre en su propio savepoint.
+`persist_chunk` empieza colapsando las filas que derivan el mismo `property_id` (`collapse_duplicate_ids`, se queda con la última), y recién después intenta `bulk_insert`. Si el insert falla, reintenta fila por fila para que una sola fila mala no cueste el chunk entero; cada reintento corre en su propio savepoint. El fallback consume las filas ya colapsadas, para que un chunk reintentado no escriba el mismo id dos veces.
+
+> **Bug corregido (2026-07-28)**: sin ese colapso, **los ids determinísticos rompían el insert**. Postgres rechaza un `INSERT` cuyo target de `ON CONFLICT` aparece dos veces (`CardinalityViolation`), así que dos filas con el mismo `external_id` en el mismo chunk revientan el statement. En el import de 20k pasó en los **8 chunks** (5-9 colisiones cada uno): ningún `bulk_insert` tuvo éxito y la corrida hizo 20.000 inserts de a uno. El resultado final era correcto — por eso pasó desapercibido; lo único que lo delataba eran los 164s y las líneas de `WARNING`.
 
 > **Bug corregido (2026-07-27)**: `begin_nested()` guardaba el savepoint pero **nada lo liberaba en el camino feliz**, así que cada fila abría un savepoint *dentro* del anterior todavía abierto — con miles de filas, miles de savepoints anidados. Se agregó `release_savepoint()` al port `AdminUnitOfWork` y a `SqlAdminUnitOfWork` (hace `self._savepoint.commit()`), y el fallback lo llama en cada éxito.
 
@@ -133,6 +136,21 @@ El estado se escribe **una sola vez, al final de todo el archivo** — los chunk
 
 `GetBulkJobStatusUseCase` reporta (y persiste) como `failed` cualquier job todavía `pending` pasado `settings.BULK_JOB_TIMEOUT_SECONDS` (600). Esto importa más acá que en el proyecto de donde se copió el patrón: **`BackgroundTasks` muere con el proceso**, así que si el server se reinicia a mitad de un import, nada más movería esa fila de `pending` jamás.
 
+## Verificado end-to-end (2026-07-28)
+
+Primera corrida real contra servicios y datos reales: 20.000 filas del scrape de FincaRaíz, 14.000 cuentas sembradas.
+
+| | |
+|---|---|
+| Filas leídas | 20.000 en 8 chunks |
+| Escritas | 18.744 |
+| Errores | 1.256 — **todos de geo** (6,3%), cero de resolución de owner |
+| Duración | 164s, degradados por el bug de dedup de arriba |
+
+Los 1.256 fallos de geo mezclan tres causas que **no se han separado**: basura del scrape (`0.0,0.0`), coordenadas fuera de Bogotá (Cartagena, Pasto, Illinois, España) y coordenadas legítimamente bogotanas que ningún polígono de barrio contiene. Solo la tercera es un gap de cobertura; las dos primeras está bien que fallen.
+
+> **Lo que este ejercicio enseñó, más allá del import**: los tests unitarios mockean el UoW y nunca tocan Postgres, así que los errores de contrato, driver y configuración les son invisibles. Ejecutar una vez encontró el mismatch de body con catalog, el `get_object` sobre el wrapper equivocado, los `extra` de logging que se descartaban, el TLD `.test` inválido y la migración inexistente — ninguno detectable leyendo o con la suite en verde.
+
 ## Gaps conocidos
 
 - Los CSV de seed (`seed_bogota_500.csv`, `seed_bogota_5k.csv`) **no tienen las columnas `external_id` ni `email`**; con `StrictBase(extra="forbid")` y ambos campos requeridos, hoy fallarían el 100% de las filas.
@@ -153,6 +171,11 @@ El estado se escribe **una sola vez, al final de todo el archivo** — los chunk
 - `enrich_chunk` corre `process_location_batch` y `resolve_emails` con `asyncio.gather`, y solo pide los emails ausentes de `email_cache`; si no hay emails nuevos no llama a users-service ([chunk_enricher.py](backend/properties-service/src/app/workers/helpers/enrichment/chunk_enricher.py)).
 - `email_cache` se crea en `_process` y se pasa a todos los chunks de la corrida — es el único estado compartido entre chunks ([bulk_create_properties_worker.py](backend/properties-service/src/app/workers/bulk_create_properties_worker.py)).
 - `build_orm_objects` devuelve dicts `{line, id, ref, value}` y reporta `"owner not resolved for email"` como `BulkRowError` cuando el email no está en `email_cache` ([orm_objects.py](backend/properties-service/src/app/workers/helpers/mapping/orm_objects.py)).
+- `persist_chunk` colapsa las filas que derivan el mismo `property_id` con `collapse_duplicate_ids` antes del `bulk_insert`, y el fallback fila-por-fila consume esas mismas filas colapsadas ([property_writer.py](backend/properties-service/src/app/workers/helpers/persistence/property_writer.py)).
+- `finalize_job` persiste `inserted` en la fila de `bulk_jobs`, y `mark_job_failed` no lo toca ([job_status.py](backend/properties-service/src/app/workers/helpers/persistence/job_status.py)).
+- `BulkJobStatusResponse` expone `inserted`; `inserted + len(errors)` es el total que leyó la corrida ([admin_schemas.py](backend/properties-service/src/app/services/admin/schemas/admin_schemas.py)).
+- `StorageClient.get_object_body` envuelve `get_object` de boto3 y traduce los errores; `MinioStorageAdapter.chunk_file` la llama en vez de dereferenciar el cliente interno ([storage.py](backend/properties-service/src/app/integrations/storage/minio/storage.py)).
+- `setup_logging` usa un `JsonLogFormatter` que renderiza los campos de `extra=`; el formato anterior los descartaba ([logger.py](backend/properties-service/src/app/core/logging/logger.py)).
 - `persist_chunk` llama `uow.release_savepoint()` tras cada inserción exitosa del fallback fila-por-fila ([property_writer.py](backend/properties-service/src/app/workers/helpers/persistence/property_writer.py)).
 - `AdminUnitOfWork` expone `release_savepoint()` y `SqlAdminUnitOfWork` la implementa con `self._savepoint.commit()` ([unit_of_work.py](backend/properties-service/src/app/services/admin/ports/unit_of_work.py), [sql_unit_of_work.py](backend/properties-service/src/app/services/admin/adapters/sql_unit_of_work.py)).
 - `finalize_job` setea `status=completed` + `errors` serializados + `confirmed_at`; `mark_job_failed` setea `status=failed` sin `confirmed_at` y sin tocar `errors` ([job_status.py](backend/properties-service/src/app/workers/helpers/persistence/job_status.py)).
