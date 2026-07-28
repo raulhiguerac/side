@@ -1,6 +1,7 @@
 import uuid
+from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class _ExternalSchema(BaseModel):
@@ -15,5 +16,16 @@ class NeighborhoodInfo(_ExternalSchema):
 
 class LocationInfo(_ExternalSchema):
     neighborhood_id: uuid.UUID
-    city_id: uuid.UUID
+    city_id: uuid.UUID = Field(alias="locality_id")
     country_id: uuid.UUID
+
+
+class PointToResolve(_ExternalSchema):
+    id: str
+    lat: float
+    lon: float
+
+
+class ResolvedPoint(_ExternalSchema):
+    id: str
+    location: Optional[LocationInfo] = None

@@ -5,16 +5,12 @@ from decimal import Decimal
 from sqlalchemy import tuple_
 from sqlmodel import Session, select
 
-from app.models.property import (
-    ListingStatus,
-    Property,
-    PropertyLocation,
-    PropertyType,
-    PromotedListing,
-)
+from app.models.listing import ListingStatus, Property, PropertyLocation, PropertyType
+from app.models.promotion import PromotedListing
+from app.services.search.ports.property_search_repository import PropertySearchRepository
 
 
-class SqlPropertySearchRepository:
+class SqlPropertySearchRepository(PropertySearchRepository):
     def __init__(self, session: Session) -> None:
         self.session = session
 

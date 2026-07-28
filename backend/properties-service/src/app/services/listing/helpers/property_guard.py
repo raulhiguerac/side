@@ -4,7 +4,7 @@ from functools import partial
 from fastapi.concurrency import run_in_threadpool
 
 from app.core.exceptions.listing import PropertyForbiddenError, PropertyNotFoundError
-from app.models.property import Property
+from app.models.listing import Property
 from app.schemas.principal import Principal
 from app.services.listing.helpers.db_error_translator import translate_db_error
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork

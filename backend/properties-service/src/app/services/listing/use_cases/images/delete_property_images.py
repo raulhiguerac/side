@@ -3,7 +3,7 @@ from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
 
-from app.models.property import ImageStatus
+from app.models.image import ImageStatus
 from app.schemas.principal import Principal
 from app.services.listing.helpers.db_error_translator import translate_db_error
 from app.services.listing.helpers.property_guard import get_owned_property_for_update

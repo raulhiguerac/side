@@ -4,33 +4,27 @@
       Importar propiedades (CSV)
     </h2>
     <p class="text-brand-muted text-sm mb-4">
-      Sube un archivo CSV con las propiedades a crear en bloque.
+      El archivo se procesa en segundo plano. Podés seguir trabajando y revisar
+      el resultado más tarde.
     </p>
 
     <input
       type="file"
-      accept=".csv,.json"
+      accept=".csv"
+      :disabled="uploading"
       @change="onFileChange"
       class="block w-full text-sm text-brand-muted mb-4"
     />
-
-    <div v-if="result" class="mb-4 text-sm">
-      <p class="text-brand-primary font-medium">
-        {{ result.inserted }} propiedades creadas.
-      </p>
-      <ul v-if="result.errors.length" class="mt-2 text-red-500 list-disc pl-5">
-        <li v-for="(err, i) in result.errors" :key="i">{{ err }}</li>
-      </ul>
-    </div>
 
     <p v-if="error" class="text-red-500 text-sm mb-4">{{ error }}</p>
 
     <div class="flex justify-end gap-3">
       <button
+        :disabled="uploading"
         @click="close"
-        class="px-4 py-2 rounded-xl text-sm font-medium text-brand-muted hover:bg-brand-bg transition-colors"
+        class="px-4 py-2 rounded-xl text-sm font-medium text-brand-muted hover:bg-brand-bg transition-colors disabled:opacity-50"
       >
-        Cerrar
+        Cancelar
       </button>
       <button
         :disabled="!file || uploading"
@@ -49,39 +43,84 @@ import BaseModal from "@/components/shared/BaseModal.vue";
 import propertiesApi from "@/api/propertiesApi";
 
 defineProps<{ modelValue: boolean }>();
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits<{
+  "update:modelValue": [value: boolean];
+  queued: [batchId: string];
+}>();
 
-interface BulkCreatePropertiesResult {
-  inserted: number;
-  errors: string[];
+interface BulkUploadUrl {
+  storage_key: string;
+  upload_url: string;
+  max_size_bytes: number;
+  expires_in: number;
+}
+
+interface BulkJobAccepted {
+  batch_id: string;
 }
 
 const file = ref<File | null>(null);
 const uploading = ref(false);
-const result = ref<BulkCreatePropertiesResult | null>(null);
 const error = ref("");
 
 function onFileChange(e: Event) {
   const target = e.target as HTMLInputElement;
   file.value = target.files?.[0] ?? null;
-  result.value = null;
   error.value = "";
 }
 
+/**
+ * Three steps, on submit rather than on file pick: the presigned URL expires
+ * (expires_in, 5 min today), so requesting it early would let it go stale while
+ * the admin is still choosing a file.
+ *
+ *   1. ask the API for a presigned PUT
+ *   2. upload the CSV straight to storage, bypassing the API
+ *   3. hand the resulting key back to the API, which queues the job and returns
+ *
+ * The job runs in the background, so there is nothing to wait for here.
+ */
 async function upload() {
-  if (!file.value) return;
+  if (!file.value || uploading.value) return;
+
   uploading.value = true;
   error.value = "";
+
   try {
-    const formData = new FormData();
-    formData.append("file", file.value);
-    const { data } = await propertiesApi.post<BulkCreatePropertiesResult>(
-      "/v1/admin/properties/bulk",
-      formData
+    const { data: presigned } = await propertiesApi.post<BulkUploadUrl>(
+      "/v1/admin/properties/bulk/upload-url",
+      { filename: file.value.name }
     );
-    result.value = data;
+
+    if (file.value.size > presigned.max_size_bytes) {
+      // A plain presigned PUT can't enforce a size limit, so this check is the
+      // only one there is — the server would accept an oversized file.
+      const maxMb = Math.round(presigned.max_size_bytes / 1024 / 1024);
+      error.value = `El archivo supera el máximo de ${maxMb} MB.`;
+      return;
+    }
+
+    // Straight to storage: no propertiesApi, no cookies. The signature travels
+    // in the query string and extra credentials can make the request fail.
+    const stored = await fetch(presigned.upload_url, {
+      method: "PUT",
+      body: file.value,
+    });
+    if (!stored.ok) {
+      throw new Error(`storage responded ${stored.status}`);
+    }
+
+    const { data: job } = await propertiesApi.post<BulkJobAccepted>(
+      "/v1/admin/properties/bulk",
+      { storage_key: presigned.storage_key }
+    );
+
+    emit("queued", job.batch_id);
+    close();
   } catch (e) {
-    error.value = "Error al subir el archivo. Verificá el formato e intentá de nuevo.";
+    error.value =
+      "No se pudo iniciar la importación. Verificá el archivo e intentá de nuevo.";
+    console.error("bulk import failed", e);
   } finally {
     uploading.value = false;
   }
@@ -89,7 +128,6 @@ async function upload() {
 
 function close() {
   file.value = null;
-  result.value = null;
   error.value = "";
   emit("update:modelValue", false);
 }

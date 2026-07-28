@@ -4,6 +4,6 @@ from app.services.search.adapters.sql_property_search_repository import SqlPrope
 from app.services.search.ports.unit_of_work import SearchUnitOfWork
 
 
-class SqlSearchUnitOfWork:
+class SqlSearchUnitOfWork(SearchUnitOfWork):
     def __init__(self, session: Session) -> None:
         self.properties = SqlPropertySearchRepository(session=session)

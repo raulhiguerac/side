@@ -5,19 +5,29 @@ from typing import Optional
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 
-from app.models.property import (
-    ImageStatus,
+from app.models.listing import (
     ListingStatus,
     ListingType,
     Property,
     PropertyCondition,
-    PropertyImage,
     PropertyLocation,
     PropertyType,
     VerificationStatus,
 )
-from app.services.admin.schemas.admin_schemas import BulkCreatePropertyItem
+from app.core.config.settings import settings
+from app.models.image import ImageStatus, PropertyImage
 from app.services.shared.helpers.geometry import compute_h3
+from app.workers.schemas.bulk_schemas import BulkCreatePropertyItem
+
+# =============================================================================
+# Identity
+# =============================================================================
+
+def derive_property_id(*, external_id: str) -> uuid.UUID:
+    """Same external_id always yields the same property id, which is what lets
+    bulk_insert upsert on re-import instead of duplicating."""
+    return uuid.uuid5(settings.BULK_PROPERTY_ID_NAMESPACE, external_id)
+
 
 # =============================================================================
 # Lookup tables
@@ -136,6 +146,10 @@ def row_to_item(
     Map a raw CSV row (enriched with catalog IDs) to BulkCreatePropertyItem.
     Returns None for rows that can't be mapped (unknown property_type, bad numbers).
     """
+    external_id = str(row.get("external_id", "")).strip()
+    if not external_id:
+        return None
+
     property_type = parse_property_type(row.get("tipo_propiedad", ""))
     if property_type is None:
         return None
@@ -157,6 +171,7 @@ def row_to_item(
         return None
 
     return BulkCreatePropertyItem(
+        external_id=external_id,
         property_type=property_type,
         listing_type=listing_type,
         condition=parse_condition(row.get("antiguedad", "")),
@@ -191,13 +206,17 @@ def build_models(
     """
     Build ORM objects from an enriched BulkCreatePropertyItem.
 
+    The id is derived from item.external_id rather than random, so re-importing
+    a file hits the `id` conflict target of bulk_insert and upserts the same row
+    instead of inserting a duplicate. That's what makes a retry idempotent.
+
     Seed-specific defaults:
     - Apartments with no piso → floor_number = 0
     - Houses with no floor data → total_floors = 1
     - Currency always COP
     - Status always active (seed is published data)
     """
-    property_id = uuid.uuid4()
+    property_id = derive_property_id(external_id=item.external_id)
     h3_r9, h3_r7 = compute_h3(item.latitude, item.longitude)
 
     floor_number = item.floor_number

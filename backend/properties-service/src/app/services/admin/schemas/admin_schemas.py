@@ -1,10 +1,12 @@
 import uuid
+from datetime import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
-from app.models.property import ListingStatus, ListingType, PropertyCondition, PropertyType, VerificationStatus
+from app.models.bulk_job import JobStatus
+from app.models.listing import Currency, ListingStatus, ListingType, PropertyType, VerificationStatus
 from app.schemas.base import StrictBase
 
 class VerifyPropertyRequest(StrictBase):
@@ -27,6 +29,41 @@ class GetPropertiesAdminRequest(StrictBase):
     page_size: int = Field(default=20, ge=1, le=100)
 
 
+class AdminPropertyCardSchema(StrictBase):
+    """Row of the moderation table.
+
+    Deliberately not PropertyCardSchema: that one is the public-facing card used
+    by the feed and the owner's list, and it hides exactly the fields moderation
+    works with (verification_status, owner_id, created_at, rejection_reason).
+    """
+
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    id: uuid.UUID
+    owner_id: uuid.UUID
+    property_type: PropertyType
+    listing_type: ListingType
+    status: ListingStatus
+    verification_status: VerificationStatus
+    rejection_reason: Optional[str] = None
+    price: Decimal
+    currency: Currency
+    area_m2: Decimal
+    bedrooms: int
+    bathrooms: Decimal
+    created_at: datetime
+
+
+class AdminPropertiesPage(StrictBase):
+    """`total` needs its own COUNT — a bare list can only tell the client
+    "there may be more", never how many pages there are."""
+
+    items: list[AdminPropertyCardSchema]
+    total: int
+    page: int
+    page_size: int
+
+
 class SetStatusRequest(StrictBase):
     status: ListingStatus
 
@@ -35,37 +72,44 @@ class SetEstimatedPriceRequest(StrictBase):
     estimated_price: Decimal = Field(gt=0, decimal_places=2)
 
 
-class BulkCreatePropertyItem(StrictBase):
-    """Enriched CSV row — catalog IDs already resolved, ready for ORM construction."""
-
-    property_type: PropertyType
-    listing_type: ListingType
-    condition: PropertyCondition
-
-    area_m2: Decimal = Field(gt=0, decimal_places=2)
-    bedrooms: int = Field(ge=1)
-    bathrooms: Decimal = Field(ge=1, decimal_places=1)
-    parking_spots: int = Field(default=0, ge=0)
-    floor_number: Optional[int] = Field(default=None, ge=0)   # required for apartments
-    total_floors: Optional[int] = Field(default=None, ge=1)   # required for houses
-    stratum: Optional[int] = Field(default=None, ge=1, le=6)
-
-    price: Decimal = Field(gt=0, decimal_places=2)
-    admin_fee: Optional[Decimal] = Field(default=None, ge=0, decimal_places=2)
-    description: Optional[str] = Field(default=None, max_length=2000)
-    year_built: Optional[int] = Field(default=None, ge=1800)
-
-    latitude: float = Field(ge=-90, le=90)
-    longitude: float = Field(ge=-180, le=180)
-
-    # Resolved by catalog enrichment script via /v1/geo-resolution/by-coordinates
-    neighborhood_id: uuid.UUID
-    city_id: uuid.UUID
-    country_id: uuid.UUID
-
-    image_urls: list[str] = Field(default_factory=list)
+class BulkJobCreate(StrictBase):
+    batch_id: uuid.UUID
+    storage_key: str
+    retry_of_job_id: Optional[uuid.UUID] = None
+    expiration: datetime
+    created_by: uuid.UUID
 
 
-class BulkCreatePropertiesResult(StrictBase):
-    inserted: int
-    errors: list[str] = Field(default_factory=list)
+class BulkUploadUrlRequest(StrictBase):
+    filename: str = Field(min_length=1)
+
+
+class BulkUploadUrlResponse(StrictBase):
+    """`max_size_bytes` is advisory — a plain presigned PUT can't cap the body
+    size, so the front pre-checks and the worker streams rather than trusting it."""
+
+    storage_key: str
+    upload_url: str
+    max_size_bytes: int
+    expires_in: int
+
+
+class BulkCreatePropertiesRequest(StrictBase):
+    """The front uploads the CSV straight to storage with a presigned PUT, so the
+    endpoint only receives the resulting key — never the file itself."""
+
+    storage_key: str
+    retry_of_job_id: Optional[uuid.UUID] = None
+
+
+class BulkJobAccepted(StrictBase):
+    batch_id: uuid.UUID
+
+
+class BulkJobStatusResponse(StrictBase):
+    batch_id: uuid.UUID
+    status: JobStatus
+    # Every row either lands or produces an error, so inserted + len(errors)
+    # is the total the run read.
+    inserted: int = 0
+    errors: list[dict[str, Any]] = Field(default_factory=list)

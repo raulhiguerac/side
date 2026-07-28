@@ -1,7 +1,7 @@
 ---
 title: users-service
 status: draft
-last-verified: 2026-06-23
+last-verified: 2026-07-27
 owners: [users-service]
 related:
   - "[[architecture]]"
@@ -9,7 +9,9 @@ related:
   - "[[users-service-auth]]"
   - "[[users-service-user]]"
   - "[[users-service-keycloak]]"
-sources: [../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-06-23-public-profile-endpoint.md]
+  - "[[properties-service-users]]"
+  - "[[open-items]]"
+sources: [../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-06-23-public-profile-endpoint.md, ../../sources/users-service/2026-07-27-resolve-accounts-by-email.md]
 ---
 
 ## TL;DR
@@ -56,20 +58,22 @@ Todo bajo prefijo `/v1`.
 | POST | `/v1/users/reactivation/request` | público |
 | POST | `/v1/users/reactivation/confirm` | Bearer (action token) |
 | POST | `/v1/onboarding/{intent,city,neighborhood,property-type}` | cookie access |
+| POST | `/v1/users/resolve` | **ninguna** (ver [[open-items]]) |
 
 ## Consumers
 
 - **frontend Vue**: registro, login, onboarding, perfil, foto. Recibe cookies HttpOnly.
 - **Keycloak** (saliente): `users-service` crea/borra usuarios y resetea passwords vía admin client; autentica vía OpenID auth client.
 - **Brevo** (saliente): emails transaccionales (reset password, reactivación).
-- **Todos los demás microservicios** (indirecto): consumen los JWT que Keycloak emite a través del login de este servicio, pero no llaman a users-service directamente.
+- **[[properties-service]]** (entrante, desde 2026-07-27): llama `POST /v1/users/resolve` desde el bulk-create worker para resolver emails de dueños a `account_id`. Es la **única** llamada síncrona servicio-a-servicio que recibe users-service hoy. Ver [[properties-service-users]].
+- **Los demás microservicios** (indirecto): consumen los JWT que Keycloak emite a través del login de este servicio, sin llamar a users-service.
 
 ## Boundaries — lo que users-service **NO** hace
 
 - **No es el store de identidad** — Keycloak es la fuente de verdad de credenciales; `accounts` es el espejo local con metadata de negocio.
 - **No valida JWT de otros servicios** — cada servicio valida su propio token contra el JWKS de Keycloak.
 - **No resuelve geografía** — el onboarding guarda IDs (`locality_id`, `neighborhood_id`) que vienen del frontend (vía [[catalog-service]]); no los valida contra catalog hoy.
-- **No tiene comm async entre servicios** — el único trabajo en background es el worker de compensación de Keycloak (interno).
+- **No tiene comm async entre servicios** — no publica ni consume eventos; el único trabajo en background es el worker de compensación de Keycloak (interno). Sí recibe una llamada **síncrona** entrante desde properties-service (`POST /v1/users/resolve`, desde 2026-07-27) — ver Consumers.
 
 ## Stack
 
@@ -109,3 +113,5 @@ Todo bajo prefijo `/v1`.
 - La sesión usa cookies (`access_token`, `refresh_token`); los action tokens usan Bearer header ([auth.py:45](backend/users-service/src/app/api/deps/auth.py#L45), [action_token.py:6-9](backend/users-service/src/app/api/deps/action_token.py#L6-L9)).
 - El worker de compensación corre in-process vía APScheduler cada 900s ([scheduler.py:19-27](backend/users-service/src/app/core/scheduler.py#L19-L27)).
 - La DB es `postgres:17` plano (`identity_service_db`), sin PostGIS ([docker-compose.yml:19-22](docker-compose.yml#L19-L22)).
+- `POST /v1/users/resolve` es el único endpoint que recibe llamadas de otro microservicio; properties-service lo consume desde su bulk-create worker ([user.py](backend/users-service/src/app/api/routes/user.py), [users_client.py](backend/properties-service/src/app/integrations/users/users_client.py)).
+- `POST /v1/users/resolve` no exige autenticación: ni la ruta ni el router `/users` declaran dependencias de auth ([user.py](backend/users-service/src/app/api/routes/user.py)).

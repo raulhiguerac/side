@@ -4,7 +4,7 @@ from functools import partial
 from fastapi.concurrency import run_in_threadpool
 
 from app.core.exceptions.listing import InvalidStatusTransitionError, PropertyNotFoundError, SetVisibilityError
-from app.models.property import VerificationStatus
+from app.models.listing import VerificationStatus
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork
 from app.services.admin.schemas.admin_schemas import VerifyPropertyRequest
 from app.services.shared.helpers.cache_keys import cache_property, client_properties, map_h3_cell

@@ -89,7 +89,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [frontend-poi-reachable](wiki/frontend/flows/frontend-poi-reachable.md) — sección "Cerca del lugar": useReachablePois (1 POST × 9 resultados), acordeón por rango, isocronas + cluster markers, CATEGORY_META/PRIORITY; spinner v-show + resize fix para Leaflet
 - [frontend-property-create-form](wiki/frontend/flows/frontend-property-create-form.md) — form multi-step 4 pasos (Tipo/Detalles/Ubicación/Imágenes), patrón update:form, Google Places + NearbyPlaces en step 2, previewId UUID
 - [frontend-property-edit-form](wiki/frontend/flows/frontend-property-edit-form.md) — vista de edición en 2 columnas, split en 5 tarjetas presentacionales, campos fijos vs editables, gotcha de `Decimal` serializado como string
-- [frontend-admin-panel](wiki/frontend/flows/frontend-admin-panel.md) — panel admin embebido: nav gating, rutas `requiresAdmin`, fix de race en el guard, hub view, modal de bulk upload, riesgo de timeout en el bulk endpoint
+- [frontend-admin-panel](wiki/frontend/flows/frontend-admin-panel.md) — panel admin embebido: nav gating, rutas `requiresAdmin`, fix de race en el guard, hub view, modal de bulk upload en 3 pasos (presigned PUT), forma de la tabla de moderación, 10 de 12 endpoints sin cablear
 
 ### runbook/
 - [frontend-local-dev](wiki/frontend/runbook/frontend-local-dev.md) — `npm run serve` port 8080, env vars, levantar backends a mano, 10 known gaps
@@ -101,6 +101,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0004 — Remover Firebase del frontend](wiki/frontend/adrs/adr-firebase-removal.md)
 - [ADR-0005 — Google Maps Places API (New) para geocoding](wiki/frontend/adrs/adr-gmaps-places-geocoding.md)
 - [ADR-0006 — Campos fijos vs. editables al editar una propiedad](wiki/frontend/adrs/adr-property-edit-fixed-fields.md)
+- [ADR-0007 — Sin librería de componentes: la tabla admin se construye a mano](wiki/frontend/adrs/adr-no-component-library.md)
 
 ## properties-service
 
@@ -110,10 +111,12 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 ### domain/
 - [properties-service-listing](wiki/properties-service/domain/properties-service-listing.md) — CRUD del dueño + flujo de imágenes presigned/batch + visibilidad
 - [properties-service-search](wiki/properties-service/domain/properties-service-search.md) — feed orgánico+ads con fallback de preferencias + feed-mapa por H3
-- [properties-service-admin](wiki/properties-service/domain/properties-service-admin.md) — moderación (state machine), precios estimados dual, promociones, bulk
+- [properties-service-admin](wiki/properties-service/domain/properties-service-admin.md) — moderación (state machine), precios estimados dual, promociones, encolado del bulk import
+- [properties-service-bulk-create-worker](wiki/properties-service/domain/properties-service-bulk-create-worker.md) — import async end-to-end: presigned PUT, BackgroundTasks con sesión propia, persistencia por chunk de 2500, cierre del BulkJob
 
 ### integrations/
 - [properties-service-catalog](wiki/properties-service/integrations/properties-service-catalog.md) — geo síncrono en write time (validación barrio↔ciudad, bulk geo-enrichment)
+- [properties-service-users](wiki/properties-service/integrations/properties-service-users.md) — cliente hacia users-service para resolución bulk de cuentas por email→account_id, consumido por el bulk-create worker
 
 ### runbook/
 - [properties-service-local-dev](wiki/properties-service/runbook/properties-service-local-dev.md) — devcontainer, env vars, create + imágenes end-to-end, 6 known gaps
@@ -126,15 +129,17 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0005 — Cursor de paginación opaco (base64url)](wiki/properties-service/adrs/adr-feed-opaque-cursor.md)
 - [ADR-0006 — Invalidación por prefijo del cache de la vitrina pública](wiki/properties-service/adrs/adr-owner-list-cache-invalidation.md)
 - [ADR-0007 — Property es 1 fila = 1 listing_type, sin soporte para venta+arriendo simultáneo](wiki/properties-service/adrs/adr-single-listing-type-per-property.md)
+- [ADR-0008 — Idempotencia del bulk create vía external_id determinístico](wiki/properties-service/adrs/adr-bulk-idempotent-external-id.md)
+- [ADR-0009 — El listado admin pagina por offset, no con el cursor del feed](wiki/properties-service/adrs/adr-admin-offset-pagination.md)
 
 ## users-service
 
-- [users-service](wiki/users-service/users-service.md) — overview: identidad y perfiles, 2 dominios (`auth`/`user`), único servicio que gestiona usuarios en Keycloak
+- [users-service](wiki/users-service/users-service.md) — overview: identidad y perfiles, 2 dominios (`auth`/`user`), único servicio que gestiona usuarios en Keycloak, resolve bulk consumido por properties
 - [users-service-architecture](wiki/users-service/users-service-architecture.md) — layout interno, 9 tablas, identidad compartida con Keycloak, worker in-process
 
 ### domain/
 - [users-service-auth](wiki/users-service/domain/users-service-auth.md) — registro (saga + compensación), sesiones por cookie, reset password
-- [users-service-user](wiki/users-service/domain/users-service-user.md) — perfil persona/empresa, onboarding 4 pasos, intereses, deactivación soft
+- [users-service-user](wiki/users-service/domain/users-service-user.md) — perfil persona/empresa, onboarding 4 pasos, intereses, deactivación soft, resolución bulk de cuentas por email
 
 ### integrations/
 - [users-service-keycloak](wiki/users-service/integrations/users-service-keycloak.md) — dos clientes (admin + auth), identidad compartida, traducción de errores

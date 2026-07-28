@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.core.exceptions.listing import CreatePropertyError, PropertyForbiddenError, PropertyNotFoundError
-from app.models.property import ImageStatus
+from app.models.image import ImageStatus
 from app.schemas.principal import Principal
 from app.services.listing.use_cases.images.delete_property_images import DeletePropertyImagesUseCase
 

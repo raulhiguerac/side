@@ -3,7 +3,7 @@ from typing import List
 
 from sqlmodel import Session
 
-from app.models.property import PropertyLocation
+from app.models.listing import PropertyLocation
 from app.services.listing.ports.property_location_repository import (
     PropertyLocationRepository,
 )

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 from app.core.exceptions.listing import DeletePropertyError
-from app.models.property import ListingStatus
+from app.models.listing import ListingStatus
 from app.schemas.principal import Principal
 from app.services.listing.helpers.property_guard import get_owned_property
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork

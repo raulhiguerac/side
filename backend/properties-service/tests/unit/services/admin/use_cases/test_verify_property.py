@@ -8,10 +8,10 @@ from app.core.exceptions.listing import (
     PropertyNotFoundError,
     SetVisibilityError,
 )
-from app.models.property import VerificationStatus
+from app.models.listing import VerificationStatus
 from app.schemas.principal import Principal
 from app.services.admin.schemas.admin_schemas import VerifyPropertyRequest
-from app.services.admin.use_cases.verify_property import VerifyPropertyUseCase
+from app.services.admin.use_cases.moderation.verify import VerifyPropertyUseCase
 from app.services.shared.helpers.cache_keys import cache_property, client_properties, map_h3_cell
 
 PROP_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
@@ -53,7 +53,7 @@ def uc(mock_uow, mock_cache):
 # Valid transitions
 # ---------------------------------------------------------------------------
 
-@patch("app.services.admin.use_cases.verify_property.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.verify.run_in_threadpool")
 async def test_transitions_unverified_to_pending(mock_run, uc, mock_uow, mock_cache):
     prop = _make_mock_prop(VerificationStatus.unverified)
     mock_run.return_value = prop
@@ -66,7 +66,7 @@ async def test_transitions_unverified_to_pending(mock_run, uc, mock_uow, mock_ca
     mock_cache.delete.assert_awaited_once()
 
 
-@patch("app.services.admin.use_cases.verify_property.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.verify.run_in_threadpool")
 async def test_transitions_pending_to_verified(mock_run, uc, mock_uow):
     prop = _make_mock_prop(VerificationStatus.pending)
     mock_run.return_value = prop
@@ -77,7 +77,7 @@ async def test_transitions_pending_to_verified(mock_run, uc, mock_uow):
     assert prop.verification_status == VerificationStatus.verified
 
 
-@patch("app.services.admin.use_cases.verify_property.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.verify.run_in_threadpool")
 async def test_transitions_pending_to_rejected_with_reason(mock_run, uc, mock_uow):
     prop = _make_mock_prop(VerificationStatus.pending)
     mock_run.return_value = prop
@@ -92,7 +92,7 @@ async def test_transitions_pending_to_rejected_with_reason(mock_run, uc, mock_uo
     assert prop.rejection_reason == "Missing documents"
 
 
-@patch("app.services.admin.use_cases.verify_property.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.verify.run_in_threadpool")
 async def test_transitions_rejected_back_to_pending(mock_run, uc, mock_uow):
     prop = _make_mock_prop(VerificationStatus.rejected)
     mock_run.return_value = prop
@@ -107,7 +107,7 @@ async def test_transitions_rejected_back_to_pending(mock_run, uc, mock_uow):
 # Cache includes H3 keys
 # ---------------------------------------------------------------------------
 
-@patch("app.services.admin.use_cases.verify_property.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.verify.run_in_threadpool")
 async def test_invalidates_property_user_and_h3_cache_keys(mock_run, uc, mock_cache):
     prop = _make_mock_prop(VerificationStatus.unverified)
     mock_run.return_value = prop
@@ -128,7 +128,7 @@ async def test_invalidates_property_user_and_h3_cache_keys(mock_run, uc, mock_ca
 # Invalid transition — verified has no allowed next states
 # ---------------------------------------------------------------------------
 
-@patch("app.services.admin.use_cases.verify_property.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.verify.run_in_threadpool")
 async def test_raises_invalid_transition_from_verified(mock_run, uc, mock_uow):
     mock_run.return_value = _make_mock_prop(VerificationStatus.verified)
     request = VerifyPropertyRequest(verification_status=VerificationStatus.pending)
@@ -143,7 +143,7 @@ async def test_raises_invalid_transition_from_verified(mock_run, uc, mock_uow):
 # Not found
 # ---------------------------------------------------------------------------
 
-@patch("app.services.admin.use_cases.verify_property.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.verify.run_in_threadpool")
 async def test_raises_not_found_when_property_missing(mock_run, uc, mock_uow):
     mock_run.return_value = None
 
@@ -160,7 +160,7 @@ async def test_raises_not_found_when_property_missing(mock_run, uc, mock_uow):
 # DB error
 # ---------------------------------------------------------------------------
 
-@patch("app.services.admin.use_cases.verify_property.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.verify.run_in_threadpool")
 async def test_rolls_back_and_raises_set_visibility_error_on_commit_failure(mock_run, uc, mock_uow):
     mock_run.return_value = _make_mock_prop(VerificationStatus.unverified)
     mock_uow.commit.side_effect = Exception("db error")
@@ -178,7 +178,7 @@ async def test_rolls_back_and_raises_set_visibility_error_on_commit_failure(mock
 # Cache failure is swallowed
 # ---------------------------------------------------------------------------
 
-@patch("app.services.admin.use_cases.verify_property.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.verify.run_in_threadpool")
 async def test_survives_cache_delete_failure(mock_run, uc, mock_uow, mock_cache):
     mock_run.return_value = _make_mock_prop(VerificationStatus.unverified)
     mock_cache.delete.side_effect = Exception("Redis down")

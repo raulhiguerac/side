@@ -2,7 +2,11 @@ import uuid
 from typing import Optional, Protocol
 
 from app.models.location import Neighborhood
-from app.services.geo_resolution.schemas.neighborhood import LocationByCoordinates
+from app.services.geo_resolution.schemas.neighborhood import (
+    LocationByCoordinates,
+    PointToResolve,
+    ResolvedPoint,
+)
 
 
 class GeoreferentiationRepository(Protocol):
@@ -21,6 +25,12 @@ class GeoreferentiationRepository(Protocol):
             lon: float,
             cell: str
         ) -> Optional[LocationByCoordinates]: ...
+
+    def get_location_by_points(
+            self,
+            *,
+            points: list[PointToResolve],
+        ) -> list[ResolvedPoint]: ...
 
     def update_neighborhood_h3_cells(
             self, 

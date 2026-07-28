@@ -12,6 +12,8 @@ from app.integrations.storage.minio.storage import StorageClient
 from app.services.shared.adapters.brevo_email_sender_adapter import BrevoSenderAdapter
 from app.services.shared.adapters.minio_storage_adapter import MinioStorageAdapter
 from app.services.shared.adapters.redis_cache_adapter import RedisCacheAdapter
+from app.services.shared.adapters.sql_account_reader import SqlAccountReader
+from app.services.shared.ports.account_reader import AccountReaderPort
 from app.services.shared.ports.cache import CachePort
 from app.services.shared.ports.email_sender import EmailSenderPort
 from app.services.shared.ports.storage import StoragePort
@@ -35,6 +37,9 @@ from app.services.user.use_cases.account.reactivate_current_account import (
 )
 from app.services.user.use_cases.account.request_account_reactivation import (
     RequestReactivationUseCase,
+)
+from app.services.user.use_cases.account.resolve_accounts_bulk import (
+    ResolveAccountsBulkUseCase,
 )
 from app.services.user.use_cases.profile.get_current_profile import (
     GetCurrentProfileUseCase,
@@ -92,6 +97,10 @@ def get_uow(session: Session = Depends(get_session)) -> UserUnitOfWork:
     return SqlUserUnitOfWork(session=session)
 
 
+def get_account_reader(session: Session = Depends(get_session)) -> AccountReaderPort:
+    return SqlAccountReader(session=session)
+
+
 # -------------------------------------------------------------------------
 # Readers / Resolvers (request-scoped if they depend on UoW)
 # -------------------------------------------------------------------------
@@ -131,6 +140,11 @@ def get_current_account_uc(
     account_reader: CurrentAccountReader = Depends(get_current_account_reader),
 ) -> GetCurrentAccountUseCase:
     return GetCurrentAccountUseCase(account_reader=account_reader)
+
+def resolve_accounts_bulk_uc(
+    account_reader: AccountReaderPort = Depends(get_account_reader),
+) -> ResolveAccountsBulkUseCase:
+    return ResolveAccountsBulkUseCase(account_reader=account_reader)
 
 def get_current_profile_uc(
     profile_service: ProfileApplicationService = Depends(get_profile_application),

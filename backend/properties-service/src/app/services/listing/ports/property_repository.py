@@ -1,7 +1,7 @@
 import uuid
 from typing import Protocol
 
-from app.models.property import Property
+from app.models.listing import Property
 
 
 class PropertyRepository(Protocol):

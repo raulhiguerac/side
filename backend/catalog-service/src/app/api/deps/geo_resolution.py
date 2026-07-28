@@ -18,6 +18,9 @@ from app.services.geo_resolution.ports.geocoding.gateway import GeocodingGateway
 from app.services.geo_resolution.ports.poi.gateway import PoiProviderGateway
 from app.services.geo_resolution.ports.routing.gateway import RoutingGateway
 from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWork
+from app.services.geo_resolution.use_cases.bulk_resolve_locations_by_coordinates import (
+    BulkResolveLocationsByCoordinatesUseCase,
+)
 from app.services.geo_resolution.use_cases.resolve_location_by_coordinates import (
     ResolveLocationByCoordinatesUseCase,
 )
@@ -94,6 +97,12 @@ def resolve_location_by_coordinates_uc(
     uow: GeoResolutionUnitOfWork = Depends(get_uow),
 ) -> ResolveLocationByCoordinatesUseCase:
     return ResolveLocationByCoordinatesUseCase(uow=uow)
+
+
+def bulk_resolve_locations_by_coordinates_uc(
+    uow: GeoResolutionUnitOfWork = Depends(get_uow),
+) -> BulkResolveLocationsByCoordinatesUseCase:
+    return BulkResolveLocationsByCoordinatesUseCase(uow=uow)
 
 
 def resolve_isochrone_uc(

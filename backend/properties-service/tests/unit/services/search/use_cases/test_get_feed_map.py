@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.property import Currency, ListingStatus, ListingType, PropertyType
+from app.models.listing import Currency, ListingStatus, ListingType, PropertyType
 from app.services.search.use_cases.get_feed_map import GetFeedMapUseCase
 from app.services.shared.schemas.property_card import PropertyCardSchema
 

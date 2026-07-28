@@ -9,7 +9,7 @@ from app.core.exceptions.listing import (
     PropertyNotFoundError,
     SetVisibilityError,
 )
-from app.models.property import ListingStatus
+from app.models.listing import ListingStatus
 from app.schemas.principal import Principal
 from app.services.listing.use_cases.property_core.set_property_visibility import SetPropertyVisibilityUseCase
 

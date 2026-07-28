@@ -24,3 +24,10 @@ def get_active_account_profile(session: Session, account_id: uuid.UUID) -> TProf
         Account.is_active.is_(True),
     )
     return session.exec(statement).first()
+
+def get_active_accounts_bulk(session: Session, emails: list[str]) -> list[tuple[uuid.UUID, str]]:
+    statement = select(Account.account_id,Account.email).where(
+        Account.email.in_(emails),
+        Account.is_active.is_(True),
+    )
+    return session.exec(statement).all()

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, Protocol
 
-from app.models.property import PropertyImage, PropertyImageUploadBatch
+from app.models.image import PropertyImage, PropertyImageUploadBatch
 
 
 class PropertyImageRepository(Protocol):

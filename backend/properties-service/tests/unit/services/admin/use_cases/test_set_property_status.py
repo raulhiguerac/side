@@ -8,8 +8,8 @@ from app.core.exceptions.listing import (
     PropertyNotFoundError,
     SetVisibilityError,
 )
-from app.models.property import ListingStatus
-from app.services.admin.use_cases.set_property_status import SetPropertyStatusUseCase
+from app.models.listing import ListingStatus
+from app.services.admin.use_cases.moderation.set_status import SetPropertyStatusUseCase
 from app.services.shared.helpers.cache_keys import cache_property, client_properties, map_h3_cell
 
 PROP_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
@@ -51,7 +51,7 @@ def uc(mock_uow, mock_cache):
 # Valid transitions
 # ---------------------------------------------------------------------------
 
-@patch("app.services.admin.use_cases.set_property_status.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.set_status.run_in_threadpool")
 async def test_transitions_draft_to_active(mock_run, uc, mock_uow, mock_cache):
     prop = _make_mock_prop(ListingStatus.draft)
     mock_run.return_value = prop
@@ -63,7 +63,7 @@ async def test_transitions_draft_to_active(mock_run, uc, mock_uow, mock_cache):
     mock_cache.delete.assert_awaited_once()
 
 
-@patch("app.services.admin.use_cases.set_property_status.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.set_status.run_in_threadpool")
 async def test_transitions_active_to_sold(mock_run, uc, mock_uow, mock_cache):
     prop = _make_mock_prop(ListingStatus.active)
     mock_run.return_value = prop
@@ -74,7 +74,7 @@ async def test_transitions_active_to_sold(mock_run, uc, mock_uow, mock_cache):
     mock_uow.commit.assert_awaited_once()
 
 
-@patch("app.services.admin.use_cases.set_property_status.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.set_status.run_in_threadpool")
 async def test_transitions_active_to_inactive(mock_run, uc, mock_uow):
     prop = _make_mock_prop(ListingStatus.active)
     mock_run.return_value = prop
@@ -84,7 +84,7 @@ async def test_transitions_active_to_inactive(mock_run, uc, mock_uow):
     assert prop.status == ListingStatus.inactive
 
 
-@patch("app.services.admin.use_cases.set_property_status.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.set_status.run_in_threadpool")
 async def test_transitions_sold_to_inactive(mock_run, uc, mock_uow):
     prop = _make_mock_prop(ListingStatus.sold)
     mock_run.return_value = prop
@@ -98,7 +98,7 @@ async def test_transitions_sold_to_inactive(mock_run, uc, mock_uow):
 # Cache includes H3 keys
 # ---------------------------------------------------------------------------
 
-@patch("app.services.admin.use_cases.set_property_status.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.set_status.run_in_threadpool")
 async def test_invalidates_property_user_and_h3_cache_keys(mock_run, uc, mock_cache):
     prop = _make_mock_prop(ListingStatus.draft)
     mock_run.return_value = prop
@@ -117,7 +117,7 @@ async def test_invalidates_property_user_and_h3_cache_keys(mock_run, uc, mock_ca
 # Invalid transition
 # ---------------------------------------------------------------------------
 
-@patch("app.services.admin.use_cases.set_property_status.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.set_status.run_in_threadpool")
 async def test_raises_invalid_transition(mock_run, uc, mock_uow):
     mock_run.return_value = _make_mock_prop(ListingStatus.sold)
 
@@ -131,7 +131,7 @@ async def test_raises_invalid_transition(mock_run, uc, mock_uow):
 # Not found
 # ---------------------------------------------------------------------------
 
-@patch("app.services.admin.use_cases.set_property_status.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.set_status.run_in_threadpool")
 async def test_raises_not_found_when_property_missing(mock_run, uc, mock_uow):
     mock_run.return_value = None
 
@@ -145,7 +145,7 @@ async def test_raises_not_found_when_property_missing(mock_run, uc, mock_uow):
 # DB error
 # ---------------------------------------------------------------------------
 
-@patch("app.services.admin.use_cases.set_property_status.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.set_status.run_in_threadpool")
 async def test_rolls_back_and_raises_set_visibility_error_on_commit_failure(mock_run, uc, mock_uow):
     mock_run.return_value = _make_mock_prop(ListingStatus.draft)
     mock_uow.commit.side_effect = Exception("db error")
@@ -160,7 +160,7 @@ async def test_rolls_back_and_raises_set_visibility_error_on_commit_failure(mock
 # Cache failure is swallowed
 # ---------------------------------------------------------------------------
 
-@patch("app.services.admin.use_cases.set_property_status.run_in_threadpool")
+@patch("app.services.admin.use_cases.moderation.set_status.run_in_threadpool")
 async def test_survives_cache_delete_failure(mock_run, uc, mock_uow, mock_cache):
     mock_run.return_value = _make_mock_prop(ListingStatus.draft)
     mock_cache.delete.side_effect = Exception("Redis down")

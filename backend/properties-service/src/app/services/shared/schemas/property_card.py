@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 from pydantic import ConfigDict, Field, model_validator
 
-from app.models.property import Currency, ListingStatus, ListingType, PropertyType
+from app.models.listing import Currency, ListingStatus, ListingType, PropertyType
 from app.schemas.base import StrictBase
 from app.services.shared.helpers.geometry import point_to_lat_lon
 

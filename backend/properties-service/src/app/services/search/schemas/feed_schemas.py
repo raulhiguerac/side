@@ -6,7 +6,7 @@ from typing import Optional
 import h3
 from pydantic import Field
 
-from app.models.property import PropertyType
+from app.models.listing import PropertyType
 from app.schemas.base import StrictBase
 
 from app.services.shared.schemas.property_card import PropertyCardSchema

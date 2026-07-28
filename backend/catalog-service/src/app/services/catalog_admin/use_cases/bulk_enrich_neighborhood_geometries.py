@@ -5,6 +5,7 @@ from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
 
+from app.core.config.settings import settings
 from app.services.catalog_admin.helpers.db_error_translator import translate_db_error
 from app.services.catalog_admin.ports.unit_of_work import CatalogAdminUnitOfWork
 from app.services.catalog_admin.schemas.neighborhood import (
@@ -14,7 +15,7 @@ from app.services.shared.helpers.cache_keys import (
     cache_key_neighborhood,
     cache_key_neighborhoods,
 )
-from app.services.shared.helpers.geometry import geom_from_geojson
+from app.services.shared.helpers.geometry import geom_from_geojson, h3_cells_for_geojson
 from app.services.shared.ports.cache import CachePort
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,14 @@ class BulkEnrichNeighborhoodGeometriesUseCase:
             return BulkEnrichNeighborhoodGeometriesResult(matched=0, unmatched=unmatched, updated=0)
 
         updates = [
-            {"id": n.id, "geom": geom_from_geojson(neighborhood_lookup[n.search_name]["geometry"])}
+            {
+                "id": n.id,
+                "geom": geom_from_geojson(neighborhood_lookup[n.search_name]["geometry"]),
+                "h3_cells": h3_cells_for_geojson(
+                    neighborhood_lookup[n.search_name]["geometry"],
+                    resolution=settings.H3_RESOLUTION,
+                ),
+            }
             for n in neighborhoods
         ]
 

@@ -1,13 +1,14 @@
 ---
 title: Lifecycle del POI (catalog-service)
 status: draft
-last-verified: 2026-06-23
+last-verified: 2026-07-18
 owners: [catalog-service]
 related:
   - "[[catalog-service]]"
   - "[[catalog-service-architecture]]"
   - "[[catalog-service-overpass]]"
   - "[[catalog-service-ors]]"
+  - "[[catalog-service-catalog-admin]]"
   - "[[avm-training]]"
   - "[[adr-poi-cache-aside]]"
   - "[[adr-isochrone-ors-h3]]"
@@ -18,11 +19,12 @@ sources:
   - ../../../sources/catalog-service/2026-06-15-ors-isochrone-reachable-pois.md
   - ../../../sources/catalog-service/2026-06-15-isochrone-poi-seed-fixes.md
   - ../../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md
+  - ../../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md
 ---
 
 ## TL;DR
 
-Los POIs se pueblan **side-effect only** — nunca on-demand de un endpoint, solo como background task disparada por un geo-resolution exitoso. 3 capas de dedup para evitar fetches redundantes a Overpass: Redis cache short-circuit → Redis `SET NX` lock distribuido → DB `FetchZone` freshness check. Cuando fetchea, también appendea el `h3_index` al array `h3_cells` del barrio (mecánica lazy-fill). `get_location_by_point` combina `h3_cells` + `ST_Contains` (el pre-filtro acota candidatos, pero `ST_Contains` decide), con fallback a `ST_Contains` completo si la celda nunca fue poblada — ver fix 2026-06-23 más abajo.
+Los POIs se pueblan **side-effect only** — nunca on-demand de un endpoint, solo como background task disparada por un geo-resolution exitoso. 3 capas de dedup para evitar fetches redundantes a Overpass: Redis cache short-circuit → Redis `SET NX` lock distribuido → DB `FetchZone` freshness check. Cuando fetchea, también appendea el `h3_index` al array `h3_cells` del barrio (mecánica lazy-fill; dedup en el append desde 2026-07-18, ver más abajo). `get_location_by_point` combina `h3_cells` + `ST_Contains` (el pre-filtro acota candidatos, pero `ST_Contains` decide), con fallback a `ST_Contains` completo si la celda nunca fue poblada — ver fix 2026-06-23 más abajo. Desde 2026-07-18 también existe `get_location_by_points`, la versión batch del mismo patrón, más un precompute eager de `h3_cells` en los flujos de enrich de geometría (ver sección propia).
 
 ## Trigger
 
@@ -120,15 +122,37 @@ TTLs:
 
 ## La lazy-fill de `h3_cells`
 
-`update_neighborhood_h3_cells` ([sql_georeferentiation_repository.py:34-41](backend/catalog-service/src/app/services/geo_resolution/adapters/sql_georeferentiation_repository.py#L34-L41)) ejecuta:
+`update_neighborhood_h3_cells` ([sql/georeferentiation_repository.py:39-48](backend/catalog-service/src/app/services/geo_resolution/adapters/sql/georeferentiation_repository.py#L39-L48)) ejecuta:
 
 ```sql
 UPDATE neighborhoods
-SET h3_cells = array_append(h3_cells, $h3_index)
+SET h3_cells = CASE
+    WHEN h3_cells.any($h3_index) THEN h3_cells             -- ya está, no tocar
+    ELSE array_append(h3_cells, $h3_index)                  -- no está, appendear
+END
 WHERE id = $neighborhood_id
 ```
 
 Cada zona fetcheada agrega **una celda** al array. Con tráfico real, los barrios populares van llenando su array de h3_cells; los olvidados quedan vacíos.
+
+**Fix 2026-07-18 — dedup en el append**: antes de este fix el `UPDATE` era un `array_append` incondicional. Cada vez que una celda pasaba por el ciclo completo de staleness de `ResolvePoiUseCase` (fresca → vence → se marca stale → segunda request la refetchea, ver diagrama arriba), `_fetch_and_persist` volvía a correr para el mismo `h3_index`/`neighborhood_id`, y `array_append` metía ese mismo string **de nuevo** — sin romper el matching (`h3_cells.any(cell)` sigue funcionando con duplicados) pero inflando el tamaño de la fila y del índice GIN sin límite para barrios con tráfico recurrente. El fix queda confinado enteramente al SQL de este método — cero cambios en `resolve_poi.py`.
+
+## Precompute eager de `h3_cells` en enrich time (2026-07-18)
+
+Además de la lazy-fill de arriba, `BulkEnrichNeighborhoodGeometriesUseCase` y `EnrichNeighborhoodGeometryUseCase` ([catalog_admin](../domain/catalog-service-catalog-admin.md)) ahora calculan `h3_cells` **completo** (cobertura del polígono entero) en el mismo momento en que setean `geom`, vía `h3_cells_for_geojson(geometry, resolution=settings.H3_RESOLUTION)` ([shared/helpers/geometry.py](backend/catalog-service/src/app/services/shared/helpers/geometry.py)) — internamente `h3.geo_to_cells(geojson, resolution)`.
+
+**Por qué el fallback sin pre-filtro sigue siendo necesario** aunque ahora haya precompute eager:
+1. `CreateNeighborhoodUseCase`/`UpdateNeighborhoodUseCase` nunca tocan `geom` ni `h3_cells` — solo los flujos de enrich lo hacen. La cobertura de `h3_cells` es inconsistente entre barrios: algunos tienen precompute completo, otros dependen 100% de la lazy-fill incremental.
+2. El polyfill de h3 decide membership de celda por **centroide** (no por overlap parcial) — un punto cerca del borde de un barrio puede caer en una celda cuyo centroide queda justo afuera del polígono, y esa celda no entra en el `h3_cells` precomputado aunque `ST_Contains` sea true para ese punto. Esto pasa incluso en barrios 100% precomputados.
+
+## Resolución batch — `get_location_by_points` (2026-07-18)
+
+Para evitar N round-trips cuando hay que resolver un lote de puntos (ej. bulk de properties), existe la contraparte batch de `get_location_by_point`:
+
+- **Adapter/port**: `get_location_by_points` ([sql/georeferentiation_repository.py](backend/catalog-service/src/app/services/geo_resolution/adapters/sql/georeferentiation_repository.py)) arma un `unnest(ids, lats, lons, cells)` como tabla derivada y hace un `LEFT JOIN LATERAL` correlacionado (un `ST_Contains` + prefiltro `h3_cells` por fila, `LIMIT 1`) — resuelve el batch completo en 1-2 queries en vez de N. Mismo patrón de dos pasadas que el singular: prefiltro h3 primero, y una segunda pasada sin prefiltro solo para los puntos que no matchearon (celdas frías).
+- **UC**: `BulkResolveLocationsByCoordinatesUseCase` ([use_cases/bulk_resolve_locations_by_coordinates.py](backend/catalog-service/src/app/services/geo_resolution/use_cases/bulk_resolve_locations_by_coordinates.py)) recibe `list[PointToResolveBase]` (id, lat, lon), calcula la celda h3 de cada punto en threadpool, y llama al adapter.
+- **Endpoint**: `POST /geo-resolution/by-coordinates/bulk` (body `BulkResolveLocationsRequest`, response `list[ResolvedPoint]`).
+- **Deliberadamente NO implementado**: a diferencia de `/by-coordinates` (singular), este endpoint **no dispara** `ResolvePoiUseCase` en background por cada punto resuelto. Se prototipó una versión con dedup por celda h3 antes de encolar (para no disparar un `BackgroundTasks.add_task` por punto cuando muchos puntos de un batch caen en la misma celda) y se revirtió explícitamente — queda como open item, no como decisión tomada.
 
 ### El huevo-gallina que esto causó (fix 2026-06-23)
 
@@ -223,13 +247,18 @@ SELECT * FROM points_of_interest WHERE h3_index = ANY(:cells)
 ## Open items
 
 - **Refresh batch para zonas stale** — hoy una zona vencida solo se marca `is_stale=True` pero nadie la refetcha hasta que alguien pase por ahí.
+- **`POST /by-coordinates/bulk` no dispara POI background tasks.** El endpoint singular sí lo hace; el bulk quedó explícitamente sin esa pieza (se probó un dedup por celda h3 antes de encolar y se revirtió) — si se quiere, falta re-diseñarlo desde cero, no retomar el intento revertido tal cual.
+- **`get_location_by_points` sin chunking de tamaño de batch.** Arma arrays literales embebidos en el `unnest` — un batch muy grande podría pegarle al tamaño máximo de query o degradar el plan. Deferred al caller (properties-service).
+- **Posibles duplicados preexistentes en `h3_cells`** de antes del fix de dedup (2026-07-18) — el fix previene nuevos duplicados pero no limpia los que ya puedan existir en producción; un backfill (`SELECT DISTINCT unnest(...)`) quedaría pendiente si hace falta.
 
 ## Claims
 
 - `ResolvePoiUseCase` es invocado como `BackgroundTasks.add_task(...)` desde `/geo-resolution/resolve-neighborhood` y `/geo-resolution/by-coordinates`; nunca on-demand ([api/routes/geo_resolution.py](backend/catalog-service/src/app/api/routes/geo_resolution.py)).
 - 3 capas de dedup: cache short-circuit (`cache_key_fetch_zone`) → lock distribuido (`set_nx`, TTL `POI_LOCK_TTL_SECONDS`=30s) → DB `FetchZone` freshness ([resolve_poi.py:62-103](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_poi.py#L62-L103)).
 - El lock SIEMPRE se libera en `finally`, sin importar el flow ([resolve_poi.py:114-115](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_poi.py#L114-L115)).
-- El append de `h3_cells` es `UPDATE ... SET h3_cells = array_append(h3_cells, $h3)` ejecutado después de persistir los POIs ([sql_georeferentiation_repository.py:34-41](backend/catalog-service/src/app/services/geo_resolution/adapters/sql_georeferentiation_repository.py#L34-L41)).
+- El append de `h3_cells` es `UPDATE ... SET h3_cells = CASE WHEN h3_cells.any($h3) THEN h3_cells ELSE array_append(h3_cells, $h3) END`, ejecutado después de persistir los POIs — el `CASE` evita duplicados en refetches repetidos de la misma celda ([sql/georeferentiation_repository.py:39-48](backend/catalog-service/src/app/services/geo_resolution/adapters/sql/georeferentiation_repository.py#L39-L48)). Antes del fix 2026-07-18 era un `array_append` incondicional.
+- `BulkEnrichNeighborhoodGeometriesUseCase` y `EnrichNeighborhoodGeometryUseCase` precomputan `h3_cells` completo vía `h3_cells_for_geojson()` al setear `geom` — no dependen solo de la lazy-fill ([shared/helpers/geometry.py](backend/catalog-service/src/app/services/shared/helpers/geometry.py)). Agregado 2026-07-18.
+- `get_location_by_points` resuelve un batch de puntos con `unnest(...)` + `LEFT JOIN LATERAL` (prefiltro h3 + `ST_Contains` por fila, `LIMIT 1`), con la misma segunda pasada de fallback sin prefiltro que el singular, expuesto en `POST /geo-resolution/by-coordinates/bulk` ([sql/georeferentiation_repository.py](backend/catalog-service/src/app/services/geo_resolution/adapters/sql/georeferentiation_repository.py), [bulk_resolve_locations_by_coordinates.py](backend/catalog-service/src/app/services/geo_resolution/use_cases/bulk_resolve_locations_by_coordinates.py)). Agregado 2026-07-18; no dispara POI background tasks (a diferencia del singular).
 - `get_location_by_point` combina `h3_cells.any(cell)` (GIN index, acota candidatos) con `ST_Contains` (decide siempre) en una query "narrowed"; si no hay match, cae a un `ST_Contains` completo sobre todos los barrios con `geom` (celda fría) — nunca confía solo en el match de celda. El UC calcula `h3.latlng_to_cell(lat, lon, settings.H3_RESOLUTION)` y lo pasa como `cell` ([sql_georeferentiation_repository.py:58-84](backend/catalog-service/src/app/services/geo_resolution/adapters/sql_georeferentiation_repository.py#L58-L84), [resolve_location_by_coordinates.py](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_location_by_coordinates.py)). Fix 2026-06-23: antes de esto, el pre-filtro solo (sin fallback) causaba un huevo-gallina permanente para celdas nunca pobladas.
 - `/geo-resolution/by-coordinates` programa `background_tasks.add_task(poi_uc.execute, ...)` después de que `uc.execute()` resuelve — restaurado 2026-06-23 tras el fix del huevo-gallina ([api/routes/geo_resolution.py:46-63](backend/catalog-service/src/app/api/routes/geo_resolution.py#L46-L63)).
 - `PoiProviderAdapter` usa `extract_category(tags)` de `category_map.py` — clasifica a una de 15 categorías estándar. `subcategories` se persiste como `None` ([poi_provider.py](backend/catalog-service/src/app/services/geo_resolution/adapters/poi_provider.py)).

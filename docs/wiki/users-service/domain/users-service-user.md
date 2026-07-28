@@ -1,7 +1,7 @@
 ---
 title: Dominio user — users-service
 status: draft
-last-verified: 2026-07-16
+last-verified: 2026-07-27
 owners: [users-service]
 related:
   - "[[users-service]]"
@@ -9,7 +9,10 @@ related:
   - "[[frontend-onboarding-flow]]"
   - "[[adr-soft-deactivation]]"
   - "[[properties-service-search]]"
-sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/users-service/2026-06-23-public-profile-endpoint.md, ../../../sources/users-service/2026-07-16-jwt-roles-is-admin.md]
+  - "[[properties-service-users]]"
+  - "[[properties-service-bulk-create-worker]]"
+  - "[[open-items]]"
+sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/users-service/2026-06-23-public-profile-endpoint.md, ../../../sources/users-service/2026-07-16-jwt-roles-is-admin.md, ../../../sources/users-service/2026-07-27-resolve-accounts-by-email.md]
 ---
 
 ## TL;DR
@@ -26,6 +29,7 @@ El dominio de **perfil y ciclo de cuenta**: leer/editar el perfil propio, subir 
 | `UpdateCurrentProfileUseCase` | `use_cases/profile/update_current_profile.py` | Patch de perfil; invalida cache. |
 | `UpdateCurrentProfilePhotoUseCase` | `use_cases/profile/upload_profile_photo.py` | Sube foto a storage, actualiza `photo_url`/`photo_key`. |
 | `GetUserInterestsUseCase` | `use_cases/account/get_interests.py` | Intereses (ciudad/barrio/tipo). |
+| `ResolveAccountsBulkUseCase` | `use_cases/account/resolve_accounts_bulk.py` | Resuelve una lista de emails a `(account_id, email)` — consumido por otro microservicio, no por el front. |
 | `DeactivateCurrentAccountUseCase` | `use_cases/account/deactivate_current_account.py` | Soft-deactivate. |
 | `RequestReactivationUseCase` | `use_cases/account/request_account_reactivation.py` | Manda email con token de reactivación. |
 | `ConfirmReactivationUseCase` | `use_cases/account/reactivate_current_account.py` | Reactiva con token. |
@@ -52,6 +56,20 @@ Endpoint sin auth para que cualquier visitante (anónimo o no) vea el perfil de 
 - **Cero cache nueva**: `profile_cache_key(account_id)` ya estaba parametrizada por `account_id` puro, no por "current user" — el endpoint público cae en la misma key que ya llena el propio `/me/profile` de ese usuario.
 - **Gap conocido, sin resolver**: en cache-hit, `_get_profile` devuelve el perfil cacheado sin re-chequear `is_active`. Si una cuenta se desactiva durante el TTL (`PROFILE_CACHE_TTL_SECONDS=600`), el perfil público puede seguir visible hasta 10 minutos después de la desactivación.
 - **`created_at` para "miembro desde X" en el front**: viene de `UserProfile.created_at`/`CompanyProfile.created_at` (mismo patrón audit que `Account`), no de `Account.created_at` — evita threadear ese campo a través del orchestrator/reader. `CurrentUserOut` (DTO de `/me`, privado) no lo incluye.
+
+## Resolución bulk de cuentas (`POST /v1/users/resolve`)
+
+Único endpoint de este servicio pensado para **consumo servicio-a-servicio**, no para el frontend. Recibe `list[str]` de emails y devuelve `list[tuple[account_id, email]]` de las cuentas **activas** que matchean.
+
+Su consumidor es el bulk-create worker de [[properties-service-bulk-create-worker]]: el CSV de import trae el email del dueño por fila y necesita el `account_id` para poblar `Property.owner_id`. Ver el lado cliente en [[properties-service-users]].
+
+**Dirección invertida (2026-07-27)**: se implementó originalmente resolviendo `account_id → email` (commit `eda7114`), que era la dirección inútil para el caso de uso que lo motivó. Se dio vuelta cambiando solo los parámetros de la cadena completa — ruta → `ResolveAccountsBulkUseCase` → `AccountReaderPort.get_accounts_bulk` → `SqlAccountReader` → `get_active_accounts_bulk`, donde el filtro pasó de `Account.account_id.in_(...)` a `Account.email.in_(emails)`. Fue un cambio de contrato breaking, aceptable únicamente porque el consumidor todavía no estaba conectado. El shape de la respuesta no cambió.
+
+**Semántica de los que no matchean**: un email sin cuenta activa **simplemente no vuelve** en la respuesta — no hay error ni placeholder. El consumidor depende de esto: properties-service convierte la ausencia en un error por fila (`"owner not resolved"`) en vez de asignar un dueño equivocado. El filtro `is_active.is_(True)` se mantiene, así que una cuenta desactivada es indistinguible de una inexistente desde afuera.
+
+> **Gotcha — case-sensitive.** `Account.email.in_(emails)` compara strings crudos. Un email guardado como `raul@mail.com` no matchea `Raul@Mail.com`. Sin decidir si normalizar en escritura, en lectura o ambas.
+
+> **Sin auth — ver [[open-items]].** La ruta no declara `Depends(get_current_principal)` y el router `/users` no tiene `dependencies=` a nivel global, así que el endpoint es **público**. Cualquiera puede postear emails arbitrarios y averiguar cuáles tienen cuenta activa, más su `account_id`.
 
 ## Foto de perfil
 
@@ -86,3 +104,6 @@ Estos intereses alimentan las `FeedPreferences` del feed de [[properties-service
 - La deactivación dispara un logout best-effort que nunca bloquea la operación ([user.py:177-183](backend/users-service/src/app/api/routes/user.py#L177-L183)).
 - `CurrentUserOut.is_admin` tiene default `False` y se recalcula post-cache en `GetCurrentAccountUseCase.execute` vía `model_copy`, nunca se cachea el flag en sí ([get_current_account.py](backend/users-service/src/app/services/user/use_cases/account/get_current_account.py)).
 - `CurrentUserProfileOut` (`/me/profile` y el perfil público) no incluye `is_admin` — solo `CurrentUserOut` (`/me/`) lo expone.
+- `ResolveAccountsBulkUseCase.execute(*, emails: list[str])` delega en `AccountReaderPort.get_accounts_bulk(emails=...)` y devuelve `list[tuple[uuid.UUID, str]]` ([resolve_accounts_bulk.py](backend/users-service/src/app/services/user/use_cases/account/resolve_accounts_bulk.py)).
+- `get_active_accounts_bulk` filtra por `Account.email.in_(emails)` y `Account.is_active.is_(True)`; los emails sin cuenta activa no aparecen en el resultado ([account_repository.py](backend/users-service/src/app/repositories/account_repository.py)).
+- `POST /v1/users/resolve` no declara ninguna dependencia de autenticación, ni en la ruta ni en el router `/users` ([user.py](backend/users-service/src/app/api/routes/user.py)).

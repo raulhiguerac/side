@@ -10,7 +10,11 @@ from app.models.interests import (
     UserNeighborhoodInterest,
     UserPropertyTypeInterest,
 )
-from app.repositories.account_repository import get_account_by_email, get_account_by_id
+from app.repositories.account_repository import (
+    get_account_by_email,
+    get_account_by_id,
+    get_active_accounts_bulk,
+)
 from app.services.shared.ports.account_reader import AccountReaderPort
 
 
@@ -37,6 +41,15 @@ class SqlAccountReader(AccountReaderPort):
             get_account_by_email,
             self._session,
             email,
+        )
+
+    async def get_accounts_bulk(
+        self, *, emails: list[str]
+    ) -> list[tuple[uuid.UUID, str]]:
+        return await run_in_threadpool(
+            get_active_accounts_bulk,
+            self._session,
+            emails,
         )
 
     async def get_interests_by_account(self, *, account_id: uuid.UUID) -> dict:

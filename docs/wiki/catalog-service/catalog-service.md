@@ -1,7 +1,7 @@
 ---
 title: catalog-service
 status: draft
-last-verified: 2026-07-15
+last-verified: 2026-07-18
 owners: [catalog-service]
 related:
   - "[[architecture]]"
@@ -9,7 +9,7 @@ related:
   - "[[catalog-service-catalog-admin]]"
   - "[[catalog-service-geo-catalog]]"
   - "[[catalog-service-poi-lifecycle]]"
-sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md]
+sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md]
 ---
 
 ## TL;DR
@@ -47,6 +47,7 @@ Tres jobs distintos:
 | GET | `/v1/neighborhoods/by-id?neighborhood_id` | frontend, otros services | público |
 | GET | `/v1/geo-resolution/resolve-neighborhood?query&locality_id` | frontend (legacy — refactor pendiente) | público |
 | GET | `/v1/geo-resolution/by-coordinates?lat&lon` | frontend / properties-service | público |
+| POST | `/v1/geo-resolution/by-coordinates/bulk` | properties-service (bulk create, futuro caller) | público |
 | POST | `/v1/geo-resolution/reachable-pois` | frontend (`NearbyPlaces.vue`, "Cerca del lugar") | público |
 | POST/PATCH | `/v1/admin/{countries,admin-divisions,localities,neighborhoods}` | UI admin futura, scripts | `require_admin` |
 | POST | `/v1/admin/localities/{id}/neighborhoods/bulk` (CSV upload) | UI admin | `require_admin` |
@@ -55,7 +56,7 @@ Tres jobs distintos:
 ## Consumers
 
 - **frontend Vue**: GETs con debounce para autocomplete; futura UI admin para uploads de catálogo.
-- **properties-service**: `/geo-resolution/by-coordinates` al crear listing (geo-enrichment at write time). Recibe el barrio y persiste su UUID como `barrio_ideca` del listing.
+- **properties-service**: `/geo-resolution/by-coordinates` al crear listing (geo-enrichment at write time). Recibe el barrio y persiste su UUID como `barrio_ideca` del listing. `/geo-resolution/by-coordinates/bulk` (2026-07-18) existe para resolver un lote de puntos en 1-2 queries en vez de N — `BulkCreatePropertiesUseCase._enrich_location` todavía no lo consume (sigue haciendo N llamadas a `/by-coordinates`), ver Open items.
 - **frontend Vue**: también consume `/geo-resolution/reachable-pois` desde `NearbyPlaces.vue` (vista de detalle de propiedad) vía `composables/pois/useReachablePois.ts` — isócronas ORS + POIs por H3 alrededor del listing.
 - **analytics-service** (futuro): consumirá la tabla `points_of_interest` directamente como feature store del modelo AVM. Hoy training usa CSV de OSM manual — ver Open items.
 
@@ -114,5 +115,6 @@ Beneficios: menos latencia, sin costo Mapbox en backend, sin cache de forward ge
 - `/geo-resolution/resolve-neighborhood` dispara la población de POIs vía `BackgroundTasks.add_task(poi_uc.execute, ...)` fire-and-forget ([api/routes/geo_resolution.py:32-38](backend/catalog-service/src/app/api/routes/geo_resolution.py#L32-L38)).
 - `/geo-resolution/by-coordinates` dispara el background task de POIs desde 2026-06-11 ([api/routes/geo_resolution.py](backend/catalog-service/src/app/api/routes/geo_resolution.py#L43-L59)).
 - catalog-service y properties-service usan la imagen `postgis/postgis:17-master` en el `docker-compose.yml`; los Postgres de users-service y keycloak son `postgres:17` plano.
-- 6 routers, 21 endpoints en total al 2026-07-15 (contados directo de los decoradores `@router.get/post/patch` en `src/app/api/routes/*.py`: admin 11, countries 1, geo_resolution 3, health 1, localities 3, neighborhoods 2).
+- 6 routers, 22 endpoints en total al 2026-07-18 (contados directo de los decoradores `@router.get/post/patch` en `src/app/api/routes/*.py`: admin 11, countries 1, geo_resolution 4, health 1, localities 3, neighborhoods 2).
+- `POST /geo-resolution/by-coordinates/bulk` (agregado 2026-07-18) resuelve un lote de `{id, lat, lon}` en una sola respuesta, vía `BulkResolveLocationsByCoordinatesUseCase` + `get_location_by_points` (unnest + LATERAL JOIN) ([api/routes/geo_resolution.py](backend/catalog-service/src/app/api/routes/geo_resolution.py)).
 - `POST /geo-resolution/reachable-pois` está implementado y wireado end-to-end: `services/geo_resolution/use_cases/resolve_isochrone.py` + integración ORS en `integrations/georef/ors/routing.py` ([api/routes/geo_resolution.py:67-72](backend/catalog-service/src/app/api/routes/geo_resolution.py#L67-L72)).

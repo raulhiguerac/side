@@ -34,11 +34,13 @@ class CatalogClient:
         except httpx.RequestError as e:
             raise CatalogClientError("Could not reach catalog service") from e
 
-    async def get_location_info(self, *, lat: float, lon: float) -> dict:
-        url = f"{self.base_url}/v1/geo-resolution/by-coordinates"
+    async def get_locations_bulk(self, *, points: list[dict]) -> list[dict]:
+        url = f"{self.base_url}/v1/geo-resolution/by-coordinates/bulk"
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.get(url, params={"lat": lat, "lon": lon})
+            # catalog expects BulkResolveLocationsRequest, i.e. the list wrapped
+            # under `points` — a bare array is rejected with 422
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(url, json={"points": points})
 
             map_response_error(response)
 

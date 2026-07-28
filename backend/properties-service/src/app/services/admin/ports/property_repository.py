@@ -1,13 +1,8 @@
 import uuid
 from typing import Optional, Protocol
 
-from app.models.property import (
-    ListingStatus,
-    Property,
-    PropertyImage,
-    PropertyLocation,
-    VerificationStatus,
-)
+from app.models.listing import ListingStatus, Property, PropertyLocation, VerificationStatus
+from app.models.image import PropertyImage
 
 
 class AdminPropertyRepository(Protocol):
@@ -22,5 +17,12 @@ class AdminPropertyRepository(Protocol):
         offset: int,
         limit: int,
     ) -> list[Property]: ...
+    def count_all(
+        self,
+        *,
+        status: Optional[ListingStatus],
+        verification_status: Optional[VerificationStatus],
+        owner_id: Optional[uuid.UUID],
+    ) -> int: ...
     def add(self, *, property: tuple[Property, PropertyLocation, list[PropertyImage]]) -> None: ...
     def bulk_insert(self, *, properties: list[tuple[Property, PropertyLocation, list[PropertyImage]]]) -> None: ...

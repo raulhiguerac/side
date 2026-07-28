@@ -5,7 +5,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from app.core.config.settings import settings
 from app.core.exceptions.listing import PropertyNotFoundError
-from app.models.property import ListingStatus
+from app.models.listing import ListingStatus
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork
 from app.services.listing.helpers.db_error_translator import translate_db_error
 from app.services.shared.helpers.cache_keys import cache_property

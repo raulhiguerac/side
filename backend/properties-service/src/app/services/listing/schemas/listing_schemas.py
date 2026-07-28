@@ -5,7 +5,7 @@ from typing import Optional
 from app.core.config.settings import settings
 from pydantic import Field, field_validator
 
-from app.models.property import Currency, ListingType, PropertyCondition, PropertyType
+from app.models.listing import Currency, ListingType, PropertyCondition, PropertyType
 from app.schemas.base import StrictBase
 
 

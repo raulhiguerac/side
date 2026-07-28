@@ -1,7 +1,7 @@
 ---
 title: Panel admin (frontend)
 status: draft
-last-verified: 2026-07-16
+last-verified: 2026-07-28
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -9,9 +9,14 @@ related:
   - "[[frontend-onboarding-flow]]"
   - "[[users-service-user]]"
   - "[[properties-service-admin]]"
+  - "[[properties-service-bulk-create-worker]]"
+  - "[[adr-admin-offset-pagination]]"
+  - "[[adr-no-component-library]]"
+  - "[[open-items]]"
 sources:
   - ../../../sources/frontend/2026-07-16-admin-panel-nav-and-hub.md
   - ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md
+  - ../../../sources/frontend/2026-07-28-admin-panel-groundwork.md
 ---
 
 ## TL;DR
@@ -71,9 +76,43 @@ Se revisó feedback genérico de dashboard (de un LLM externo) y se descartaron 
 
 El equivalente en catálogo (`POST /admin/localities/{locality_id}/neighborhoods/bulk`) no tiene botón todavía porque necesita elegir una localidad primero — no es una acción global de un click. UX pendiente de diseñar.
 
-## Riesgo encontrado: el bulk endpoint es síncrono
+## El modal de importación — flujo de 3 pasos (2026-07-28)
 
-Al construir el modal de importación se encontró que `POST /admin/properties/bulk` corre síncrono end-to-end en el back — incluye una llamada de red a `catalog-service` por cada fila del CSV antes de comitear. El timeout de `propertiesApi` (8s) puede ser insuficiente para CSVs de más de un puñado de filas. Refactor a patrón `202 + batch_id` + polling propuesto pero no implementado — ver el source de `properties-service` para el detalle, y `wiki/_shared/open-items.md` (marcado IMPORTANTE).
+El backend pasó a un contrato de presigned upload (ver [[properties-service-bulk-create-worker]]), lo que dejó al modal mandando `multipart` a un endpoint que ahora espera JSON — roto al mergear. Reescrito, `upload()` hace tres pasos:
+
+1. `POST /v1/admin/properties/bulk/upload-url` → `{ storage_key, upload_url, max_size_bytes, expires_in }`.
+2. `PUT` del CSV directo a MinIO.
+3. `POST /v1/admin/properties/bulk` con `{ storage_key }` → `202 { batch_id }`.
+
+Tres detalles que no son obvios al reimplementarlo:
+
+- **La URL se pide en el submit, no al elegir el archivo.** Pedirla antes la deja vencer (`expires_in`, hoy 5 min) mientras el admin todavía está eligiendo, y el fallo aparecería como un 403 opaco de MinIO.
+- **El `PUT` usa `fetch` pelado, no `propertiesApi`.** Va directo a MinIO, la firma viaja en el query string y las cookies del cliente API no tienen por qué ir ahí. Es el paso que más fácil se hace mal.
+- **El tamaño se chequea del lado del cliente contra `max_size_bytes`, y es el único chequeo que existe.** Un presigned PUT plano no puede imponer un límite: el server aceptaría un archivo más grande. Un límite duro requeriría presigned POST con `content-length-range` (ver [[open-items]]).
+
+No hay polling ni panel de resultado: el modal emite `queued` con el `batch_id` y cierra. Revisar el resultado es problema de otra vista, deliberadamente.
+
+## El riesgo del bulk síncrono — cerrado
+
+La versión anterior de esta página documentaba que `POST /admin/properties/bulk` corría síncrono end-to-end y podía superar el `timeout: 8000` de `propertiesApi`. **Ya no aplica**: el endpoint responde `202` apenas encola y el trabajo pesado corre en un `BackgroundTask` ([[properties-service-bulk-create-worker]]). Los tres requests que hace el modal son cortos por construcción.
+
+## El hueco que bloquea: un import no se puede revisar
+
+`emit("queued")` no lo escucha nadie — `AdminPropertiesView.vue` monta el modal con `v-model` y sin `@queued` — y tampoco hay sistema de toasts en el proyecto. O sea que hoy el modal cierra en silencio y el admin no recibe confirmación de nada.
+
+Peor: el `batch_id` se descarta al cerrar y **no existe ningún endpoint que liste los bulk jobs**, solo `GET /admin/properties/bulk/{job_id}/status`, que exige un id que ya haya que tener. El diseño de "revisar el resultado en otro lado" necesita primero un `GET /admin/properties/bulk`; `bulk_jobs` ya guarda todo lo que esa vista mostraría, y de paso le daría un punto de entrada al flujo de retry.
+
+## Forma del panel: tabla, no el card grid del feed
+
+El grid del feed optimiza para "cuál me gusta" — imagen, precio, ambientes. Moderar es "cuáles necesitan acción": más filas visibles a la vez, columnas alineadas para escanear, acciones por fila. Los filtros van **en la misma vista** que la tabla, porque el loop es filtrar → mirar → actuar → filtrar de nuevo, y separarlos obliga a ida y vuelta de navegación.
+
+`GET /admin/properties` es el primero natural a cablear: moderación, verificación, pricing y promociones todas necesitan un `property_id` elegido de una lista. Pagina por offset con `total` — la decisión y por qué no reusa el cursor opaco del feed están en [[adr-admin-offset-pagination]]. La tabla se construye a mano, sin librería de componentes ([[adr-no-component-library]]).
+
+## Estado del cableado: 10 de 12 endpoints admin sin consumer
+
+`AdminPropertiesView` sigue diciendo "En construcción". Los únicos dos endpoints admin con consumer en el front son los dos del bulk; los otros diez no tienen ninguno.
+
+Tampoco hay módulo de API admin: las URLs del modal son strings inline. Con diez endpoints por venir, conviene introducir un `src/api/adminApi.ts` (o un composable) **antes** de que se dispersen.
 
 ## Decisiones diferidas
 
@@ -86,7 +125,11 @@ Al construir el modal de importación se encontró que `POST /admin/properties/b
 - Las 3 rutas admin (`/admin`, `/admin/properties`, `/admin/catalog`) llevan `meta: { requiresAuth: true, requiresAdmin: true }` ([router/routes/admin/](frontend/src/router/routes/admin)).
 - El guard `requiresAdmin` llama `authStore.fillUserData()` si `!authStore.accountId` antes de chequear `isAdmin` — evita que un admin sea rebotado en un deep-link directo ([router/index.ts](frontend/src/router/index.ts)).
 - `AdminHomeView.vue` muestra 4 KPI cards con valor placeholder `"—"` — sin wiring a ningún endpoint de conteo todavía ([views/admin/AdminHomeView.vue](frontend/src/views/admin/AdminHomeView.vue)).
-- `BulkUploadPropertiesModal.vue` llama `POST /v1/admin/properties/bulk` vía `propertiesApi` y muestra `{ inserted, errors }` de la respuesta ([components/admin/properties/BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/BulkUploadPropertiesModal.vue)).
+- `BulkUploadPropertiesModal.upload()` encadena `POST /v1/admin/properties/bulk/upload-url` → `fetch(upload_url, { method: "PUT" })` → `POST /v1/admin/properties/bulk` con `{ storage_key }`, y emite `queued` con el `batch_id` antes de cerrar ([components/admin/properties/BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/BulkUploadPropertiesModal.vue)).
+- El `PUT` a storage no usa `propertiesApi`: es `fetch` nativo sin credenciales, porque la firma va en el query string ([components/admin/properties/BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/BulkUploadPropertiesModal.vue)).
+- La presigned URL se pide dentro de `upload()`, no en `onFileChange()` ([components/admin/properties/BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/BulkUploadPropertiesModal.vue)).
+- El modal compara `file.size` contra `presigned.max_size_bytes` antes de subir; no hay validación de tamaño del lado del servidor en el flujo de presigned PUT ([components/admin/properties/BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/BulkUploadPropertiesModal.vue)).
+- `AdminPropertiesView.vue` monta `<BulkUploadPropertiesModal v-model="isBulkModalOpen" />` sin listener de `@queued`, y su cuerpo dice "En construcción" ([views/admin/properties/AdminPropertiesView.vue](frontend/src/views/admin/properties/AdminPropertiesView.vue)).
+- No existe `src/api/adminApi.ts` — el directorio `src/api/` tiene solo `avmApi`, `catalogApi`, `interceptors`, `propertiesApi` y `usersApi` ([api/](frontend/src/api)).
 - No existe ningún botón de bulk-import en `AdminCatalogView.vue` — el endpoint de catálogo requiere `locality_id`, no es una acción global ([views/admin/catalog/AdminCatalogView.vue](frontend/src/views/admin/catalog/AdminCatalogView.vue)).
-- `BulkCreatePropertiesUseCase.execute()` en properties-service llama a `catalog-service` por cada fila del CSV (semáforo de 50 concurrentes) antes de `bulk_insert`+`commit`, todo dentro del ciclo del request HTTP ([bulk_create_properties.py](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py)).
-- `propertiesApi` tiene `timeout: 8000` — insuficiente para CSVs grandes dado el patrón síncrono anterior ([api/propertiesApi.ts](frontend/src/api/propertiesApi.ts)).
+- `propertiesApi` tiene `timeout: 8000`, suficiente ahora que los tres requests del modal son cortos ([api/propertiesApi.ts](frontend/src/api/propertiesApi.ts)).

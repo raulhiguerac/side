@@ -55,6 +55,11 @@ async def get_current_principal(request: Request) -> Principal:
         raise UnauthorizedError(detail="Could not reach JWKS endpoint", cause=exc)
     except PyJWKClientError as exc:
         raise UnauthorizedError(cause=exc)
+    except InvalidTokenError as exc:
+        # get_signing_key_from_jwt decodes the token to read its `kid`, so a
+        # malformed one raises DecodeError here. It is not a PyJWKClientError,
+        # so without this it escapes as a 500 with a stack trace instead of a 401.
+        raise UnauthorizedError(detail="Malformed token", cause=exc)
 
     try:
         claims = await run_in_threadpool(

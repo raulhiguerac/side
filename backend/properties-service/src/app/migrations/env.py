@@ -1,16 +1,22 @@
 import os
+import sys
 from logging.config import fileConfig
 
 from alembic import context
-from models.property import (  # noqa: F401
-    Property,
-    PropertyLocation,
-    PropertyImage,
-    PropertyImageUploadBatch,
-    PromotedListing
-)
 from sqlalchemy import engine_from_config, pool
+
+# src/ directory so that `app.*` imports resolve correctly.
+# The models import each other as `app.models.*`, so importing them as bare
+# `models.*` would load every one of them twice under two module identities and
+# register each table in SQLModel.metadata twice.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from sqlmodel import SQLModel
+
+from app.models.listing import Property, PropertyLocation  # noqa: F401,E402
+from app.models.image import PropertyImage, PropertyImageUploadBatch  # noqa: F401,E402
+from app.models.promotion import PromotedListing  # noqa: F401,E402
+from app.models.bulk_job import BulkJob  # noqa: F401,E402
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -31,6 +37,22 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 target_metadata = SQLModel.metadata
+
+
+def include_object(object, name, type_, reflected, compare_to):
+    """Keep autogenerate scoped to the tables this service owns.
+
+    PostGIS installs its own tables in this database (spatial_ref_sys, topology
+    and the ~40 tiger geocoder tables). They are reflected but absent from
+    target_metadata, so autogenerate reads them as "should not exist" and emits
+    drop_table for each one — dropping spatial_ref_sys alone breaks every SRID
+    4326 lookup in property_locations. Ignoring reflected tables we do not map
+    keeps the diff to our own schema.
+    """
+    if type_ == "table" and reflected and name not in target_metadata.tables:
+        return False
+    return True
+
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -56,6 +78,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -77,7 +100,9 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=include_object,
         )
 
         with context.begin_transaction():

@@ -1,16 +1,20 @@
 ---
 title: Dominio admin — properties-service
-status: stable
-last-verified: 2026-07-16
+status: draft
+last-verified: 2026-07-28
 owners: [properties-service]
 related:
   - "[[properties-service]]"
   - "[[properties-service-architecture]]"
   - "[[adr-estimated-price-dual-signal]]"
+  - "[[adr-bulk-idempotent-external-id]]"
+  - "[[adr-admin-offset-pagination]]"
   - "[[analytics-service]]"
   - "[[frontend-admin-panel]]"
   - "[[open-items]]"
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md]
+  - "[[properties-service-bulk-create-worker]]"
+  - "[[properties-service-users]]"
+sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md]
 ---
 
 ## TL;DR
@@ -24,13 +28,15 @@ El dominio de **operación interna**: moderación (status + verificación), prec
 | `SetPropertyStatusUseCase` | `use_cases/moderation/set_status.py` | Cambia `status` validando la state machine; invalida cache. |
 | `VerifyPropertyUseCase` | `use_cases/moderation/verify.py` | Cambia `verification_status` validando su propia state machine; **no** setea `verified_by` (campo muerto — el UC no recibe `principal`). |
 | `SetEstimatedPriceUseCase` | `use_cases/estimated_price/set_estimated_price.py` | Escribe precio estimado admin **o** ML según haya principal. |
-| `GetPropertiesAdminUseCase` | `use_cases/get_properties.py` | Listado admin con filtros. |
+| `GetPropertiesAdminUseCase` | `use_cases/get_properties.py` | Listado admin paginado con filtros + `total`. |
 | `GetPropertyDetailAdminUseCase` | `use_cases/get_property_detail.py` | Detalle admin (sin reglas de visibilidad). |
 | `CreatePromotionUseCase` | `use_cases/promotions/create.py` | Crea promoción (exige property `active`). |
 | `DeletePromotionUseCase` | `use_cases/promotions/delete.py` | Desactiva la promoción activa. |
 | `ListAllPromotionsUseCase` | `use_cases/promotions/list_all.py` | Lista todas las promociones. |
 | `ListPromotionsByPropertyUseCase` | `use_cases/promotions/list_by_property.py` | Promos de una property. |
-| `BulkCreatePropertiesUseCase` | `use_cases/bulk_create_properties.py` | Carga masiva con geo-enrichment concurrente. |
+| `RequestBulkUploadUrlUseCase` | `use_cases/request_bulk_upload_url.py` | Emite la presigned PUT para subir el CSV a MinIO; no persiste nada. |
+| `BulkCreatePropertiesUseCase` | `use_cases/bulk_create_properties.py` | **Solo encola**: valida el retry, crea la fila en `bulk_jobs`, devuelve `batch_id`. |
+| `GetBulkJobStatusUseCase` | `use_cases/get_bulk_job_status.py` | Status + errores del job; marca `failed` los `pending` vencidos. |
 
 ## State machine de status
 
@@ -72,19 +78,34 @@ Ambas señales se preservan por separado para servir como labels de training del
 
 ## Bulk create
 
-`BulkCreatePropertiesUseCase` ([bulk_create_properties.py](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py)):
+**Resuelto end-to-end el 2026-07-27.** El dominio admin ya no ejecuta el import: `BulkCreatePropertiesUseCase` (`use_cases/bulk_create_properties.py`) **solo encola** — valida el retry, crea la fila en `bulk_jobs` y devuelve el `batch_id`. El procesamiento vive en `BulkCreatePropertiesWorker` (`workers/bulk_create_properties_worker.py`), que corre en background. Ver [[properties-service-bulk-create-worker]] para el detalle técnico completo.
 
-1. **Geo-enrichment concurrente**: por cada record, `catalog.get_location_by_point(lat, lon)` bajo un `asyncio.Semaphore(50)`.
-2. Mapea filas a modelos (`row_to_item` + `build_models`), acumulando errores por fila sin abortar el lote.
-3. **Happy path**: `bulk_insert` + `commit`.
-4. **Fallback**: si el bulk falla, reintenta fila por fila con `begin_nested()` / `rollback_to_savepoint()` y un solo `commit` al final.
-5. Devuelve `BulkCreatePropertiesResult(inserted, errors)`.
+Flujo en tres pasos: `POST /admin/properties/bulk/upload-url` (201, presigned PUT) → el front sube el CSV directo a MinIO → `POST /admin/properties/bulk` con la `storage_key` (202 + `batch_id`, agenda `BackgroundTasks`) → `GET /admin/properties/bulk/{job_id}/status` para polling.
 
-Mismo patrón bulk-then-row-by-row que el UC batch de [[analytics-service-architecture]].
+Responsabilidades del UC de encolado:
 
-> **Riesgo detectado (2026-07-16), pendiente de refactor — ver `open-items.md`, marcado IMPORTANTE**: `execute()` corre **síncrono end-to-end dentro del ciclo del request HTTP**, incluyendo el geo-enrichment contra catalog-service (paso 1) y el `commit()` (paso 3/4) — la respuesta al front solo llega después de que el commit ya se ejecutó. El timeout del cliente (`propertiesApi`, 8s) puede no alcanzar para CSVs de más de un puñado de filas, dado el acumulado de latencia de red hacia catalog-service por cada fila. Refactor propuesto (no implementado): patrón `202 { batch_id }` + procesamiento en background + endpoint de polling de status, con el gotcha de que las dependencias `yield` (UoW/sesión) de FastAPI se cierran antes de que corra un `BackgroundTask` — el worker necesitaría abrir su propia sesión. Ver [[frontend-admin-panel]] para el lado consumidor (el modal de importación que expuso el problema).
+- Si es un retry: verifica que el job exista, que **no sea a su vez un retry** (`RetryOfRetryNotAllowedError`) y que no esté vencido (`BulkJobExpiredError`, 409). Hereda `expires_at` del original en vez de renovarlo, para que encadenar reintentos no extienda la ventana indefinidamente.
+- Si es nuevo: `expires_at = now + 60 días` (`_RETRY_WINDOW`).
 
-> **Segundo hallazgo (2026-07-16), también pendiente — marcado IMPORTANTE**: `build_models()` (`seed_mapper.py`) llama `Property(owner_id=owner_id, ...)` con `owner_id=principal.sub` — el mismo UUID que `created_by`. Todas las propiedades importadas en bloque quedan "de propiedad" del admin que corrió el import, apareciendo en su propio `GET /properties/me`. `created_by=principal.sub` está bien (audita quién ejecutó el import). `owner_id` está mal: debería resolver a la cuenta real del dueño. **Decisión tomada**: resolver por **email** contra `Account.email` en users-service (único+indexado, sin migración) — se descartó cédula porque ese campo no existe hoy en `users-service` (solo `account_id`/`email` son identificadores únicos en `models/account.py`). El CSV necesitaría una columna de email por fila; qué pasa si no matchea ninguna cuenta (¿crear placeholder? ¿rechazar fila?) queda sin decidir. La trazabilidad de qué `property_id`s salieron de qué import puede resolverse con la misma entidad de batch del refactor async de arriba, sin mecanismo aparte.
+> **Riesgo de timeout (2026-07-16) — cerrado.** El endpoint corría síncrono end-to-end dentro del request y podía superar el timeout de 8s del front. Resuelto con el patrón `202 + batch_id` + `BackgroundTasks` + endpoint de polling. El gotcha que se había anticipado se confirmó y se manejó: el runner abre su propia `Session(engine)` porque las dependencias `yield` de FastAPI se cierran antes de que corra el `BackgroundTask`. Ver [[frontend-admin-panel]] para el lado consumidor.
+
+> **`owner_id` = el admin importador (2026-07-16) — cerrado.** El CSV ahora trae una columna `email` por fila y el worker resuelve `email → account_id` contra users-service (ver [[properties-service-users]]), poblando `Property.owner_id` con la cuenta real. `created_by` sigue siendo `principal.sub` (auditoría de quién ejecutó el import), que siempre estuvo bien. Un email sin cuenta activa **no** se asigna a nadie: la fila falla con `"owner not resolved for email"` y queda registrada en `bulk_jobs.errors`.
+
+> **Trazabilidad — se deriva, no se almacena.** `Property.bulk_job_id` se declaró en `f3a0c4d` y se **eliminó el 2026-07-27** sin haber llegado nunca a una migración: nadie la escribía, y con ids determinísticos el set de properties de un import se reconstruye desde el CSV (`uuid5` por `external_id`), que sigue en storage vía `bulk_jobs.storage_key`. Ver [[adr-bulk-idempotent-external-id]]. Costo asumido: no hay forma de consultar en SQL directo qué properties salieron de qué import.
+
+## Listado admin (`GET /admin/properties`)
+
+Devuelve `AdminPropertiesPage` — `{items, total, page, page_size}` — con filtros por `status`, `verification_status` y `owner_id`, todos como query params.
+
+**Por qué no reusa `PropertyCardSchema`**: ese es el card *público*, el que consumen el feed y "mis propiedades", y esconde justo lo que la moderación necesita — `verification_status`, `owner_id`, `created_at`, `rejection_reason`. Antes el endpoint devolvía una lista pelada de ese schema, así que una tabla de moderación podía **filtrar por campos que no podía mostrar**, y paginar sin saber cuántas páginas hay. `AdminPropertyCardSchema` es nuevo y no hereda del público, para que un cambio del feed no arrastre al panel.
+
+**Paginación por offset, no con el cursor opaco del feed** (ver [[adr-admin-offset-pagination]]).
+
+Dos detalles de implementación que valen la pena:
+
+- `get_all` y `count_all` comparten `_apply_filters`. Si cada uno armara su propio `WHERE`, agregar un filtro a uno y olvidarlo en el otro haría que el total mienta sin que nada falle.
+- El `noload` sobre `images`, `location` y `promotions` no es una micro-optimización: `Property` las carga con `selectin`, así que cada página traía filas de imágenes, geometrías PostGIS y promociones que el schema admin descarta. Pasó de 5 queries por request a 2.
+- La página y el conteo van **secuenciales, no con `asyncio.gather`**: comparten la `Session` del UoW y una `Session` de SQLAlchemy no es segura entre threads.
 
 ## Promociones
 
@@ -92,15 +113,18 @@ Mismo patrón bulk-then-row-by-row que el UC batch de [[analytics-service-archit
 
 ## Claims
 
+- `GET /admin/properties` devuelve `AdminPropertiesPage` con `items`, `total`, `page` y `page_size` ([admin.py](backend/properties-service/src/app/api/routes/admin.py), [admin_schemas.py](backend/properties-service/src/app/services/admin/schemas/admin_schemas.py)).
+- `AdminPropertyCardSchema` incluye `verification_status`, `owner_id`, `created_at` y `rejection_reason`, que `PropertyCardSchema` no expone ([admin_schemas.py](backend/properties-service/src/app/services/admin/schemas/admin_schemas.py)).
+- `get_all` y `count_all` comparten `_apply_filters`, y `get_all` aplica `noload` a `images`, `location` y `promotions` ([sql_property_repository.py](backend/properties-service/src/app/services/admin/adapters/sql_property_repository.py)).
 - Las rutas `/admin/*` están protegidas con `dependencies=[Depends(require_admin)]` a nivel router ([admin.py:43-47](backend/properties-service/src/app/api/routes/admin.py#L43-L47)).
 - `set_status` valida transiciones contra `_ALLOWED_TRANSITIONS` y lanza `InvalidStatusTransitionError` si no aplica ([set_status.py:39-44](backend/properties-service/src/app/services/admin/use_cases/moderation/set_status.py#L39-L44)).
 - `SetEstimatedPriceUseCase` escribe `admin_estimated_price` si hay principal, `ml_estimated_price` si no ([set_estimated_price.py:26-32](backend/properties-service/src/app/services/admin/use_cases/estimated_price/set_estimated_price.py#L26-L32)).
 - El path ML de `set_estimated_price` no tiene caller — `workers/` está vacío al 2026-05-28 ([workers/](backend/properties-service/src/app/workers)).
-- El bulk enriquece ubicación contra catalog con un `Semaphore(50)` de concurrencia ([bulk_create_properties.py:22-23](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py#L22-L23), [bulk_create_properties.py:97-101](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py#L97-L101)).
-- El bulk hace `bulk_insert` con fallback row-by-row vía `begin_nested`/`rollback_to_savepoint` ([bulk_create_properties.py:62-94](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py#L62-L94)).
-- La ruta `bulk_create_properties` hace `return await uc.execute(...)` — la respuesta HTTP espera a que el `commit()` (real, vía `session.commit()` en threadpool) termine antes de responder; un `201` implica filas ya comiteadas, no un ack especulativo ([admin.py:59-67](backend/properties-service/src/app/api/routes/admin.py#L59-L67), [sql_unit_of_work.py:15-16](backend/properties-service/src/app/services/admin/adapters/sql_unit_of_work.py#L15-L16)).
-- No hay `BackgroundTasks` en la ruta de bulk create — todo el geo-enrichment + insert + commit corre dentro del ciclo de vida del request ([admin.py](backend/properties-service/src/app/api/routes/admin.py)).
-- `build_models()` setea `owner_id=owner_id` con el valor `principal.sub` pasado desde `execute()` — el mismo UUID que `created_by` ([seed_mapper.py:210-212](backend/properties-service/src/app/services/admin/helpers/seed_mapper.py#L210-L212), [bulk_create_properties.py:54-56](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py#L54-L56)).
+- `BulkCreatePropertiesUseCase` (`use_cases/bulk_create_properties.py`) solo encola: crea la fila en `bulk_jobs` y devuelve el `batch_id`; no procesa el CSV ([bulk_create_properties.py](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py)).
+- Un retry hereda `expires_at` del job original en vez de recibir una ventana nueva, y se rechaza con `RetryOfRetryNotAllowedError` si el target ya es un retry o con `BulkJobExpiredError` si está vencido ([bulk_create_properties.py](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py)).
+- `POST /admin/properties/bulk` responde `202` con `batch_id` y agenda el worker vía `BackgroundTasks`; el procesamiento no ocurre dentro del request ([admin.py](backend/properties-service/src/app/api/routes/admin.py)).
+- `build_models()` recibe `owner_id` resuelto desde el `email` de la fila del CSV vía `email_cache`, y `created_by=principal.sub` — ya no son el mismo UUID ([orm_objects.py](backend/properties-service/src/app/workers/helpers/mapping/orm_objects.py), [seed_mapper.py](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py)).
+- `Property` no tiene columna de vínculo a `BulkJob` — `bulk_job_id` se removió del modelo sin haberse migrado nunca ([listing.py](backend/properties-service/src/app/models/listing.py)).
 - `Account` en users-service tiene `account_id` y `email` como únicos identificadores indexados/únicos — no existe ningún campo de documento de identidad (cédula) ([account.py:37-53](backend/users-service/src/app/models/account.py#L37-L53)).
-- `Property.promotions` es una relación viewonly filtrada por `is_active=True` ([property.py:183-190](backend/properties-service/src/app/models/property.py#L183-L190)).
+- `Property.promotions` es una relación viewonly filtrada por `is_active=True` ([listing.py](backend/properties-service/src/app/models/listing.py)).
 - `is_promoted` en `PropertyCardSchema` se calcula desde la presencia de promociones activas ([property_card.py:64-69](backend/properties-service/src/app/services/shared/schemas/property_card.py#L64-L69)).
