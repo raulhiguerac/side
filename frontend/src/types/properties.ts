@@ -44,13 +44,19 @@ export interface PresignedUrlsResponse {
   items: PresignedUrlItem[];
 }
 
+export type VerificationStatus =
+  | "unverified"
+  | "pending"
+  | "verified"
+  | "rejected";
+
 export interface PropertyDetail {
   id: string;
   property_type: "house" | "apartment";
   listing_type: "sale" | "rent";
   condition: "new" | "used" | "remodeled";
   status: ListingStatus;
-  verification_status: "unverified" | "pending" | "verified" | "rejected";
+  verification_status: VerificationStatus;
 
   price: number;
   currency: "COP" | "USD" | "EUR" | "MXN" | "PEN" | "CLP" | "ARS";
