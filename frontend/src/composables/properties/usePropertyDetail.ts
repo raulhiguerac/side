@@ -1,5 +1,6 @@
 import { Ref, computed } from "vue";
 import type { PropertyDetail } from "@/types/properties";
+import { formatCurrency } from "@/utils/money";
 
 export function usePropertyDetail(property: Ref<PropertyDetail | null>) {
   const title = computed(() => {
@@ -11,23 +12,17 @@ export function usePropertyDetail(property: Ref<PropertyDetail | null>) {
     return `${type} ${mode}`;
   });
 
-  const formattedPrice = computed(() => {
-    if (!property.value) return "";
-    return new Intl.NumberFormat("es-CO", {
-      style: "currency",
-      currency: property.value.currency,
-      maximumFractionDigits: 0,
-    }).format(property.value.price);
-  });
+  const formattedPrice = computed(() =>
+    property.value
+      ? formatCurrency(property.value.price, property.value.currency)
+      : ""
+  );
 
-  const formattedAdminFee = computed(() => {
-    if (!property.value?.admin_fee) return "";
-    return new Intl.NumberFormat("es-CO", {
-      style: "currency",
-      currency: property.value.currency,
-      maximumFractionDigits: 0,
-    }).format(property.value.admin_fee);
-  });
+  const formattedAdminFee = computed(() =>
+    property.value?.admin_fee
+      ? formatCurrency(property.value.admin_fee, property.value.currency)
+      : ""
+  );
 
   const stats = computed(() => {
     const p = property.value;

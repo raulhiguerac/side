@@ -57,7 +57,7 @@
       <!-- Price -->
       <div class="flex items-baseline gap-1 mb-1">
         <span class="text-brand-text text-2xl font-bold">
-          ${{ formatPrice(property.price) }}
+          {{ formatCurrency(property.price) }}
         </span>
         <span v-if="property.type === 'rent'" class="text-brand-muted text-sm"
           >/mes</span
@@ -215,6 +215,7 @@ import {
   LISTING_STATUS_LABELS,
   LISTING_STATUS_BADGE_CLASSES,
 } from "@/constants/propertyStatus";
+import { formatCurrency } from "@/utils/money";
 
 const props = withDefaults(
   defineProps<{
@@ -265,7 +266,7 @@ const statusBadgeClass = computed(
     ""
 );
 
-const formatPrice = (price: number) => {
-  return price.toLocaleString("es-CO");
-};
+// `PropertyCardUI` no lleva `currency` (el mapper lo descarta), así que
+// `formatCurrency` cae a su default COP — el mismo supuesto que hacía el `$`
+// hardcodeado que estaba en el template.
 </script>
