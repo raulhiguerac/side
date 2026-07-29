@@ -1,0 +1,78 @@
+# Valores por defecto del chart. Cada servicio los sobreescribe con su propio -f values/<ms>.yaml
+# 'env' vive a nivel raíz porque es del eje ENTORNO (se moverá a values/dev.yaml, values/staging.yaml).
+env: dev
+
+# Crea los Secrets DUMMY (local/dev). En real -> false: los reales llegan por Sealed Secrets/ESO.
+createDummySecrets: true
+
+app:
+  name: users
+  replicas: 1
+  image: tu-registry/users-ms:0.1.0
+  containerName: users
+  port: 8000
+  # configmaps y secrets que consume el servicio (se iteran con range en el helper envFrom)
+  configMaps:
+    - users-ms-config
+  secrets:
+    - users-ms-minio
+    - users-ms-keycloak
+    - users-ms-brevo
+
+# imagen del initContainer wait-for-db (solo necesita pg_isready)
+wait:
+  image: postgres:17
+
+# puerto por el que escucha el Service (el "del host"); targetPort reusa app.port
+service:
+  port: 80
+
+# Variables NO secretas → se vuelcan al ConfigMap (helper microservice.configData).
+config:
+  # URLs internas (DNS del cluster)
+  KEYCLOAK_URL: "http://keycloak.platform.svc.cluster.local:8080"
+  KC_JWKS_URL: "http://keycloak.platform.svc.cluster.local:8080/realms/dummy-realm/protocol/openid-connect/certs"
+  MINIO_URL: "http://minio.platform.svc.cluster.local:9000"
+  REDIS_URL: "redis://redis.platform.svc.cluster.local:6379/0"
+  # URLs externas (navegador / claim iss del token)
+  KC_ISSUER: "http://localhost:8080/realms/dummy-realm"
+  STORAGE_PUBLIC_BASE_URL: "http://localhost:9000"
+  FRONT_BASE_URL: "http://localhost:5173"
+  # Identificadores Keycloak
+  KC_REALM: "dummy-realm"
+  KC_CLIENT_ID: "dummy-client"
+  KC_CLIENT_AUTH: "dummy-client-auth"
+  OIDC_AUDIENCE: "dummy-audience"
+  # Negocio / storage
+  ADMIN_ROLE: "admin"
+  PROFILE_PHOTOS_BUCKET: "profile-photos"
+  ACCEPTED_IMAGE_MIME_TYPES: "image/jpeg,image/png,image/webp"
+  ACCEPTED_IMAGE_MAX_SIZE: "5242880"
+  # TTLs de cache
+  CACHE_TTL_SECONDS: "300"
+  CACHE_REACTIVATION_TTL_SECONDS: "900"
+  PROFILE_CACHE_TTL_SECONDS: "600"
+
+# Secrets DUMMY (local/dev). Mapa: grupo -> {clave: valor}. El template crea un
+# Secret "<app.name>-ms-<grupo>" por cada entrada. Reales -> Sealed Secrets/ESO.
+secretData:
+  minio:
+    ACCESS_KEY: minioadmin
+    SECRET_KEY: minioadmin
+  keycloak:
+    KC_AUTH_SECRET: dummy-auth-secret
+    KC_ADMIN_SECRET: dummy-secret
+  brevo:
+    BREVO_API_KEY: dummy-smtp-key
+
+# Postgres (CloudNativePG). requests/limits son MAPAS: deben existir aunque
+# uses default en las hojas (ver gotcha del default anidado).
+db:
+  instances: 1
+  schema: identity_service_db
+  owner: users
+  # storage y resources son OPCIONALES: el template pone defaults (dig/default).
+  # Descoméntalos solo si un servicio necesita valores distintos:
+  # storage: 20Gi
+  # requests: { memory: 256Mi, cpu: 100m }
+  # limits:   { memory: 1Gi,   cpu: 500m }

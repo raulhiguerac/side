@@ -1,0 +1,10 @@
+apiVersion: v2
+name: microservice
+description: Chart genérico para los microservicios de Side (users, catalog, properties, analytics)
+type: application
+
+# Versión del CHART (la plantilla). Sube cuando cambias los templates.
+version: 0.1.0
+
+# Versión de la APP por defecto (imagen). Se puede sobreescribir por values de cada servicio.
+appVersion: "0.1.0"

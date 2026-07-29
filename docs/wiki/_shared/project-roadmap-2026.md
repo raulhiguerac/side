@@ -1,16 +1,17 @@
 ---
 title: Project roadmap 2026
 status: stable
-last-verified: 2026-07-13
+last-verified: 2026-07-29
 owners: [_shared]
 related:
   - "[[architecture]]"
   - "[[open-items]]"
+  - "[[deployment-k8s-helm]]"
   - "[[analytics-service]]"
   - "[[properties-service]]"
   - "[[frontend]]"
   - "[[avm-training]]"
-sources: [../../sources/_shared/2026-05-29-project-roadmap.md, ../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md]
+sources: [../../sources/_shared/2026-05-29-project-roadmap.md, ../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md, ../../sources/_shared/2026-07-29-k8s-helm-microservice-chart.md]
 ---
 
 ## TL;DR
@@ -56,15 +57,17 @@ Ver [[properties-service]], [[properties-service-listing]], [[properties-service
 
 Ver [[analytics-service]], [[avm-training]], [[analytics-service-mlflow]], [[frontend-architecture]].
 
-## Fase 4 — Infra (~1 semana) ⏳
+## Fase 4 — Infra 🔄
 
-Prioridad: forms básicos de Fase 2 primero, luego infra, luego diferenciadores.
+Prioridad: forms básicos de Fase 2 primero, luego infra, luego diferenciadores. **Arrancada 2026-07-29** en modo aprendizaje — detalle completo en [[deployment-k8s-helm]].
 
-### Infraestructura — Kind / k3s
-- **Local**: Kind (CI) o k3s (VM). Manifiestos portables — la fricción local→cloud es solo config (storage PVCs, LoadBalancer, secrets manager).
-- **Estimado**: ~1 semana para Dockerfiles + Helm charts + CI/CD básico.
-- **NetworkPolicies**: cada MS en su propio namespace con egress restringido — solo el MS dueño alcanza su Postgres/Redis.
-- Objetivo: blast radius mínimo. Portable a GKE/EKS sin cambiar manifiestos.
+### Infraestructura — Helm + kind → GKE
+- **Enfoque decidido**: chart Helm genérico por microservicio (`k8s/charts/microservice/`), reusable para los 4 vía `values/<ms>.yaml`. Se pivotó de Kustomize a Helm.
+- **Self-host** de lo stateful (Postgres vía CloudNativePG, Redis, MinIO, Kafka como pods) — no managed GCP.
+- **Cluster**: kind local primero, GKE después. Deploy **diferido**: el PC actual no corre kind ni helm; hoy solo autoría del chart.
+- **NetworkPolicies**: cada MS en su namespace con egress restringido — requiere CNI Calico/Cilium (kindnet no las aplica). Ver [[open-items]].
+- **Secretos**: dummy tras flag en dev; reales por Sealed Secrets/ESO (fase de seguridad).
+- Objetivo: blast radius mínimo. Portable a GKE sin reescribir el chart.
 
 ### CI/CD
 - Pipeline: lint → test → build → push → deploy.
@@ -118,7 +121,7 @@ Prioridad: forms básicos de Fase 2 primero, luego infra, luego diferenciadores.
 - [ ] DWH para heatmap: ¿BigQuery managed o DuckDB self-hosted sobre MinIO?
 - [ ] notifications-ms: ¿mismo Keycloak o token propio para push?
 - [ ] payments-ms: ¿Stripe o Wompi/PSE como PSP primario?
-- [ ] Infra: ¿GKE/EKS managed en prod o VPS con k3s?
+- [ ] Infra: self-host de lo stateful sobre Kubernetes (kind local hacia GKE, chart Helm generico) decidido 2026-07-29 (ver [[deployment-k8s-helm]]); managed vs self-host para la prod definitiva sigue abierto
 - [ ] Supply inicial: ¿listings de venta, arriendo, o ambos?
 
 ## Claims
@@ -127,4 +130,4 @@ Prioridad: forms básicos de Fase 2 primero, luego infra, luego diferenciadores.
 - El feed pagina por cursor opaco con Redis cache-aside (TTL 5 min, solo orgánicos) al 2026-06-08 ([get_feed.py](backend/properties-service/src/app/services/search/use_cases/get_feed.py)).
 - `PropertiesView` con toggle Lista/Mapa en nested routes `/feed/list` y `/feed/map` operativo al 2026-06-08 ([router/index.ts](frontend/src/router/index.ts)).
 - notifications-ms y payments-ms están en fase draft — no hay código en el repo al 2026-06-08.
-- La estrategia de despliegue objetivo es Kind/k3s con manifiestos portables a cloud — docker-compose es solo para desarrollo local.
+- La estrategia de despliegue objetivo es un chart Helm generico por microservicio en `k8s/charts/microservice/` sobre kind local hacia GKE, con self-host de lo stateful (Postgres via CloudNativePG) — docker-compose es solo para desarrollo local.

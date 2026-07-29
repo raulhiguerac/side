@@ -1,8 +1,9 @@
 ---
 title: Open items — gaps y deuda técnica cross-service
 status: draft
-last-verified: 2026-07-28
-owners: [_shared]
+last-verified: 2026-07-29
+owners:
+  - _shared
 related:
   - "[[architecture]]"
   - "[[project-roadmap-2026]]"
@@ -22,7 +23,25 @@ related:
   - "[[frontend-architecture]]"
   - "[[adr-vue-cli-deferred-vite-migration]]"
   - "[[adr-firebase-removal]]"
-sources: [../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md, ../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md, ../../sources/users-service/2026-06-23-public-profile-endpoint.md, ../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../sources/properties-service/2026-07-17-bulk-async-redesign-presigned-retry.md, ../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md, ../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../sources/properties-service/2026-07-22-bulk-create-properties-refactor.md, ../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../sources/users-service/2026-07-27-resolve-accounts-by-email.md, ../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md, ../../sources/frontend/2026-07-28-admin-panel-groundwork.md]
+  - "[[deployment-k8s-helm]]"
+sources:
+  - ../../sources/_shared/2026-07-29-k8s-helm-microservice-chart.md
+  - ../../sources/properties-service/2026-05-28-foundational-exploration.md
+  - ../../sources/users-service/2026-05-28-foundational-exploration.md
+  - ../../sources/frontend/2026-06-04-feed-filters-contract.md
+  - ../../sources/_shared/2026-06-09-mvp-audit-scores.md
+  - ../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md
+  - ../../sources/users-service/2026-06-23-public-profile-endpoint.md
+  - ../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md
+  - ../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md
+  - ../../sources/properties-service/2026-07-17-bulk-async-redesign-presigned-retry.md
+  - ../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md
+  - ../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md
+  - ../../sources/properties-service/2026-07-22-bulk-create-properties-refactor.md
+  - ../../sources/properties-service/2026-07-27-bulk-async-import-worker.md
+  - ../../sources/users-service/2026-07-27-resolve-accounts-by-email.md
+  - ../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md
+  - ../../../sources/frontend/2026-07-28-admin-panel-groundwork.md
 ---
 
 ## TL;DR
@@ -111,6 +130,14 @@ Backlog vivo de gaps detectados al documentar la wiki (2026-05-28): cosas que el
 
 - [ ] **Validar redundancia del `try/except Exception: pass` de cache-aside en los tres servicios.** El ADR [[adr-cache-optional-layer]] documenta ese wrapper en los use cases como el patrón correcto para degradar a DB si Redis falla. En catalog-service se verificó (2026-06-20) que es redundante: `CacheClient.get_json`/`set_json` (`integrations/cache/redis/cache.py`) ya atrapan la excepción internamente y devuelven `None`/`False`, por lo que el wrapper en `ResolveNeighborhoodUseCase` y `ResolvePoiUseCase` no hacía nada — se quitó en ambos. Falta confirmar si las copias de `CacheClient` en properties-service y users-service (ya divergidas, ítem anterior) también atrapan internamente o si ahí el wrapper en el use case sigue siendo necesario porque el cliente propaga la excepción. Si las tres copias atrapan igual, el ADR debería aclarar que el wrapper en el use case es opcional/redundante, no parte del contrato. **Instancias concretas en properties-service pendientes de este veredicto** (auditoría de admin endpoints 2026-07-17): `moderation/set_status.py:54-64`, `moderation/verify.py:50-57`, `promotions/create.py:67-77`, `promotions/delete.py:40-50` — las cuatro comparten el mismo shape de `try/except Exception: pass` alrededor de la invalidación. Resolver la pregunta de redundancia primero (15 min de investigación) y aplicar el mismo veredicto a las cuatro de una — no una por una. Ver [[adr-cache-optional-layer]], [[catalog-service]].
 - [x] **Cache-aside para `reachable-pois` con check pre-ORS.** Implementado 2026-06-20. `ResolveIsochroneUseCase.execute()` chequea `cache.get_json` con `get_isochrone_key(property_id=...)` si viene `property_id`, o con el h3 cell del punto (`h3.latlng_to_cell(lat, lon, settings.H3_RESOLUTION)`, no los cells del polígono de la isocrona) si no, antes de llamar `gateway.get_isochrones`. Es todo-o-nada por request porque ORS siempre devuelve los 3 profiles fijos en una sola llamada (`asyncio.gather` en `ors/routing.py`) — no hay cache parcial por perfil. Cachea la response completa (isocrona + POIs) solo si ningún profile dio error, TTL `settings.CACHE_TTL_ISOCHRONE_SECONDS` (1h). Pendiente: invalidación cruzada cuando se actualiza una propiedad (sin reverse index) — ver ítem `geo:reachable:property:{property_id}` arriba. Ver [[catalog-service-ors]], [[adr-isochrone-ors-h3]].
+
+### Infra k8s (self-host) — diferidos a la fase de seguridad
+
+Del track de despliegue Helm (arrancado 2026-07-29, ver [[deployment-k8s-helm]]). Nada desplegado aún — el PC actual no corre kind ni helm; hoy solo autoría del chart.
+
+- [ ] **NetworkPolicies + cambio de CNI.** El aislamiento de red que asume [[project-roadmap-2026]] (cada MS solo alcanza su Postgres/Redis; la DB solo es alcanzable por su MS) necesita un CNI que las aplique — **kindnet NO las enforce**: hay que instalar Calico o Cilium en el cluster kind antes de que cualquier policy haga efecto. Ver [[deployment-k8s-helm]].
+- [ ] **Gestión real de secretos.** El chart crea secrets dummy tras el flag `createDummySecrets`; los reales deben llegar cifrados (Sealed Secrets) o por referencia (External Secrets Operator + Vault en modo dev). base64 no es cifrado — nunca commitear valores reales en el repo. Ver [[deployment-k8s-helm]].
+- [ ] **Hardening de ServiceAccount.** Ningún workload llama a la API de k8s (todos usan la SA `default`, que no puede tocar la API); como capa opcional de aislamiento, SA dedicada por servicio con `automountServiceAccountToken: false`. El operator CloudNativePG trae su propio RBAC. Ver [[deployment-k8s-helm]].
 
 ### properties-service — seguridad del feed
 

@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Values.app.name }}-ms"
+  labels:
+    {{- include "microservice.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.app.replicas }}
+  selector:
+    matchLabels:
+      {{- include "microservice.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        # hash del configmap: si cambia la config, cambia el hash → el pod se recrea (rollout)
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
+      labels:
+        {{- include "microservice.labels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      initContainers:
+      # espera a que la MIGRACIÓN esté aplicada (schema == head), no solo a que la DB responda
+      - name: wait-for-migration
+        image: {{ .Values.app.image }}        # imagen de la app: trae uv + alembic + migraciones
+        env:
+          {{- include "microservice.dbEnv" . | nindent 8 }}
+        command:
+        - sh
+        - -c
+        - |
+          until [ "$(uv run alembic current 2>/dev/null | head -c12)" = "$(uv run alembic heads | head -c12)" ]; do
+            echo esperando migracion; sleep 2;
+          done
+      containers:
+      - name: {{ .Values.app.containerName }}
+        image: {{ .Values.app.image }}
+        ports:
+        - containerPort: {{ .Values.app.port }}
+        envFrom:
+          {{- include "microservice.envFrom" . | nindent 8 }}
+        env:
+          {{- include "microservice.dbEnv" . | nindent 8 }}

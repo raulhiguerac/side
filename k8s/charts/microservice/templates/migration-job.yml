@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Values.app.name }}-migration"
+  labels:
+    {{- include "microservice.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "microservice.labels" . | nindent 8 }}
+        app.kubernetes.io/component: migration
+    spec:
+      initContainers:
+      - name: wait-for-db
+        image: {{ .Values.wait.image }}
+        env:
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Values.app.name }}-cluster-app"
+              key: host
+        command: ['sh', '-c', 'until pg_isready -h $DB_HOST; do echo esperando db; sleep 2; done']
+      containers:
+      - name: "migration-{{ .Values.app.containerName }}"
+        image: {{ .Values.app.image }}
+        command: ["uv", "run", "alembic", "upgrade", "head"]
+        env:
+        {{- include "microservice.dbEnv" . | nindent 8 }}
+      restartPolicy: Never
+  backoffLimit: 4
+

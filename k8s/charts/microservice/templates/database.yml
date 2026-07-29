@@ -1,0 +1,22 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: "{{ .Values.app.name }}-cluster"
+  labels:
+    {{- include "microservice.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  instances: {{ .Values.db.instances }}
+  bootstrap:
+    initdb:
+      database: {{ .Values.db.schema }}
+      owner: {{ .Values.db.owner }}
+  storage:
+    size: {{ .Values.db.storage | default "10Gi" | quote }}
+  resources:
+    requests:
+      memory: {{ dig "requests" "memory" "128Mi" .Values.db | quote }}
+      cpu: {{ dig "requests" "cpu" "50m" .Values.db | quote }}
+    limits:
+      memory: {{ dig "limits" "memory" "512Mi" .Values.db | quote }}
+      cpu: {{ dig "limits" "cpu" "100m" .Values.db | quote }}

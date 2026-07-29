@@ -13,6 +13,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [dev-workflow](wiki/_shared/dev-workflow.md) — reglas de trabajo: discuss-before-code (CLAUDE.md) + pre-commit hook de wiki staleness
 - [open-items](wiki/_shared/open-items.md) — backlog vivo de gaps y deuda técnica cross-service (checklist marcable entre sesiones)
 - [project-roadmap-2026](wiki/_shared/project-roadmap-2026.md) — fases del producto: completado (catálogo, users, AVM), en progreso (properties), pendiente (infra K3s, heatmap DWH, notifications-ms, payments-ms)
+- [deployment-k8s-helm](wiki/_shared/deployment-k8s-helm.md) — despliegue k8s self-host: chart Helm genérico por microservicio, CloudNativePG (1 Cluster/servicio), patrón Job+initContainer para migraciones, secretos tras flag, namespaces vía `--create-namespace` (draft, nada desplegado aún)
 - [business-model](wiki/_shared/business-model.md) — monetización por fases (promocionados, comisiones, B2B data, FinTech), análisis competitivo (Cerouno, Rentpana, Habi), moat y features planeadas
 - _shared/adrs/_:
   - [ADR-0001 — Auth vía Keycloak JWT](wiki/_shared/adrs/adr-auth-keycloak-jwt.md)
