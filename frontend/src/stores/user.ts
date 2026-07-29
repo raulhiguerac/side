@@ -42,7 +42,11 @@ export const useUserStore = defineStore("user", {
     },
 
     resetInterests() {
-      this.userInterests = { localities: [], neighborhoods: {}, properties: {} };
+      this.userInterests = {
+        localities: [],
+        neighborhoods: {},
+        properties: {},
+      };
     },
 
     isOnboardingDismissed(): boolean {

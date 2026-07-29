@@ -4,8 +4,7 @@ export const adminPropertiesRoutes: RouteRecordRaw[] = [
   {
     path: "/admin/properties",
     name: "admin-properties",
-    component: () =>
-      import("@/views/admin/properties/AdminPropertiesView.vue"),
+    component: () => import("@/views/admin/properties/AdminPropertiesView.vue"),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
 ];
