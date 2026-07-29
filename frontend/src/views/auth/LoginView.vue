@@ -178,26 +178,32 @@
                 <span v-else>Iniciar sesión</span>
               </button>
 
-              <!-- Divider -->
-              <div class="flex items-center gap-3">
-                <div class="flex-1 h-px bg-brand-divider"></div>
-                <span class="text-brand-muted text-xs">O continuar con</span>
-                <div class="flex-1 h-px bg-brand-divider"></div>
-              </div>
+              <!--
+                Login con Google, comentado junto con la baja de firebase.
+                No funcionaba: initializeApp nunca se llamaba, no existe ningún
+                firebaseConfig en el repo, y el endpoint POST /v1/auth/login/google
+                tampoco existe en users-service. Vuelve cuando esté el Identity
+                Brokering de Keycloak (ADR-0004).
 
-              <!-- Botón Google -->
-              <button
-                @click="loginWithGoogle"
-                type="button"
-                class="w-full h-12 bg-white border-[1.5px] border-brand-border rounded-[10px] flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-colors"
-              >
-                <img
-                  src="https://www.svgrepo.com/show/475656/google-color.svg"
-                  class="w-5 h-5"
-                  alt="Google"
-                />
-                <span class="text-brand-text text-sm font-medium">Google</span>
-              </button>
+                <div class="flex items-center gap-3">
+                  <div class="flex-1 h-px bg-brand-divider"></div>
+                  <span class="text-brand-muted text-xs">O continuar con</span>
+                  <div class="flex-1 h-px bg-brand-divider"></div>
+                </div>
+
+                <button
+                  @click="loginWithGoogle"
+                  type="button"
+                  class="w-full h-12 bg-white border-[1.5px] border-brand-border rounded-[10px] flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-colors"
+                >
+                  <img
+                    src="https://www.svgrepo.com/show/475656/google-color.svg"
+                    class="w-5 h-5"
+                    alt="Google"
+                  />
+                  <span class="text-brand-text text-sm font-medium">Google</span>
+                </button>
+              -->
             </div>
 
             <!-- Link a registro -->
@@ -228,9 +234,7 @@
  * 4. Si falla → mostramos error
  */
 import { ref } from "vue";
-import usersApi from "@/api/usersApi";
 import router from "@/router";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useAuthStore } from "@/stores/auth";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 
@@ -273,34 +277,7 @@ const loginUser = async () => {
   isLoading.value = false;
 };
 
-/**
- * 🔵 Login con Google
- *
- * Firebase maneja el popup de Google, luego enviamos
- * el token al backend para crear/vincular la cuenta
- */
-const loginWithGoogle = async () => {
-  try {
-    const auth = getAuth();
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    const idToken = await result.user.getIdToken();
-
-    // El login con Google todavía usa axios porque
-    // el flujo es diferente (token de Firebase)
-    const response = await usersApi.post("/v1/auth/login/google", {
-      token: idToken,
-    });
-
-    if (response.status === 200) {
-      // Después del login con Google, verificamos la sesión
-      // para cargar los datos del usuario en el store
-      await authStore.checkAuth();
-      router.push("/");
-    }
-  } catch (error) {
-    console.error("Error en login con Google:", error);
-    errorMessage.value = "Error al iniciar sesión con Google";
-  }
-};
+// El handler de login con Google se eliminó junto con firebase — el botón quedó
+// comentado en el template. No se puede dejar vivo sin la dependencia, y tampoco
+// funcionaba. Ver ADR-0004.
 </script>

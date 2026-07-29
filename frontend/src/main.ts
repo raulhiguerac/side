@@ -11,7 +11,6 @@ import "./main.css";
 
 const pinia = createPinia();
 
-// initializeApp(firebaseConfig);
 createApp(App)
   .use(pinia)
   .use(router)
