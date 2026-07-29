@@ -1,7 +1,7 @@
 ---
 title: Bulk-create worker — streaming CSV desde MinIO (properties-service)
 status: stable
-last-verified: 2026-07-28
+last-verified: 2026-07-29
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -16,6 +16,7 @@ sources:
   - ../../../sources/properties-service/2026-07-22-bulk-create-properties-refactor.md
   - ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md
   - ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md
+  - ../../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md
 ---
 
 ## TL;DR
@@ -151,6 +152,17 @@ Los 1.256 fallos de geo mezclan tres causas que **no se han separado**: basura d
 
 > **Lo que este ejercicio enseñó, más allá del import**: los tests unitarios mockean el UoW y nunca tocan Postgres, así que los errores de contrato, driver y configuración les son invisibles. Ejecutar una vez encontró el mismatch de body con catalog, el `get_object` sobre el wrapper equivocado, los `extra` de logging que se descartaban, el TLD `.test` inválido y la migración inexistente — ninguno detectable leyendo o con la suite en verde.
 
+## Con qué estado nacen las filas importadas
+
+`build_models` no deja que la fila herede defaults del modelo: fija explícitamente `status=ListingStatus.active` y `verification_status=VerificationStatus.unverified` ([seed_mapper.py:236-237](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py#L236-L237)).
+
+Las dos mitades de esa decisión tiran para lados distintos:
+
+- **`active`** significa que un import publica directo. Las 18.744 propiedades del smoke test entraron al feed público en el momento del commit, sin revisión previa.
+- **`unverified`** significa que quedan fuera de la cola de moderación, porque la state machine de verificación solo admite `unverified → pending` y **nada dispara ese salto** en un import (ver [[properties-service-admin]]). En el flujo normal lo pide el dueño; acá no hay dueño pidiendo.
+
+O sea que hoy el import produce listings visibles y no verificables. Cuál de las dos mitades cambiar —que el import escriba `pending`, o que el panel gane una acción de "enviar a revisión"— es una decisión de producto abierta, registrada en [[open-items]].
+
 ## Gaps conocidos
 
 - Los CSV de seed (`seed_bogota_500.csv`, `seed_bogota_5k.csv`) **no tienen las columnas `external_id` ni `email`**; con `StrictBase(extra="forbid")` y ambos campos requeridos, hoy fallarían el 100% de las filas.
@@ -187,3 +199,4 @@ Los 1.256 fallos de geo mezclan tres causas que **no se han separado**: basura d
 - `BulkPropertyCsvRow` hereda `StrictBase` (`extra="forbid"`, sin `strict=True`) y mantiene como `str` los campos con valores no numéricos del CSV real, para reusar los parsers tolerantes de `seed_mapper.py` ([bulk_schemas.py](backend/properties-service/src/app/workers/schemas/bulk_schemas.py)).
 - `BulkRowError(line, ref, issues)` usa `line` como contador monotónico sobre el generador (no el índice windowed del chunk) ([bulk_schemas.py](backend/properties-service/src/app/workers/schemas/bulk_schemas.py), [row_ref.py](backend/properties-service/src/app/workers/helpers/row_ref.py)).
 - El UC de encolado rechaza reintentar un job vencido con `BulkJobExpiredError` (409), comparando `datetime.now(timezone.utc)` contra `target_job.expires_at` ([bulk_create_properties.py](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py)).
+- `build_models` fija `status=ListingStatus.active` y `verification_status=VerificationStatus.unverified` en cada `Property` construida, en vez de dejar que apliquen los defaults del modelo ([seed_mapper.py:236-237](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py#L236-L237)).

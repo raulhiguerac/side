@@ -102,6 +102,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0005 — Google Maps Places API (New) para geocoding](wiki/frontend/adrs/adr-gmaps-places-geocoding.md)
 - [ADR-0006 — Campos fijos vs. editables al editar una propiedad](wiki/frontend/adrs/adr-property-edit-fixed-fields.md)
 - [ADR-0007 — Sin librería de componentes: la tabla admin se construye a mano](wiki/frontend/adrs/adr-no-component-library.md)
+- [ADR-0008 — TanStack Table (headless) para la tabla admin](wiki/frontend/adrs/adr-tanstack-table.md)
 
 ## properties-service
 

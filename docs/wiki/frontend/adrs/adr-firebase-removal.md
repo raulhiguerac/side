@@ -1,15 +1,17 @@
 ---
 title: ADR-0004 — Remover Firebase del frontend
 status: stable
-last-verified: 2026-07-15
+last-verified: 2026-07-28
 owners: [frontend]
 related:
   - "[[frontend]]"
   - "[[frontend-architecture]]"
   - "[[adr-auth-keycloak-jwt]]"
-sources: [../../../sources/frontend/2026-05-21-foundational-qa.md]
+  - "[[open-items]]"
+sources: [../../../sources/frontend/2026-05-21-foundational-qa.md, ../../../sources/frontend/2026-07-28-admin-panel-groundwork.md]
 decision-date: 2026-05-21
 decision-status: accepted
+executed-on: 2026-07-28
 ---
 
 # ADR-0004 — Remover Firebase del frontend
@@ -86,13 +88,27 @@ Pasos concretos:
 - ❌ Pérdida temporal del botón "Continuar con Google" hasta que Keycloak Brokering esté configurado.
 - ❌ Trabajo de cleanup (~1 hora de remover imports/deps + smoke test login normal).
 
+## Ejecución (2026-07-28)
+
+Ejecutado 14 meses después de decidido, al auditar dependencias del frontend. Al hacerlo aparecieron **tres cosas que este ADR daba por ciertas y no lo eran** — todas en la dirección de que el flujo estaba más muerto de lo que se creía:
+
+1. **Firebase nunca se inicializaba, ni siquiera on-demand.** Este ADR afirmaba que `LoginView.loginWithGoogle` lo inicializaba al vuelo; en realidad llamaba `getAuth()` sin ningún `initializeApp` previo y sin que existiera un `firebaseConfig` en el repo. Cualquier click en el botón tiraba `No Firebase App '[DEFAULT]' has been created`.
+2. **El endpoint backend nunca existió.** El paso 4 del plan de remoción contemplaba borrar `POST /v1/auth/login/google` de users-service; no hay tal ruta, ni UC, ni test. No hubo nada que borrar.
+3. **`RegisterView` tenía su propio botón de Google**, que este ADR no mencionaba. No tenía handler — era decorativo.
+
+O sea que la "pérdida temporal del botón" listada en las consecuencias no fue tal: no había funcionalidad que perder.
+
+**Desvío deliberado respecto del plan**: los botones y sus dividers quedaron **comentados** en `LoginView` y `RegisterView`, no borrados, con una nota de por qué. El markup es la parte que sirve tal cual cuando entre el Identity Brokering; el handler sí se eliminó, porque no puede sobrevivir a la baja de la dependencia.
+
 ## Trigger de re-evaluación
 
 Solo si Keycloak resultara insuficiente (no es escenario realista), o si se necesita auth offline-first (PWA con auth without server reachability), Firebase podría volver — pero esos casos no están en el roadmap.
 
 ## Claims
 
-- `firebase: ^10.12.2` está en `dependencies` del `package.json` ([package.json:17](frontend/package.json#L17)).
-- Firebase se inicializa on-demand en `LoginView.loginWithGoogle`, no globalmente — el `initializeApp(firebaseConfig)` en `main.ts` está comentado ([main.ts:14](frontend/src/main.ts#L14), [LoginView.vue:303-305](frontend/src/views/auth/LoginView.vue#L303-L305)).
-- El endpoint backend invocado es `POST /v1/auth/login/google` con body `{ token: idToken }` ([LoginView.vue:310-314](frontend/src/views/auth/LoginView.vue#L310-L314)).
+- `firebase` ya no figura en `package.json` ni en el lockfile; tampoco hay imports de `firebase/*` en `src/` ([package.json](frontend/package.json)).
+- `main.ts` no tiene ninguna línea de firebase — el `// initializeApp(firebaseConfig)` comentado se eliminó ([main.ts](frontend/src/main.ts)).
+- `LoginView.vue` ya no define `loginWithGoogle`; el botón de Google y su divider quedan como bloque comentado en el template ([views/auth/LoginView.vue](frontend/src/views/auth/LoginView.vue)).
+- `RegisterView.vue` tenía un botón de Google sin `@click`, hoy también comentado ([views/auth/RegisterView.vue](frontend/src/views/auth/RegisterView.vue)).
+- No existe ninguna ruta `/v1/auth/login/google` en users-service ([backend/users-service/src/app](backend/users-service/src/app)).
 - Keycloak (configurado en el compose, ver [[architecture]]) soporta Identity Brokering con Google nativo — no requiere SDK adicional en el frontend.

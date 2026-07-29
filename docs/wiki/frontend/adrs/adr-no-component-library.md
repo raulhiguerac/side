@@ -1,9 +1,11 @@
 ---
 title: "ADR-0007 — Sin librería de componentes: la tabla admin se construye a mano"
 status: stable
-last-verified: 2026-07-28
+last-verified: 2026-07-29
 owners: [frontend]
+superseded-by: "[[adr-tanstack-table]] (parcial — solo la decisión de construir la tabla a mano)"
 related:
+  - "[[adr-tanstack-table]]"
   - "[[frontend-architecture]]"
   - "[[frontend-admin-panel]]"
   - "[[adr-vue-cli-deferred-vite-migration]]"
@@ -14,6 +16,12 @@ decision-status: accepted
 ---
 
 # ADR-0007 — Sin librería de componentes: la tabla admin se construye a mano
+
+> **Superado parcialmente el 2026-07-29 por [[adr-tanstack-table]].** Al día siguiente de tomarse, se adoptó `@tanstack/vue-table` en vez de construir la tabla a mano.
+>
+> **Cae** la alternativa de abajo que dejaba TanStack como salida futura: se adoptó de entrada.
+>
+> **Sigue vigente** todo lo demás, que es el núcleo: Nuxt UI no encaja porque exigiría migrar a Vite y a Tailwind v4, y no se adopta ninguna librería que traiga estilos propios o que dicte el build tool. TanStack entró justamente por no hacer ninguna de las dos cosas.
 
 ## Contexto
 
@@ -34,7 +42,7 @@ Y de las dos migraciones, la de Tailwind es la que **no depende de nosotros**: `
 - **Nuxt UI ahora.** Descartado: arrastra la migración a Vite + Tailwind v4 como prerequisito. Sería dejar que la elección de un componente decida el build pipeline del proyecto entero.
 - **Migrar a Vite y Tailwind v4 primero, después Nuxt UI.** Es el orden correcto si algún día se quiere, pero invierte las prioridades: hoy el panel admin tiene 10 endpoints sin cablear y ninguna vista de moderación. Construir la tabla no está bloqueado por nada.
 - **PrimeVue / Element Plus** (bundler-agnósticos, sí correrían acá). Descartados por costo de estilo: traen su propio sistema de theming, que habría que reconciliar con los tokens `brand-*` existentes. Se pagaría integración para no escribir un `<table>`.
-- **`@tanstack/vue-table`.** No descartado — **diferido**. Es headless (lógica sin markup ni estilos) y agnóstico del bundler, así que entra sin tocar nada del build. Es la salida si la tabla llega a necesitar multi-sort, selección de filas o virtualización. Hoy no las necesita: la paginación es offset con `total` del servidor ([[adr-admin-offset-pagination]]), no scroll infinito.
+- **`@tanstack/vue-table`.** No descartado — **diferido**. Es headless (lógica sin markup ni estilos) y agnóstico del bundler, así que entra sin tocar nada del build. Es la salida si la tabla llega a necesitar multi-sort, selección de filas o virtualización. Hoy no las necesita: la paginación es offset con `total` del servidor ([[adr-admin-offset-pagination]]), no scroll infinito. — **Esta es la parte que cayó**: se adoptó al día siguiente sin esperar a esos casos de uso. Ver [[adr-tanstack-table]].
 
 ## Consecuencias
 

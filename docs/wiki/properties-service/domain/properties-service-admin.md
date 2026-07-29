@@ -1,7 +1,7 @@
 ---
 title: Dominio admin — properties-service
 status: draft
-last-verified: 2026-07-28
+last-verified: 2026-07-29
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -14,7 +14,7 @@ related:
   - "[[open-items]]"
   - "[[properties-service-bulk-create-worker]]"
   - "[[properties-service-users]]"
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md]
+sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md, ../../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md]
 ---
 
 ## TL;DR
@@ -64,6 +64,22 @@ Una transición no permitida lanza `InvalidStatusTransitionError`. Tras el cambi
 | `verified` | — (terminal, sin salida) |
 
 Una transición no permitida lanza el mismo `InvalidStatusTransitionError` que `set_status`. El UC no recibe `principal` en su firma (`execute(*, property_id, request)`), así que el campo `verified_by` del modelo `Property` nunca se escribe desde este flujo — queda muerto.
+
+### Consecuencia: aprobar exige dos saltos, y el primero no tiene quién lo dispare
+
+Detectado el 2026-07-29 al estimar los botones de moderación del panel admin. La state machine de arriba se lee como una cola de moderación razonable, pero **nada la alimenta**:
+
+- Una propiedad nace `unverified` (`create_property`), y el worker de import **la fija explícitamente** en `unverified` (`seed_mapper.py:236-237`).
+- Desde `unverified` el único destino legal es `pending`. Recién desde `pending` se puede `verified` o `rejected`.
+- O sea que **ninguna propiedad se puede aprobar en un paso**, y las 18.744 del import de 20k están todas en ese estado.
+
+En el diseño original el salto a `pending` lo haría el dueño al pedir verificación. En un import masivo no hay dueño pidiendo nada, así que hoy esas filas están fuera de cualquier cola. Peor: el mismo `seed_mapper` las crea con `status=active`, con lo cual **están publicadas y visibles en el feed sin verificar**. Ver [[open-items]] y [[properties-service-bulk-create-worker]].
+
+Además, `verified` es **terminal**: no hay transición de salida. Aprobar es irreversible — desverificar algo aprobado por error requiere tocar la DB.
+
+### Los tres endpoints de moderación devuelven 204 sin cuerpo
+
+`PATCH /properties/{id}/status`, `PATCH /properties/{id}/verification` y `POST /properties/{id}/estimated-price` responden `204 NO CONTENT`. Quien los consuma no recibe la fila actualizada, así que después de actuar hay que refetchear o parchear el registro en local — decisión que se complica cuando la lista está filtrada, porque actuar sobre una fila debería sacarla del resultado. Ver [[frontend-admin-panel]].
 
 ## Precio estimado dual
 
@@ -118,6 +134,11 @@ Dos detalles de implementación que valen la pena:
 - `get_all` y `count_all` comparten `_apply_filters`, y `get_all` aplica `noload` a `images`, `location` y `promotions` ([sql_property_repository.py](backend/properties-service/src/app/services/admin/adapters/sql_property_repository.py)).
 - Las rutas `/admin/*` están protegidas con `dependencies=[Depends(require_admin)]` a nivel router ([admin.py:43-47](backend/properties-service/src/app/api/routes/admin.py#L43-L47)).
 - `set_status` valida transiciones contra `_ALLOWED_TRANSITIONS` y lanza `InvalidStatusTransitionError` si no aplica ([set_status.py:39-44](backend/properties-service/src/app/services/admin/use_cases/moderation/set_status.py#L39-L44)).
+- `VerifyPropertyUseCase._ALLOWED_TRANSITIONS` mapea `unverified → [pending]`, `pending → [verified, rejected]`, `rejected → [pending]` y `verified → []`, así que `verified` no tiene transición de salida ([verify.py:13-18](backend/properties-service/src/app/services/admin/use_cases/moderation/verify.py#L13-L18)).
+- Ninguna propiedad puede pasar de `unverified` a `verified` en una sola llamada: `pending` es paso obligatorio ([verify.py:13-18](backend/properties-service/src/app/services/admin/use_cases/moderation/verify.py#L13-L18)).
+- El worker de import fija `status=ListingStatus.active` y `verification_status=VerificationStatus.unverified` al construir cada `Property` ([seed_mapper.py:236-237](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py#L236-L237)).
+- `set_property_status`, `verify_property` y `set_estimated_price` declaran `status_code=status.HTTP_204_NO_CONTENT` — ninguno devuelve la entidad actualizada ([admin.py:156-190](backend/properties-service/src/app/api/routes/admin.py#L156-L190)).
+- `InvalidStatusTransitionError` usa el código `INVALID_STATUS_TRANSITION` y lleva `{current, target}` en su contexto ([listing.py:159-165](backend/properties-service/src/app/core/exceptions/listing.py#L159-L165)).
 - `SetEstimatedPriceUseCase` escribe `admin_estimated_price` si hay principal, `ml_estimated_price` si no ([set_estimated_price.py:26-32](backend/properties-service/src/app/services/admin/use_cases/estimated_price/set_estimated_price.py#L26-L32)).
 - El path ML de `set_estimated_price` no tiene caller — `workers/` está vacío al 2026-05-28 ([workers/](backend/properties-service/src/app/workers)).
 - `BulkCreatePropertiesUseCase` (`use_cases/bulk_create_properties.py`) solo encola: crea la fila en `bulk_jobs` y devuelve el `batch_id`; no procesa el CSV ([bulk_create_properties.py](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py)).

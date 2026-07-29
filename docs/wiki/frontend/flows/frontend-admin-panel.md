@@ -1,7 +1,7 @@
 ---
 title: Panel admin (frontend)
 status: draft
-last-verified: 2026-07-28
+last-verified: 2026-07-29
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -12,16 +12,19 @@ related:
   - "[[properties-service-bulk-create-worker]]"
   - "[[adr-admin-offset-pagination]]"
   - "[[adr-no-component-library]]"
+  - "[[adr-tanstack-table]]"
   - "[[open-items]]"
 sources:
   - ../../../sources/frontend/2026-07-16-admin-panel-nav-and-hub.md
   - ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md
   - ../../../sources/frontend/2026-07-28-admin-panel-groundwork.md
+  - ../../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md
+  - ../../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md
 ---
 
 ## TL;DR
 
-Scaffolding del panel admin embebido en la app existente (no un subdominio separado): un link condicional en el nav, tres rutas gateadas por rol, y una vista hub que orquesta hacia las secciones de propiedades y catálogo. Hoy es mayormente placeholder — las vistas de moderación reales todavía no existen.
+Panel admin embebido en la app existente (no un subdominio separado): un link condicional en el nav, tres rutas gateadas por rol, y una vista hub que orquesta hacia propiedades y catálogo. Desde el 2026-07-29 la vista de propiedades tiene tabla real (listado paginado + import por CSV); lo que sigue faltando son las **acciones** de moderación y toda la sección de catálogo.
 
 ## Por qué embebido, no subdominio
 
@@ -106,13 +109,39 @@ Peor: el `batch_id` se descarta al cerrar y **no existe ningún endpoint que lis
 
 El grid del feed optimiza para "cuál me gusta" — imagen, precio, ambientes. Moderar es "cuáles necesitan acción": más filas visibles a la vez, columnas alineadas para escanear, acciones por fila. Los filtros van **en la misma vista** que la tabla, porque el loop es filtrar → mirar → actuar → filtrar de nuevo, y separarlos obliga a ida y vuelta de navegación.
 
-`GET /admin/properties` es el primero natural a cablear: moderación, verificación, pricing y promociones todas necesitan un `property_id` elegido de una lista. Pagina por offset con `total` — la decisión y por qué no reusa el cursor opaco del feed están en [[adr-admin-offset-pagination]]. La tabla se construye a mano, sin librería de componentes ([[adr-no-component-library]]).
+`GET /admin/properties` es el primero natural a cablear: moderación, verificación, pricing y promociones todas necesitan un `property_id` elegido de una lista. Pagina por offset con `total` — la decisión y por qué no reusa el cursor opaco del feed están en [[adr-admin-offset-pagination]].
 
-## Estado del cableado: 10 de 12 endpoints admin sin consumer
+## La tabla (2026-07-29)
 
-`AdminPropertiesView` sigue diciendo "En construcción". Los únicos dos endpoints admin con consumer en el front son los dos del bulk; los otros diez no tienen ninguno.
+Construida sobre `@tanstack/vue-table` ([[adr-tanstack-table]]), en dos componentes:
 
-Tampoco hay módulo de API admin: las URLs del modal son strings inline. Con diez endpoints por venir, conviene introducir un `src/api/adminApi.ts` (o un composable) **antes** de que se dispersen.
+**`components/shared/BaseTable.vue`** — dumb y genérico (`<script setup generic="T">`), sin nada de dominio. Recibe `columns`/`data`/`loading` y reusa `EmptyState` y `BaseSpinner` para los bordes. Dos decisiones adentro:
+
+- Registra **solo `getCoreRowModel`**. Sumar `getSortedRowModel` o `getPaginationRowModel` ordenaría o paginaría las 20 filas ya cargadas, con un resultado que parece global sin serlo.
+- Cada celda es `<slot :name="cell.column.id">` con `<FlexRender>` de fallback: las columnas de texto plano no cuestan nada y los badges se escriben como template en el padre, no como `h()` dentro del `columnDef`. Se probó prefijar los slots con `cell:` y **se descartó** — un `:` en el nombre obliga a la sintaxis de argumento dinámico (``#[`cell:status`]``) en cada uso, y `BaseTable` no tiene otros slots con los que colisionar.
+
+**`components/admin/properties/AdminPropertiesTable.vue`** — muestra 5 de los 13 campos del schema. `id`/`owner_id` son UUIDs que no dicen nada sin un join que no existe, y área/habitaciones/baños son detalle, no moderación. El `id` sigue disponible en el slot `actions` vía `row.original`, así que las acciones nunca necesitaron una columna de id visible. La columna de acciones solo se renderiza si el padre pasa el slot.
+
+**`composables/admin/useAdminProperties.ts`** — reusa `usePagination` con `fetchMore`, siguiendo el precedente de `PublicProfileView` para endpoints paginados por offset; volver atrás nunca pega al servidor. El `total` del servidor se guarda **aparte**, porque `usePagination.total` es `allItems.length` — filas cargadas, no filas que existen.
+
+`AdminPropertiesView` ya no dice "En construcción": tabla, `PaginationArrows`, "Mostrando X-Y de Z" y un banner de error.
+
+## Lo que falta para que las acciones de moderación funcionen
+
+Las dos acciones (aprobar/rechazar y publicar/despublicar) parecen un par de composables, pero el backend impone máquinas de estado — ver [[properties-service-admin]] para el detalle. Lo que eso implica acá:
+
+- **Los botones dependen del estado de cada fila**, no son un set fijo. Y la tabla de transiciones vive solo en el backend, así que duplicarla en el front arriesga drift silencioso.
+- **Ninguna propiedad importada se puede aprobar hoy**: nacen `unverified`, cuyo único destino es `pending`, y nada dispara ese salto. Es un hueco de producto abierto ([[open-items]]).
+- **`verified` es terminal.** Aprobar es irreversible, así que no debería ser un click suelto en una fila.
+- **Rechazar necesita motivo** (`rejection_reason`, máx. 500), o sea un modal con textarea.
+- **Los tres endpoints devuelven 204 sin cuerpo**, y `useAdminProperties` no sabe recargar la página actual: solo tiene `load()` (que resetea a la 1), `next()` y `prev()`. Falta un `reload()`.
+- **Sin sistema de toasts**, el resultado de la acción no tiene dónde mostrarse — el mismo gap que deja al modal de import cerrando en silencio.
+
+## Estado del cableado: 9 de 12 endpoints admin sin consumer
+
+Con el listado ya cableado, quedan 9 sin consumer en properties-service: verificación, status, detalle, precio estimado, los 4 de promociones y el status de un bulk job. En catalog-service son **11 de 11** — `AdminCatalogView` está vacía.
+
+Tampoco hay módulo de API admin. Se evaluó crear `src/api/adminApi.ts` y **se descartó**: las instancias de axios del proyecto son una por servicio, y "admin" no es un servicio — los endpoints admin viven en properties y en catalog. En su lugar la ruta se agregó a `constants/propertiesEndpoints.ts` y el fetch vive en el composable, que es el patrón que ya usan `useFeed` y `useProfileListings`.
 
 ## Decisiones diferidas
 
@@ -129,7 +158,12 @@ Tampoco hay módulo de API admin: las URLs del modal son strings inline. Con die
 - El `PUT` a storage no usa `propertiesApi`: es `fetch` nativo sin credenciales, porque la firma va en el query string ([components/admin/properties/BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/BulkUploadPropertiesModal.vue)).
 - La presigned URL se pide dentro de `upload()`, no en `onFileChange()` ([components/admin/properties/BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/BulkUploadPropertiesModal.vue)).
 - El modal compara `file.size` contra `presigned.max_size_bytes` antes de subir; no hay validación de tamaño del lado del servidor en el flujo de presigned PUT ([components/admin/properties/BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/BulkUploadPropertiesModal.vue)).
-- `AdminPropertiesView.vue` monta `<BulkUploadPropertiesModal v-model="isBulkModalOpen" />` sin listener de `@queued`, y su cuerpo dice "En construcción" ([views/admin/properties/AdminPropertiesView.vue](frontend/src/views/admin/properties/AdminPropertiesView.vue)).
-- No existe `src/api/adminApi.ts` — el directorio `src/api/` tiene solo `avmApi`, `catalogApi`, `interceptors`, `propertiesApi` y `usersApi` ([api/](frontend/src/api)).
+- `AdminPropertiesView.vue` monta `<BulkUploadPropertiesModal v-model="isBulkModalOpen" />` sin listener de `@queued` ([views/admin/properties/AdminPropertiesView.vue](frontend/src/views/admin/properties/AdminPropertiesView.vue)).
+- `AdminPropertiesView.vue` renderiza `AdminPropertiesTable` + `PaginationArrows` alimentados por `useAdminProperties`, con `onMounted(load)` ([views/admin/properties/AdminPropertiesView.vue](frontend/src/views/admin/properties/AdminPropertiesView.vue)).
+- `BaseTable.vue` declara `generic="T"` y expone un slot por columna nombrado `cell.column.id`, con `<FlexRender>` como contenido por defecto ([BaseTable.vue](frontend/src/components/shared/BaseTable.vue)).
+- `AdminPropertiesTable.vue` define 5 columnas —`verification_status`, `tipo`, `price`, `created_at`, `status`— y agrega la de acciones solo si el padre pasa el slot ([AdminPropertiesTable.vue](frontend/src/components/admin/properties/AdminPropertiesTable.vue)).
+- `useAdminProperties` mantiene `serverTotal` en un ref propio, separado del `total` de `usePagination` ([useAdminProperties.ts](frontend/src/composables/admin/useAdminProperties.ts)).
+- La ruta del listado admin vive en `PROPERTIES_ENDPOINTS.adminList`, y el fetch está en el composable — no hay módulo de API admin ([propertiesEndpoints.ts](frontend/src/constants/propertiesEndpoints.ts), [useAdminProperties.ts](frontend/src/composables/admin/useAdminProperties.ts)).
+- No existe `src/api/adminApi.ts` — el directorio `src/api/` tiene solo `avmApi`, `catalogApi`, `interceptors`, `propertiesApi` y `usersApi`, uno por servicio ([api/](frontend/src/api)).
 - No existe ningún botón de bulk-import en `AdminCatalogView.vue` — el endpoint de catálogo requiere `locality_id`, no es una acción global ([views/admin/catalog/AdminCatalogView.vue](frontend/src/views/admin/catalog/AdminCatalogView.vue)).
 - `propertiesApi` tiene `timeout: 8000`, suficiente ahora que los tres requests del modal son cortos ([api/propertiesApi.ts](frontend/src/api/propertiesApi.ts)).

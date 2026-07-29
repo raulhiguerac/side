@@ -1,11 +1,12 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-07-28
+last-verified: 2026-07-29
 owners: [frontend]
 related:
   - "[[architecture]]"
   - "[[adr-no-component-library]]"
+  - "[[adr-tanstack-table]]"
   - "[[adr-vue-cli-deferred-vite-migration]]"
   - "[[frontend]]"
   - "[[frontend-onboarding-flow]]"
@@ -37,6 +38,7 @@ sources:
   - ../../sources/frontend/2026-07-16-auth-user-store-consolidation.md
   - ../../sources/frontend/2026-07-16-admin-panel-nav-and-hub.md
   - ../../sources/frontend/2026-07-28-admin-panel-groundwork.md
+  - ../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md
 ---
 
 ## TL;DR
@@ -83,19 +85,23 @@ frontend/
 │   │   │   ├── usePropertyMapper.ts   # PropertyCard → PropertyCardUI con lookup de barrio
 │   │   │   ├── usePropertyVisibility.ts  # toggleVisibility(id): Promise<boolean>, sin estado
 │   │   │   └── useMyProperties.ts     # { properties, isLoading, fetchProperties } — mismo molde que useFeed
+│   │   ├── admin/
+│   │   │   └── useAdminProperties.ts  # listado admin: usePagination + serverTotal aparte
 │   │   └── users/
 │   │       └── useProfileListings.ts  # fetchUserListings(id, offset) — función pura, sin estado (la paginación vive en usePagination)
 │   ├── utils/
-│   │   └── money.ts               # formatMoney / parseMoney — compartido entre create y edit form
+│   │   ├── money.ts               # formatMoney/parseMoney (inputs) + formatCurrency (display)
+│   │   └── date.ts                # formatShortDate — Intl construido una vez a nivel módulo
 │   ├── constants/
-│   │   ├── propertyStatus.ts      # LISTING_STATUS_LABELS / LISTING_STATUS_BADGE_CLASSES
-│   │   ├── pagination.ts          # PAGE_SIZE por vista (MY_PROPERTIES, PUBLIC_PROFILE)
-│   │   └── propertiesEndpoints.ts # paths de properties-service (me, byId, byUser, visibility, images)
+│   │   ├── propertyStatus.ts      # LISTING_STATUS_* y VERIFICATION_STATUS_* (labels + badges)
+│   │   ├── pagination.ts          # PAGE_SIZE por vista (MY_PROPERTIES, PUBLIC_PROFILE, ADMIN_PROPERTIES)
+│   │   └── propertiesEndpoints.ts # paths de properties-service (me, byId, byUser, visibility, images, adminList)
 │   ├── types/
 │   │   ├── user.ts
 │   │   ├── feed.ts               # PropertyCard (API shape), PropertyCardUI (UI shape), PropertyImageCard, ListingStatus
 │   │   ├── properties.ts         # PropertyDetail, PropertyLocationDetail, CreatePropertyForm, PropertyEditForm
-│   │   └── pois.ts               # OrsProfile, GeoJsonPolygon, ReachablePoiItem, RangeGroup, CATEGORY_META, CATEGORY_PRIORITY
+│   │   ├── pois.ts               # OrsProfile, GeoJsonPolygon, ReachablePoiItem, RangeGroup, CATEGORY_META, CATEGORY_PRIORITY
+│   │   └── admin.ts              # AdminPropertyRow, AdminPropertiesPage, AdminPropertiesFilters
 │   ├── views/                    # páginas-ruta
 │   │   ├── public/{HomeView, AboutView, PublicProfileView}  # /users/:userId
 │   │   ├── auth/{LoginView, RegisterView, ResetPasswordView}
@@ -109,7 +115,7 @@ frontend/
 │   │   ├── dev/{DevPlaygroundView, CreatePropertyDevView}  # sin auth, dev only
 │   │   └── admin/{AdminHomeView, properties/AdminPropertiesView, catalog/AdminCatalogView}  # requiresAdmin — ver [[frontend-admin-panel]]
 │   └── components/
-│       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState, PrimaryButton}
+│       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState, PrimaryButton, BaseTable}
 │       ├── onboarding/{IntentSelector, LocalitySelector, NeighborhoodSelector, PropertyTypeSelector}
 │       ├── properties/
 │       │   ├── cards/{PropertyCard, HouseCard}      # HouseCard sin uso actual
@@ -120,7 +126,7 @@ frontend/
 │       │   └── feed/FeedFilters
 │       ├── settings/SettingsSidebar
 │       ├── map/MapUser
-│       └── admin/properties/BulkUploadPropertiesModal  # ver [[frontend-admin-panel]]
+│       └── admin/properties/{BulkUploadPropertiesModal, AdminPropertiesTable}  # ver [[frontend-admin-panel]]
 ├── package.json
 ├── vue.config.js                 # webpack tweaks (Vue CLI)
 ├── tailwind.config.js
@@ -142,7 +148,7 @@ createApp(App)
 ```
 
 Notas:
-- **Firebase NO se inicializa acá** — la initialización está comentada (`initializeApp(firebaseConfig)`). Se llama on-demand desde `LoginView.loginWithGoogle()`, hoy su único import en todo el `src/` ([[adr-firebase-removal]] ya decidió sacarlo; no se ejecutó).
+- **Firebase ya no está** — removido el 2026-07-28 ejecutando [[adr-firebase-removal]]. No se inicializaba en ningún lado, así que el login con Google nunca funcionó; los botones quedaron comentados en `LoginView`/`RegisterView` esperando el Identity Brokering de Keycloak.
 - **Vueform** se registra global, pero **ningún template usa sus componentes** — corregido 2026-07-28, ver §Forms. Lo que sí se usa es `@vueform/multiselect`.
 - Sin axios instance global — cada store/composable crea/usa el axios default.
 
@@ -390,10 +396,11 @@ Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. `ONBOARDING_DISMISSE
 
 | Carpeta | Propósito |
 |---|---|
-| `shared/` | NavBar, NavGuest (no-logged), NavUser (logged), BaseModal, PrimaryButton (botón gradiente verde reusable, presentacional puro) — reusables transversales. |
+| `shared/` | NavBar, NavGuest (no-logged), NavUser (logged), BaseModal, PrimaryButton (botón gradiente verde reusable, presentacional puro), PaginationArrows, EmptyState, BaseSpinner y **BaseTable** (tabla dumb genérica sobre TanStack, un slot por columna — ver [[adr-tanstack-table]]) — reusables transversales. |
 | `onboarding/` | 4 selectors (Intent, Locality, Neighborhood, PropertyType) — usados desde el modal. |
 | `properties/` | Organizado en subcarpetas por dominio desde 2026-06-21. `cards/{PropertyCard, HouseCard}` — cards para feed (`HouseCard` sin uso actual). `photos/{PropertyPhotoGrid, PhotoGalleryPopup}`. `detail/{PropertyOverview, NearbyPlaces}`. `feed/FeedFilters` — sidebar de filtros con secciones Preferencias (ciudad, barrio, tipo) y Filtros (precio, área, habitaciones, baños); se pre-pobla con ciudades de `useCities`, barrios cargados dinámicamente al seleccionar ciudad vía `watch`. Mantiene estado local (`selected`, `selectedNeighborhoods`, `selectedTypes`, `filters: ref<FeedFilters>({})` con `v-model.number`); `property_types` se togglea con `toggleType(type)` (push/filter sobre el array). **Emite un solo `submit` con `{preferences, filters}` al click en "Aplicar"** — no reactivo con `watch`, decisión para evitar una petición por cada cambio de campo. El objeto `preferences` se arma en `onSubmit` leyendo los refs (`selected.value`, etc.), sin ref `preferences` duplicado. |
 | `settings/` | SettingsSidebar — navegación lateral del SettingsLayout. |
+| `admin/` | `properties/{BulkUploadPropertiesModal, AdminPropertiesTable}` — el modal de import por presigned PUT y la tabla de moderación (columnas + badges sobre `BaseTable`). Ver [[frontend-admin-panel]]. |
 | `map/` | MapUser — componente de mapa dumb/reusable (vue-leaflet declarativo, markers-prop + slot). Ver [[frontend-map-component]]. |
 | `avm/` | AvmForm / AvmResult — form del avalúo multi-step. `AvmForm` consume `composables/useAvmForm` (expone `AvmFormPayload`, `AvmPredictRequest`, `SelectedPlace`). Emite `place-selected` (marker en tiempo real) y `submit` (payload + place + neighborhood resuelto). `DevPlaygroundView` orquesta: recibe `place-selected` → actualiza `center` y `marker` reactivos → pasa al mapa. |
 
@@ -419,6 +426,18 @@ Consecuencias de la corrección:
 
 También se removieron `vue-class-component` (API de Vue 2, sin imports) y `vue-google-autocomplete` — el input de ubicación ya usa el web component `gmp-place-autocomplete` ([[adr-gmaps-places-geocoding]]).
 
+## Formateo (`utils/`)
+
+Consolidado el 2026-07-29. Antes el dinero tenía **cuatro** implementaciones compitiendo: `utils/money.ts` sin símbolo, dos `Intl.NumberFormat` idénticos en `usePropertyDetail`, `"$ " + Math.round(...)` en `AvmResult` y un `toLocaleString` pelado en `PropertyCard`.
+
+- **`formatCurrency(value, currency = "COP")`** en `utils/money.ts` es el único camino hoy. Acepta `string` además de `number` porque los `Decimal` del backend se serializan como string.
+- **`formatMoney`/`parseMoney` quedan aparte a propósito**: no son formateo de display, son el par que usan los inputs de `StepDetalles` y `PropertyEditForm` en `@blur`. Meterles símbolo rompería el `parseMoney` de vuelta.
+- **`utils/date.ts`** (`formatShortDate`) es nuevo — no existía **ningún** formateo de fechas en el proyecto. Su `Intl.DateTimeFormat` se construye una vez a nivel de módulo: instanciarlo por celda es de lo más caro que puede hacer una tabla.
+
+Efecto colateral visible: `PropertyCard` tenía el `$` hardcodeado en el template, así que los precios pasaron de `$450.000.000` a `$ 450.000.000` — la salida real del locale `es-CO`, que `AvmResult` ya usaba.
+
+Limitación conocida: `PropertyCardUI` no lleva `currency` (el mapper lo descarta), así que las tarjetas del feed asumen COP aunque el backend soporte cinco monedas. Ver [[open-items]].
+
 ## Mapas y geocoding
 
 Ver [[adr-mapbox-geocoding-leaflet-rendering]] para el detalle. Resumen:
@@ -433,9 +452,29 @@ El render lo encapsula `MapUser.vue` — un componente **dumb/reusable**: props 
 
 - **Vue 3.5.35** (upgrade completado 2026-05-29) — habilita `defineModel` y `useTemplateRef`. Es **independiente** de la migración a Vite, que sigue diferida (ver [[adr-vue-cli-deferred-vite-migration]]).
 - **`useTemplateRef`** (Vue 3.5): reemplaza `ref<HTMLElement>(null)` para refs de template. Sintaxis: `useTemplateRef<HTMLDivElement>('refName')` — el template usa `ref="refName"` (string, no binding dinámico).
-- **Build**: `npm run build` (vue-cli-service) → `dist/` estático. ⚠️ **Hoy falla**: `vue-cli-service build` corre ESLint y aborta ante errores; hay 9 pre-existentes (7 de formato auto-fixeables, un `vue/no-side-effects-in-computed-properties` real en `StepImagenes.vue`, y un bloque vacío). Ver [[open-items]].
+- **Build**: `npm run build` (vue-cli-service) → `dist/` estático. **Verde desde el 2026-07-29**; venía fallando por 9 errores de lint pre-existentes, resueltos con `lint --fix` más dos bugs reales (ver abajo).
 - **Deploy planeado**: bucket público (probable S3 / MinIO / GCS) sirviendo `index.html` + assets. Hash history evita necesidad de rewrites en el bucket.
 - **Sin SSR** — pura SPA client-side.
+
+### El typecheck nunca corrió (2026-07-29)
+
+`vue-tsc --noEmit` **aborta** por un error de config pre-existente: `tsconfig.json` declara `baseUrl`, deprecado en TS 5.x, y eso emite `TS5101` antes de typecheckear nada. O sea que cualquier lectura de "el typecheck pasa" en este proyecto era una corrida que nunca arrancó.
+
+Corriéndolo con `--ignoreDeprecations 6.0` aparecen **2 errores reales**, ambos pre-existentes:
+
+- `HouseCard.vue:81` importa un default export que `types/properties.ts` no tiene.
+- `ResetPasswordView.vue:51` usa un `loginUser` que no existe en ese componente.
+
+Ninguno rompe el build porque **`vue-cli-service build` no corre `vue-tsc`, solo ESLint**. Arreglar el `tsconfig` es el prerequisito para que el typecheck vuelva a ser una red de seguridad. Ver [[open-items]].
+
+### Reglas de ESLint desactivadas
+
+`no-undef` está apagado a nivel proyecto desde el 2026-07-29. `eslint-plugin-vue` está en v8 (2022) y no entiende `<script setup generic="T">` ni `defineSlots`, así que marcaba los parámetros de tipo como identificadores no definidos. La regla además es redundante con `vue-tsc` —que sí ve el type-space de TS— y es lo que recomienda typescript-eslint para proyectos TS. Sin esto, cada componente genérico nuevo daría falsos positivos.
+
+### Bugs encontrados al dejar el build verde
+
+- **`StepImagenes.vue`**: un `computed` leía y escribía el mismo ref (`objectUrls`), así que se auto-invalidaba y podía revocar object URLs que las miniaturas seguían usando. Reemplazado por un `watch` sobre `files`, colapsando los dos refs en uno.
+- **`CreatePropertyView.vue`**: el `catch` vacío **no** era el bug que parecía. Que el `finally` avance al paso 3 pase lo que pase es deliberado — el paso 3 es una pantalla de doble uso que renderiza el estado de error *o* el uploader, y el botón de publicar está gateado por `!error`, así que el "estado roto" era inalcanzable. Solo se arregló el bloque vacío.
 
 ### Costo medido de migrar a Vite (2026-07-28)
 
@@ -503,7 +542,7 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 - Las baseURLs usan rutas relativas (`/api/*`) en dev — el proxy de `vue.config.js` las reenvía a cada backend dentro del container; en prod se sobreescriben con `VUE_APP_*_URL` ([config/index.ts](frontend/src/config/index.ts), [vue.config.js](frontend/vue.config.js)).
 - El proxy de webpack es necesario porque Chrome bloquea subresource requests entre puertos `localhost` distintos en un devcontainer (VS Code port forwarding + keep-alive reuse); Firefox no tiene este problema ([vue.config.js](frontend/vue.config.js)).
 - `leaflet` (^1.9.4) y `@vue-leaflet/vue-leaflet` (^0.10.1) están en `devDependencies`, pero **se usan en runtime** en `MapUser.vue` — deberían moverse a `dependencies` ([package.json:35](frontend/package.json#L35), [package.json:46](frontend/package.json#L46), [components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
-- Firebase NO se inicializa en `main.ts` — el `initializeApp(firebaseConfig)` está comentado ([main.ts:14](frontend/src/main.ts#L14)).
+- `main.ts` no contiene ninguna referencia a firebase ([main.ts](frontend/src/main.ts)).
 - `MapUser.vue` es un componente de mapa dumb (vue-leaflet declarativo, props + `<slot>`, `defineModel` para zoom) — ver [[frontend-map-component]] ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - El form del avalúo está partido en `components/avm/` (`AvmForm`, `AvmResult`, `AvmMap`) con la lógica en `composables/useAvmForm.ts` ([components/avm/](frontend/src/components/avm), [composables/useAvmForm.ts](frontend/src/composables/useAvmForm.ts)).
 - Vue está en `^3.5.35`; upgrade completado 2026-05-29 ([package.json:23](frontend/package.json#L23)).
@@ -539,6 +578,12 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 - No hay ningún import de `vuelidate` ni de `@vuelidate/*` en `src/`; `LoginView` y `RegisterView` validan con inputs nativos y `ref`, sin librería de forms ([views/auth/LoginView.vue](frontend/src/views/auth/LoginView.vue), [views/auth/RegisterView.vue](frontend/src/views/auth/RegisterView.vue)).
 - Ningún template usa componentes de `@vueform/vueform` pese a estar registrado en `main.ts`; `@vueform/multiselect` sí se importa en `main.ts`, `FeedFilters.vue`, `LocalitySelector.vue` y `NeighborhoodSelector.vue` ([main.ts](frontend/src/main.ts), [components/properties/feed/FeedFilters.vue](frontend/src/components/properties/feed/FeedFilters.vue)).
 - `@vueform/multiselect` no figura en `package.json` — llega como dependencia transitiva de `@vueform/vueform` ([package.json](frontend/package.json)).
-- `firebase` tiene un solo import en todo `src/`: `firebase/auth` en `LoginView.vue` ([views/auth/LoginView.vue](frontend/src/views/auth/LoginView.vue)).
+- `firebase` no está en `package.json` ni hay imports de `firebase/*` en `src/` — removido el 2026-07-28 ([package.json](frontend/package.json)).
 - `process.env` aparece 5 veces en `src/`, todas en `config/index.ts`; el único uso de una API específica de webpack es `require("leaflet.markercluster")` en `MapUser.vue` ([config/index.ts](frontend/src/config/index.ts), [components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - `tailwind.config.js` carga `require("@vueform/vueform/tailwind")` como plugin y escanea los temas de Vueform en `content`, lo que ata la versión de Tailwind a la que soporte Vueform ([tailwind.config.js:6-8,30](frontend/tailwind.config.js#L30)).
+- `tsconfig.json` declara `baseUrl`, lo que hace que `vue-tsc --noEmit` aborte con `TS5101` antes de typecheckear ([tsconfig.json](frontend/tsconfig.json)).
+- `vue.config.js` no invoca `vue-tsc`; el `build` de `vue-cli-service` valida con ESLint, no con el compilador de tipos ([vue.config.js](frontend/vue.config.js), [package.json](frontend/package.json)).
+- `.eslintrc.js` desactiva `no-undef` en `rules` ([.eslintrc.js](frontend/.eslintrc.js)).
+- `formatCurrency` es la única función de formateo de moneda con símbolo; no queda ningún `Intl.NumberFormat` ni `toLocaleString("es-CO")` fuera de `utils/money.ts` ([utils/money.ts](frontend/src/utils/money.ts)).
+- `utils/date.ts` construye su `Intl.DateTimeFormat` a nivel de módulo, no por llamada ([utils/date.ts](frontend/src/utils/date.ts)).
+- `StepImagenes.vue` genera las previews con un `watch` sobre `files` (no un `computed`) y las revoca en `onUnmounted` ([StepImagenes.vue](frontend/src/components/properties/create/StepImagenes.vue)).

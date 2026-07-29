@@ -1,14 +1,14 @@
 ---
 title: frontend
 status: draft
-last-verified: 2026-06-28
+last-verified: 2026-07-29
 owners: [frontend]
 related:
   - "[[architecture]]"
   - "[[frontend-architecture]]"
   - "[[frontend-onboarding-flow]]"
   - "[[frontend-local-dev]]"
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md, ../../sources/frontend/2026-06-20-property-detail-view-refactor.md, ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md, ../../sources/frontend/2026-06-28-endpoint-coverage-and-stepimages.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md, ../../sources/frontend/2026-06-20-property-detail-view-refactor.md, ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md, ../../sources/frontend/2026-06-28-endpoint-coverage-and-stepimages.md, ../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md]
 ---
 
 ## TL;DR
@@ -40,18 +40,19 @@ Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con pro
 
 ## Stack
 
-- **Vue 3.2** + **TypeScript 5**
+- **Vue 3.5.35** + **TypeScript 5**
 - **Vue CLI 5** + webpack (deuda técnica — migra a Vite post-backend, ver [[adr-vue-cli-deferred-vite-migration]])
 - **vue-router 4** en `createWebHashHistory` (`/#/`) — ver [[adr-hash-history-static-hosting]]
 - **Pinia 3** — stores: `auth` (autenticación), `user` (onboarding + intereses)
-- **Tailwind 3** + **Vueform** (forms complejos) + **Vuelidate** (validación)
-- **Axios** (sin instance central hoy — ver [[frontend-architecture]])
+- **Tailwind 3** — sin librería de componentes ([[adr-no-component-library]]). Los forms son inputs nativos con validación a mano; `@vueform/multiselect` es lo único de Vueform en uso (ver [[frontend-architecture]] §Forms)
+- **`@tanstack/vue-table` 8** (headless) para la tabla admin — ver [[adr-tanstack-table]]
+- **Axios** con una instancia dedicada por servicio + interceptor de silent refresh (centralizado el 2026-06-28 — ver [[frontend-architecture]])
 - **Mapa**: `leaflet` + `@vue-leaflet/vue-leaflet` + **D3.js** para overlays — ver [[adr-mapbox-geocoding-leaflet-rendering]]
 - **Forward geocoding**: Google Maps Places API (New) — `PlaceAutocompleteElement` web component, key en `.env.local`. Ver [[adr-gmaps-places-geocoding]].
 
 ### A remover (tracked)
-- **Firebase 10** + Google sign-in: spike-out, no funcionó. Ver [[adr-firebase-removal]].
-- `vue-class-component`: alpha de Vue 2 era — sospecha de zombie, no se importa en el código revisado.
+- ~~**Firebase 10** + Google sign-in~~: **removido el 2026-07-28** ejecutando [[adr-firebase-removal]]. El spike nunca llegó a funcionar — no se inicializaba y el endpoint backend no existía.
+- ~~`vue-class-component`~~: **removido el 2026-07-28**, la sospecha de zombie se confirmó (cero imports). Junto con él salieron `vuelidate`/`@vuelidate/*` y `vue-google-autocomplete`.
 
 ## Routes (11)
 
@@ -98,7 +99,7 @@ Detalle de cada patrón en [[frontend-architecture]].
 
 ## Roadmap inmediato (deuda técnica tracked)
 
-- [ ] **Remover Firebase** — imports en `LoginView.vue`, dep `firebase` del `package.json`, eventual cleanup del endpoint backend (`/v1/auth/login/google` si solo lo usaba esta integración).
+- [x] **Remover Firebase** ✅ resuelto 2026-07-28 — dep, imports y handler fuera; botones comentados a la espera de Keycloak Brokering. El cleanup del endpoint backend no hizo falta: `/v1/auth/login/google` nunca existió. Ver [[adr-firebase-removal]].
 - [x] **Centralizar axios** ✅ resuelto 2026-06-28 — instancias dedicadas por servicio + interceptor silent refresh + webpack proxy. Ver [[frontend-architecture]].
 - [ ] **Vite migration** — post-cierre de todos los microservicios backend.
 - [ ] **Cerrar CORS** en backends pre-producción — hoy `allow_origins=["*"]` en catalog.
@@ -128,7 +129,7 @@ Detalle de cada patrón en [[frontend-architecture]].
 - `vue-router` corre en `createWebHashHistory` (URL pattern `/#/...`) ([router/index.ts:89](frontend/src/router/index.ts#L89)).
 - `auth.ts` store hardcodea `http://localhost:8000/v1/...` en login/register/logout/checkAuth ([stores/auth.ts:80-83](frontend/src/stores/auth.ts#L80-L83), [stores/auth.ts:98-101](frontend/src/stores/auth.ts#L98-L101)).
 - `config/index.ts` define `API.USERS_BASE_URL` y `API.CATALOG_BASE_URL` pero solo `user.ts` y los composables lo usan; `auth.ts` ignora la config ([config/index.ts:1-5](frontend/src/config/index.ts#L1-L5)).
-- Firebase 10 está en `package.json` y se usa solo en `LoginView.loginWithGoogle()` ([package.json:17](frontend/package.json#L17), [LoginView.vue:253-326](frontend/src/views/auth/LoginView.vue#L253-L326)).
+- `firebase` ya no está en `package.json` y `LoginView.vue` no define `loginWithGoogle` — removidos el 2026-07-28 ([package.json](frontend/package.json), [views/auth/LoginView.vue](frontend/src/views/auth/LoginView.vue)).
 - `leaflet` + `@vue-leaflet/vue-leaflet` están en **devDependencies** del package.json (probablemente debería ser dependencies si se usa en runtime) ([package.json:32-33](frontend/package.json#L32-L33), [package.json:43](frontend/package.json#L43)).
 - `vue.config.js` reconoce que Vue CLI está en maintenance ("Vue CLI is in maintenance mode") ([vue.config.js:13](frontend/vue.config.js#L13)).
 - Onboarding tiene 4 pasos definidos en `useOnboarding.ts` (`STEP_MAP`): intent, city, neighborhood, property_type ([composables/useOnboarding.ts:11-16](frontend/src/composables/useOnboarding.ts#L11-L16)).
