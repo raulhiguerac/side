@@ -81,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onUnmounted } from "vue";
+import { ref, watch, onUnmounted } from "vue";
 import { Camera, X } from "@lucide/vue";
 
 const props = defineProps<{
@@ -93,14 +93,22 @@ const files = defineModel<File[]>({ default: () => [] });
 
 const inputRef = ref<HTMLInputElement | null>(null);
 const isDragging = ref(false);
-const objectUrls = ref<string[]>([]);
+/**
+ * Generar y revocar object URLs es un efecto, no una derivación: como `computed`
+ * leía y escribía el mismo ref, se auto-invalidaba y podía revocar URLs que las
+ * miniaturas todavía estaban usando. Con `watch` la revocación ocurre una sola
+ * vez por cambio real de `files`.
+ */
+const previews = ref<string[]>([]);
 
-const previews = computed(() => {
-  objectUrls.value.forEach(URL.revokeObjectURL);
-  const urls = files.value.map((f) => URL.createObjectURL(f));
-  objectUrls.value = urls;
-  return urls;
-});
+watch(
+  files,
+  (list) => {
+    previews.value.forEach(URL.revokeObjectURL);
+    previews.value = list.map((f) => URL.createObjectURL(f));
+  },
+  { immediate: true }
+);
 
 function addFiles(list: FileList | null) {
   if (!list) return;
@@ -128,5 +136,5 @@ function removeFile(i: number) {
   files.value = next;
 }
 
-onUnmounted(() => objectUrls.value.forEach(URL.revokeObjectURL));
+onUnmounted(() => previews.value.forEach(URL.revokeObjectURL));
 </script>
