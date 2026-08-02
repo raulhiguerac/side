@@ -3,8 +3,11 @@
     :columns="columns"
     :data="rows"
     :loading="loading"
+    :row-key="(row: AdminPropertyRow) => row.id"
+    :selected-key="selectedId"
     empty-title="Sin propiedades"
     empty-description="Ninguna propiedad coincide con los filtros seleccionados."
+    @row-click="emit('rowClick', $event)"
   >
     <template #verification_status="{ row }">
       <span
@@ -69,7 +72,10 @@ import type { AdminPropertyRow } from "@/types/admin";
 defineProps<{
   rows: AdminPropertyRow[];
   loading?: boolean;
+  selectedId?: string | null;
 }>();
+
+const emit = defineEmits<{ rowClick: [row: AdminPropertyRow] }>();
 
 defineSlots<{
   actions?: (props: { row: AdminPropertyRow }) => unknown;
@@ -89,10 +95,13 @@ const LISTING_TYPE_LABELS: Record<AdminPropertyRow["listing_type"], string> = {
 };
 
 /**
- * Se muestran 5 de los 13 campos del schema. Meterlos todos mataría la
- * escaneabilidad, que es justamente el motivo de haber elegido tabla sobre el
- * card grid del feed: `id`/`owner_id` son UUIDs que no dicen nada sin un join
- * que hoy no existe, y área/habitaciones/baños son detalle, no moderación.
+ * La fila no alcanza para saber qué se está moderando: el modelo `Property` no
+ * tiene título ni dirección, y `id`/`owner_id` son UUIDs. La identificación la
+ * resuelve el panel de vista previa, no una columna más — por eso acá van solo
+ * los campos que sirven para *escanear* y decidir cuál abrir.
+ *
+ * Tipo y operación separados: juntos en una celda se leen como una sola cosa y
+ * obligan a parsear la fila entera para distinguir venta de arriendo.
  *
  * Sin columnas ordenables: `GET /admin/properties` todavía no acepta parámetro
  * de orden, y ordenar client-side reordenaría solo la página cargada, dando un
@@ -102,12 +111,14 @@ const columns = computed<ColumnDef<AdminPropertyRow>[]>(() => {
   const base: ColumnDef<AdminPropertyRow>[] = [
     { id: "verification_status", header: "Verificación" },
     {
-      id: "tipo",
+      id: "property_type",
       header: "Tipo",
-      accessorFn: (row) =>
-        `${PROPERTY_TYPE_LABELS[row.property_type]} · ${
-          LISTING_TYPE_LABELS[row.listing_type]
-        }`,
+      accessorFn: (row) => PROPERTY_TYPE_LABELS[row.property_type],
+    },
+    {
+      id: "listing_type",
+      header: "Operación",
+      accessorFn: (row) => LISTING_TYPE_LABELS[row.listing_type],
     },
     { id: "price", header: "Precio", meta: { align: "right" } },
     {
