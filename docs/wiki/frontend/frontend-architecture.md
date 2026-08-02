@@ -1,12 +1,13 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-07-29
+last-verified: 2026-08-01
 owners: [frontend]
 related:
   - "[[architecture]]"
   - "[[adr-no-component-library]]"
   - "[[adr-tanstack-table]]"
+  - "[[adr-admin-tabs-nested-routes]]"
   - "[[adr-vue-cli-deferred-vite-migration]]"
   - "[[frontend]]"
   - "[[frontend-onboarding-flow]]"
@@ -39,6 +40,7 @@ sources:
   - ../../sources/frontend/2026-07-16-admin-panel-nav-and-hub.md
   - ../../sources/frontend/2026-07-28-admin-panel-groundwork.md
   - ../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md
+  - ../../sources/frontend/2026-08-01-admin-panel-tabs-moderation-preview.md
 ---
 
 ## TL;DR
@@ -113,7 +115,7 @@ frontend/
 │   │   │   ├── detail/PropertyDetailView   # /listing/:id
 │   │   │   └── edit/EditPropertyView       # /properties/:id/edit — ver [[frontend-property-edit-form]]
 │   │   ├── dev/{DevPlaygroundView, CreatePropertyDevView}  # sin auth, dev only
-│   │   └── admin/{AdminHomeView, properties/AdminPropertiesView, catalog/AdminCatalogView}  # requiresAdmin — ver [[frontend-admin-panel]]
+│   │   └── admin/{AdminHomeView, properties/{AdminPropertiesLayout, ...ModerationView, ...PromotionsView, ...ImportsView}, catalog/AdminCatalogView}  # requiresAdmin — ver [[frontend-admin-panel]]
 │   └── components/
 │       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState, PrimaryButton, BaseTable}
 │       ├── onboarding/{IntentSelector, LocalitySelector, NeighborhoodSelector, PropertyTypeSelector}
@@ -396,11 +398,11 @@ Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. `ONBOARDING_DISMISSE
 
 | Carpeta | Propósito |
 |---|---|
-| `shared/` | NavBar, NavGuest (no-logged), NavUser (logged), BaseModal, PrimaryButton (botón gradiente verde reusable, presentacional puro), PaginationArrows, EmptyState, BaseSpinner y **BaseTable** (tabla dumb genérica sobre TanStack, un slot por columna — ver [[adr-tanstack-table]]) — reusables transversales. |
+| `shared/` | NavBar, NavGuest (no-logged), NavUser (logged), BaseModal, PrimaryButton (botón gradiente verde reusable, presentacional puro), PaginationArrows, EmptyState, BaseSpinner y **BaseTable** (tabla dumb genérica sobre TanStack, un slot por columna, con selección de fila opcional vía `rowKey`/`selectedKey` + emit `rowClick` — ver [[adr-tanstack-table]]) — reusables transversales. Gotcha de la selección: la clase de fila activa y el `hover:` se aplican de forma **excluyente**, porque Tailwind emite la variante `hover:` con más especificidad y si conviven despinta la fila seleccionada al pasarle el mouse. |
 | `onboarding/` | 4 selectors (Intent, Locality, Neighborhood, PropertyType) — usados desde el modal. |
 | `properties/` | Organizado en subcarpetas por dominio desde 2026-06-21. `cards/{PropertyCard, HouseCard}` — cards para feed (`HouseCard` sin uso actual). `photos/{PropertyPhotoGrid, PhotoGalleryPopup}`. `detail/{PropertyOverview, NearbyPlaces}`. `feed/FeedFilters` — sidebar de filtros con secciones Preferencias (ciudad, barrio, tipo) y Filtros (precio, área, habitaciones, baños); se pre-pobla con ciudades de `useCities`, barrios cargados dinámicamente al seleccionar ciudad vía `watch`. Mantiene estado local (`selected`, `selectedNeighborhoods`, `selectedTypes`, `filters: ref<FeedFilters>({})` con `v-model.number`); `property_types` se togglea con `toggleType(type)` (push/filter sobre el array). **Emite un solo `submit` con `{preferences, filters}` al click en "Aplicar"** — no reactivo con `watch`, decisión para evitar una petición por cada cambio de campo. El objeto `preferences` se arma en `onSubmit` leyendo los refs (`selected.value`, etc.), sin ref `preferences` duplicado. |
 | `settings/` | SettingsSidebar — navegación lateral del SettingsLayout. |
-| `admin/` | `properties/{BulkUploadPropertiesModal, AdminPropertiesTable}` — el modal de import por presigned PUT y la tabla de moderación (columnas + badges sobre `BaseTable`). Ver [[frontend-admin-panel]]. |
+| `admin/` | `properties/{BulkUploadPropertiesModal, AdminPropertiesTable, AdminPropertyPreviewPanel}` — el modal de import por presigned PUT, la tabla de moderación (columnas + badges sobre `BaseTable`) y el panel de vista previa, que reusa `PropertyOverview` y `PhotoGalleryPopup` del detalle público. Ver [[frontend-admin-panel]]. |
 | `map/` | MapUser — componente de mapa dumb/reusable (vue-leaflet declarativo, markers-prop + slot). Ver [[frontend-map-component]]. |
 | `avm/` | AvmForm / AvmResult — form del avalúo multi-step. `AvmForm` consume `composables/useAvmForm` (expone `AvmFormPayload`, `AvmPredictRequest`, `SelectedPlace`). Emite `place-selected` (marker en tiempo real) y `submit` (payload + place + neighborhood resuelto). `DevPlaygroundView` orquesta: recibe `place-selected` → actualiza `center` y `marker` reactivos → pasa al mapa. |
 
