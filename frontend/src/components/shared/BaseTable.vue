@@ -26,10 +26,23 @@
       </thead>
 
       <tbody>
+        <!--
+          `hover` y seleccionado son excluyentes a propósito: Tailwind emite
+          `.hover\:bg-brand-bg:hover` con más especificidad que `.bg-...-light`,
+          así que teniendo las dos clases el hover le ganaría al seleccionado y
+          la fila activa se despintaría al pasarle el mouse por encima.
+        -->
         <tr
           v-for="row in table.getRowModel().rows"
           :key="row.id"
-          class="border-b border-brand-divider last:border-0 hover:bg-brand-bg transition-colors"
+          @click="emit('rowClick', row.original)"
+          :class="[
+            'border-b border-brand-divider last:border-0 transition-colors',
+            isSelectable ? 'cursor-pointer' : '',
+            isSelected(row.original)
+              ? 'bg-brand-primary-light'
+              : 'hover:bg-brand-bg',
+          ]"
         >
           <td
             v-for="cell in row.getVisibleCells()"
@@ -79,6 +92,7 @@
 </template>
 
 <script setup lang="ts" generic="T">
+import { computed } from "vue";
 import {
   FlexRender,
   getCoreRowModel,
@@ -95,13 +109,27 @@ const props = withDefaults(
     loading?: boolean;
     emptyTitle?: string;
     emptyDescription?: string;
+    /** Sin `rowKey` la tabla no es seleccionable: no hay con qué comparar. */
+    rowKey?: (row: T) => string;
+    selectedKey?: string | null;
   }>(),
   {
     loading: false,
     emptyTitle: "Nada por acá",
     emptyDescription: "No hay resultados para los filtros seleccionados.",
+    rowKey: undefined,
+    selectedKey: null,
   }
 );
+
+const emit = defineEmits<{ rowClick: [row: T] }>();
+
+const isSelectable = computed(() => props.rowKey !== undefined);
+
+function isSelected(row: T): boolean {
+  if (!props.rowKey || props.selectedKey == null) return false;
+  return props.rowKey(row) === props.selectedKey;
+}
 
 /**
  * Los getters son la forma que pide el adaptador de Vue para que la tabla
