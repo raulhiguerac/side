@@ -234,7 +234,13 @@ def build_models(
         condition=item.condition,
         currency="COP",
         status=ListingStatus.active,
-        verification_status=VerificationStatus.unverified,
+        # `pending` y no `unverified`: la transición `unverified -> pending` está
+        # pensada para que el dueño pida verificación, y en un import masivo no
+        # hay dueño que la dispare. El admin que sube el CSV ya está pidiendo que
+        # se revise el lote, así que las filas nacen encoladas en vez de quedar
+        # fuera de toda cola. Nacer en un estado no es una transición, así que no
+        # pasa por `VerifyPropertyUseCase` ni por su `_ALLOWED_TRANSITIONS`.
+        verification_status=VerificationStatus.pending,
         floor_number=floor_number,
         total_floors=total_floors,
         area_m2=item.area_m2,
