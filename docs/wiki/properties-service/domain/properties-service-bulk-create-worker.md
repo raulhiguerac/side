@@ -1,7 +1,7 @@
 ---
 title: Bulk-create worker — streaming CSV desde MinIO (properties-service)
 status: stable
-last-verified: 2026-07-29
+last-verified: 2026-08-01
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -17,6 +17,7 @@ sources:
   - ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md
   - ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md
   - ../../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md
+  - ../../../sources/properties-service/2026-08-01-bulk-import-pending-verification.md
 ---
 
 ## TL;DR
@@ -154,14 +155,14 @@ Los 1.256 fallos de geo mezclan tres causas que **no se han separado**: basura d
 
 ## Con qué estado nacen las filas importadas
 
-`build_models` no deja que la fila herede defaults del modelo: fija explícitamente `status=ListingStatus.active` y `verification_status=VerificationStatus.unverified` ([seed_mapper.py:236-237](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py#L236-L237)).
+`build_models` no deja que la fila herede defaults del modelo: fija explícitamente `status=ListingStatus.active` y `verification_status=VerificationStatus.pending` ([seed_mapper.py:236,243](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py#L236-L243)).
 
-Las dos mitades de esa decisión tiran para lados distintos:
+Las dos mitades responden a decisiones distintas:
 
-- **`active`** significa que un import publica directo. Las 18.744 propiedades del smoke test entraron al feed público en el momento del commit, sin revisión previa.
-- **`unverified`** significa que quedan fuera de la cola de moderación, porque la state machine de verificación solo admite `unverified → pending` y **nada dispara ese salto** en un import (ver [[properties-service-admin]]). En el flujo normal lo pide el dueño; acá no hay dueño pidiendo.
+- **`active`** significa que un import publica directo — y pisa el default `draft` del modelo. Las 18.744 propiedades del smoke test entraron al feed público en el momento del commit. Se mantiene a propósito: publicar y verificar son ejes independientes, y un listing puede estar visible mientras se revisa (ver [[properties-service-admin]]).
+- **`pending`** (desde el 2026-08-01, antes `unverified`) mete cada fila importada en la cola de moderación. El motivo: la transición `unverified → pending` está pensada para que el **dueño** pida verificación, y en un import no hay dueño — el admin que sube el CSV ya está pidiendo que se revise el lote. Nacer en un estado no es una transición, así que no pasa por `VerifyPropertyUseCase` ni por su `_ALLOWED_TRANSITIONS`.
 
-O sea que hoy el import produce listings visibles y no verificables. Cuál de las dos mitades cambiar —que el import escriba `pending`, o que el panel gane una acción de "enviar a revisión"— es una decisión de producto abierta, registrada en [[open-items]].
+Quedan dos consecuencias abiertas, registradas en [[open-items]]: las filas importadas **antes** de ese cambio siguen en `unverified` y nada las va a mover, y una cola de 18.744 no es trabajable sin un criterio de priorización.
 
 ## Gaps conocidos
 
@@ -199,4 +200,4 @@ O sea que hoy el import produce listings visibles y no verificables. Cuál de la
 - `BulkPropertyCsvRow` hereda `StrictBase` (`extra="forbid"`, sin `strict=True`) y mantiene como `str` los campos con valores no numéricos del CSV real, para reusar los parsers tolerantes de `seed_mapper.py` ([bulk_schemas.py](backend/properties-service/src/app/workers/schemas/bulk_schemas.py)).
 - `BulkRowError(line, ref, issues)` usa `line` como contador monotónico sobre el generador (no el índice windowed del chunk) ([bulk_schemas.py](backend/properties-service/src/app/workers/schemas/bulk_schemas.py), [row_ref.py](backend/properties-service/src/app/workers/helpers/row_ref.py)).
 - El UC de encolado rechaza reintentar un job vencido con `BulkJobExpiredError` (409), comparando `datetime.now(timezone.utc)` contra `target_job.expires_at` ([bulk_create_properties.py](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py)).
-- `build_models` fija `status=ListingStatus.active` y `verification_status=VerificationStatus.unverified` en cada `Property` construida, en vez de dejar que apliquen los defaults del modelo ([seed_mapper.py:236-237](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py#L236-L237)).
+- `build_models` fija `status=ListingStatus.active` y `verification_status=VerificationStatus.pending` en cada `Property` construida, en vez de dejar que apliquen los defaults del modelo ([seed_mapper.py:236,243](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py#L236-L243)).

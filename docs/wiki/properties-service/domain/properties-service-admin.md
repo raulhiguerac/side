@@ -1,7 +1,7 @@
 ---
 title: Dominio admin — properties-service
 status: draft
-last-verified: 2026-07-29
+last-verified: 2026-08-01
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -14,7 +14,8 @@ related:
   - "[[open-items]]"
   - "[[properties-service-bulk-create-worker]]"
   - "[[properties-service-users]]"
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md, ../../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md]
+  - "[[properties-service-search]]"
+sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md, ../../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md, ../../../sources/properties-service/2026-08-01-bulk-import-pending-verification.md]
 ---
 
 ## TL;DR
@@ -65,21 +66,31 @@ Una transición no permitida lanza `InvalidStatusTransitionError`. Tras el cambi
 
 Una transición no permitida lanza el mismo `InvalidStatusTransitionError` que `set_status`. El UC no recibe `principal` en su firma (`execute(*, property_id, request)`), así que el campo `verified_by` del modelo `Property` nunca se escribe desde este flujo — queda muerto.
 
-### Consecuencia: aprobar exige dos saltos, y el primero no tiene quién lo dispare
+### Aprobar exige dos saltos; el import ahora entra directo en `pending`
 
-Detectado el 2026-07-29 al estimar los botones de moderación del panel admin. La state machine de arriba se lee como una cola de moderación razonable, pero **nada la alimenta**:
+Desde `unverified` el único destino legal es `pending`, y recién desde ahí se puede `verified` o `rejected` — o sea que **ninguna propiedad se aprueba en una sola llamada**. En el diseño original ese primer salto lo dispara el dueño al pedir verificación.
 
-- Una propiedad nace `unverified` (`create_property`), y el worker de import **la fija explícitamente** en `unverified` (`seed_mapper.py:236-237`).
-- Desde `unverified` el único destino legal es `pending`. Recién desde `pending` se puede `verified` o `rejected`.
-- O sea que **ninguna propiedad se puede aprobar en un paso**, y las 18.744 del import de 20k están todas en ese estado.
+Un import masivo no tiene dueño pidiendo nada, así que hasta el 2026-08-01 las filas importadas quedaban en `unverified`, fuera de toda cola (detectado el 2026-07-29 al estimar los botones de moderación). **Resuelto haciendo que el import escriba `pending` directo** ([seed_mapper.py:243](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py#L243)): el admin que sube el CSV *es* quien está pidiendo que se revise el lote, así que las filas nacen encoladas.
 
-En el diseño original el salto a `pending` lo haría el dueño al pedir verificación. En un import masivo no hay dueño pidiendo nada, así que hoy esas filas están fuera de cualquier cola. Peor: el mismo `seed_mapper` las crea con `status=active`, con lo cual **están publicadas y visibles en el feed sin verificar**. Ver [[open-items]] y [[properties-service-bulk-create-worker]].
+Es legal porque **nacer en un estado no es una transición**: el worker construye el modelo y hace `bulk_insert`, sin pasar nunca por `VerifyPropertyUseCase` ni por su `_ALLOWED_TRANSITIONS`.
 
 Además, `verified` es **terminal**: no hay transición de salida. Aprobar es irreversible — desverificar algo aprobado por error requiere tocar la DB.
+
+### Publicar y verificar son ejes independientes, por decisión
+
+Las dos state machines son separadas y **no** hay regla que ate publicar a estar verificado. Una propiedad puede estar visible *mientras* se revisa, avisándolo con un badge; acoplarlas sería una decisión de producto adicional, no una regla del dominio.
+
+Por eso el import mantiene `status=ListingStatus.active` ([seed_mapper.py:236](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py#L236)) — que además pisa el default `draft` del modelo. La contracara es que el aviso hoy solo existe en el detalle público: `PropertyCardSchema` no lleva `verification_status`, así que el feed y el mapa no pueden mostrarlo (ver [[properties-service-search]]). Y mientras el 100% del inventario esté en `pending`, el badge no comunica nada: su valor depende de que la cola se trabaje, no de mostrarlo. Ver [[open-items]].
+
+### El detalle admin está acoplado al público
+
+`GET /admin/properties/{id}` devuelve el mismo `PropertyDetailSchema` que el endpoint público **y comparte la key `cache_property`**. Eso bloquea sumarle campos admin-only —documentos de verificación, `owner_id`, `rejection_reason`— sin partir antes el schema: agregarlos los publicaría en el endpoint público y envenenaría el cache compartido.
 
 ### Los tres endpoints de moderación devuelven 204 sin cuerpo
 
 `PATCH /properties/{id}/status`, `PATCH /properties/{id}/verification` y `POST /properties/{id}/estimated-price` responden `204 NO CONTENT`. Quien los consuma no recibe la fila actualizada, así que después de actuar hay que refetchear o parchear el registro en local — decisión que se complica cuando la lista está filtrada, porque actuar sobre una fila debería sacarla del resultado. Ver [[frontend-admin-panel]].
+
+Los dos de moderación **sí invalidan cache** tras escribir (`cache_property` y las keys derivadas), así que refetchear devuelve el estado nuevo. `set_estimated_price` **no toca cache** — probablemente correcto, porque `admin_estimated_price` no forma parte de `PropertyDetailSchema`, pero conviene confirmarlo al cablear esa acción.
 
 ## Precio estimado dual
 
@@ -136,7 +147,11 @@ Dos detalles de implementación que valen la pena:
 - `set_status` valida transiciones contra `_ALLOWED_TRANSITIONS` y lanza `InvalidStatusTransitionError` si no aplica ([set_status.py:39-44](backend/properties-service/src/app/services/admin/use_cases/moderation/set_status.py#L39-L44)).
 - `VerifyPropertyUseCase._ALLOWED_TRANSITIONS` mapea `unverified → [pending]`, `pending → [verified, rejected]`, `rejected → [pending]` y `verified → []`, así que `verified` no tiene transición de salida ([verify.py:13-18](backend/properties-service/src/app/services/admin/use_cases/moderation/verify.py#L13-L18)).
 - Ninguna propiedad puede pasar de `unverified` a `verified` en una sola llamada: `pending` es paso obligatorio ([verify.py:13-18](backend/properties-service/src/app/services/admin/use_cases/moderation/verify.py#L13-L18)).
-- El worker de import fija `status=ListingStatus.active` y `verification_status=VerificationStatus.unverified` al construir cada `Property` ([seed_mapper.py:236-237](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py#L236-L237)).
+- El worker de import fija `status=ListingStatus.active` y `verification_status=VerificationStatus.pending` al construir cada `Property` ([seed_mapper.py:236,243](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py#L236-L243)).
+- Construir un `Property` con un `verification_status` dado no pasa por `VerifyPropertyUseCase`, así que `_ALLOWED_TRANSITIONS` no aplica al estado inicial de una fila importada ([seed_mapper.py](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py), [verify.py](backend/properties-service/src/app/services/admin/use_cases/moderation/verify.py)).
+- `GetPropertyDetailAdminUseCase` devuelve `PropertyDetailSchema` y usa la misma key `cache_property` que el `GetPropertyUseCase` público ([get_property_detail.py:25](backend/properties-service/src/app/services/admin/use_cases/get_property_detail.py#L25), [get_property.py:29](backend/properties-service/src/app/services/listing/use_cases/property_core/get_property.py#L29)).
+- `GetPropertyDetailAdminUseCase` solo escribe al cache cuando `status == active`, así que borradores e inactivos se leen siempre desde la DB ([get_property_detail.py:46-54](backend/properties-service/src/app/services/admin/use_cases/get_property_detail.py#L46-L54)).
+- `VerifyPropertyUseCase` y `SetPropertyStatusUseCase` borran `cache_property` tras escribir; `SetEstimatedPriceUseCase` no invalida cache ([verify.py:51](backend/properties-service/src/app/services/admin/use_cases/moderation/verify.py#L51), [set_status.py:55](backend/properties-service/src/app/services/admin/use_cases/moderation/set_status.py#L55), [set_estimated_price.py](backend/properties-service/src/app/services/admin/use_cases/estimated_price/set_estimated_price.py)).
 - `set_property_status`, `verify_property` y `set_estimated_price` declaran `status_code=status.HTTP_204_NO_CONTENT` — ninguno devuelve la entidad actualizada ([admin.py:156-190](backend/properties-service/src/app/api/routes/admin.py#L156-L190)).
 - `InvalidStatusTransitionError` usa el código `INVALID_STATUS_TRANSITION` y lleva `{current, target}` en su contexto ([listing.py:159-165](backend/properties-service/src/app/core/exceptions/listing.py#L159-L165)).
 - `SetEstimatedPriceUseCase` escribe `admin_estimated_price` si hay principal, `ml_estimated_price` si no ([set_estimated_price.py:26-32](backend/properties-service/src/app/services/admin/use_cases/estimated_price/set_estimated_price.py#L26-L32)).
