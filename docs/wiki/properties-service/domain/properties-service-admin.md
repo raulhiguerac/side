@@ -1,7 +1,7 @@
 ---
 title: Dominio admin — properties-service
 status: draft
-last-verified: 2026-08-01
+last-verified: 2026-08-02
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -9,13 +9,14 @@ related:
   - "[[adr-estimated-price-dual-signal]]"
   - "[[adr-bulk-idempotent-external-id]]"
   - "[[adr-admin-offset-pagination]]"
+  - "[[adr-verification-reversible-lifecycle]]"
   - "[[analytics-service]]"
   - "[[frontend-admin-panel]]"
   - "[[open-items]]"
   - "[[properties-service-bulk-create-worker]]"
   - "[[properties-service-users]]"
   - "[[properties-service-search]]"
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md, ../../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md, ../../../sources/properties-service/2026-08-01-bulk-import-pending-verification.md]
+sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md, ../../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md, ../../../sources/properties-service/2026-08-01-bulk-import-pending-verification.md, ../../../sources/properties-service/2026-08-02-moderation-lifecycle-verified-not-terminal.md]
 ---
 
 ## TL;DR
@@ -27,7 +28,7 @@ El dominio de **operación interna**: moderación (status + verificación), prec
 | UC | Archivo | Qué hace |
 |---|---|---|
 | `SetPropertyStatusUseCase` | `use_cases/moderation/set_status.py` | Cambia `status` validando la state machine; invalida cache. |
-| `VerifyPropertyUseCase` | `use_cases/moderation/verify.py` | Cambia `verification_status` validando su propia state machine; **no** setea `verified_by` (campo muerto — el UC no recibe `principal`). |
+| `VerifyPropertyUseCase` | `use_cases/moderation/verify.py` | Cambia `verification_status` validando su propia state machine; firma `verified_by` y `updated_by` con el admin. |
 | `SetEstimatedPriceUseCase` | `use_cases/estimated_price/set_estimated_price.py` | Escribe precio estimado admin **o** ML según haya principal. |
 | `GetPropertiesAdminUseCase` | `use_cases/get_properties.py` | Listado admin paginado con filtros + `total`. |
 | `GetPropertyDetailAdminUseCase` | `use_cases/get_property_detail.py` | Detalle admin (sin reglas de visibilidad). |
@@ -55,16 +56,34 @@ Una transición no permitida lanza `InvalidStatusTransitionError`. Tras el cambi
 
 ### State machine de `verification_status` (independiente de la de arriba)
 
-`VerifyPropertyUseCase` tiene su **propia** `_ALLOWED_TRANSITIONS` sobre `VerificationStatus`, separada de la de `ListingStatus` de arriba — no documentada hasta ahora:
+`VerifyPropertyUseCase` tiene su **propia** `_ALLOWED_TRANSITIONS` sobre `VerificationStatus`, separada de la de `ListingStatus` de arriba:
 
 | Desde | Hacia |
 |---|---|
 | `unverified` | `pending` |
 | `pending` | `verified`, `rejected` |
 | `rejected` | `pending` |
-| `verified` | — (terminal, sin salida) |
+| `verified` | `pending`, `rejected` |
 
-Una transición no permitida lanza el mismo `InvalidStatusTransitionError` que `set_status`. El UC no recibe `principal` en su firma (`execute(*, property_id, request)`), así que el campo `verified_by` del modelo `Property` nunca se escribe desde este flujo — queda muerto.
+Una transición no permitida lanza el mismo `InvalidStatusTransitionError` que `set_status`.
+
+**`verified` no es terminal** (desde el 2026-08-02, ver [[adr-verification-reversible-lifecycle]]): una property aprobada que después viola las normas se revoca a `rejected`, y un cambio de fotos la devuelve a `pending`. Lo único prohibido desde ahí es volver a `unverified`, que existe solo como estado inicial y al que no apunta ninguna transición.
+
+Dar de baja una publicación **no** vive en este eje: es `status: active → inactive`, y funciona como takedown real porque la máquina del dueño solo hace `draft ↔ active` (ver [[properties-service-listing]]).
+
+### Quién moderó queda firmado
+
+`execute()` recibe `principal` y escribe `updated_by` siempre. `verified_by` se firma cuando la verificación queda **resuelta** (`verified` o `rejected`) y se **limpia** al reencolar a `pending`, junto con `rejection_reason` — una property sin resolver no puede tener aprobador.
+
+`verified_by` se sostiene aparte de `updated_by` porque este último lo pisa cualquier escritura posterior, incluida la del dueño editando el precio. `SetPropertyStatusUseCase` también recibe `principal` y escribe `updated_by`; antes las dos acciones de moderación eran anónimas en la DB.
+
+Lo que sigue faltando es **cuándo**: no existe `verified_at`, y `updated_at` lo pisa la siguiente escritura (ver [[open-items]]).
+
+### `rejection_reason` está atado al target, y la regla vive en el schema
+
+`VerifyPropertyRequest` valida con un `model_validator(mode="after")`: el motivo es **obligatorio** al rechazar y **prohibido** en cualquier otro target, incluido `pending` — reencolar no es rechazar. Antes el UC lo asignaba tal cual llegara, así que aprobar mandando motivo dejaba una fila que se contradice, y rechazar sin motivo dejaba al dueño sin saber qué corregir.
+
+Va en el schema y no en el UC porque es validación de la forma del payload, y así la asignación incondicional de `verify.py` queda correcta por construcción. Un motivo en blanco cuenta como ausente: `StrictBase` tiene `str_strip_whitespace=True`, así que `"   "` llega como `""`.
 
 ### Aprobar exige dos saltos; el import ahora entra directo en `pending`
 
@@ -74,7 +93,6 @@ Un import masivo no tiene dueño pidiendo nada, así que hasta el 2026-08-01 las
 
 Es legal porque **nacer en un estado no es una transición**: el worker construye el modelo y hace `bulk_insert`, sin pasar nunca por `VerifyPropertyUseCase` ni por su `_ALLOWED_TRANSITIONS`.
 
-Además, `verified` es **terminal**: no hay transición de salida. Aprobar es irreversible — desverificar algo aprobado por error requiere tocar la DB.
 
 ### Publicar y verificar son ejes independientes, por decisión
 
@@ -88,7 +106,9 @@ Por eso el import mantiene `status=ListingStatus.active` ([seed_mapper.py:236](b
 
 ### Los tres endpoints de moderación devuelven 204 sin cuerpo
 
-`PATCH /properties/{id}/status`, `PATCH /properties/{id}/verification` y `POST /properties/{id}/estimated-price` responden `204 NO CONTENT`. Quien los consuma no recibe la fila actualizada, así que después de actuar hay que refetchear o parchear el registro en local — decisión que se complica cuando la lista está filtrada, porque actuar sobre una fila debería sacarla del resultado. Ver [[frontend-admin-panel]].
+`PATCH /properties/{id}/status`, `PATCH /properties/{id}/verification` y `POST /properties/{id}/estimated-price` responden `204 NO CONTENT`. **Se decidió dejarlo así** (2026-08-02): el consumidor refetchea.
+
+La alternativa —devolver la fila actualizada para que el cliente la parchee en memoria— se descartó porque con filtros activos el front tendría que decidir si la fila sigue matcheando y recalcular el `total`, o sea reimplementar en JavaScript el `WHERE` de `_apply_filters` del repo, en un segundo lugar que hay que mantener sincronizado. Ver [[frontend-admin-panel]].
 
 Los dos de moderación **sí invalidan cache** tras escribir (`cache_property` y las keys derivadas), así que refetchear devuelve el estado nuevo. `set_estimated_price` **no toca cache** — probablemente correcto, porque `admin_estimated_price` no forma parte de `PropertyDetailSchema`, pero conviene confirmarlo al cablear esa acción.
 
@@ -145,7 +165,11 @@ Dos detalles de implementación que valen la pena:
 - `get_all` y `count_all` comparten `_apply_filters`, y `get_all` aplica `noload` a `images`, `location` y `promotions` ([sql_property_repository.py](backend/properties-service/src/app/services/admin/adapters/sql_property_repository.py)).
 - Las rutas `/admin/*` están protegidas con `dependencies=[Depends(require_admin)]` a nivel router ([admin.py:43-47](backend/properties-service/src/app/api/routes/admin.py#L43-L47)).
 - `set_status` valida transiciones contra `_ALLOWED_TRANSITIONS` y lanza `InvalidStatusTransitionError` si no aplica ([set_status.py:39-44](backend/properties-service/src/app/services/admin/use_cases/moderation/set_status.py#L39-L44)).
-- `VerifyPropertyUseCase._ALLOWED_TRANSITIONS` mapea `unverified → [pending]`, `pending → [verified, rejected]`, `rejected → [pending]` y `verified → []`, así que `verified` no tiene transición de salida ([verify.py:13-18](backend/properties-service/src/app/services/admin/use_cases/moderation/verify.py#L13-L18)).
+- `VerifyPropertyUseCase._ALLOWED_TRANSITIONS` mapea `unverified → [pending]`, `pending → [verified, rejected]`, `rejected → [pending]` y `verified → [pending, rejected]` ([verify.py:13-18](backend/properties-service/src/app/services/admin/use_cases/moderation/verify.py#L13-L18)).
+- `VerifyPropertyUseCase.execute()` y `SetPropertyStatusUseCase.execute()` reciben `principal` y escriben `updated_by` ([verify.py](backend/properties-service/src/app/services/admin/use_cases/moderation/verify.py), [set_status.py](backend/properties-service/src/app/services/admin/use_cases/moderation/set_status.py)).
+- `VerifyPropertyUseCase` escribe `verified_by` cuando el target está en `_RESOLVED_STATES` (`verified`, `rejected`) y lo deja en `None` en cualquier otro caso ([verify.py](backend/properties-service/src/app/services/admin/use_cases/moderation/verify.py)).
+- `VerifyPropertyRequest` declara un `model_validator(mode="after")` que exige `rejection_reason` si el target es `rejected` y lo rechaza si no lo es ([admin_schemas.py](backend/properties-service/src/app/services/admin/schemas/admin_schemas.py)).
+- Las rutas `PATCH /admin/properties/{id}/status` y `PATCH /admin/properties/{id}/verification` declaran `principal: Annotated[Principal, Depends(require_admin)]` ([admin.py](backend/properties-service/src/app/api/routes/admin.py)).
 - Ninguna propiedad puede pasar de `unverified` a `verified` en una sola llamada: `pending` es paso obligatorio ([verify.py:13-18](backend/properties-service/src/app/services/admin/use_cases/moderation/verify.py#L13-L18)).
 - El worker de import fija `status=ListingStatus.active` y `verification_status=VerificationStatus.pending` al construir cada `Property` ([seed_mapper.py:236,243](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py#L236-L243)).
 - Construir un `Property` con un `verification_status` dado no pasa por `VerifyPropertyUseCase`, así que `_ALLOWED_TRANSITIONS` no aplica al estado inicial de una fila importada ([seed_mapper.py](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py), [verify.py](backend/properties-service/src/app/services/admin/use_cases/moderation/verify.py)).

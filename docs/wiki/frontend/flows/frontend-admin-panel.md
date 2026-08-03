@@ -1,7 +1,7 @@
 ---
 title: Panel admin (frontend)
 status: draft
-last-verified: 2026-08-01
+last-verified: 2026-08-02
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -14,6 +14,8 @@ related:
   - "[[adr-no-component-library]]"
   - "[[adr-tanstack-table]]"
   - "[[adr-admin-tabs-nested-routes]]"
+  - "[[adr-moderation-panel-staged-form]]"
+  - "[[adr-verification-reversible-lifecycle]]"
   - "[[open-items]]"
 sources:
   - ../../../sources/frontend/2026-07-16-admin-panel-nav-and-hub.md
@@ -22,11 +24,12 @@ sources:
   - ../../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md
   - ../../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md
   - ../../../sources/frontend/2026-08-01-admin-panel-tabs-moderation-preview.md
+  - ../../../sources/frontend/2026-08-02-moderation-panel-form-over-buttons.md
 ---
 
 ## TL;DR
 
-Panel admin embebido en la app existente (no un subdominio separado): un link condicional en el nav, rutas gateadas por rol, y una vista hub que orquesta hacia propiedades y catálogo. Desde el 2026-08-01 la sección de propiedades es un layout con tres tabs como rutas hijas (moderación, promociones, importaciones), y la de moderación combina tabla paginada + panel de vista previa de la propiedad seleccionada. Lo que sigue faltando son las **acciones** de moderación, los filtros, y toda la sección de catálogo.
+Panel admin embebido en la app existente (no un subdominio separado): un link condicional en el nav, rutas gateadas por rol, y una vista hub que orquesta hacia propiedades y catálogo. Desde el 2026-08-01 la sección de propiedades es un layout con tres tabs como rutas hijas (moderación, promociones, importaciones), y la de moderación combina tabla paginada + panel de vista previa. Desde el 2026-08-02 el panel lleva además el **formulario de moderación**, todavía sin cablear a la API. Lo que sigue faltando son la ejecución de ese guardado, los filtros, y toda la sección de catálogo.
 
 ## Por qué embebido, no subdominio
 
@@ -162,22 +165,47 @@ Reusa las piezas del detalle público sin tocarlas: `PropertyOverview` con los 1
 
 La vista de moderación (`AdminPropertiesModerationView`) trae tabla, `PaginationArrows`, "Mostrando X-Y de Z", banner de error y el panel de vista previa.
 
-## Lo que falta para que las acciones de moderación funcionen
+## Moderar se hace en el panel, no en la tabla (2026-08-02)
 
-Las dos acciones (aprobar/rechazar y publicar/despublicar) parecen un par de composables, pero el backend impone máquinas de estado — ver [[properties-service-admin]] para el detalle. Lo que eso implica acá:
+La decisión completa y las alternativas descartadas están en [[adr-moderation-panel-staged-form]]. El resumen: **moderar exige mirar**, y aprobar desde una fila de la tabla es aprobar sin ver las fotos. Las columnas disponibles —tipo, precio, fecha— no alcanzan para decidir nada.
 
-- **Los botones dependen del estado de cada fila**, no son un set fijo. Y la tabla de transiciones vive solo en el backend, así que duplicarla en el front arriesga drift silencioso.
-- **El primer salto de las importadas ya está resuelto**: desde el 2026-08-01 el import las crea en `pending` ([[properties-service-bulk-create-worker]]), así que aprobar o rechazar aplica directo. Las importadas *antes* de esa fecha siguen en `unverified` y necesitan backfill ([[open-items]]).
-- **`verified` es terminal.** Aprobar es irreversible, así que no debería ser un click suelto en una fila.
-- **Rechazar necesita motivo** (`rejection_reason`, máx. 500), o sea un modal con textarea.
-- **Los tres endpoints devuelven 204 sin cuerpo**, y `useAdminProperties` no sabe recargar la página actual: solo tiene `load()` (que resetea a la 1), `next()` y `prev()`. Falta un `reload()`.
-- **Sin sistema de toasts**, el resultado de la acción no tiene dónde mostrarse — el mismo gap que deja al modal de import cerrando en silencio.
+Consecuencia práctica: la tabla no cambió ni una línea. Como `AdminPropertiesModerationView` nunca pasa el slot `#actions`, `AdminPropertiesTable` no agrega la columna (el chequeo `slots.actions`), y el click en fila sigue siendo solo selección.
+
+### Formulario con borrador, no botones instantáneos
+
+Se construyó primero una barra de botones (`AdminModerationActionBar.vue`) y se borró. El problema decisivo no era estético: con la tabla filtrada por `verification_status=pending`, cambiar la verificación **saca la fila de la lista antes** de poder tocar el status. Moderar los dos ejes no era lento, era imposible.
+
+`AdminModerationForm.vue` lo reemplaza — dos selects, cambios en borrador, un "Guardar". La fila sale del filtro una sola vez, cuando el trabajo terminó.
+
+Cuatro cosas que resuelve de paso:
+
+- **Los selects ofrecen el estado actual más los destinos legales, y nada más.** Llegar a `verified` desde `unverified` son dos guardados por construcción, porque `verified` no está en la lista. La regla de los dos saltos se comunica en vez de aparecer como un 409.
+- **El motivo del rechazo es inline**, bajo el select, solo al elegir "Rechazada", con contador de 500 y "Guardar" deshabilitado mientras esté vacío. Coincide con el `model_validator` que el backend agregó el mismo día ([[properties-service-admin]]): el motivo es obligatorio al rechazar y prohibido en el resto.
+- **Aprobar dejó de ser irreversible.** `verified` ya no es terminal ([[adr-verification-reversible-lifecycle]]), así que desde ahí el select ofrece "Reencolar" y "Revocar".
+- **El formulario va detrás de `v-if="property"`**, así que ni se dibuja mientras la foto carga — no se puede moderar a ciegas.
+
+### El formulario es tonto; el composable irá en la vista
+
+Props: `status`, `verificationStatus`, `saving`, `successMessage`, `errorMessage`. Emite `save` con **solo lo que cambió**. El panel lo alimenta desde el detalle que ya trajo —`PropertyDetailSchema` incluye ambos campos— y reenvía el evento hacia arriba con el `propertyId`.
+
+El composable de ejecución pertenece a `AdminPropertiesModerationView`, la única que tiene la lista, la selección y el refetch. Dejar la llamada fuera del formulario y fuera del panel evita atar a cualquiera de los dos a esta pantalla.
+
+`constants/moderationTransitions.ts` espeja las dos tablas del backend, con la fuente de verdad nombrada en un comentario — el riesgo de drift es real y explícito.
+
+`ModerationPayload` vive en `types/admin.ts` y no exportado del SFC: el shim de `*.vue` solo declara el default export, así que un import de tipo con nombre desde un componente rompería bajo `vue-tsc`.
+
+## Lo que falta para cerrar la moderación
+
+- **La ejecución.** El `save` no lo escucha nadie todavía. Un guardado son **uno o dos requests, no atómicos** (son endpoints distintos); si el segundo falla con 409 el primero ya se aplicó, así que hay que reportar por eje y recargar.
+- **`useAdminProperties` no sabe recargar la página actual**: solo tiene `load()` (que resetea a la 1), `next()` y `prev()`. Falta un `reload()`.
+- **Las importadas antes del 2026-08-01 siguen en `unverified`** y necesitan backfill ([[open-items]]).
+- **El precio estimado quedó fuera del panel**, y no solo por alcance: `admin_estimated_price` y `ml_estimated_price` no están en ningún schema de respuesta, así que el input sería write-only — escribir un precio sin ver el guardado ni el del modelo. Además no es moderación: es una señal de pricing para el AVM.
 
 ## Estado del cableado: 4 de 23 endpoints admin con consumer
 
 En properties-service hay 4 cableados —listado, detalle (el panel de preview) y los dos pasos del bulk upload— y quedan 8 sin consumer: verificación, status, precio estimado, los 4 de promociones y el status de un bulk job. En catalog-service son **11 de 11** sin cablear — `AdminCatalogView` está vacía.
 
-De los tres que faltan para la tab de moderación, los tres son acciones sobre la propiedad seleccionada: `PATCH /verification`, `PATCH /status` y `POST /estimated-price`.
+De los tres que faltan para la tab de moderación, los tres son acciones sobre la propiedad seleccionada: `PATCH /verification`, `PATCH /status` y `POST /estimated-price`. Los dos primeros ya tienen su UI construida en `AdminModerationForm`; falta solo el composable que los llame.
 
 Tampoco hay módulo de API admin. Se evaluó crear `src/api/adminApi.ts` y **se descartó**: las instancias de axios del proyecto son una por servicio, y "admin" no es un servicio — los endpoints admin viven en properties y en catalog. En su lugar la ruta se agregó a `constants/propertiesEndpoints.ts` y el fetch vive en el composable, que es el patrón que ya usan `useFeed` y `useProfileListings`.
 
@@ -213,3 +241,9 @@ Tampoco hay módulo de API admin. Se evaluó crear `src/api/adminApi.ts` y **se 
 - No existe `src/api/adminApi.ts` — el directorio `src/api/` tiene solo `avmApi`, `catalogApi`, `interceptors`, `propertiesApi` y `usersApi`, uno por servicio ([api/](frontend/src/api)).
 - No existe ningún botón de bulk-import en `AdminCatalogView.vue` — el endpoint de catálogo requiere `locality_id`, no es una acción global ([views/admin/catalog/AdminCatalogView.vue](frontend/src/views/admin/catalog/AdminCatalogView.vue)).
 - `propertiesApi` tiene `timeout: 8000`, suficiente ahora que los tres requests del modal son cortos ([api/propertiesApi.ts](frontend/src/api/propertiesApi.ts)).
+- `AdminPropertiesModerationView.vue` no declara ningún `<template #actions>`, así que `AdminPropertiesTable` no agrega la columna de acciones ([AdminPropertiesModerationView.vue](frontend/src/views/admin/properties/AdminPropertiesModerationView.vue), [AdminPropertiesTable.vue](frontend/src/components/admin/properties/AdminPropertiesTable.vue)).
+- `AdminModerationForm.vue` construye las opciones de sus dos selects desde `VERIFICATION_TRANSITIONS` y `LISTING_STATUS_TRANSITIONS` ([moderationTransitions.ts](frontend/src/constants/moderationTransitions.ts), [AdminModerationForm.vue](frontend/src/components/admin/properties/AdminModerationForm.vue)).
+- `AdminModerationForm.vue` no importa `propertiesApi`: emite `save` con los campos que cambiaron y nada más ([AdminModerationForm.vue](frontend/src/components/admin/properties/AdminModerationForm.vue)).
+- El textarea del motivo solo se renderiza cuando el target de verificación elegido es `rejected`, y bloquea "Guardar" si está vacío ([AdminModerationForm.vue](frontend/src/components/admin/properties/AdminModerationForm.vue)).
+- `AdminPropertyPreviewPanel.vue` monta el formulario detrás de `v-if="property"` y reenvía su `save` con el `propertyId` ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue)).
+- `useAdminProperties` expone `load`, `next` y `prev`, pero no una recarga de la página actual ([useAdminProperties.ts](frontend/src/composables/admin/useAdminProperties.ts)).

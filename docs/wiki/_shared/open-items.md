@@ -1,7 +1,7 @@
 ---
 title: Open items — gaps y deuda técnica cross-service
 status: draft
-last-verified: 2026-08-01
+last-verified: 2026-08-02
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -16,13 +16,16 @@ related:
   - "[[adr-gmaps-places-geocoding]]"
   - "[[adr-bulk-idempotent-external-id]]"
   - "[[adr-admin-offset-pagination]]"
+  - "[[adr-verification-reversible-lifecycle]]"
+  - "[[adr-moderation-panel-staged-form]]"
+  - "[[properties-service-admin]]"
   - "[[properties-service-bulk-create-worker]]"
   - "[[properties-service-users]]"
   - "[[frontend-admin-panel]]"
   - "[[frontend-architecture]]"
   - "[[adr-vue-cli-deferred-vite-migration]]"
   - "[[adr-firebase-removal]]"
-sources: [../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md, ../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md, ../../sources/users-service/2026-06-23-public-profile-endpoint.md, ../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../sources/properties-service/2026-07-17-bulk-async-redesign-presigned-retry.md, ../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md, ../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../sources/properties-service/2026-07-22-bulk-create-properties-refactor.md, ../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../sources/users-service/2026-07-27-resolve-accounts-by-email.md, ../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md, ../../sources/frontend/2026-07-28-admin-panel-groundwork.md, ../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md, ../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md, ../../sources/properties-service/2026-08-01-bulk-import-pending-verification.md, ../../sources/frontend/2026-08-01-admin-panel-tabs-moderation-preview.md]
+sources: [../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md, ../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md, ../../sources/users-service/2026-06-23-public-profile-endpoint.md, ../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../sources/properties-service/2026-07-17-bulk-async-redesign-presigned-retry.md, ../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md, ../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../sources/properties-service/2026-07-22-bulk-create-properties-refactor.md, ../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../sources/users-service/2026-07-27-resolve-accounts-by-email.md, ../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md, ../../sources/frontend/2026-07-28-admin-panel-groundwork.md, ../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md, ../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md, ../../sources/properties-service/2026-08-01-bulk-import-pending-verification.md, ../../sources/frontend/2026-08-01-admin-panel-tabs-moderation-preview.md, ../../sources/properties-service/2026-08-02-moderation-lifecycle-verified-not-terminal.md, ../../sources/frontend/2026-08-02-moderation-panel-form-over-buttons.md]
 ---
 
 ## TL;DR
@@ -82,6 +85,11 @@ Backlog vivo de gaps detectados al documentar la wiki (2026-05-28): cosas que el
 - [ ] **CI + promoción del training AVM.** Automatizar el run (orchestrator tipo Airflow) y formalizar la promoción del alias `production` (hoy manual). Ver [[avm-training]], [[adr-model-promotion-external-to-service]].
 
 ### properties-service — arquitectura interna
+
+- [ ] **El precio estimado no se puede leer desde ningún cliente.** `admin_estimated_price` y `ml_estimated_price` no aparecen en `PropertyDetailSchema`, `PropertyCardSchema` ni `AdminPropertyCardSchema` — la única mención de `estimated_price` en los schemas es la del *request*. O sea que `POST /admin/properties/{id}/estimated-price` es write-only: el admin escribiría un precio sin ver el guardado ni el que estimó el modelo, pisándolo a ciegas. Exponerlos está bloqueado por que el detalle admin comparte `PropertyDetailSchema` y la key `cache_property` con el endpoint público (agregarlos los publicaría). Por eso el input quedó fuera del panel de moderación. Ver [[properties-service-admin]], [[frontend-admin-panel]], [[adr-estimated-price-dual-signal]].
+- [ ] **No existe `verified_at`: se sabe quién aprobó, no cuándo.** Desde el 2026-08-02 `VerifyPropertyUseCase` firma `verified_by`, pero el momento de la resolución no se guarda en ningún lado — `updated_at` lo pisa la siguiente escritura, incluida la del dueño editando el precio. Agregarlo es una columna nueva y su migración de Alembic. Ver [[properties-service-admin]], [[adr-verification-reversible-lifecycle]].
+- [ ] **Sin historial de moderación.** Con `verified` ya no terminal, una property se puede resolver varias veces (aprobar → revocar → reencolar → aprobar) y solo la última sobrevive en `verified_by`/`rejection_reason`. Responder "¿cuál fue el historial de esta property?" requiere una tabla de eventos de moderación. Se decidió explícitamente **no** construirla ahora. Ver [[adr-verification-reversible-lifecycle]].
+- [ ] **El handler de errores descarta `context`, así que el 409 llega sin datos.** `base_error_handler` devuelve solo `{message, code}`; el `{current, target}` que carga `InvalidStatusTransitionError` se loguea pero no viaja al cliente, y el `message` está en inglés. Un front que reciba `409 INVALID_STATUS_TRANSITION` no puede decir "no se puede pasar de X a Y" con datos — solo texto genérico. Afecta a todos los `BaseError` con contexto, no solo a este. Ver [[properties-service-admin]], [[frontend-admin-panel]].
 
 - [ ] **Refactor: `CreatePropertyUseCase` construye el ORM model `Property` directamente (`create_property.py:62`).** El UC debería pasar el schema de dominio al repo y que el repo haga el mapeo al ORM model — leak de hex arch detectado 2026-06-30. Ver [[properties-service-listing]].
 - [ ] **Los 1.256 fallos de geo del import de 20k no están triados.** Mezclan tres causas: basura del scrape (`0.0,0.0`), coordenadas fuera de Bogotá (Cartagena, Pasto, Illinois, España) y coordenadas legítimamente bogotanas que ningún polígono de barrio contiene. **Solo la tercera es un gap**; las dos primeras está bien que fallen. Sin separarlas no se puede decir si el 6,3% es aceptable o si falta cobertura de barrios en catalog. Query de diagnóstico: `ST_Contains` sobre un punto conocido de Chicó — si da 0 filas pero el barrio vecino existe, es hueco de teselado de IDECA. Ver [[properties-service-bulk-create-worker]].
