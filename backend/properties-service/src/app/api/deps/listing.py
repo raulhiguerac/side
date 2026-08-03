@@ -97,9 +97,11 @@ def get_create_property_uc(
 def get_update_property_uc(
     uow: ListingUnitOfWork = Depends(get_listing_uow),
     cache: CachePort = Depends(get_cache_port),
-    catalog: CatalogGateway = Depends(get_catalog_gateway),
 ) -> UpdatePropertyUseCase:
-    return UpdatePropertyUseCase(uow=uow, cache_client=cache, catalog=catalog)
+    return UpdatePropertyUseCase(
+        uow = uow,
+        cache_client = cache,
+    )
 
 
 def get_delete_property_uc(

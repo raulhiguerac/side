@@ -1,10 +1,5 @@
 import uuid
-from typing import Optional
 
-from geoalchemy2.shape import from_shape
-from shapely.geometry import Point
-
-from app.core.exceptions.listing import InconsistentLocationError
 from app.schemas.principal import Principal
 from app.services.listing.helpers.db_error_translator import translate_db_error
 from app.services.listing.helpers.property_guard import get_owned_property
@@ -15,16 +10,18 @@ from app.services.shared.helpers.cache_keys import (
     client_properties,
     public_user_properties_pattern,
 )
-from app.services.shared.helpers.geometry import compute_h3
 from app.services.shared.ports.cache import CachePort
-from app.services.shared.ports.catalog_gateway import CatalogGateway
 
 
 class UpdatePropertyUseCase:
-    def __init__(self, *, uow: ListingUnitOfWork, cache_client: CachePort, catalog: CatalogGateway) -> None:
+    def __init__(
+        self,
+        *,
+        uow: ListingUnitOfWork,
+        cache_client: CachePort,
+    ) -> None:
         self.uow = uow
         self.cache_client = cache_client
-        self.catalog = catalog
 
     async def execute(
         self,
@@ -36,29 +33,11 @@ class UpdatePropertyUseCase:
         db_model = await get_owned_property(uow=self.uow, property_id=property_id, principal=principal)
 
         data = request.model_dump(exclude_unset=True)
-        loc_data: Optional[dict] = data.pop("location", None)
 
         for field, value in data.items():
             setattr(db_model, field, value)
 
         db_model.updated_by = principal.sub
-
-        if loc_data is not None:
-            guard = await self.catalog.get_neighborhood(neighborhood_id=loc_data["neighborhood_id"])
-            if guard.locality_id != loc_data["city_id"]:
-                raise InconsistentLocationError(
-                    neighborhood_id=loc_data["neighborhood_id"],
-                    city_id=loc_data["city_id"],
-                )
-            if db_model.location:
-                db_model.location.neighborhood_id = loc_data["neighborhood_id"]
-                db_model.location.city_id = loc_data["city_id"]
-                db_model.location.country_id = loc_data["country_id"]
-                db_model.location.location = from_shape(
-                    Point(loc_data["longitude"], loc_data["latitude"]), srid=4326
-                )
-                db_model.location.updated_by = principal.sub
-                db_model.h3_r9, db_model.h3_r7 = compute_h3(loc_data["latitude"], loc_data["longitude"])
 
         try:
             await self.uow.commit()
