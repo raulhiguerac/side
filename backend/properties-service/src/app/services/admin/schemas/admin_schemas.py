@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, model_validator
 
 from app.models.bulk_job import JobStatus
 from app.models.listing import Currency, ListingStatus, ListingType, PropertyType, VerificationStatus
@@ -12,6 +12,26 @@ from app.schemas.base import StrictBase
 class VerifyPropertyRequest(StrictBase):
     verification_status: VerificationStatus
     rejection_reason: Optional[str] = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_rejection_reason(self) -> "VerifyPropertyRequest":
+        """El motivo solo tiene sentido al rechazar.
+
+        Sin esta regla el UC persiste el campo tal cual llegue: aprobar mandando
+        motivo deja una fila que se contradice, y rechazar sin motivo deja al
+        dueño sin saber qué corregir.
+        """
+        is_rejection = self.verification_status == VerificationStatus.rejected
+
+        if is_rejection and not self.rejection_reason:
+            raise ValueError("rejection_reason is required when rejecting a property")
+
+        if not is_rejection and self.rejection_reason is not None:
+            raise ValueError(
+                f"rejection_reason is only allowed when rejecting, not for '{self.verification_status.value}'"
+            )
+
+        return self
 
 
 
