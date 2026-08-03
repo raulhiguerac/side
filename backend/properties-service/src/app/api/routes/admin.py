@@ -160,9 +160,14 @@ async def get_property_detail(
 async def set_property_status(
     property_id: uuid.UUID,
     req: SetStatusRequest,
+    principal: Annotated[Principal, Depends(require_admin)],
     uc: Annotated[SetPropertyStatusUseCase, Depends(get_set_status_uc)],
 ) -> None:
-    await uc.execute(property_id=property_id, target_status=req.status)
+    await uc.execute(
+        principal = principal,
+        property_id = property_id,
+        target_status = req.status,
+    )
 
 
 @router.patch(
@@ -172,9 +177,14 @@ async def set_property_status(
 async def verify_property(
     property_id: uuid.UUID,
     req: VerifyPropertyRequest,
+    principal: Annotated[Principal, Depends(require_admin)],
     uc: Annotated[VerifyPropertyUseCase, Depends(get_verify_property_uc)],
 ) -> None:
-    await uc.execute(property_id=property_id, request=req)
+    await uc.execute(
+        principal = principal,
+        property_id = property_id,
+        request = req,
+    )
 
 
 @router.post(
