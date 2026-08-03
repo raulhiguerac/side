@@ -80,6 +80,19 @@
       cerrado — con `v-show` el componente se monta igual y el costo se paga.
     -->
 
+    <!--
+      El formulario se alimenta del detalle que este panel ya trajo, no de la
+      fila de la tabla: así los controles y lo que se está mirando salen de la
+      misma respuesta. Mientras carga no hay `property`, así que no se puede
+      moderar a ciegas algo que todavía no se ve.
+    -->
+    <AdminModerationForm
+      v-if="property"
+      :status="property.status"
+      :verification-status="property.verification_status"
+      @save="emit('save', $event, property.id)"
+    />
+
     <PhotoGalleryPopup
       v-if="property"
       :is-open="isGalleryOpen"
@@ -99,9 +112,19 @@ import { usePropertyDetail } from "@/composables/properties/usePropertyDetail";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import PropertyOverview from "@/components/properties/detail/PropertyOverview.vue";
 import PhotoGalleryPopup from "@/components/properties/photos/PhotoGalleryPopup.vue";
+import AdminModerationForm from "@/components/admin/properties/AdminModerationForm.vue";
+import type { ModerationPayload } from "@/types/admin";
 import type { PropertyDetail } from "@/types/properties";
 
 const props = defineProps<{ propertyId: string | null }>();
+
+/**
+ * El panel no guarda nada: reenvía lo que cambió con el id de la property que
+ * está mostrando. Quien lo reciba es quien tiene la lista y puede refetchear.
+ */
+const emit = defineEmits<{
+  save: [payload: ModerationPayload, propertyId: string];
+}>();
 
 const property = ref<PropertyDetail | null>(null);
 const locationLabel = ref("");

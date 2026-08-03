@@ -38,3 +38,16 @@ export interface AdminPropertiesFilters {
   verification_status?: VerificationStatus;
   owner_id?: string;
 }
+
+/**
+ * Lo que el formulario de moderación emite al guardar: solo los campos que
+ * cambiaron. Cada uno corresponde a un endpoint distinto —
+ * `PATCH .../verification` y `PATCH .../status`— así que un guardado puede
+ * derivar en uno o dos requests.
+ */
+export interface ModerationPayload {
+  verificationStatus?: VerificationStatus;
+  /** Obligatorio si `verificationStatus` es `rejected`; prohibido si no. */
+  rejectionReason?: string;
+  status?: ListingStatus;
+}
