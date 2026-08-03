@@ -12,6 +12,7 @@ from app.core.exceptions.listing import (
 )
 from app.core.exceptions.storage import StorageMisconfiguredError
 from app.models.image import BatchStatus
+from app.models.listing import VerificationStatus
 from app.schemas.principal import Principal
 from app.services.listing.use_cases.images.confirm_image_uploads import ConfirmImageUploadsUseCase
 
@@ -22,6 +23,14 @@ PRINCIPAL = Principal(sub=OWNER_ID)
 
 KEY_1 = f"{PROP_ID}/key-one"
 KEY_2 = f"{PROP_ID}/key-two"
+
+
+def _make_prop(verification_status=VerificationStatus.verified):
+    m = MagicMock()
+    m.id = PROP_ID
+    m.owner_id = OWNER_ID
+    m.verification_status = verification_status
+    return m
 
 
 def _make_batch(status=BatchStatus.ready, expired=False, property_id=PROP_ID):
@@ -81,6 +90,51 @@ async def test_confirms_images_and_invalidates_cache(mock_get_prop, mock_run, uc
     assert batch.confirmed_at is not None
     mock_uow.commit.assert_awaited_once()
     mock_cache.delete.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# Verification degradation — confirmar fotos nuevas invalida el sello
+# ---------------------------------------------------------------------------
+
+@patch("app.services.listing.use_cases.images.confirm_image_uploads.run_in_threadpool")
+@patch("app.services.listing.use_cases.images.confirm_image_uploads.get_owned_property_for_update", new_callable=AsyncMock)
+async def test_degrades_verification_when_property_was_verified(mock_get_prop, mock_run, uc, mock_uow):
+    prop = _make_prop(verification_status=VerificationStatus.verified)
+    mock_get_prop.return_value = prop
+    mock_run.return_value = _make_batch(status=BatchStatus.ready)
+
+    await uc.execute(
+        principal=PRINCIPAL,
+        property_id=PROP_ID,
+        batch_id=BATCH_ID,
+        confirmed_keys=[KEY_1],
+    )
+
+    assert prop.verification_status == VerificationStatus.pending
+    # Mismo commit que confirma el batch: o entran las dos cosas, o ninguna.
+    mock_uow.commit.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    "initial",
+    [VerificationStatus.unverified, VerificationStatus.pending, VerificationStatus.rejected],
+)
+@patch("app.services.listing.use_cases.images.confirm_image_uploads.run_in_threadpool")
+@patch("app.services.listing.use_cases.images.confirm_image_uploads.get_owned_property_for_update", new_callable=AsyncMock)
+async def test_leaves_verification_untouched_when_not_verified(mock_get_prop, mock_run, uc, initial):
+    """Sin sello no hay nada que quitar — degradar acá solo ensuciaría la cola."""
+    prop = _make_prop(verification_status=initial)
+    mock_get_prop.return_value = prop
+    mock_run.return_value = _make_batch(status=BatchStatus.ready)
+
+    await uc.execute(
+        principal=PRINCIPAL,
+        property_id=PROP_ID,
+        batch_id=BATCH_ID,
+        confirmed_keys=[KEY_1],
+    )
+
+    assert prop.verification_status == initial
 
 
 # ---------------------------------------------------------------------------

@@ -5,6 +5,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from app.core.exceptions.listing import InvalidStatusTransitionError, PropertyNotFoundError, SetVisibilityError
 from app.models.listing import ListingStatus
+from app.schemas.principal import Principal
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork
 from app.services.shared.helpers.cache_keys import (
     cache_property,
@@ -28,7 +29,13 @@ class SetPropertyStatusUseCase:
         self.uow = uow
         self.cache = cache
 
-    async def execute(self, property_id: uuid.UUID, target_status: ListingStatus) -> None:
+    async def execute(
+        self,
+        *,
+        principal: Principal,
+        property_id: uuid.UUID,
+        target_status: ListingStatus,
+    ) -> None:
         prop = await run_in_threadpool(
             partial(self.uow.properties.get_by_id, property_id=property_id)
         )
@@ -44,6 +51,7 @@ class SetPropertyStatusUseCase:
             )
 
         prop.status = target_status
+        prop.updated_by = principal.sub
 
         try:
             await self.uow.commit()

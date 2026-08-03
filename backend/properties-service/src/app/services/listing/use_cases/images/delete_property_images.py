@@ -7,6 +7,7 @@ from app.models.image import ImageStatus
 from app.schemas.principal import Principal
 from app.services.listing.helpers.db_error_translator import translate_db_error
 from app.services.listing.helpers.property_guard import get_owned_property_for_update
+from app.services.listing.helpers.verification_guard import degrade_verification
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork
 from app.services.shared.helpers.cache_keys import (
     cache_property,
@@ -32,7 +33,7 @@ class DeletePropertyImagesUseCase:
         if not image_ids:
             return
 
-        await get_owned_property_for_update(uow=self.uow, property_id=property_id, principal=principal)
+        model = await get_owned_property_for_update(uow=self.uow, property_id=property_id, principal=principal)
 
         images = await run_in_threadpool(
             partial(
@@ -47,6 +48,8 @@ class DeletePropertyImagesUseCase:
 
         for image in images:
             image.status = ImageStatus.pending_delete
+
+        degrade_verification(prop=model)
 
         try:
             await self.uow.commit()
