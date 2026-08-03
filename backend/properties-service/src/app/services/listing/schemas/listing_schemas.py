@@ -58,22 +58,11 @@ class CreatePropertyRequest(StrictBase):
 
 
 class UpdatePropertyRequest(StrictBase):
-    property_type: Optional[PropertyType] = None
-    listing_type: Optional[ListingType] = None
     condition: Optional[PropertyCondition] = None
     currency: Optional[Currency] = None
-    floor_number: Optional[int] = Field(default=None, ge=0)
-    total_floors: Optional[int] = Field(default=None, ge=1)
-    area_m2: Optional[Decimal] = Field(default=None, gt=0, decimal_places=2)
-    bedrooms: Optional[int] = Field(default=None, ge=1)
-    bathrooms: Optional[Decimal] = Field(default=None, ge=1, decimal_places=1)
-    parking_spots: Optional[int] = Field(default=None, ge=0)
     price: Optional[Decimal] = Field(default=None, gt=0, decimal_places=2)
     admin_fee: Optional[Decimal] = Field(default=None, ge=0, decimal_places=2)
     description: Optional[str] = Field(default=None, max_length=2000)
-    year_built: Optional[int] = Field(default=None, ge=1800)
-    stratum: Optional[int] = Field(default=None, ge=1, le=6)
-    location: Optional[LocationField] = None
 
 
 class PresignedUrlItem(StrictBase):
