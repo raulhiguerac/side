@@ -7,6 +7,9 @@ metadata:
     app.kubernetes.io/component: database
 spec:
   instances: {{ .Values.db.instances }}
+  {{- with .Values.db.image }}
+  imageName: {{ . }}
+  {{- end }}
   bootstrap:
     initdb:
       database: {{ .Values.db.schema }}

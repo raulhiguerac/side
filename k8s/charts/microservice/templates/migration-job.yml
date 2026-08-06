@@ -2,6 +2,14 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: "{{ .Values.app.name }}-migration"
+  annotations:
+    # post-install: primer install, DESPUÉS de crear el Cluster CNPG (el wait-for-db espera a que responda).
+    # pre-upgrade: en upgrades migra ANTES de rodar los pods nuevos (schema nuevo → luego código nuevo).
+    "helm.sh/hook": post-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    # borra el Job anterior justo antes de crear el nuevo → los Jobs son inmutables y sin esto el 2º upgrade peta.
+    # (no borra tras éxito: dejamos el último Job para poder ver sus logs)
+    "helm.sh/hook-delete-policy": before-hook-creation
   labels:
     {{- include "microservice.labels" . | nindent 4 }}
     app.kubernetes.io/component: migration
