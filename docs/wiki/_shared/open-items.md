@@ -24,8 +24,11 @@ related:
   - "[[adr-vue-cli-deferred-vite-migration]]"
   - "[[adr-firebase-removal]]"
   - "[[deployment-k8s-helm]]"
+  - "[[platform-deps-k8s]]"
+  - "[[adr-cilium-cni-gateway]]"
 sources:
   - ../../sources/_shared/2026-07-29-k8s-helm-microservice-chart.md
+  - ../../sources/_shared/2026-07-31-k8s-selfhost-infra-design.md
   - ../../sources/properties-service/2026-05-28-foundational-exploration.md
   - ../../sources/users-service/2026-05-28-foundational-exploration.md
   - ../../sources/frontend/2026-06-04-feed-filters-contract.md
@@ -135,7 +138,8 @@ Backlog vivo de gaps detectados al documentar la wiki (2026-05-28): cosas que el
 
 Del track de despliegue Helm (arrancado 2026-07-29, ver [[deployment-k8s-helm]]). Nada desplegado aún — el PC actual no corre kind ni helm; hoy solo autoría del chart.
 
-- [ ] **NetworkPolicies + cambio de CNI.** El aislamiento de red que asume [[project-roadmap-2026]] (cada MS solo alcanza su Postgres/Redis; la DB solo es alcanzable por su MS) necesita un CNI que las aplique — **kindnet NO las enforce**: hay que instalar Calico o Cilium en el cluster kind antes de que cualquier policy haga efecto. Ver [[deployment-k8s-helm]].
+- [ ] **NetworkPolicies + cambio de CNI.** El aislamiento de red que asume [[project-roadmap-2026]] (cada MS solo alcanza su Postgres/Redis; la DB solo es alcanzable por su MS) necesita un CNI que las aplique — **kindnet NO las enforce**. **Update 2026-07-31 — CNI decidido: Cilium** (unifica CNI + NetworkPolicy + Gateway API; ver [[adr-cilium-cni-gateway]]). El `kind/config.yml` ya trae `disableDefaultCNI: true` + `kubeProxyMode: "none"` y el install de Cilium está escrito en `01-cluster.sh`. **Falta**: escribir las policies (default-deny + allow cross-service; en `identity`, la BD solo alcanzable desde pods de Keycloak). Ver [[deployment-k8s-helm]], [[platform-deps-k8s]].
+- [ ] **ORS bloqueado por falta del seed.** El `.osm.pbf` de Bogotá y el grafo construido no están en el repo (solo `infra/ors/config/`); el grafo era el resultado de procesar el `.pbf`, que tampoco está. Hay que re-conseguir el `.pbf` (extract OSM de Bogotá). Diseño acordado: PVC para el grafo (build-once, cache), y persistir el **grafo construido** (backup en MinIO) en vez de reconstruir por entorno — ORS es la dep pesada (~6GB heap). Ver [[platform-deps-k8s]], [[catalog-service-ors]].
 - [ ] **Gestión real de secretos.** El chart crea secrets dummy tras el flag `createDummySecrets`; los reales deben llegar cifrados (Sealed Secrets) o por referencia (External Secrets Operator + Vault en modo dev). base64 no es cifrado — nunca commitear valores reales en el repo. Ver [[deployment-k8s-helm]].
 - [ ] **Hardening de ServiceAccount.** Ningún workload llama a la API de k8s (todos usan la SA `default`, que no puede tocar la API); como capa opcional de aislamiento, SA dedicada por servicio con `automountServiceAccountToken: false`. El operator CloudNativePG trae su propio RBAC. Ver [[deployment-k8s-helm]].
 

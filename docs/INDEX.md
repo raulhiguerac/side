@@ -13,7 +13,8 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [dev-workflow](wiki/_shared/dev-workflow.md) — reglas de trabajo: discuss-before-code (CLAUDE.md) + pre-commit hook de wiki staleness
 - [open-items](wiki/_shared/open-items.md) — backlog vivo de gaps y deuda técnica cross-service (checklist marcable entre sesiones)
 - [project-roadmap-2026](wiki/_shared/project-roadmap-2026.md) — fases del producto: completado (catálogo, users, AVM), en progreso (properties), pendiente (infra K3s, heatmap DWH, notifications-ms, payments-ms)
-- [deployment-k8s-helm](wiki/_shared/deployment-k8s-helm.md) — despliegue k8s self-host: chart Helm genérico por microservicio, CloudNativePG (1 Cluster/servicio), patrón Job+initContainer para migraciones, secretos tras flag, namespaces vía `--create-namespace` (draft, nada desplegado aún)
+- [deployment-k8s-helm](wiki/_shared/deployment-k8s-helm.md) — despliegue k8s self-host: chart Helm genérico por microservicio, CloudNativePG (1 Cluster/servicio), migraciones como Helm hook + initContainer, secretos tras flag, namespaces vía `namespaces.yml` (draft, nada desplegado aún)
+- [platform-deps-k8s](wiki/_shared/platform-deps-k8s.md) — deps de plataforma (Keycloak, Redis, MinIO, Kafka, MLflow, ORS) como manifiestos planos en `k8s/infra/`; operadores solo CNPG+Strimzi; Keycloak aislado en ns `identity`; ORS bloqueado por seed (draft)
 - [business-model](wiki/_shared/business-model.md) — monetización por fases (promocionados, comisiones, B2B data, FinTech), análisis competitivo (Cerouno, Rentpana, Habi), moat y features planeadas
 - _shared/adrs/_:
   - [ADR-0001 — Auth vía Keycloak JWT](wiki/_shared/adrs/adr-auth-keycloak-jwt.md)
@@ -22,6 +23,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
   - [ADR-0004 — Impresiones y clicks vía beacon de cliente + collector + Kafka](wiki/_shared/adrs/adr-impressions-beacon-pipeline.md)
   - [ADR-0005 — Cache como capa opcional; degradación silenciosa a DB](wiki/_shared/adrs/adr-cache-optional-layer.md)
   - [ADR-0006 — Librería interna compartida para clientes de infra (Redis/MinIO)](wiki/_shared/adrs/adr-shared-infra-lib.md)
+  - [ADR-0007 — Cilium como CNI unificado (CNI + NetworkPolicy + Gateway API)](wiki/_shared/adrs/adr-cilium-cni-gateway.md)
 
 ## analytics-service (piloto)
 
