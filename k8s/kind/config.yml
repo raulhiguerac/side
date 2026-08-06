@@ -1,5 +1,13 @@
 apiVersion: kind.x-k8s.io/v1alpha4
 kind: Cluster
+networking:
+  # kindnet no aplica NetworkPolicies y vamos con Cilium como CNI → lo desactivamos.
+  # Cilium se instala aparte DESPUÉS de crear el cluster; hasta entonces los nodos
+  # quedan NotReady (sin CNI no hay red de pods). Es lo esperado, no un fallo.
+  disableDefaultCNI: true
+  # Cilium corre con kubeProxyReplacement=true (eBPF) → kube-proxy no debe existir,
+  # o habría dos cosas haciendo routing de Services. 'none' desactiva el addon.
+  kubeProxyMode: "none"
 nodes:
   - role: control-plane
     kubeadmConfigPatches:
