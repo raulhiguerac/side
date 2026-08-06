@@ -1,0 +1,3 @@
+# Manifiestos k8s de Keycloak (ns 'identity'):
+# Deployment/StatefulSet + Service (name: keycloak) + ConfigMap del realm + Cluster CNPG (su BD).
+# El realm sale de la raíz del repo: infra/keycloak/realm.template.json

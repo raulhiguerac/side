@@ -1,0 +1,2 @@
+# Manifiestos k8s de OpenRouteService (plano):
+# Deployment + Service + PVC (grafos). Monta el .osm.pbf y config, como en docker-compose.

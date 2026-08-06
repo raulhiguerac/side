@@ -30,8 +30,8 @@ service:
 # Variables NO secretas → se vuelcan al ConfigMap (helper microservice.configData).
 config:
   # URLs internas (DNS del cluster)
-  KEYCLOAK_URL: "http://keycloak.platform.svc.cluster.local:8080"
-  KC_JWKS_URL: "http://keycloak.platform.svc.cluster.local:8080/realms/dummy-realm/protocol/openid-connect/certs"
+  KEYCLOAK_URL: "http://keycloak.identity.svc.cluster.local:8080"
+  KC_JWKS_URL: "http://keycloak.identity.svc.cluster.local:8080/realms/dummy-realm/protocol/openid-connect/certs"
   MINIO_URL: "http://minio.platform.svc.cluster.local:9000"
   REDIS_URL: "redis://redis.platform.svc.cluster.local:6379/0"
   # URLs externas (navegador / claim iss del token)

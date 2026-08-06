@@ -32,3 +32,12 @@ metadata:
   name: platform
   labels:
     env: dev
+---
+# Keycloak (+ su propia BD) aislado en su namespace: el pilar de auth va aparte
+# para poder cerrarlo con NetworkPolicies (BD solo habla con pods de keycloak).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: identity
+  labels:
+    env: dev

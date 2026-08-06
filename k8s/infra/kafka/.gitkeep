@@ -1,0 +1,2 @@
+# Manifiestos k8s de Kafka (operador Strimzi):
+# CR Kafka (KRaft) + CRs KafkaTopic (reemplazan al topic-init del docker-compose).

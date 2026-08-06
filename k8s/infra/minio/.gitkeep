@@ -1,0 +1,2 @@
+# Manifiestos k8s de MinIO (plano, object store):
+# Deployment + Service + PVC. Buckets: profile-photos, property-photos, property-bulk, mlflow-artifacts.

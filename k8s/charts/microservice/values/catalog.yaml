@@ -1,0 +1,39 @@
+env: dev
+createDummySecrets: true
+
+app:
+  name: catalog
+  replicas: 1
+  image: tu-registry/catalog-ms:0.1.0
+  containerName: catalog
+  port: 8000
+  configMaps:
+    - catalog-ms-config
+  secrets:
+    - catalog-ms-mapbox
+
+wait:
+  image: postgres:17
+
+service:
+  port: 80
+
+config:
+  REDIS_URL: "redis://redis.platform.svc.cluster.local:6379/0"
+  KC_JWKS_URL: "http://keycloak.identity.svc.cluster.local:8080/realms/dummy-realm/protocol/openid-connect/certs"
+  KC_ISSUER: "http://localhost:8080/realms/dummy-realm"
+  OIDC_AUDIENCE: "dummy-audience"
+  ADMIN_ROLE: "admin"
+  ORS_URL: "http://ors.platform.svc.cluster.local:8082/ors"
+  OVERPASS_USER_AGENT: "side-catalog-service/1.0 (contact: raul.higuera369@gmail.com)"
+
+secretData:
+  mapbox:
+    MAPBOX_API_KEY: dummy-mapbox-token
+
+db:
+  instances: 1
+  schema: catalog_service_db
+  owner: catalog
+  # PostGIS: catalog usa columnas geográficas
+  image: ghcr.io/cloudnative-pg/postgis:17

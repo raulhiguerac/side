@@ -1,0 +1,2 @@
+# Keycloak — ConfigMap 'keycloak-config' (config no-secreta)
+# KC_DB, KC_DB_URL, KC_HOSTNAME, KC_HEALTH_ENABLED, KC_PROXY, ...  → consumido por envFrom

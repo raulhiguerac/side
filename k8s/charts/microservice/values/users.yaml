@@ -1,0 +1,56 @@
+env: dev
+createDummySecrets: true
+
+app:
+  name: users
+  replicas: 1
+  image: tu-registry/users-ms:0.1.0
+  containerName: users
+  port: 8000
+  configMaps:
+    - users-ms-config
+  secrets:
+    - users-ms-minio
+    - users-ms-keycloak
+    - users-ms-brevo
+
+wait:
+  image: postgres:17
+
+service:
+  port: 80
+
+config:
+  KEYCLOAK_URL: "http://keycloak.identity.svc.cluster.local:8080"
+  KC_JWKS_URL: "http://keycloak.identity.svc.cluster.local:8080/realms/dummy-realm/protocol/openid-connect/certs"
+  KC_ISSUER: "http://localhost:8080/realms/dummy-realm"
+  KC_REALM: "dummy-realm"
+  KC_CLIENT_ID: "dummy-client"
+  KC_CLIENT_AUTH: "dummy-client-auth"
+  OIDC_AUDIENCE: "dummy-audience"
+  ADMIN_ROLE: "admin"
+  MINIO_URL: "http://minio.platform.svc.cluster.local:9000"
+  REDIS_URL: "redis://redis.platform.svc.cluster.local:6379/0"
+  PROFILE_PHOTOS_BUCKET: "profile-photos"
+  STORAGE_PUBLIC_BASE_URL: "http://localhost:9000"
+  FRONT_BASE_URL: "http://localhost:5173"
+  ACCEPTED_IMAGE_MIME_TYPES: "image/jpeg,image/png,image/webp"
+  ACCEPTED_IMAGE_MAX_SIZE: "5242880"
+  CACHE_TTL_SECONDS: "300"
+  CACHE_REACTIVATION_TTL_SECONDS: "900"
+  PROFILE_CACHE_TTL_SECONDS: "600"
+
+secretData:
+  minio:
+    ACCESS_KEY: minioadmin
+    SECRET_KEY: minioadmin
+  keycloak:
+    KC_AUTH_SECRET: dummy-auth-secret
+    KC_ADMIN_SECRET: dummy-secret
+  brevo:
+    BREVO_API_KEY: dummy-smtp-key
+
+db:
+  instances: 1
+  schema: identity_service_db
+  owner: users

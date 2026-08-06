@@ -1,0 +1,2 @@
+# Manifiestos k8s de MLflow (plano):
+# Deployment + Service. Backend store + artifacts en MinIO (s3://mlflow-artifacts).

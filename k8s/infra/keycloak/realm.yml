@@ -1,0 +1,3 @@
+# Keycloak — ConfigMap 'keycloak-realm' (JSON del realm)
+# Se monta en /opt/keycloak/data/import y se importa con --import-realm.
+# Fuente del JSON: infra/keycloak/realm.template.json (raíz del repo).

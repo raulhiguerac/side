@@ -1,0 +1,44 @@
+env: dev
+createDummySecrets: true
+
+app:
+  name: properties
+  replicas: 1
+  image: tu-registry/properties-ms:0.1.0
+  containerName: properties
+  port: 8000
+  configMaps:
+    - properties-ms-config
+  secrets:
+    - properties-ms-minio
+
+wait:
+  image: postgres:17
+
+service:
+  port: 80
+
+config:
+  CATALOG_URL: "http://catalog.catalog-ms.svc.cluster.local"
+  USERS_URL: "http://users.users-ms.svc.cluster.local"
+  KC_JWKS_URL: "http://keycloak.identity.svc.cluster.local:8080/realms/dummy-realm/protocol/openid-connect/certs"
+  KC_ISSUER: "http://localhost:8080/realms/dummy-realm"
+  OIDC_AUDIENCE: "dummy-audience"
+  ADMIN_ROLE: "admin"
+  REDIS_URL: "redis://redis.platform.svc.cluster.local:6379/0"
+  MINIO_URL: "http://minio.platform.svc.cluster.local:9000"
+  STORAGE_PUBLIC_BASE_URL: "http://localhost:9000"
+  BUCKET_PHOTOS_PROPERTIES: "property-photos"
+  BUCKET_BULK_PROPERTIES: "property-bulk"
+
+secretData:
+  minio:
+    AWS_ACCESS_KEY_ID: minioadmin
+    AWS_SECRET_ACCESS_KEY: minioadmin
+
+db:
+  instances: 1
+  schema: properties_service_db
+  owner: properties
+  # PostGIS: properties usa columnas geográficas + H3
+  image: ghcr.io/cloudnative-pg/postgis:17

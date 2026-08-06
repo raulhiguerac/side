@@ -1,0 +1,44 @@
+env: dev
+createDummySecrets: true
+
+app:
+  name: analytics
+  replicas: 1
+  image: tu-registry/analytics-ms:0.1.0
+  containerName: analytics
+  port: 8000
+  configMaps:
+    - analytics-ms-config
+  secrets:
+    - analytics-ms-mlflow
+
+wait:
+  image: postgres:17
+
+service:
+  port: 80
+
+config:
+  REDIS_URL: "redis://redis.platform.svc.cluster.local:6379/0"
+  KC_JWKS_URL: "http://keycloak.identity.svc.cluster.local:8080/realms/dummy-realm/protocol/openid-connect/certs"
+  KC_ISSUER: "http://localhost:8080/realms/dummy-realm"
+  OIDC_AUDIENCE: "dummy-audience"
+  MLFLOW_TRACKING_URI: "http://mlflow.platform.svc.cluster.local:5000"
+  MLFLOW_S3_ENDPOINT_URL: "http://minio.platform.svc.cluster.local:9000"
+  MLFLOW_MODEL_URI: "models:/bogota-avm@production"
+  KAFKA_SERVER: "kafka.platform.svc.cluster.local:9092"
+  KAFKA_GROUP_ID: "analytics-listing-consumer"
+  KAFKA_TOPIC: "listing-created"
+  KAFKA_PREDICTIONS_TOPIC: "price-predicted"
+  KAFKA_DLQ_TOPIC: "listing-created-dlq"
+  WORKER_PRINCIPAL: "00000000-0000-0000-0000-000000000000"
+
+secretData:
+  mlflow:
+    AWS_ACCESS_KEY_ID: minioadmin
+    AWS_SECRET_ACCESS_KEY: minioadmin
+
+db:
+  instances: 1
+  schema: analytics_service_db
+  owner: analytics

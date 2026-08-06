@@ -1,0 +1,2 @@
+# Manifiestos k8s de Redis (plano, cache):
+# Deployment + Service. Sin persistencia crítica (es cache).
