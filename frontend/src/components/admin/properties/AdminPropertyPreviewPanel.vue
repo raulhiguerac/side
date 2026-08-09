@@ -76,6 +76,8 @@
       v-if="property"
       :status="property.status"
       :verification-status="property.verification_status"
+      :allowed-verification-targets="property.allowed_verification_targets"
+      :allowed-status-targets="property.allowed_status_targets"
       :saving="saving"
       :success-message="successMessage"
       :error-message="errorMessage"
@@ -102,8 +104,7 @@ import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import PropertyOverview from "@/components/properties/detail/PropertyOverview.vue";
 import PhotoGalleryPopup from "@/components/properties/photos/PhotoGalleryPopup.vue";
 import AdminModerationForm from "@/components/admin/properties/AdminModerationForm.vue";
-import type { ModerationPayload } from "@/types/admin";
-import type { PropertyDetail } from "@/types/properties";
+import type { AdminPropertyDetail, ModerationPayload } from "@/types/admin";
 
 /** El estado del guardado solo pasa de largo hasta el formulario. */
 const props = defineProps<{
@@ -118,7 +119,7 @@ const emit = defineEmits<{
   save: [payload: ModerationPayload, propertyId: string];
 }>();
 
-const property = ref<PropertyDetail | null>(null);
+const property = ref<AdminPropertyDetail | null>(null);
 const locationLabel = ref("");
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -165,7 +166,7 @@ async function load(id: string | null) {
   loading.value = true;
 
   try {
-    const { data } = await propertiesApi.get<PropertyDetail>(
+    const { data } = await propertiesApi.get<AdminPropertyDetail>(
       PROPERTIES_ENDPOINTS.adminDetail(id)
     );
     if (token !== requestToken) return;

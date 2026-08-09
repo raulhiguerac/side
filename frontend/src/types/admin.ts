@@ -1,5 +1,14 @@
 import type { ListingStatus } from "@/types/feed";
-import type { VerificationStatus } from "@/types/properties";
+import type { PropertyDetail, VerificationStatus } from "@/types/properties";
+
+/**
+ * `GET /v1/admin/properties/{id}`: el detalle más los destinos legales desde el
+ * estado en que está, que el backend calcula con la misma tabla que después aplica.
+ */
+export interface AdminPropertyDetail extends PropertyDetail {
+  allowed_verification_targets: VerificationStatus[];
+  allowed_status_targets: ListingStatus[];
+}
 
 /** Fila del listado admin: lleva los campos que `PropertyCard` esconde, y los `Decimal` llegan como string. */
 export interface AdminPropertyRow {

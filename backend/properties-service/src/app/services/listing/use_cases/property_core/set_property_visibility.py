@@ -10,12 +10,8 @@ from app.services.shared.helpers.cache_keys import (
     client_properties,
     public_user_properties_pattern,
 )
+from app.services.shared.helpers.status_transitions import OWNER_VISIBILITY_TRANSITIONS
 from app.services.shared.ports.cache import CachePort
-
-_ALLOWED_TRANSITIONS = {
-    ListingStatus.draft: ListingStatus.active,
-    ListingStatus.active: ListingStatus.draft,
-}
 
 
 class SetPropertyVisibilityUseCase:
@@ -26,7 +22,7 @@ class SetPropertyVisibilityUseCase:
     async def execute(self, property_id: uuid.UUID, principal: Principal) -> None:
         prop = await get_owned_property(uow=self.uow, property_id=property_id, principal=principal)
 
-        next_status = _ALLOWED_TRANSITIONS.get(prop.status)
+        next_status = OWNER_VISIBILITY_TRANSITIONS.get(prop.status)
         if next_status is None:
             raise InvalidStatusTransitionError(
                 current=prop.status.value,

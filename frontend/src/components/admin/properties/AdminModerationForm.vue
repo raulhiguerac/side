@@ -138,10 +138,6 @@ import {
   LISTING_STATUS_LABELS,
   VERIFICATION_STATUS_LABELS,
 } from "@/constants/propertyStatus";
-import {
-  LISTING_STATUS_TRANSITIONS,
-  VERIFICATION_TRANSITIONS,
-} from "@/constants/moderationTransitions";
 import type { ModerationPayload } from "@/types/admin";
 import type { ListingStatus } from "@/types/feed";
 import type { VerificationStatus } from "@/types/properties";
@@ -150,6 +146,9 @@ import type { VerificationStatus } from "@/types/properties";
 const props = defineProps<{
   status: ListingStatus | null;
   verificationStatus: VerificationStatus | null;
+  /** Los destinos legales los calcula el backend con la misma tabla que después aplica. */
+  allowedVerificationTargets: VerificationStatus[];
+  allowedStatusTargets: ListingStatus[];
   saving?: boolean;
   successMessage?: string | null;
   errorMessage?: string | null;
@@ -161,7 +160,7 @@ const draftStatus = ref<ListingStatus | null>(null);
 const draftVerification = ref<VerificationStatus | null>(null);
 const reason = ref("");
 
-/** El estado actual (primero, marcado) más sus destinos legales: lo que no está en la máquina no se ofrece. */
+/** El estado actual (primero, marcado) más los destinos que trajo el servidor. */
 const verificationOptions = computed(() => {
   if (!props.verificationStatus) return [];
   const current = props.verificationStatus;
@@ -170,9 +169,9 @@ const verificationOptions = computed(() => {
       value: current,
       label: `${VERIFICATION_STATUS_LABELS[current]} (actual)`,
     },
-    ...VERIFICATION_TRANSITIONS[current].map((action) => ({
-      value: action.target,
-      label: VERIFICATION_STATUS_LABELS[action.target],
+    ...props.allowedVerificationTargets.map((target) => ({
+      value: target,
+      label: VERIFICATION_STATUS_LABELS[target],
     })),
   ];
 });
@@ -182,9 +181,9 @@ const statusOptions = computed(() => {
   const current = props.status;
   return [
     { value: current, label: `${LISTING_STATUS_LABELS[current]} (actual)` },
-    ...LISTING_STATUS_TRANSITIONS[current].map((action) => ({
-      value: action.target,
-      label: LISTING_STATUS_LABELS[action.target],
+    ...props.allowedStatusTargets.map((target) => ({
+      value: target,
+      label: LISTING_STATUS_LABELS[target],
     })),
   ];
 });

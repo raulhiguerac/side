@@ -8,6 +8,7 @@ from pydantic import ConfigDict, Field, model_validator
 from app.models.bulk_job import JobStatus
 from app.models.listing import Currency, ListingStatus, ListingType, PropertyType, VerificationStatus
 from app.schemas.base import StrictBase
+from app.services.shared.schemas.property_detail import PropertyDetailSchema
 
 class VerifyPropertyRequest(StrictBase):
     verification_status: VerificationStatus
@@ -72,6 +73,18 @@ class AdminPropertyCardSchema(StrictBase):
     bedrooms: int
     bathrooms: Decimal
     created_at: datetime
+
+
+class AdminPropertyDetailSchema(PropertyDetailSchema):
+    """Detail plus the legal moderation targets for the state it is in.
+
+    They are derived from status/verification_status, so they are computed on
+    the way out — nothing to store, nothing to cache. Shipping them is what
+    keeps the panel from offering a transition the use cases would reject.
+    """
+
+    allowed_verification_targets: list[VerificationStatus]
+    allowed_status_targets: list[ListingStatus]
 
 
 class AdminPropertiesPage(StrictBase):

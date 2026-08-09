@@ -13,15 +13,8 @@ from app.services.shared.helpers.cache_keys import (
     map_h3_cell,
     public_user_properties_pattern,
 )
+from app.services.shared.helpers.status_transitions import LISTING_STATUS_TRANSITIONS
 from app.services.shared.ports.cache import CachePort
-
-_ALLOWED_TRANSITIONS: dict[ListingStatus, list[ListingStatus]] = {
-    ListingStatus.draft: [ListingStatus.active],
-    ListingStatus.active: [ListingStatus.draft, ListingStatus.inactive, ListingStatus.sold, ListingStatus.rented],
-    ListingStatus.inactive: [ListingStatus.active, ListingStatus.draft],
-    ListingStatus.sold: [ListingStatus.inactive],
-    ListingStatus.rented: [ListingStatus.inactive],
-}
 
 
 class SetPropertyStatusUseCase:
@@ -43,7 +36,7 @@ class SetPropertyStatusUseCase:
         if prop is None:
             raise PropertyNotFoundError(property_id=property_id)
 
-        allowed = _ALLOWED_TRANSITIONS.get(prop.status, [])
+        allowed = LISTING_STATUS_TRANSITIONS.get(prop.status, [])
         if target_status not in allowed:
             raise InvalidStatusTransitionError(
                 current=prop.status.value,

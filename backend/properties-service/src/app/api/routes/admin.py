@@ -24,6 +24,7 @@ from app.api.deps.auth import require_admin
 from app.schemas.principal import Principal
 from app.services.admin.schemas.admin_schemas import (
     AdminPropertiesPage,
+    AdminPropertyDetailSchema,
     BulkCreatePropertiesRequest,
     BulkJobAccepted,
     BulkJobStatusResponse,
@@ -48,7 +49,6 @@ from app.services.admin.use_cases.promotions.delete import DeletePromotionUseCas
 from app.services.admin.use_cases.promotions.list_all import ListAllPromotionsUseCase
 from app.services.admin.use_cases.promotions.list_by_property import ListPromotionsByPropertyUseCase
 from app.services.shared.schemas.property_card import PropertyCardSchema
-from app.services.shared.schemas.property_detail import PropertyDetailSchema
 
 logger = logging.getLogger(__name__)
 
@@ -143,13 +143,13 @@ async def get_properties(
 
 @router.get(
     "/properties/{property_id}",
-    response_model=PropertyDetailSchema,
+    response_model=AdminPropertyDetailSchema,
     status_code=status.HTTP_200_OK,
 )
 async def get_property_detail(
     property_id: uuid.UUID,
     uc: Annotated[GetPropertyDetailAdminUseCase, Depends(get_admin_property_detail_uc)],
-) -> PropertyDetailSchema:
+) -> AdminPropertyDetailSchema:
     return await uc.execute(property_id=property_id)
 
 
