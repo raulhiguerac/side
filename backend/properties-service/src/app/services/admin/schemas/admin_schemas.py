@@ -8,6 +8,7 @@ from pydantic import ConfigDict, Field, model_validator
 from app.models.bulk_job import JobStatus
 from app.models.listing import Currency, ListingStatus, ListingType, PropertyType, VerificationStatus
 from app.schemas.base import StrictBase
+from app.services.shared.schemas.property_card import PropertyCardSchema
 from app.services.shared.schemas.property_detail import PropertyDetailSchema
 
 class VerifyPropertyRequest(StrictBase):
@@ -38,7 +39,8 @@ class VerifyPropertyRequest(StrictBase):
 
 class CreatePromotionRequest(StrictBase):
     property_id: uuid.UUID
-    promoted_days: int = Field(ge=1)
+    # Tope de 60 días: una promoción es una campaña, no un estado permanente.
+    promoted_days: int = Field(ge=1, le=60)
     priority: int = Field(default=0, ge=0)
 
 
@@ -46,6 +48,9 @@ class GetPropertiesAdminRequest(StrictBase):
     status: Optional[ListingStatus] = None
     verification_status: Optional[VerificationStatus] = None
     owner_id: Optional[uuid.UUID] = None
+    # Filtra por promoción activa, que es la condición del
+    # DuplicateActivePromotionError: `false` da las promocionables.
+    is_promoted: Optional[bool] = None
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=20, ge=1, le=100)
 
@@ -85,6 +90,37 @@ class AdminPropertyDetailSchema(PropertyDetailSchema):
 
     allowed_verification_targets: list[VerificationStatus]
     allowed_status_targets: list[ListingStatus]
+
+
+class GetPromotionsAdminRequest(StrictBase):
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=100)
+
+
+class AdminPromotionSchema(StrictBase):
+    """A promotion, with the property it promotes nested inside.
+
+    Deliberately not a bare PropertyCardSchema: that one answers "is it
+    promoted?" and nothing else, so a panel listing promotions could not show
+    priority or when they expire — the only two things a promotion decides.
+    """
+
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    id: uuid.UUID
+    property_id: uuid.UUID
+    priority: int
+    starts_at: datetime
+    ends_at: datetime
+    is_active: bool
+    property: Optional[PropertyCardSchema] = None
+
+
+class AdminPromotionsPage(StrictBase):
+    items: list[AdminPromotionSchema]
+    total: int
+    page: int
+    page_size: int
 
 
 class AdminPropertiesPage(StrictBase):
