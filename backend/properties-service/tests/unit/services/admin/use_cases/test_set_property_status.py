@@ -11,7 +11,13 @@ from app.core.exceptions.listing import (
 from app.models.listing import ListingStatus
 from app.schemas.principal import Principal
 from app.services.admin.use_cases.moderation.set_status import SetPropertyStatusUseCase
-from app.services.shared.helpers.cache_keys import cache_property, client_properties, map_h3_cell
+from app.services.shared.helpers.cache_keys import (
+    cache_property,
+    client_properties,
+    feed_ads_by_city,
+    feed_ads_global,
+    map_h3_cell,
+)
 
 PROP_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 OWNER_ID = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
@@ -22,6 +28,9 @@ H3_R9 = "8fb5a30a2dfffff"
 H3_R7 = "87b5a30a2ffffff"
 
 
+CITY_ID = uuid.UUID("cccccccc-cccc-cccc-cccc-cccccccccccc")
+
+
 def _make_mock_prop(status: ListingStatus):
     m = MagicMock()
     m.id = PROP_ID
@@ -29,6 +38,7 @@ def _make_mock_prop(status: ListingStatus):
     m.status = status
     m.h3_r9 = H3_R9
     m.h3_r7 = H3_R7
+    m.location = MagicMock(city_id=CITY_ID)
     return m
 
 
@@ -172,3 +182,32 @@ async def test_survives_cache_delete_failure(mock_run, uc, mock_uow, mock_cache)
     await uc.execute(principal=ADMIN, property_id=PROP_ID, target_status=ListingStatus.active)
 
     mock_uow.commit.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# Cache incluye los ads del feed
+# ---------------------------------------------------------------------------
+
+@patch("app.services.admin.use_cases.moderation.set_status.run_in_threadpool")
+async def test_invalidates_feed_ads_keys(mock_run, uc, mock_cache):
+    """Sacar de `active` una property promocionada la dejaba sirviéndose como
+    aviso pago hasta que expirara el TTL de esa entrada."""
+    mock_run.return_value = _make_mock_prop(ListingStatus.active)
+
+    await uc.execute(principal=ADMIN, property_id=PROP_ID, target_status=ListingStatus.inactive)
+
+    deleted_keys = mock_cache.delete.call_args.kwargs["key"]
+    assert feed_ads_global() in deleted_keys
+    assert feed_ads_by_city(CITY_ID) in deleted_keys
+
+
+@patch("app.services.admin.use_cases.moderation.set_status.run_in_threadpool")
+async def test_invalidates_ads_without_asking_if_promoted(mock_run, uc, mock_cache, mock_uow):
+    """Averiguarlo costaría una query por cada cambio de status; borrar una key
+    que se repuebla sola en el primer feed sale más barato."""
+    mock_run.return_value = _make_mock_prop(ListingStatus.draft)
+
+    await uc.execute(principal=ADMIN, property_id=PROP_ID, target_status=ListingStatus.active)
+
+    assert mock_run.await_count == 1  # solo el get_by_id, ninguna consulta de promociones
+    assert feed_ads_global() in mock_cache.delete.call_args.kwargs["key"]
