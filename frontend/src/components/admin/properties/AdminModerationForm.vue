@@ -1,7 +1,5 @@
 <template>
-  <!-- Pie fijo del panel: el contenido scrollea por encima y la moderación
-       queda siempre a la vista. Fondo opaco para que las fotos no se lean
-       por debajo de los controles. -->
+  <!-- Pie fijo y opaco: la moderación queda a la vista mientras el contenido scrollea. -->
   <div
     v-if="status && verificationStatus"
     class="border-brand-divider sticky bottom-0 border-t bg-white px-5 py-4"
@@ -85,9 +83,7 @@
         </div>
       </div>
 
-      <!-- Inline y no modal: el motivo es parte de elegir "Rechazada", no un
-           paso aparte. El backend lo exige al rechazar y lo prohíbe en el
-           resto, así que aparece exactamente cuando aplica. -->
+      <!-- Inline y no modal: el motivo es parte de elegir "Rechazada", que es donde el backend lo acepta. -->
       <div v-if="requiresReason">
         <label
           for="moderation-reason"
@@ -150,14 +146,7 @@ import type { ModerationPayload } from "@/types/admin";
 import type { ListingStatus } from "@/types/feed";
 import type { VerificationStatus } from "@/types/properties";
 
-/**
- * Formulario de moderación del panel. Mantiene los cambios en borrador y los
- * emite juntos: cambiar la verificación saca la fila del filtro, así que
- * aplicar de a un campo dejaría a medias a quien necesita tocar los dos.
- *
- * No llama a la API. Recibe el estado actual, emite lo que cambió, y el padre
- * decide qué hacer con eso.
- */
+/** Acumula los cambios y los emite juntos: cambiar la verificación saca la fila del filtro. */
 const props = defineProps<{
   status: ListingStatus | null;
   verificationStatus: VerificationStatus | null;
@@ -172,12 +161,7 @@ const draftStatus = ref<ListingStatus | null>(null);
 const draftVerification = ref<VerificationStatus | null>(null);
 const reason = ref("");
 
-/**
- * Las opciones son el estado actual más los destinos legales desde él. El
- * actual va primero y marcado, para que el select sirva también como lectura
- * de en qué estado está. Lo que no está en la máquina no se ofrece: llegar a
- * `verified` desde `unverified` son dos guardados, y así se ve.
- */
+/** El estado actual (primero, marcado) más sus destinos legales: lo que no está en la máquina no se ofrece. */
 const verificationOptions = computed(() => {
   if (!props.verificationStatus) return [];
   const current = props.verificationStatus;
@@ -247,10 +231,7 @@ function onSave() {
   });
 }
 
-/**
- * Cambiar de property —o recargarla tras guardar— reinicia el borrador: si no,
- * los selects seguirían mostrando lo que se eligió para la anterior.
- */
+/** Cambiar de property —o recargarla tras guardar— reinicia el borrador. */
 watch(() => [props.status, props.verificationStatus], reset, {
   immediate: true,
 });

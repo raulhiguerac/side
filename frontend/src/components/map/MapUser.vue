@@ -96,8 +96,7 @@ function buildPoiPopupHtml(m: MarkerData): string {
 const zoom = defineModel<number>("zoom", { default: 15 });
 const center = defineModel<[number, number]>("center");
 
-// Internal center that l-map owns — prevents Leaflet LatLng objects from
-// leaking into parent state and avoids circular update crashes.
+// Centro interno de l-map: evita que los LatLng de Leaflet se filtren al padre y crasheen el update.
 const internalCenter = ref<[number, number]>(
   center.value ?? [4.681414, -74.046864]
 );

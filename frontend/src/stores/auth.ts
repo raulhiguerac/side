@@ -107,10 +107,7 @@ export const useAuthStore = defineStore("auth", {
       }
     },
 
-    /**
-     * 🚪 LOGOUT OPTIMIZADO
-     * Prevenimos el bloqueo de la transición out-in.
-     */
+    /** Logout optimizado: no bloquea la transición out-in. */
     async logout(): Promise<void> {
       try {
         await axios.post(
@@ -129,11 +126,7 @@ export const useAuthStore = defineStore("auth", {
         this.isAdmin = false;
         this.accountId = null;
 
-        /**
-         * 💡 EL TRUCO: Marcamos _authChecked como true.
-         * Esto evita que el router.beforeEach intente llamar a checkAuth()
-         * otra vez mientras la animación de salida está ocurriendo.
-         */
+        /** `_authChecked` en true evita que el guard llame a `checkAuth()` durante la animación de salida. */
         this._authChecked = true;
 
         // Redirigimos al Home o Login

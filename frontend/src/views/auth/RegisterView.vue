@@ -490,9 +490,7 @@
                 </button>
 
                 <!--
-                  Registro con Google, comentado junto con la baja de firebase.
-                  Este botón nunca tuvo handler — era decorativo. Vuelve cuando
-                  esté el Identity Brokering de Keycloak (ADR-0004).
+                  Registro con Google, comentado con la baja de firebase: era decorativo. Vuelve con Keycloak (ADR-0004).
 
                   <div class="flex items-center gap-3">
                     <div class="flex-1 h-px bg-brand-divider"></div>
@@ -526,15 +524,7 @@
 </template>
 
 <script lang="ts" setup>
-/**
- * 📝 REGISTER VIEW - Pantalla de registro (3 pasos)
- *
- * Flujo:
- * 1. Paso 1: Seleccionar tipo de cuenta (persona/organización)
- * 2. Paso 2: Datos personales (nombre, apellido, teléfono)
- * 3. Paso 3: Credenciales (email, password)
- * 4. Al finalizar → llamamos al store.register()
- */
+/** Registro en 3 pasos: tipo de cuenta, datos personales y credenciales. */
 import { ref } from "vue";
 import router from "@/router";
 import { useAuthStore } from "@/stores/auth";
@@ -563,14 +553,7 @@ const nextStep = () => {
   step.value++;
 };
 
-/**
- * 📝 Registro con email/password
- *
- * Usa el store para hacer el registro, así:
- * - El store maneja la cookie automáticamente
- * - El store guarda los datos del usuario
- * - Redirigimos al home si es exitoso
- */
+/** Registro vía store: él maneja la cookie, guarda el usuario, y redirigimos al home. */
 const registerUser = async () => {
   isLoading.value = true;
   errorMessage.value = "";

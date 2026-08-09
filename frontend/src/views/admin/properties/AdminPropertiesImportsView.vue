@@ -10,11 +10,7 @@
       </button>
     </div>
 
-    <!--
-      Sin historial: el backend solo expone `GET /admin/properties/bulk/{job_id}/status`,
-      no un listado de jobs, así que no hay de dónde sacar las importaciones
-      anteriores. Hasta que exista ese endpoint esto es un empty state fijo.
-    -->
+    <!-- Empty state fijo: el backend no lista jobs, solo el status de uno por id. -->
     <div
       class="rounded-2xl border border-brand-divider bg-white px-6 py-12 text-center"
     >

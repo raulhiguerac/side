@@ -179,11 +179,7 @@
               </button>
 
               <!--
-                Login con Google, comentado junto con la baja de firebase.
-                No funcionaba: initializeApp nunca se llamaba, no existe ningún
-                firebaseConfig en el repo, y el endpoint POST /v1/auth/login/google
-                tampoco existe en users-service. Vuelve cuando esté el Identity
-                Brokering de Keycloak (ADR-0004).
+                Login con Google, comentado con la baja de firebase: nunca funcionó. Vuelve con Keycloak (ADR-0004).
 
                 <div class="flex items-center gap-3">
                   <div class="flex-1 h-px bg-brand-divider"></div>
@@ -224,15 +220,7 @@
 </template>
 
 <script lang="ts" setup>
-/**
- * 🔐 LOGIN VIEW - Pantalla de inicio de sesión
- *
- * Flujo:
- * 1. Usuario llena email y password
- * 2. Llamamos al store.login()
- * 3. Si es exitoso → el store guarda el usuario y redirigimos
- * 4. Si falla → mostramos error
- */
+/** Pantalla de login: delega en `store.login()` y redirige, o muestra el error. */
 import { ref } from "vue";
 import router from "@/router";
 import { useAuthStore } from "@/stores/auth";
@@ -251,14 +239,7 @@ const showPassword = ref(false);
 const isLoading = ref(false);
 const errorMessage = ref(""); // Para mostrar errores al usuario
 
-/**
- * 🔑 Login con email/password
- *
- * Usa el store para hacer el login, así:
- * - El store maneja la cookie automáticamente
- * - El store guarda los datos del usuario
- * - Todos los componentes que usen el store se actualizan
- */
+/** Login vía store: él maneja la cookie, guarda el usuario y propaga el cambio. */
 const loginUser = async () => {
   isLoading.value = true;
   errorMessage.value = ""; // Limpiamos errores previos
@@ -277,7 +258,5 @@ const loginUser = async () => {
   isLoading.value = false;
 };
 
-// El handler de login con Google se eliminó junto con firebase — el botón quedó
-// comentado en el template. No se puede dejar vivo sin la dependencia, y tampoco
-// funcionaba. Ver ADR-0004.
+// El handler de Google se fue con firebase; el botón quedó comentado en el template (ADR-0004).
 </script>

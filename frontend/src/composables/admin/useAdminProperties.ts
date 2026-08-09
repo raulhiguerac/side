@@ -35,12 +35,7 @@ export function useAdminProperties() {
   const error = ref<string | null>(null);
   const filters = ref<AdminPropertiesFilters>({});
 
-  /**
-   * El total del servidor se guarda aparte a propósito: el `total` que expone
-   * `usePagination` es `allItems.length`, o sea lo cargado hasta ahora. Para
-   * "Mostrando 1-20 de 18.744" hace falta el conteo real, que es justamente lo
-   * que el listado admin pagina por offset para poder dar (ver ADR-0009).
-   */
+  /** El conteo real del servidor: el `total` de `usePagination` es solo lo cargado (ver ADR-0009). */
   const serverTotal = ref(0);
 
   const totalPages = computed(() =>
@@ -83,11 +78,7 @@ export function useAdminProperties() {
     }
   }
 
-  /**
-   * Avanzar es "cuánto nos desplazamos": `usePagination` solo pide al servidor
-   * cuando la página siguiente todavía no está cargada, así que volver atrás
-   * nunca dispara request — las filas ya están en memoria.
-   */
+  /** Solo pide al servidor si la página siguiente no está cargada; volver atrás nunca dispara request. */
   async function next() {
     if (loading.value) return;
     loading.value = true;

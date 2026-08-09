@@ -233,9 +233,7 @@ async function submitAndContinue() {
   try {
     propertyId.value = await createListing(form.value);
   } catch {
-    // `createListing` ya dejó el detalle en `error`/`errorCode` antes de re-lanzar,
-    // y el paso 3 renderiza ese estado de error en vez del uploader. Por eso se
-    // avanza igual en el `finally`: es la pantalla que muestra el fallo.
+    // `createListing` ya dejó el detalle en `error`/`errorCode` y el paso 3 lo renderiza: por eso se avanza igual.
   } finally {
     currentStep.value = 3;
   }

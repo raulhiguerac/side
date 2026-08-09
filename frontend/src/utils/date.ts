@@ -4,11 +4,7 @@ const shortDateFormatter = new Intl.DateTimeFormat("es-CO", {
   year: "numeric",
 });
 
-/**
- * `12 jul 2026`. El formateador se crea una sola vez a nivel de módulo:
- * construir un `Intl.DateTimeFormat` por celda es de lo más caro que puede
- * hacer una tabla con cientos de filas.
- */
+/** `12 jul 2026`. El formateador se crea una vez por módulo: uno por celda es carísimo en tablas grandes. */
 export function formatShortDate(value: string | Date | null): string {
   if (!value) return "";
   const date = typeof value === "string" ? new Date(value) : value;

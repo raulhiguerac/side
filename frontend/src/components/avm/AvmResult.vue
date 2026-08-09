@@ -49,8 +49,7 @@ onMounted(() => {
   gsap.to(tweened, { duration: 1.5, value: props.price, ease: "power2.out" });
 });
 
-// `formatCurrency` ya redondea vía `maximumFractionDigits: 0`, así que el
-// `Math.round` que había acá era redundante.
+// `formatCurrency` ya redondea vía `maximumFractionDigits: 0`.
 function formatCOP(value: number): string {
   return formatCurrency(value, "COP");
 }

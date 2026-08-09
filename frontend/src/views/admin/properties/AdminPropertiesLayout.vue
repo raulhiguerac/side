@@ -11,21 +11,7 @@
         </p>
       </div>
 
-      <!--
-        `flex-1` en cada tab reparte el ancho en tres partes iguales; el
-        `-mb-px` sube el borde activo un pixel para que tape la línea divisoria
-        en vez de dibujarse debajo de ella.
-
-        `custom` + `<a>` en vez de dejar que RouterLink renderice: hace falta
-        el `v-slot` para leer `isExactActive` y aplicar el ternario. Con las
-        props `active-class`/`exact-active-class` las dos variantes conviven en
-        el atributo y gana la que Tailwind haya emitido última en el CSS, no la
-        que corresponde.
-
-        Exact y no `isActive`: `/admin/properties` es prefijo de las otras dos,
-        así que con activo por prefijo "Moderación" quedaría encendida también
-        al estar parado en promociones o importaciones.
-      -->
+      <!-- `custom` + `<a>` para leer `isExactActive`; exacto porque `/admin/properties` es prefijo de las otras. -->
       <nav class="flex border-b border-brand-divider">
         <RouterLink
           v-for="tab in TABS"

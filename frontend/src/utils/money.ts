@@ -8,14 +8,7 @@ export function parseMoney(raw: string): number | null {
   return isNaN(n) ? null : n;
 }
 
-/**
- * Igual que `formatMoney` pero con símbolo de moneda. Existe porque el mismo
- * `Intl.NumberFormat` está repetido en `usePropertyDetail` (precio y admin fee)
- * y hay variantes a mano en `AvmResult` y `PropertyCard` — este es el lugar
- * donde deberían converger.
- *
- * Acepta string porque los `Decimal` del backend se serializan así.
- */
+/** Como `formatMoney` pero con símbolo; acepta string porque los `Decimal` del backend llegan así. */
 export function formatCurrency(
   value: number | string | null,
   currency = "COP"

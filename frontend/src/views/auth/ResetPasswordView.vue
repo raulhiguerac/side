@@ -97,15 +97,7 @@
 </template>
 
 <script lang="ts" setup>
-/**
- * 🔐 LOGIN VIEW - Pantalla de inicio de sesión
- *
- * Flujo:
- * 1. Usuario llena email y password
- * 2. Llamamos al store.login()
- * 3. Si es exitoso → el store guarda el usuario y redirigimos
- * 4. Si falla → mostramos error
- */
+/** Pantalla de recuperación de contraseña. */
 import { ref } from "vue";
 import usersApi from "@/api/usersApi";
 import router from "@/router";
@@ -119,14 +111,7 @@ const user = ref({
 const isLoading = ref(false);
 const errorMessage = ref(""); // Para mostrar errores al usuario
 
-/**
- * 🔑 Login con email/password
- *
- * Usa el store para hacer el login, así:
- * - El store maneja la cookie automáticamente
- * - El store guarda los datos del usuario
- * - Todos los componentes que usen el store se actualizan
- */
+/** Pide el cambio de contraseña y muestra el resultado. */
 const resetPasswordUser = async () => {
   isLoading.value = true;
   errorMessage.value = "";
@@ -137,12 +122,10 @@ const resetPasswordUser = async () => {
       email: user.value.email,
     });
 
-    // 2. Si llega aquí, es que fue exitoso (status 200)
-    // Normalmente el reset no te loguea de inmediato,
-    // sino que te avisa que revises tu correo.
+    // Éxito: el reset no loguea, solo avisa que revises el correo.
     router.push("/login");
   } catch (error: any) {
-    // 3. Si algo sale mal (400, 500, etc.)
+    // Fallo (400, 500, etc.)
     errorMessage.value =
       error.response?.data?.message || "Error al solicitar el cambio";
   } finally {

@@ -93,12 +93,7 @@ const files = defineModel<File[]>({ default: () => [] });
 
 const inputRef = ref<HTMLInputElement | null>(null);
 const isDragging = ref(false);
-/**
- * Generar y revocar object URLs es un efecto, no una derivación: como `computed`
- * leía y escribía el mismo ref, se auto-invalidaba y podía revocar URLs que las
- * miniaturas todavía estaban usando. Con `watch` la revocación ocurre una sola
- * vez por cambio real de `files`.
- */
+/** Efecto y no `computed`: leer y escribir el mismo ref se auto-invalidaba y revocaba URLs en uso. */
 const previews = ref<string[]>([]);
 
 watch(

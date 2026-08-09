@@ -1,13 +1,6 @@
 import type { RouteRecordRaw } from "vue-router";
 
-/**
- * El padre no lleva `name`: tiene un hijo con `path: ""`, y nombrar a los dos
- * hace ambiguo un `push({ name: "admin-properties" })`. El nombre vive en el
- * hijo por defecto, que es el destino real.
- *
- * `meta` va solo en el padre — el guard usa `to.matched.some(...)` y `matched`
- * incluye los registros padre, así que los hijos quedan protegidos igual.
- */
+/** El `name` vive en el hijo por defecto; el `meta` del padre alcanza porque el guard usa `matched`. */
 export const adminPropertiesRoutes: RouteRecordRaw[] = [
   {
     path: "/admin/properties",

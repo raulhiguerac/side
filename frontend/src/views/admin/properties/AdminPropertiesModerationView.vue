@@ -1,11 +1,6 @@
 <template>
   <div class="flex items-start gap-6">
-    <!-- 60/40 vía `flex-[3]` / `flex-[2]`, que reparten el espacio *después*
-         del gap; con `w-3/5` + `w-2/5` la suma daría 100% más el gap y los dos
-         hijos tendrían que encogerse para entrar.
-
-         `min-w-0` deja que la tabla se encoja: sin eso el hijo flex toma el
-         ancho de su contenido y empuja el panel fuera de la pantalla. -->
+    <!-- `flex-[3]`/`flex-[2]` reparten después del gap; `min-w-0` deja que la tabla se encoja. -->
     <div class="min-w-0 flex-[3]">
       <p
         v-if="error"
@@ -40,8 +35,7 @@
       </div>
     </div>
 
-    <!-- Oculto por debajo de xl: un panel al lado de la tabla no entra en
-         pantallas chicas, y moderar es una tarea de escritorio. -->
+    <!-- Oculto bajo xl: moderar es una tarea de escritorio. -->
     <aside class="sticky top-6 hidden min-w-0 flex-[2] xl:block">
       <AdminPropertyPreviewPanel :property-id="selectedId" />
     </aside>
@@ -70,12 +64,7 @@ const {
 
 const selectedId = ref<string | null>(null);
 
-/**
- * El panel arranca con la primera fila ya elegida en vez de vacío. Se vigila
- * `rows` y no solo la carga inicial porque al paginar cambia la página entera:
- * la selección anterior deja de estar visible y quedaría marcada una fila que
- * no se ve. Si la seleccionada sigue en la página, no se toca.
- */
+/** Arranca con la primera fila elegida; al paginar la anterior deja de estar visible. */
 watch(
   rows,
   (list) => {
