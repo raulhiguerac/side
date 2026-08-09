@@ -6,7 +6,7 @@ from sqlalchemy import tuple_
 from sqlmodel import Session, select
 
 from app.models.listing import ListingStatus, Property, PropertyLocation, PropertyType
-from app.models.promotion import PromotedListing
+from app.models.promotion import PromotedListing, active_promotion_clause
 from app.services.search.ports.property_search_repository import PropertySearchRepository
 
 
@@ -69,7 +69,7 @@ class SqlPropertySearchRepository(PropertySearchRepository):
             stmt = stmt.join(
                 PromotedListing, PromotedListing.property_id == Property.id
             ).where(
-                PromotedListing.is_active == True  # noqa: E712
+                active_promotion_clause()
             ).order_by(PromotedListing.priority.desc(), Property.created_at.desc(), Property.id.desc())
         else:
             stmt = stmt.order_by(Property.created_at.desc(), Property.id.desc())

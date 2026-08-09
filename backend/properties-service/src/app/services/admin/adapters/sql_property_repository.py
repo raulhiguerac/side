@@ -7,6 +7,7 @@ from sqlalchemy.orm import noload
 
 from app.models.listing import ListingStatus, Property, PropertyLocation, VerificationStatus
 from app.models.image import PropertyImage
+from app.models.promotion import PromotedListing, active_promotion_clause
 from app.services.admin.ports.property_repository import AdminPropertyRepository
 
 _PROPERTY_UPSERT_FIELDS = [
@@ -104,6 +105,7 @@ class SqlAdminPropertyRepository(AdminPropertyRepository):
         status: Optional[ListingStatus],
         verification_status: Optional[VerificationStatus],
         owner_id: Optional[uuid.UUID],
+        is_promoted: Optional[bool],
     ):
         """Shared by get_all and count_all on purpose: a filter added to one and
         not the other would make the reported total disagree with the rows."""
@@ -115,6 +117,18 @@ class SqlAdminPropertyRepository(AdminPropertyRepository):
             stmt = stmt.where(Property.verification_status == verification_status)
         if owner_id is not None:
             stmt = stmt.where(Property.owner_id == owner_id)
+        if is_promoted is not None:
+            # EXISTS y no JOIN: con join una property con varias promociones
+            # duplicaría filas y rompería el count. La condición es la misma que
+            # usa `get_active_by_property_id` —solo `is_active`, sin mirar
+            # `ends_at`— porque es la que decide el DuplicateActivePromotionError.
+            has_active_promotion = (
+                select(PromotedListing.id)
+                .where(PromotedListing.property_id == Property.id)
+                .where(active_promotion_clause())
+                .exists()
+            )
+            stmt = stmt.where(has_active_promotion if is_promoted else ~has_active_promotion)
 
         return stmt
 
@@ -124,6 +138,7 @@ class SqlAdminPropertyRepository(AdminPropertyRepository):
         status: Optional[ListingStatus] = None,
         verification_status: Optional[VerificationStatus] = None,
         owner_id: Optional[uuid.UUID] = None,
+        is_promoted: Optional[bool] = None,
         offset: int = 0,
         limit: int = 20,
     ) -> list[Property]:
@@ -132,6 +147,7 @@ class SqlAdminPropertyRepository(AdminPropertyRepository):
             status=status,
             verification_status=verification_status,
             owner_id=owner_id,
+            is_promoted=is_promoted,
         )
         # Property eager-loads images, location and promotions with selectin, so
         # every page would also fetch image rows, PostGIS geometries and
@@ -152,11 +168,13 @@ class SqlAdminPropertyRepository(AdminPropertyRepository):
         status: Optional[ListingStatus] = None,
         verification_status: Optional[VerificationStatus] = None,
         owner_id: Optional[uuid.UUID] = None,
+        is_promoted: Optional[bool] = None,
     ) -> int:
         stmt = self._apply_filters(
             select(func.count()).select_from(Property),
             status=status,
             verification_status=verification_status,
             owner_id=owner_id,
+            is_promoted=is_promoted,
         )
         return self.session.exec(stmt).one()

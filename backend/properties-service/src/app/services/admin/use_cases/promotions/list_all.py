@@ -3,41 +3,38 @@ from functools import partial
 from fastapi.concurrency import run_in_threadpool
 
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork
-from app.services.shared.helpers.cache_keys import feed_ads_global
-from app.services.shared.ports.cache import CachePort
-from app.services.shared.schemas.property_card import PropertyCardSchema
+from app.services.admin.schemas.admin_schemas import (
+    AdminPromotionSchema,
+    AdminPromotionsPage,
+    GetPromotionsAdminRequest,
+)
 
 
 class ListAllPromotionsUseCase:
-    def __init__(self, *, uow: AdminUnitOfWork, cache: CachePort) -> None:
+    """Listado admin de promociones activas, paginado por offset.
+
+    Sin cache a propósito. La versión anterior leía y escribía `feed_ads_global()`
+    —la cache de ads del feed público— así que cambiarle la forma a la respuesta
+    habría envenenado esa entrada para todos los lectores del feed. Es una lectura
+    interna, de pocas filas y poco frecuente: no amerita cache propia.
+    """
+
+    def __init__(self, *, uow: AdminUnitOfWork) -> None:
         self.uow = uow
-        self.cache = cache
 
-    async def execute(self) -> list[PropertyCardSchema]:
-        try:
-            cached = await self.cache.get_json(key=feed_ads_global())
-            if cached:
-                return [PropertyCardSchema.model_validate(c) for c in cached]
-        except Exception:
-            pass
+    async def execute(self, *, request: GetPromotionsAdminRequest) -> AdminPromotionsPage:
+        offset = (request.page - 1) * request.page_size
 
-        promotions = await run_in_threadpool(self.uow.promotions.get_all)
-        if not promotions:
-            return []
-
-        property_ids = [p.property_id for p in promotions]
-        properties = await run_in_threadpool(
-            partial(self.uow.properties.get_by_ids, property_ids=property_ids)
+        # Secuencial y no con `gather`: comparten la Session de este UoW, que no
+        # es segura entre threads.
+        promotions = await run_in_threadpool(
+            partial(self.uow.promotions.get_all, offset=offset, limit=request.page_size)
         )
+        total = await run_in_threadpool(self.uow.promotions.count_all)
 
-        cards = [PropertyCardSchema.model_validate(p) for p in properties]
-
-        try:
-            await self.cache.set_json(
-                key=feed_ads_global(),
-                value=[c.model_dump(mode="json") for c in cards],
-            )
-        except Exception:
-            pass
-
-        return cards
+        return AdminPromotionsPage(
+            items = [AdminPromotionSchema.model_validate(p) for p in promotions],
+            total = total,
+            page = request.page,
+            page_size = request.page_size,
+        )

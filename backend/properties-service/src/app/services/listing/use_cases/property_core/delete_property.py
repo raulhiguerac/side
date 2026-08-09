@@ -9,6 +9,8 @@ from app.services.listing.ports.unit_of_work import ListingUnitOfWork
 from app.services.shared.helpers.cache_keys import (
     cache_property,
     client_properties,
+    feed_ads_by_city,
+    feed_ads_global,
     public_user_properties_pattern,
 )
 from app.services.shared.ports.cache import CachePort
@@ -32,11 +34,15 @@ class DeletePropertyUseCase:
             await self.uow.rollback()
             raise DeletePropertyError(cause=exc, context={"property_id": str(property_id)}) from exc
 
+        # Los ads del feed también: una property promocionada que se borra seguiría
+        # sirviéndose como aviso pago hasta que expire el TTL de esa entrada.
         try:
-            await self.cache.delete(key=[                                                                                    
+            await self.cache.delete(key=[
                 cache_property(property_id=property_id),
-                client_properties(user_id=principal.sub),                                                                       
-            ]) 
+                client_properties(user_id=principal.sub),
+                feed_ads_global(),
+                *([feed_ads_by_city(prop.location.city_id)] if prop.location else []),
+            ])
         except Exception:
             pass
 

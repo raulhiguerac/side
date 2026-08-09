@@ -10,6 +10,8 @@ from app.services.admin.ports.unit_of_work import AdminUnitOfWork
 from app.services.shared.helpers.cache_keys import (
     cache_property,
     client_properties,
+    feed_ads_by_city,
+    feed_ads_global,
     map_h3_cell,
     public_user_properties_pattern,
 )
@@ -52,10 +54,17 @@ class SetPropertyStatusUseCase:
             await self.uow.rollback()
             raise SetVisibilityError(cause=exc, context={"property_id": str(property_id)}) from exc
 
+        # Los ads del feed van con el resto: sacar de `active` una property
+        # promocionada la deja sirviéndose como aviso pago hasta que expire el
+        # TTL de esa entrada. Se invalidan pase lo que pase con el status —
+        # saber si estaba promocionada costaría una query más, y borrar una key
+        # que igual se repuebla al primer feed es más barato que consultarla.
         try:
             await self.cache.delete(key=[
                 cache_property(property_id=property_id),
                 client_properties(user_id=prop.owner_id),
+                feed_ads_global(),
+                *([feed_ads_by_city(prop.location.city_id)] if prop.location else []),
                 *[map_h3_cell(i) for i in [prop.h3_r9, prop.h3_r7]],
             ])
             await self.cache.delete_pattern(

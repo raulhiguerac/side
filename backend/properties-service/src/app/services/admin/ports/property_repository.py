@@ -14,6 +14,7 @@ class AdminPropertyRepository(Protocol):
         status: Optional[ListingStatus],
         verification_status: Optional[VerificationStatus],
         owner_id: Optional[uuid.UUID],
+        is_promoted: Optional[bool],
         offset: int,
         limit: int,
     ) -> list[Property]: ...
@@ -23,6 +24,7 @@ class AdminPropertyRepository(Protocol):
         status: Optional[ListingStatus],
         verification_status: Optional[VerificationStatus],
         owner_id: Optional[uuid.UUID],
+        is_promoted: Optional[bool],
     ) -> int: ...
     def add(self, *, property: tuple[Property, PropertyLocation, list[PropertyImage]]) -> None: ...
     def bulk_insert(self, *, properties: list[tuple[Property, PropertyLocation, list[PropertyImage]]]) -> None: ...
