@@ -71,18 +71,8 @@
 
     <!-- Sin `NearbyPlaces` a propósito: fetchea en `onMounted` y serían 9 isócronas por click de fila. -->
 
-    <!-- El form sale del detalle que trajo el panel, así que no se modera lo que todavía no se ve. -->
-    <AdminModerationForm
-      v-if="property"
-      :status="property.status"
-      :verification-status="property.verification_status"
-      :allowed-verification-targets="property.allowed_verification_targets"
-      :allowed-status-targets="property.allowed_status_targets"
-      :saving="saving"
-      :success-message="successMessage"
-      :error-message="errorMessage"
-      @save="emit('save', $event, property.id)"
-    />
+    <!-- El pie sale del detalle que trajo el panel, así que no se actúa sobre lo que todavía no se ve. -->
+    <slot v-if="property" name="footer" :property="property" />
 
     <PhotoGalleryPopup
       v-if="property"
@@ -103,20 +93,17 @@ import { usePropertyDetail } from "@/composables/properties/usePropertyDetail";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import PropertyOverview from "@/components/properties/detail/PropertyOverview.vue";
 import PhotoGalleryPopup from "@/components/properties/photos/PhotoGalleryPopup.vue";
-import AdminModerationForm from "@/components/admin/properties/AdminModerationForm.vue";
-import type { AdminPropertyDetail, ModerationPayload } from "@/types/admin";
+import type { AdminPropertyDetail } from "@/types/admin";
 
-/** El estado del guardado solo pasa de largo hasta el formulario. */
-const props = defineProps<{
-  propertyId: string | null;
-  saving?: boolean;
-  successMessage?: string | null;
-  errorMessage?: string | null;
-}>();
+const props = defineProps<{ propertyId: string | null }>();
 
-/** El panel no guarda nada: reenvía lo que cambió con el id que está mostrando. */
-const emit = defineEmits<{
-  save: [payload: ModerationPayload, propertyId: string];
+/**
+ * El panel muestra la property; qué se hace con ella es de cada tab. El pie va
+ * como slot —moderación pone su formulario, promociones el suyo— y recibe el
+ * detalle ya cargado para no volver a pedirlo.
+ */
+defineSlots<{
+  footer?: (props: { property: AdminPropertyDetail }) => unknown;
 }>();
 
 const property = ref<AdminPropertyDetail | null>(null);

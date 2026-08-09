@@ -10,4 +10,9 @@ export const PROPERTIES_ENDPOINTS = {
   /** Ejes independientes y ambos `204`: mover los dos son dos PATCH sin respuesta útil. */
   adminVerification: (id: string) => `/v1/admin/properties/${id}/verification`,
   adminStatus: (id: string) => `/v1/admin/properties/${id}/status`,
+  /** GET lista las promocionadas (como `PropertyCardSchema`, no como promociones); POST crea una. */
+  adminPromotions: "/v1/admin/promotions",
+  /** GET las de una property; DELETE baja la activa — el path va por property, no por id de promoción. */
+  adminPropertyPromotions: (id: string) =>
+    `/v1/admin/properties/${id}/promotions`,
 };
