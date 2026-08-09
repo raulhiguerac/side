@@ -14,7 +14,6 @@ from app.api.deps.admin import (
     get_create_promotion_uc,
     get_delete_promotion_uc,
     get_list_all_promotions_uc,
-    get_list_promotions_by_property_uc,
     get_request_bulk_upload_url_uc,
     get_set_estimated_price_uc,
     get_set_status_uc,
@@ -23,6 +22,7 @@ from app.api.deps.admin import (
 from app.api.deps.auth import require_admin
 from app.schemas.principal import Principal
 from app.services.admin.schemas.admin_schemas import (
+    AdminPromotionsPage,
     AdminPropertiesPage,
     AdminPropertyDetailSchema,
     BulkCreatePropertiesRequest,
@@ -31,6 +31,7 @@ from app.services.admin.schemas.admin_schemas import (
     BulkUploadUrlRequest,
     BulkUploadUrlResponse,
     CreatePromotionRequest,
+    GetPromotionsAdminRequest,
     GetPropertiesAdminRequest,
     SetEstimatedPriceRequest,
     SetStatusRequest,
@@ -47,8 +48,6 @@ from app.services.admin.use_cases.moderation.verify import VerifyPropertyUseCase
 from app.services.admin.use_cases.promotions.create import CreatePromotionUseCase
 from app.services.admin.use_cases.promotions.delete import DeletePromotionUseCase
 from app.services.admin.use_cases.promotions.list_all import ListAllPromotionsUseCase
-from app.services.admin.use_cases.promotions.list_by_property import ListPromotionsByPropertyUseCase
-from app.services.shared.schemas.property_card import PropertyCardSchema
 
 logger = logging.getLogger(__name__)
 
@@ -206,25 +205,14 @@ async def set_estimated_price(
 
 @router.get(
     "/promotions",
-    response_model=list[PropertyCardSchema],
+    response_model=AdminPromotionsPage,
     status_code=status.HTTP_200_OK,
 )
 async def list_all_promotions(
+    filters: Annotated[GetPromotionsAdminRequest, Depends()],
     uc: Annotated[ListAllPromotionsUseCase, Depends(get_list_all_promotions_uc)],
-) -> list[PropertyCardSchema]:
-    return await uc.execute()
-
-
-@router.get(
-    "/properties/{property_id}/promotions",
-    response_model=list[PropertyCardSchema],
-    status_code=status.HTTP_200_OK,
-)
-async def list_promotions_by_property(
-    property_id: uuid.UUID,
-    uc: Annotated[ListPromotionsByPropertyUseCase, Depends(get_list_promotions_by_property_uc)],
-) -> list[PropertyCardSchema]:
-    return await uc.execute(property_id=property_id)
+) -> AdminPromotionsPage:
+    return await uc.execute(request=filters)
 
 
 @router.post(

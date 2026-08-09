@@ -9,6 +9,7 @@ from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, Num
 from sqlmodel import Field, Relationship
 
 from app.models.mixins import AuditMixin
+from app.models.promotion import ACTIVE_PROMOTION_PRIMARYJOIN
 
 
 # =============================================================================
@@ -147,7 +148,7 @@ class Property(AuditMixin, table=True):
     promotions: list["PromotedListing"] = Relationship(
         sa_relationship_kwargs={
             "lazy": "selectin",
-            "primaryjoin": "and_(Property.id == foreign(PromotedListing.property_id), PromotedListing.is_active == True)",
+            "primaryjoin": ACTIVE_PROMOTION_PRIMARYJOIN,
             "viewonly": True,
             "overlaps": "property",
         }

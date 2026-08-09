@@ -20,6 +20,7 @@ class GetPropertiesAdminUseCase:
             "status": request.status,
             "verification_status": request.verification_status,
             "owner_id": request.owner_id,
+            "is_promoted": request.is_promoted,
         }
 
         # Sequential, not gathered: both calls share this UoW's Session, and a
