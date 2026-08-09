@@ -26,6 +26,16 @@ export function usePagination<T>(pageSize = 20) {
     page.value = 1;
   }
 
+  /** Refresca la página actual y descarta las siguientes: si una fila salió, se corrieron todas. */
+  function replaceCurrentPage(items: T[], more = false) {
+    const start = (page.value - 1) * pageSize;
+    allItems.value = [...allItems.value.slice(0, start), ...items];
+    hasMore.value = more;
+
+    // Página vacía = ya no existe; se retrocede a la anterior, que está cargada.
+    if (!items.length && hasPrev.value) page.value--;
+  }
+
   async function next(fetchMore?: () => Promise<FetchPageResult<T>>) {
     if (!hasNext.value) return;
 
@@ -57,6 +67,7 @@ export function usePagination<T>(pageSize = 20) {
     hasMore,
     total,
     setItems,
+    replaceCurrentPage,
     next,
     prev,
     reset,

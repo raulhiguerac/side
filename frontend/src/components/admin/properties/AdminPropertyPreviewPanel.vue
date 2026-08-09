@@ -76,6 +76,9 @@
       v-if="property"
       :status="property.status"
       :verification-status="property.verification_status"
+      :saving="saving"
+      :success-message="successMessage"
+      :error-message="errorMessage"
       @save="emit('save', $event, property.id)"
     />
 
@@ -102,7 +105,13 @@ import AdminModerationForm from "@/components/admin/properties/AdminModerationFo
 import type { ModerationPayload } from "@/types/admin";
 import type { PropertyDetail } from "@/types/properties";
 
-const props = defineProps<{ propertyId: string | null }>();
+/** El estado del guardado solo pasa de largo hasta el formulario. */
+const props = defineProps<{
+  propertyId: string | null;
+  saving?: boolean;
+  successMessage?: string | null;
+  errorMessage?: string | null;
+}>();
 
 /** El panel no guarda nada: reenvía lo que cambió con el id que está mostrando. */
 const emit = defineEmits<{
@@ -180,4 +189,7 @@ async function load(id: string | null) {
 }
 
 watch(() => props.propertyId, load, { immediate: true });
+
+/** Tras moderar cambia el estado, no el id: el watcher no se entera y hay que pedirlo. */
+defineExpose({ refresh: () => load(props.propertyId) });
 </script>

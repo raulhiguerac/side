@@ -78,6 +78,31 @@ export function useAdminProperties() {
     }
   }
 
+  /** Refetchea la página actual tras moderar; `load()` no sirve porque resetea a la 1. */
+  async function reload() {
+    if (loading.value) return;
+    loading.value = true;
+    error.value = null;
+
+    const currentPage = pagination.page.value;
+
+    try {
+      const data = await fetchAdminProperties(currentPage, filters.value);
+      serverTotal.value = data.total;
+      pagination.replaceCurrentPage(
+        data.items,
+        hasMoreAfter(
+          (currentPage - 1) * PAGE_SIZE.ADMIN_PROPERTIES + data.items.length
+        )
+      );
+    } catch (e) {
+      error.value = "No se pudo actualizar la lista";
+      console.error("admin properties reload failed", e);
+    } finally {
+      loading.value = false;
+    }
+  }
+
   /** Solo pide al servidor si la página siguiente no está cargada; volver atrás nunca dispara request. */
   async function next() {
     if (loading.value) return;
@@ -119,6 +144,7 @@ export function useAdminProperties() {
     loading,
     error,
     load,
+    reload,
     next,
     prev,
   };
