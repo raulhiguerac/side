@@ -14,15 +14,7 @@
 </template>
 
 <script lang="ts" setup>
-/**
- * 🧭 NAVBAR - Barra de navegación inteligente
- *
- * Esta navbar "sabe" si el usuario está logueado o no,
- * gracias al store de Pinia que actúa como "memoria compartida"
- *
- * Nota: El checkAuth() se hace en App.vue al iniciar la app,
- * así que aquí solo leemos el estado.
- */
+/** Solo lee el estado de auth del store; el `checkAuth()` lo hace App.vue al iniciar. */
 import { computed } from "vue";
 import NavGuest from "./NavGuest.vue";
 import NavUser from "./NavUser.vue";

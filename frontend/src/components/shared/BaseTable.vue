@@ -26,12 +26,7 @@
       </thead>
 
       <tbody>
-        <!--
-          `hover` y seleccionado son excluyentes a propósito: Tailwind emite
-          `.hover\:bg-brand-bg:hover` con más especificidad que `.bg-...-light`,
-          así que teniendo las dos clases el hover le ganaría al seleccionado y
-          la fila activa se despintaría al pasarle el mouse por encima.
-        -->
+        <!-- Excluyentes a propósito: con las dos clases el hover le gana al seleccionado y lo despinta. -->
         <tr
           v-for="row in table.getRowModel().rows"
           :key="row.id"
@@ -54,16 +49,7 @@
                 : 'text-left',
             ]"
           >
-            <!--
-              Cada slot se llama igual que su columna. El slot gana y FlexRender
-              es el fallback: las columnas de texto plano no necesitan nada, y
-              las que llevan badges o botones se escriben como template en el
-              padre en vez de como render function dentro del columnDef.
-
-              Sin prefijo a propósito: un nombre con `:` obligaría a la sintaxis
-              de argumento dinámico (`#[\`cell:status\`]`) en cada uso. Si algún
-              día hacen falta slots estructurales, se namespacean esos.
-            -->
+            <!-- Cada slot se llama como su columna y gana sobre FlexRender; sin prefijo para no forzar `#[...]`. -->
             <slot
               :name="cell.column.id"
               :row="row.original"
@@ -131,16 +117,7 @@ function isSelected(row: T): boolean {
   return props.rowKey(row) === props.selectedKey;
 }
 
-/**
- * Los getters son la forma que pide el adaptador de Vue para que la tabla
- * reaccione a cambios de props: pasar `props.data` directo la congelaría en el
- * valor del primer render.
- *
- * Solo se registra el core row model. Ordenamiento, filtros y paginación son
- * server-side en este proyecto, así que sumar `getSortedRowModel` o
- * `getPaginationRowModel` haría que la tabla operara sobre la página ya cargada
- * y diera resultados que parecen globales sin serlo.
- */
+/** Getters para que reaccione a las props; solo core row model, porque orden y paginación son server-side. */
 const table = useVueTable({
   get data() {
     return props.data;

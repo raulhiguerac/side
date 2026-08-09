@@ -1,10 +1,4 @@
-/**
- * Gestión del Onboarding y Datos de Usuario
- * * Este store se encarga de:
- * 1. Rastrear en qué paso del onboarding está el usuario.
- * 2. Recordar si el usuario cerró el modal manualmente (SessionStorage).
- * 3. Evitar llamadas innecesarias al servidor si ya tenemos los datos.
- */
+/** Onboarding: paso actual, si se cerró el modal (sessionStorage) y cache de los datos del usuario. */
 
 import { defineStore } from "pinia";
 import axios from "axios";
