@@ -27,7 +27,7 @@
 <script lang="ts" setup>
 import { ref } from "vue";
 import { Upload } from "@lucide/vue";
-import BulkUploadPropertiesModal from "@/components/admin/properties/BulkUploadPropertiesModal.vue";
+import BulkUploadPropertiesModal from "@/components/admin/properties/imports/BulkUploadPropertiesModal.vue";
 
 const isBulkModalOpen = ref(false);
 </script>
