@@ -105,6 +105,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0008 — TanStack Table (headless) para la tabla admin](wiki/frontend/adrs/adr-tanstack-table.md)
 - [ADR-0009 — Las tabs del panel admin son rutas hijas, no un switch de componentes](wiki/frontend/adrs/adr-admin-tabs-nested-routes.md)
 - [ADR-0010 — Moderar se hace en el panel de vista previa, con un formulario de guardado explícito](wiki/frontend/adrs/adr-moderation-panel-staged-form.md)
+- [ADR-0011 — Promocionar vive en su propia sub-tab, no en el panel de moderación](wiki/frontend/adrs/adr-promotions-own-subtab.md)
 
 ## properties-service
 
@@ -135,6 +136,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0008 — Idempotencia del bulk create vía external_id determinístico](wiki/properties-service/adrs/adr-bulk-idempotent-external-id.md)
 - [ADR-0009 — El listado admin pagina por offset, no con el cursor del feed](wiki/properties-service/adrs/adr-admin-offset-pagination.md)
 - [ADR-0010 — La verificación es reversible y el takedown es un cambio de status](wiki/properties-service/adrs/adr-verification-reversible-lifecycle.md)
+- [ADR-0011 — Las transiciones legales las sirve el backend, no las duplica el cliente](wiki/properties-service/adrs/adr-transitions-served-by-backend.md)
 
 ## users-service
 

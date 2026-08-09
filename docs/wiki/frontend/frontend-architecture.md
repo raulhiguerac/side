@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-08-01
+last-verified: 2026-08-09
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -81,14 +81,18 @@ frontend/
 │   │   ├── pois/
 │   │   │   └── useReachablePois.ts    # POIs alcanzables desde una propiedad (3 perfiles × 3 rangos)
 │   │   ├── shared/
-│   │   │   └── usePagination.ts       # slice client-side genérico; opcionalmente pagina por red vía fetchMore
+│   │   │   └── usePagination.ts       # slice client-side genérico; pagina por red vía fetchMore; replaceCurrentPage para refrescar in situ
 │   │   ├── properties/
 │   │   │   ├── usePropertyDetail.ts   # computed logic de PropertyDetailView
 │   │   │   ├── usePropertyMapper.ts   # PropertyCard → PropertyCardUI con lookup de barrio
 │   │   │   ├── usePropertyVisibility.ts  # toggleVisibility(id): Promise<boolean>, sin estado
 │   │   │   └── useMyProperties.ts     # { properties, isLoading, fetchProperties } — mismo molde que useFeed
 │   │   ├── admin/
-│   │   │   └── useAdminProperties.ts  # listado admin: usePagination + serverTotal aparte
+│   │   │   ├── useAdminProperties.ts  # listado admin: usePagination + serverTotal aparte + reload() de la página actual
+│   │   │   ├── useActivePromotions.ts # promociones vigentes: pagina por servidor + remove()
+│   │   │   ├── useModerateProperty.ts # traduce el payload del form a uno o dos PATCH
+│   │   │   ├── usePromoteProperty.ts  # POST de promoción; distingue los dos 409 por `code`
+│   │   │   └── useRowSelection.ts     # selección de fila válida frente a cambios de la lista, con extractor de clave
 │   │   └── users/
 │   │       └── useProfileListings.ts  # fetchUserListings(id, offset) — función pura, sin estado (la paginación vive en usePagination)
 │   ├── utils/
@@ -96,14 +100,14 @@ frontend/
 │   │   └── date.ts                # formatShortDate — Intl construido una vez a nivel módulo
 │   ├── constants/
 │   │   ├── propertyStatus.ts      # LISTING_STATUS_* y VERIFICATION_STATUS_* (labels + badges)
-│   │   ├── pagination.ts          # PAGE_SIZE por vista (MY_PROPERTIES, PUBLIC_PROFILE, ADMIN_PROPERTIES)
-│   │   └── propertiesEndpoints.ts # paths de properties-service (me, byId, byUser, visibility, images, adminList)
+│   │   ├── pagination.ts          # PAGE_SIZE por vista (MY_PROPERTIES, PUBLIC_PROFILE, ADMIN_PROPERTIES, ADMIN_PROMOTIONS)
+│   │   └── propertiesEndpoints.ts # paths de properties-service (me, byId, byUser, visibility, images, adminList, adminDetail, adminVerification, adminStatus, adminPromotions, adminPropertyPromotions)
 │   ├── types/
 │   │   ├── user.ts
 │   │   ├── feed.ts               # PropertyCard (API shape), PropertyCardUI (UI shape), PropertyImageCard, ListingStatus
 │   │   ├── properties.ts         # PropertyDetail, PropertyLocationDetail, CreatePropertyForm, PropertyEditForm
 │   │   ├── pois.ts               # OrsProfile, GeoJsonPolygon, ReachablePoiItem, RangeGroup, CATEGORY_META, CATEGORY_PRIORITY
-│   │   └── admin.ts              # AdminPropertyRow, AdminPropertiesPage, AdminPropertiesFilters
+│   │   └── admin.ts              # AdminPropertyRow, AdminPropertyDetail, AdminPromotionRow, AdminPropertiesPage/AdminPromotionsPage, AdminPropertiesFilters, Moderation/PromotionPayload
 │   ├── views/                    # páginas-ruta
 │   │   ├── public/{HomeView, AboutView, PublicProfileView}  # /users/:userId
 │   │   ├── auth/{LoginView, RegisterView, ResetPasswordView}
@@ -115,7 +119,7 @@ frontend/
 │   │   │   ├── detail/PropertyDetailView   # /listing/:id
 │   │   │   └── edit/EditPropertyView       # /properties/:id/edit — ver [[frontend-property-edit-form]]
 │   │   ├── dev/{DevPlaygroundView, CreatePropertyDevView}  # sin auth, dev only
-│   │   └── admin/{AdminHomeView, properties/{AdminPropertiesLayout, ...ModerationView, ...PromotionsView, ...ImportsView}, catalog/AdminCatalogView}  # requiresAdmin — ver [[frontend-admin-panel]]
+│   │   └── admin/{AdminHomeView, properties/{AdminPropertiesLayout, moderation/AdminModerationView, promotions/{AdminPromotionsLayout, AdminPromotionsActiveView, AdminPromotionsCreateView}, imports/AdminImportsView}, catalog/AdminCatalogView}  # requiresAdmin — ver [[frontend-admin-panel]]
 │   └── components/
 │       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState, PrimaryButton, BaseTable}
 │       ├── onboarding/{IntentSelector, LocalitySelector, NeighborhoodSelector, PropertyTypeSelector}
@@ -128,7 +132,13 @@ frontend/
 │       │   └── feed/FeedFilters
 │       ├── settings/SettingsSidebar
 │       ├── map/MapUser
-│       └── admin/properties/{BulkUploadPropertiesModal, AdminPropertiesTable}  # ver [[frontend-admin-panel]]
+│       └── admin/                                  # ver [[frontend-admin-panel]]
+│           ├── shared/{AdminSplitView, AdminTabsNav}    # layout 60/40 y nav de tabs, sin dominio
+│           └── properties/
+│               ├── {AdminPropertiesTable, AdminPropertyPreviewPanel}   # compartidos entre tabs
+│               ├── moderation/AdminModerationForm
+│               ├── promotions/{AdminPromotionsTable, AdminPromotionForm, RemovePromotionModal}
+│               └── imports/BulkUploadPropertiesModal
 ├── package.json
 ├── vue.config.js                 # webpack tweaks (Vue CLI)
 ├── tailwind.config.js
