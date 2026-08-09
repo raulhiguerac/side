@@ -143,16 +143,30 @@ import type { ListingStatus } from "@/types/feed";
 import type { VerificationStatus } from "@/types/properties";
 
 /** Acumula los cambios y los emite juntos: cambiar la verificación saca la fila del filtro. */
-const props = defineProps<{
-  status: ListingStatus | null;
-  verificationStatus: VerificationStatus | null;
-  /** Los destinos legales los calcula el backend con la misma tabla que después aplica. */
-  allowedVerificationTargets: VerificationStatus[];
-  allowedStatusTargets: ListingStatus[];
-  saving?: boolean;
-  successMessage?: string | null;
-  errorMessage?: string | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    status: ListingStatus | null;
+    verificationStatus: VerificationStatus | null;
+    /**
+     * Los destinos legales los calcula el backend con la misma tabla que después
+     * aplica. Default vacío porque front y backend se despliegan por separado: si
+     * la respuesta todavía no los trae, el select se queda sin destinos —no se
+     * puede mover nada— en vez de romper el panel entero.
+     */
+    allowedVerificationTargets?: VerificationStatus[];
+    allowedStatusTargets?: ListingStatus[];
+    saving?: boolean;
+    successMessage?: string | null;
+    errorMessage?: string | null;
+  }>(),
+  {
+    allowedVerificationTargets: () => [],
+    allowedStatusTargets: () => [],
+    saving: false,
+    successMessage: null,
+    errorMessage: null,
+  }
+);
 
 const emit = defineEmits<{ save: [payload: ModerationPayload] }>();
 

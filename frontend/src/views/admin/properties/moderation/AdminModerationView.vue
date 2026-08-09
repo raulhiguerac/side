@@ -1,23 +1,15 @@
 <template>
-  <div class="flex items-start gap-6">
-    <!-- `flex-[3]`/`flex-[2]` reparten después del gap; `min-w-0` deja que la tabla se encoja. -->
-    <div class="min-w-0 flex-[3]">
-      <p
-        v-if="error"
-        class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"
-      >
-        {{ error }}
-      </p>
+  <AdminSplitView :error="error">
+    <template #table>
+      <AdminPropertiesTable
+        :rows="rows"
+        :loading="loading"
+        :selected-id="selectedId"
+        @row-click="selectedId = $event.id"
+      />
+    </template>
 
-      <div class="rounded-2xl border border-brand-divider bg-white">
-        <AdminPropertiesTable
-          :rows="rows"
-          :loading="loading"
-          :selected-id="selectedId"
-          @row-click="selectedId = $event.id"
-        />
-      </div>
-
+    <template #footer>
       <div
         v-if="serverTotal"
         class="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-between"
@@ -33,29 +25,39 @@
           @next="next"
         />
       </div>
-    </div>
+    </template>
 
-    <!-- Oculto bajo xl: moderar es una tarea de escritorio. -->
-    <aside class="sticky top-6 hidden min-w-0 flex-[2] xl:block">
-      <AdminPropertyPreviewPanel
-        ref="previewPanel"
-        :property-id="selectedId"
-        :saving="saving"
-        :success-message="success"
-        :error-message="moderationError"
-        @save="onSave"
-      />
-    </aside>
-  </div>
+    <template #panel>
+      <AdminPropertyPreviewPanel ref="previewPanel" :property-id="selectedId">
+        <template #footer="{ property }">
+          <AdminModerationForm
+            :status="property.status"
+            :verification-status="property.verification_status"
+            :allowed-verification-targets="
+              property.allowed_verification_targets
+            "
+            :allowed-status-targets="property.allowed_status_targets"
+            :saving="saving"
+            :success-message="success"
+            :error-message="moderationError"
+            @save="onSave($event, property.id)"
+          />
+        </template>
+      </AdminPropertyPreviewPanel>
+    </template>
+  </AdminSplitView>
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onMounted, ref, useTemplateRef, watch } from "vue";
+import { nextTick, onMounted, useTemplateRef, watch } from "vue";
 import PaginationArrows from "@/components/shared/PaginationArrows.vue";
+import AdminSplitView from "@/components/admin/shared/AdminSplitView.vue";
 import AdminPropertiesTable from "@/components/admin/properties/AdminPropertiesTable.vue";
 import AdminPropertyPreviewPanel from "@/components/admin/properties/AdminPropertyPreviewPanel.vue";
+import AdminModerationForm from "@/components/admin/properties/moderation/AdminModerationForm.vue";
 import { useAdminProperties } from "@/composables/admin/useAdminProperties";
 import { useModerateProperty } from "@/composables/admin/useModerateProperty";
+import { useRowSelection } from "@/composables/admin/useRowSelection";
 import type { ModerationPayload } from "@/types/admin";
 
 const {
@@ -83,7 +85,7 @@ const {
 
 const previewPanel = useTemplateRef("previewPanel");
 
-const selectedId = ref<string | null>(null);
+const { selectedId } = useRowSelection(rows);
 
 async function onSave(payload: ModerationPayload, propertyId: string) {
   // Un fallo parcial también deja lo mostrado viejo, así que refresca igual.
@@ -99,21 +101,6 @@ async function onSave(payload: ModerationPayload, propertyId: string) {
 
 /** Los mensajes son de la property moderada: cambiar de fila los invalida. */
 watch(selectedId, resetModeration);
-
-/** Arranca con la primera fila elegida; al paginar la anterior deja de estar visible. */
-watch(
-  rows,
-  (list) => {
-    if (!list.length) {
-      selectedId.value = null;
-      return;
-    }
-    if (!list.some((row) => row.id === selectedId.value)) {
-      selectedId.value = list[0].id;
-    }
-  },
-  { immediate: true }
-);
 
 onMounted(load);
 </script>
