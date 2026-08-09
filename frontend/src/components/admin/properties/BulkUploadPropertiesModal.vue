@@ -69,17 +69,7 @@ function onFileChange(e: Event) {
   error.value = "";
 }
 
-/**
- * Three steps, on submit rather than on file pick: the presigned URL expires
- * (expires_in, 5 min today), so requesting it early would let it go stale while
- * the admin is still choosing a file.
- *
- *   1. ask the API for a presigned PUT
- *   2. upload the CSV straight to storage, bypassing the API
- *   3. hand the resulting key back to the API, which queues the job and returns
- *
- * The job runs in the background, so there is nothing to wait for here.
- */
+/** Presigned PUT → upload directo a storage → key de vuelta a la API. Al submit: la URL expira en 5 min. */
 async function upload() {
   if (!file.value || uploading.value) return;
 
@@ -93,15 +83,13 @@ async function upload() {
     );
 
     if (file.value.size > presigned.max_size_bytes) {
-      // A plain presigned PUT can't enforce a size limit, so this check is the
-      // only one there is — the server would accept an oversized file.
+      // A plain presigned PUT can't enforce a size limit, so this check is the only one there is.
       const maxMb = Math.round(presigned.max_size_bytes / 1024 / 1024);
       error.value = `El archivo supera el máximo de ${maxMb} MB.`;
       return;
     }
 
-    // Straight to storage: no propertiesApi, no cookies. The signature travels
-    // in the query string and extra credentials can make the request fail.
+    // Straight to storage: extra credentials can make the signed request fail.
     const stored = await fetch(presigned.upload_url, {
       method: "PUT",
       body: file.value,

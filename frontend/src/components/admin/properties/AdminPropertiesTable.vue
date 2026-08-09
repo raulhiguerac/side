@@ -44,11 +44,7 @@
       </span>
     </template>
 
-    <!--
-      No es recursión: `#actions` es el slot de la columna en BaseTable, y el
-      `<slot name="actions">` de adentro reenvía el que recibe este componente
-      de su padre. Coinciden en nombre porque son de componentes distintos.
-    -->
+    <!-- No es recursión: `#actions` es el slot de BaseTable y el de adentro reenvía el del padre. -->
     <template v-if="slots.actions" #actions="{ row }">
       <slot name="actions" :row="row" />
     </template>
@@ -94,19 +90,7 @@ const LISTING_TYPE_LABELS: Record<AdminPropertyRow["listing_type"], string> = {
   rent: "Arriendo",
 };
 
-/**
- * La fila no alcanza para saber qué se está moderando: el modelo `Property` no
- * tiene título ni dirección, y `id`/`owner_id` son UUIDs. La identificación la
- * resuelve el panel de vista previa, no una columna más — por eso acá van solo
- * los campos que sirven para *escanear* y decidir cuál abrir.
- *
- * Tipo y operación separados: juntos en una celda se leen como una sola cosa y
- * obligan a parsear la fila entera para distinguir venta de arriendo.
- *
- * Sin columnas ordenables: `GET /admin/properties` todavía no acepta parámetro
- * de orden, y ordenar client-side reordenaría solo la página cargada, dando un
- * resultado que parece global sin serlo.
- */
+/** Solo campos para escanear y sin orden: identificar la property es del panel, y el listado no ordena. */
 const columns = computed<ColumnDef<AdminPropertyRow>[]>(() => {
   const base: ColumnDef<AdminPropertyRow>[] = [
     { id: "verification_status", header: "Verificación" },

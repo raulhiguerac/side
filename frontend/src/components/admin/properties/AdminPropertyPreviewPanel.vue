@@ -26,11 +26,7 @@
     </p>
 
     <div v-else-if="property" class="space-y-5 p-5">
-      <!--
-        Portada sola en vez de `PropertyPhotoGrid`: esa grilla reparte 5 fotos
-        en 4 columnas y a este ancho quedarían miniaturas ilegibles. El resto se
-        ve en el popup, que es el mismo que usa el detalle público.
-      -->
+      <!-- Portada sola: `PropertyPhotoGrid` a este ancho da miniaturas ilegibles; el resto va en el popup. -->
       <button
         v-if="cover"
         type="button"
@@ -73,19 +69,9 @@
       />
     </div>
 
-    <!--
-      Sin `NearbyPlaces` a propósito: fetchea en su `onMounted`, así que montarlo
-      acá dispararía 9 isócronas contra ORS en cada click de fila, para un dato
-      que no se usa para moderar. Si algún día se agrega, va detrás de un `v-if`
-      cerrado — con `v-show` el componente se monta igual y el costo se paga.
-    -->
+    <!-- Sin `NearbyPlaces` a propósito: fetchea en `onMounted` y serían 9 isócronas por click de fila. -->
 
-    <!--
-      El formulario se alimenta del detalle que este panel ya trajo, no de la
-      fila de la tabla: así los controles y lo que se está mirando salen de la
-      misma respuesta. Mientras carga no hay `property`, así que no se puede
-      moderar a ciegas algo que todavía no se ve.
-    -->
+    <!-- El form sale del detalle que trajo el panel, así que no se modera lo que todavía no se ve. -->
     <AdminModerationForm
       v-if="property"
       :status="property.status"
@@ -118,10 +104,7 @@ import type { PropertyDetail } from "@/types/properties";
 
 const props = defineProps<{ propertyId: string | null }>();
 
-/**
- * El panel no guarda nada: reenvía lo que cambió con el id de la property que
- * está mostrando. Quien lo reciba es quien tiene la lista y puede refetchear.
- */
+/** El panel no guarda nada: reenvía lo que cambió con el id que está mostrando. */
 const emit = defineEmits<{
   save: [payload: ModerationPayload, propertyId: string];
 }>();
@@ -154,12 +137,7 @@ const coverIndex = computed(() => {
 
 const cover = computed(() => property.value?.images[coverIndex.value] ?? null);
 
-/**
- * Moderar es clickear filas rápido, así que las respuestas se pisan: si se
- * elige A y antes de que llegue se elige B, la respuesta de A puede llegar
- * última y pintar A estando seleccionada B. El token descarta todo lo que no
- * corresponda a la última selección.
- */
+/** Clickear filas rápido pisa las respuestas: el token descarta las que no son de la última selección. */
 let requestToken = 0;
 
 async function load(id: string | null) {

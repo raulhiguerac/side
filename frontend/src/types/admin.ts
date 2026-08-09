@@ -1,14 +1,7 @@
 import type { ListingStatus } from "@/types/feed";
 import type { VerificationStatus } from "@/types/properties";
 
-/**
- * Fila de `GET /v1/admin/properties`. No es `PropertyCard`: esa es la tarjeta
- * pública del feed y esconde justo los campos con los que trabaja moderación
- * (`verification_status`, `owner_id`, `created_at`, `rejection_reason`).
- *
- * `price`, `area_m2` y `bathrooms` llegan como **string**: son `Decimal` en el
- * backend y pydantic los serializa así para no perder precisión.
- */
+/** Fila del listado admin: lleva los campos que `PropertyCard` esconde, y los `Decimal` llegan como string. */
 export interface AdminPropertyRow {
   id: string;
   owner_id: string;
@@ -39,12 +32,7 @@ export interface AdminPropertiesFilters {
   owner_id?: string;
 }
 
-/**
- * Lo que el formulario de moderación emite al guardar: solo los campos que
- * cambiaron. Cada uno corresponde a un endpoint distinto —
- * `PATCH .../verification` y `PATCH .../status`— así que un guardado puede
- * derivar en uno o dos requests.
- */
+/** Solo los campos que cambiaron; cada uno es su propio endpoint, así que son uno o dos requests. */
 export interface ModerationPayload {
   verificationStatus?: VerificationStatus;
   /** Obligatorio si `verificationStatus` es `rejected`; prohibido si no. */
