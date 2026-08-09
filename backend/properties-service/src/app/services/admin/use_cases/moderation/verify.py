@@ -9,14 +9,8 @@ from app.schemas.principal import Principal
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork
 from app.services.admin.schemas.admin_schemas import VerifyPropertyRequest
 from app.services.shared.helpers.cache_keys import cache_property, client_properties, map_h3_cell
+from app.services.shared.helpers.status_transitions import VERIFICATION_TRANSITIONS
 from app.services.shared.ports.cache import CachePort
-
-_ALLOWED_TRANSITIONS: dict[VerificationStatus, list[VerificationStatus]] = {
-    VerificationStatus.unverified: [VerificationStatus.pending],
-    VerificationStatus.pending: [VerificationStatus.verified, VerificationStatus.rejected],
-    VerificationStatus.rejected: [VerificationStatus.pending],
-    VerificationStatus.verified: [VerificationStatus.pending, VerificationStatus.rejected],
-}
 
 # Estados en los que la verificación quedó resuelta por un admin concreto.
 _RESOLVED_STATES = (VerificationStatus.verified, VerificationStatus.rejected)
@@ -41,7 +35,7 @@ class VerifyPropertyUseCase:
         if prop is None:
             raise PropertyNotFoundError(property_id=property_id)
 
-        allowed = _ALLOWED_TRANSITIONS.get(prop.verification_status, [])
+        allowed = VERIFICATION_TRANSITIONS.get(prop.verification_status, [])
         if request.verification_status not in allowed:
             raise InvalidStatusTransitionError(
                 current=prop.verification_status.value,
