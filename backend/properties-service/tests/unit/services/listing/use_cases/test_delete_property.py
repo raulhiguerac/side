@@ -13,11 +13,15 @@ OWNER_ID = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
 PRINCIPAL = Principal(sub=OWNER_ID)
 
 
+CITY_ID = uuid.UUID("cccccccc-cccc-cccc-cccc-cccccccccccc")
+
+
 def _make_mock_prop():
     m = MagicMock()
     m.id = PROP_ID
     m.owner_id = OWNER_ID
     m.status = ListingStatus.active
+    m.location = MagicMock(city_id=CITY_ID)
     return m
 
 
@@ -106,3 +110,22 @@ async def test_survives_cache_delete_failure(mock_get_prop, uc, mock_uow, mock_c
     await uc.execute(property_id=PROP_ID, principal=PRINCIPAL)
 
     mock_uow.commit.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# Cache incluye los ads del feed
+# ---------------------------------------------------------------------------
+
+@patch("app.services.listing.use_cases.property_core.delete_property.get_owned_property", new_callable=AsyncMock)
+async def test_invalidates_feed_ads_keys(mock_get_prop, uc, mock_cache):
+    """Una property promocionada que su dueño borra seguiría apareciendo como
+    aviso pago en el feed hasta que expirara el TTL."""
+    from app.services.shared.helpers.cache_keys import feed_ads_by_city, feed_ads_global
+
+    mock_get_prop.return_value = _make_mock_prop()
+
+    await uc.execute(property_id=PROP_ID, principal=PRINCIPAL)
+
+    deleted_keys = mock_cache.delete.call_args.kwargs["key"]
+    assert feed_ads_global() in deleted_keys
+    assert feed_ads_by_city(CITY_ID) in deleted_keys
