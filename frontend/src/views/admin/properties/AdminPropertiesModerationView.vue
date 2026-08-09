@@ -37,17 +37,26 @@
 
     <!-- Oculto bajo xl: moderar es una tarea de escritorio. -->
     <aside class="sticky top-6 hidden min-w-0 flex-[2] xl:block">
-      <AdminPropertyPreviewPanel :property-id="selectedId" />
+      <AdminPropertyPreviewPanel
+        ref="previewPanel"
+        :property-id="selectedId"
+        :saving="saving"
+        :success-message="success"
+        :error-message="moderationError"
+        @save="onSave"
+      />
     </aside>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref, watch } from "vue";
+import { nextTick, onMounted, ref, useTemplateRef, watch } from "vue";
 import PaginationArrows from "@/components/shared/PaginationArrows.vue";
 import AdminPropertiesTable from "@/components/admin/properties/AdminPropertiesTable.vue";
 import AdminPropertyPreviewPanel from "@/components/admin/properties/AdminPropertyPreviewPanel.vue";
 import { useAdminProperties } from "@/composables/admin/useAdminProperties";
+import { useModerateProperty } from "@/composables/admin/useModerateProperty";
+import type { ModerationPayload } from "@/types/admin";
 
 const {
   rows,
@@ -58,11 +67,38 @@ const {
   loading,
   error,
   load,
+  reload,
   next,
   prev,
 } = useAdminProperties();
 
+/** Moderar vive acá: lo que hay que refrescar después incluye la lista, que es de esta vista. */
+const {
+  saving,
+  error: moderationError,
+  success,
+  moderate,
+  reset: resetModeration,
+} = useModerateProperty();
+
+const previewPanel = useTemplateRef("previewPanel");
+
 const selectedId = ref<string | null>(null);
+
+async function onSave(payload: ModerationPayload, propertyId: string) {
+  // Un fallo parcial también deja lo mostrado viejo, así que refresca igual.
+  if (!(await moderate(propertyId, payload))) return;
+
+  await reload();
+
+  /** Si la selección se movió, el panel ya está cargando solo; el `nextTick` espera ese watcher. */
+  const previousId = selectedId.value;
+  await nextTick();
+  if (selectedId.value === previousId) previewPanel.value?.refresh();
+}
+
+/** Los mensajes son de la property moderada: cambiar de fila los invalida. */
+watch(selectedId, resetModeration);
 
 /** Arranca con la primera fila elegida; al paginar la anterior deja de estar visible. */
 watch(
