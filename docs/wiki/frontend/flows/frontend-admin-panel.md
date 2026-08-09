@@ -1,7 +1,7 @@
 ---
 title: Panel admin (frontend)
 status: draft
-last-verified: 2026-08-02
+last-verified: 2026-08-09
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -16,6 +16,8 @@ related:
   - "[[adr-admin-tabs-nested-routes]]"
   - "[[adr-moderation-panel-staged-form]]"
   - "[[adr-verification-reversible-lifecycle]]"
+  - "[[adr-transitions-served-by-backend]]"
+  - "[[adr-promotions-own-subtab]]"
   - "[[open-items]]"
 sources:
   - ../../../sources/frontend/2026-07-16-admin-panel-nav-and-hub.md
@@ -25,11 +27,13 @@ sources:
   - ../../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md
   - ../../../sources/frontend/2026-08-01-admin-panel-tabs-moderation-preview.md
   - ../../../sources/frontend/2026-08-02-moderation-panel-form-over-buttons.md
+  - ../../../sources/frontend/2026-08-09-moderation-wiring-and-promotions-shell.md
+  - ../../../sources/frontend/2026-08-09-promotions-tab-wired.md
 ---
 
 ## TL;DR
 
-Panel admin embebido en la app existente (no un subdominio separado): un link condicional en el nav, rutas gateadas por rol, y una vista hub que orquesta hacia propiedades y catálogo. Desde el 2026-08-01 la sección de propiedades es un layout con tres tabs como rutas hijas (moderación, promociones, importaciones), y la de moderación combina tabla paginada + panel de vista previa. Desde el 2026-08-02 el panel lleva además el **formulario de moderación**, todavía sin cablear a la API. Lo que sigue faltando son la ejecución de ese guardado, los filtros, y toda la sección de catálogo.
+Panel admin embebido en la app existente (no un subdominio separado): un link condicional en el nav, rutas gateadas por rol, y una vista hub que orquesta hacia propiedades y catálogo. Desde el 2026-08-01 la sección de propiedades es un layout con tres tabs como rutas hijas (moderación, promociones, importaciones), y la de moderación combina tabla paginada + panel de vista previa. Desde el 2026-08-02 el panel lleva además el **formulario de moderación**, y desde el 2026-08-09 ese guardado **llega a la API**: moderar funciona punta a punta. Promociones quedó cableada el mismo día en dos sub-tabs: activas (listar y quitar) y promocionar (elegir y crear). Lo que sigue faltando son los filtros de la cola y toda la sección de catálogo.
 
 ## Por qué embebido, no subdominio
 
@@ -53,9 +57,11 @@ Se eligió primer nivel sobre el dropdown porque la moderación se espera que se
 |---|---|---|
 | `/admin` | `admin-home` | `views/admin/AdminHomeView.vue` (hub) |
 | `/admin/properties` | — | `views/admin/properties/AdminPropertiesLayout.vue` (padre con tabs) |
-| `/admin/properties` (`path: ""`) | `admin-properties` | `AdminPropertiesModerationView.vue` |
-| `/admin/properties/promotions` | `admin-properties-promotions` | `AdminPropertiesPromotionsView.vue` |
-| `/admin/properties/imports` | `admin-properties-imports` | `AdminPropertiesImportsView.vue` |
+| `/admin/properties` (`path: ""`) | `admin-properties` | `moderation/AdminModerationView.vue` |
+| `/admin/properties/promotions` | — | `promotions/AdminPromotionsLayout.vue` (padre con sub-tabs) |
+| `/admin/properties/promotions` (`path: ""`) | `admin-properties-promotions` | `promotions/AdminPromotionsActiveView.vue` |
+| `/admin/properties/promotions/new` | `admin-properties-promotions-new` | `promotions/AdminPromotionsCreateView.vue` |
+| `/admin/properties/imports` | `admin-properties-imports` | `imports/AdminImportsView.vue` |
 | `/admin/catalog` | `admin-catalog` | `views/admin/catalog/AdminCatalogView.vue` |
 
 `home.ts`/`properties.ts`/`catalog.ts` se combinan en un barrel `index.ts` (`adminRoutes`) importado en `router/index.ts`.
@@ -69,9 +75,11 @@ Dos detalles del árbol de propiedades (2026-08-01):
 
 Ver [[adr-admin-tabs-nested-routes]] para la decisión completa. El resumen: el estado de los filtros de moderación pertenece a la URL, y con un switch de componentes habría que inventarle un store.
 
-La barra de tabs vive en el layout y usa `RouterLink` con `custom` + `v-slot`, leyendo `isExactActive` para aplicar un ternario de clases. **No** se usan las props `active-class`/`exact-active-class`: con ellas las dos variantes conviven en el atributo (`border-transparent` y `border-brand-primary`) y quién gana lo decide el orden de emisión del CSS de Tailwind, no el atributo. Renderizar un `<a>` real además conserva el click del medio y "abrir en pestaña nueva".
+La barra de tabs vive en `components/admin/shared/AdminTabsNav.vue` (extraída el 2026-08-09, cuando promociones necesitó la suya) y usa `RouterLink` con `custom` + `v-slot` para aplicar un ternario de clases. **No** se usan las props `active-class`/`exact-active-class`: con ellas las dos variantes conviven en el atributo (`border-transparent` y `border-brand-primary`) y quién gana lo decide el orden de emisión del CSS de Tailwind, no el atributo. Renderizar un `<a>` real además conserva el click del medio y "abrir en pestaña nueva".
 
-Es `isExactActive` y no `isActive` porque `/admin/properties` es prefijo de las otras dos rutas: con activo por prefijo, "Moderación" quedaría encendida estando parado en promociones o importaciones.
+**Cada tab elige su propio matching**: si su ruta es prefijo de la de otra tab, matchea exacto; si no, por prefijo. Antes el nav entero era `isExactActive` porque `/admin/properties` es prefijo de las otras dos, y con activo por prefijo "Moderación" quedaría encendida estando en promociones. Esa regla global dejó de servir al aparecer las sub-rutas: `/admin/properties/promotions/new` apagaba la tab "Promociones". Derivarlo de la lista de tabs cubre los dos casos sin que nadie tenga que acordarse.
+
+`stretch` reparte el ancho entre las tabs — lo usa el nav de primer nivel, no el de promociones.
 
 ## Guard `requiresAdmin` — el fix de la race
 
@@ -159,17 +167,19 @@ Reusa las piezas del detalle público sin tocarlas: `PropertyOverview` con los 1
 
 **Guard de carrera.** Moderar es clickear filas rápido, así que las respuestas se pisan: elegir A, elegir B antes de que llegue, y la respuesta de A pinta A estando seleccionada B. Un contador `requestToken` se incrementa en cada selección y cada llamada guarda su copia; toda respuesta cuyo token ya no es el vigente se descarta. Hay tres puntos de descarte porque se encadenan dos `await` (detalle y después el nombre del barrio), y el `finally` también compara para que una respuesta tardía no apague el spinner de la actual.
 
-**Layout.** 60/40 con `flex-[3]`/`flex-[2]`, no `w-3/5` + `w-2/5`: los porcentajes más el `gap-6` superan el 100% y fuerzan encogimiento desparejo. La primera fila se autoselecciona vía `watch` sobre `rows` —no solo en la carga inicial— porque paginar cambia la página entera y la selección previa quedaría marcada en una fila que ya no se ve. El panel está oculto por debajo de `xl`: moderar es desktop-only por decisión, sin fallback en móvil.
+**Layout.** 60/40 con `flex-[3]`/`flex-[2]`, no `w-3/5` + `w-2/5`: los porcentajes más el `gap-6` superan el 100% y fuerzan encogimiento desparejo. El panel está oculto por debajo de `xl`: moderar es desktop-only por decisión, sin fallback en móvil.
+
+Desde el 2026-08-09 ese layout es `components/admin/shared/AdminSplitView.vue` (slots `#table`, `#footer`, `#panel`), y la selección de fila es `composables/admin/useRowSelection.ts`. Las dos salieron de esta vista cuando promociones necesitó lo mismo. La regla de la selección: autoselecciona la primera fila, y al cambiar la lista —paginar, refetchear— la reasigna **solo si la seleccionada ya no está**; si sigue visible no se toca, y con lista vacía queda en `null`.
 
 **`composables/admin/useAdminProperties.ts`** — reusa `usePagination` con `fetchMore`, siguiendo el precedente de `PublicProfileView` para endpoints paginados por offset; volver atrás nunca pega al servidor. El `total` del servidor se guarda **aparte**, porque `usePagination.total` es `allItems.length` — filas cargadas, no filas que existen.
 
-La vista de moderación (`AdminPropertiesModerationView`) trae tabla, `PaginationArrows`, "Mostrando X-Y de Z", banner de error y el panel de vista previa.
+La vista de moderación (`AdminModerationView`) trae tabla, `PaginationArrows`, "Mostrando X-Y de Z", banner de error y el panel de vista previa.
 
 ## Moderar se hace en el panel, no en la tabla (2026-08-02)
 
 La decisión completa y las alternativas descartadas están en [[adr-moderation-panel-staged-form]]. El resumen: **moderar exige mirar**, y aprobar desde una fila de la tabla es aprobar sin ver las fotos. Las columnas disponibles —tipo, precio, fecha— no alcanzan para decidir nada.
 
-Consecuencia práctica: la tabla no cambió ni una línea. Como `AdminPropertiesModerationView` nunca pasa el slot `#actions`, `AdminPropertiesTable` no agrega la columna (el chequeo `slots.actions`), y el click en fila sigue siendo solo selección.
+Consecuencia práctica: la tabla no cambió ni una línea. Como ninguna vista pasa el slot `#actions`, `AdminPropertiesTable` no agrega la columna (el chequeo `slots.actions`), y el click en fila sigue siendo solo selección.
 
 ### Formulario con borrador, no botones instantáneos
 
@@ -188,24 +198,74 @@ Cuatro cosas que resuelve de paso:
 
 Props: `status`, `verificationStatus`, `saving`, `successMessage`, `errorMessage`. Emite `save` con **solo lo que cambió**. El panel lo alimenta desde el detalle que ya trajo —`PropertyDetailSchema` incluye ambos campos— y reenvía el evento hacia arriba con el `propertyId`.
 
-El composable de ejecución pertenece a `AdminPropertiesModerationView`, la única que tiene la lista, la selección y el refetch. Dejar la llamada fuera del formulario y fuera del panel evita atar a cualquiera de los dos a esta pantalla.
+El composable de ejecución pertenece a `AdminModerationView`, la única que tiene la lista, la selección y el refetch (cableado el 2026-08-09, ver más abajo). Dejar la llamada fuera del formulario y fuera del panel evita atar a cualquiera de los dos a esta pantalla.
 
-`constants/moderationTransitions.ts` espeja las dos tablas del backend, con la fuente de verdad nombrada en un comentario — el riesgo de drift es real y explícito.
+**Los destinos legales ya no se duplican acá.** `constants/moderationTransitions.ts` espejaba las dos tablas del backend y se **borró** el 2026-08-09: el detalle admin las publica por property (`allowed_verification_targets`, `allowed_status_targets`) y el formulario las recibe como prop, así que solo les pone etiqueta. Ver [[adr-transitions-served-by-backend]].
+
+Las dos props llevan default `[]`. Front y backend se despliegan por separado, y contra un backend viejo esos campos llegan `undefined`: sin default el `.map` reventaba el panel entero. Con default, el select muestra solo el estado actual —no se puede mover nada— y el panel sigue en pie.
 
 `ModerationPayload` vive en `types/admin.ts` y no exportado del SFC: el shim de `*.vue` solo declara el default export, así que un import de tipo con nombre desde un componente rompería bajo `vue-tsc`.
 
+## El guardado, cableado punta a punta (2026-08-09)
+
+`composables/admin/useModerateProperty.ts` traduce el payload del formulario a **uno o dos PATCH**, y la vista es quien lo llama: es la única que tiene la lista, la selección y el refetch.
+
+- **La verificación va primero.** Si solo entra uno de los dos requests, conviene que sea el que decide si la property sigue en la cola: aprobada sin publicar es un estado revisable, publicada sin resolver es una property que se escapó de la cola.
+- **`moderate()` devuelve "algo quedó escrito", no "salió todo bien".** Un fallo parcial deja igual de viejo lo que se está mostrando, así que obliga a refetchear; el mensaje distingue el caso ("se guardó la verificación, pero el estado no cambió") para que el reintento no choque contra la mitad ya aplicada.
+- **El 409 no puede explicar qué pasó.** `base_error_handler` descarta el `context`, así que `{current, target}` no viaja: el mensaje dice qué hacer —recargar— en vez de qué falló ([[properties-service-admin]]).
+
+Refrescar después son dos cosas distintas:
+
+- **La lista.** `useAdminProperties.reload()` refetchea la página actual con los filtros vigentes; `load()` no sirve porque resetea a la 1 y devolvería al principio a quien modera en la página 5. Por debajo usa `usePagination.replaceCurrentPage`, que **descarta las páginas siguientes**: al salir una fila del filtro todas se corren un lugar, y conservarlas mostraría filas duplicadas al avanzar. Si la página queda vacía, retrocede a la anterior.
+- **El panel.** Expone `refresh()` vía `defineExpose`, porque su `watch` mira `propertyId` y tras moderar cambia el estado, no el id. La vista se lo pide **solo si la fila sobrevivió al refetch**: si la selección se movió, el watcher del panel ya está cargando la nueva y pedirlo sería fetchear dos veces.
+
+La división queda: `load()` para aplicar o cambiar filtros, `reload()` para refrescar después de moderar.
+
 ## Lo que falta para cerrar la moderación
 
-- **La ejecución.** El `save` no lo escucha nadie todavía. Un guardado son **uno o dos requests, no atómicos** (son endpoints distintos); si el segundo falla con 409 el primero ya se aplicó, así que hay que reportar por eje y recargar.
-- **`useAdminProperties` no sabe recargar la página actual**: solo tiene `load()` (que resetea a la 1), `next()` y `prev()`. Falta un `reload()`.
+- **El filtro por `verification_status`.** Todo el diseño del formulario staged asume una cola filtrada por `pending`, y la vista todavía no manda filtros: se ve el inventario entero mezclado. Cuando entre, `useRowSelection` debería conservar el índice en vez de saltar a la primera fila — hoy moderar la fila 7 la hace desaparecer y el panel salta a la 1, no a la que ocupó su lugar.
 - **Las importadas antes del 2026-08-01 siguen en `unverified`** y necesitan backfill ([[open-items]]).
 - **El precio estimado quedó fuera del panel**, y no solo por alcance: `admin_estimated_price` y `ml_estimated_price` no están en ningún schema de respuesta, así que el input sería write-only — escribir un precio sin ver el guardado ni el del modelo. Además no es moderación: es una señal de pricing para el AVM.
 
-## Estado del cableado: 4 de 23 endpoints admin con consumer
+## Promociones: dos sub-tabs, armazón montado (2026-08-09)
 
-En properties-service hay 4 cableados —listado, detalle (el panel de preview) y los dos pasos del bulk upload— y quedan 8 sin consumer: verificación, status, precio estimado, los 4 de promociones y el status de un bulk job. En catalog-service son **11 de 11** sin cablear — `AdminCatalogView` está vacía.
+La decisión de por qué promocionar no vive en el panel de moderación está en [[adr-promotions-own-subtab]]. La forma elegida fue **tabla + preview**, la misma que moderación, y no un grid de cards: el grid se ve mejor pero no tiene dónde poner la prioridad ni comparar vencimientos, que es lo único que la promoción decide.
 
-De los tres que faltan para la tab de moderación, los tres son acciones sobre la propiedad seleccionada: `PATCH /verification`, `PATCH /status` y `POST /estimated-price`. Los dos primeros ya tienen su UI construida en `AdminModerationForm`; falta solo el composable que los llame.
+- **Activas** (`AdminPromotionsActiveView`) — lista `GET /admin/promotions`, que desde el 2026-08-09 devuelve promociones y no cards ([[properties-service-admin]]), así que la tabla muestra **prioridad** y **vencimiento**, este último con los días restantes calculados ("en 5 días", "vence hoy", "vencida"): la fecha sola obliga a hacer la cuenta mentalmente. Se selecciona por `property_id` y no por el id de la fila, porque lo que el panel muestra es la property — para eso `useRowSelection` acepta un extractor de clave.
+- **Promocionar** (`AdminPromotionsCreateView`) — reusa `useAdminProperties` y `AdminPropertiesTable` con `{ status: "active", is_promoted: false }`, las dos condiciones que valida `CreatePromotionUseCase`. El filtro `is_promoted` se agregó al backend el mismo día en vez de cruzar las promociones en memoria.
+
+### El pie del panel es un slot
+
+`AdminPropertyPreviewPanel` expone `#footer` con la property ya cargada como slot prop, y perdió las props de guardado y el emit `save`. Antes traía el `AdminModerationForm` fijo adentro, así que las vistas de promociones habrían mostrado el formulario de moderación con un "Guardar" que no escuchaba nadie. De paso, moderación se ahorró el reenvío de dos saltos que tenía (formulario → panel → vista).
+
+Cada tab pone el suyo:
+
+- **Promocionar** — `AdminPromotionForm`: chips 7/15/30 más campo libre acotado a 1–60, prioridad como dropdown 1–5, y la fecha de vencimiento calculada en el cliente debajo de la duración, porque `promoted_days` es un número abstracto y la fecha es lo que se quiere saber. Emite `{ promotedDays, priority }`; el `property_id` lo pone la vista desde el slot prop.
+- **Activas** — un botón "Quitar" que solo abre `RemovePromotionModal`. El botón que dispara el DELETE está en el modal, y el modal es **presentacional**: emite `confirm`/`close` y no hace el request, a diferencia de `DeletePropertyModal`, que se autogestiona y reporta con un `alert()`. Se cierra pase lo que pase y el error queda en el pie del panel, que es donde el admin sigue mirando.
+
+Dos diferencias con el guardado de moderación:
+
+- **`usePromoteProperty` puede decir qué falló.** Los dos 409 —`DUPLICATE_ACTIVE_PROMOTION` y `PROPERTY_NOT_READY_FOR_PROMOTION`— llegan distinguidos por `code`, que el handler del backend sí conserva; el 409 de transiciones no tiene esa suerte.
+- **Tras promocionar no se refresca el panel, solo la lista.** `PropertyDetailSchema` no lleva `is_promoted`, así que nada de lo que se está mirando cambió, y la fila sale sola del listado por dejar de cumplir `is_promoted: false`.
+
+`remove()` vive dentro de `useActivePromotions` y no en un composable aparte: acá el dueño de la lista y el de la acción son el mismo, y tras el DELETE hay que releerla igual. Ese composable **pagina contra el servidor sin acumular páginas en memoria**, a diferencia de `useAdminProperties`: quitar una promoción corre a todas las siguientes, así que una copia local quedaría desalineada al primer borrado.
+
+## Organización de `admin/` (2026-08-09)
+
+```
+components/admin/
+  shared/        AdminSplitView.vue · AdminTabsNav.vue
+  properties/    AdminPropertiesTable.vue · AdminPropertyPreviewPanel.vue
+    moderation/  AdminModerationForm.vue
+    promotions/  AdminPromotionsTable.vue
+    imports/     BulkUploadPropertiesModal.vue
+```
+
+`AdminPropertiesTable` y `AdminPropertyPreviewPanel` quedan en la raíz de `properties/` a propósito: la tabla la usan moderación y promocionar, y el panel las tres vistas. Meterlas bajo `moderation/` mentiría sobre quién las consume. Las vistas siguen el mismo corte (`views/admin/properties/{moderation,promotions,imports}/`), y ahí las que ya vivían en su carpeta perdieron el `Properties` redundante del nombre.
+
+## Estado del cableado: 9 de 22 endpoints admin con consumer
+
+El total bajó de 23 a 22 porque `GET /admin/properties/{id}/promotions` se borró ([[properties-service-admin]]). En properties-service hay **9 de 11** cableados —listado, detalle, los dos pasos del bulk upload, los dos PATCH de moderación y los tres de promociones— y quedan 2 sin consumer, los dos bloqueados de siempre: el precio estimado (write-only, ningún schema lo devuelve) y el status de un bulk job (no hay endpoint que liste los jobs). En catalog-service son **11 de 11** sin cablear — `AdminCatalogView` está vacía.
 
 Tampoco hay módulo de API admin. Se evaluó crear `src/api/adminApi.ts` y **se descartó**: las instancias de axios del proyecto son una por servicio, y "admin" no es un servicio — los endpoints admin viven en properties y en catalog. En su lugar la ruta se agregó a `constants/propertiesEndpoints.ts` y el fetch vive en el composable, que es el patrón que ya usan `useFeed` y `useProfileListings`.
 
@@ -217,18 +277,20 @@ Tampoco hay módulo de API admin. Se evaluó crear `src/api/adminApi.ts` y **se 
 ## Claims
 
 - El link "Admin" en `NavUser.vue` está gateado por `v-if="authStore.isAdmin"`, apunta a `/admin`, y es un link de primer nivel (no del dropdown) ([components/shared/NavUser.vue](frontend/src/components/shared/NavUser.vue)).
-- `/admin/properties` es una ruta padre sin `name` con tres hijos (`""`, `promotions`, `imports`), y solo el padre declara `meta: { requiresAuth: true, requiresAdmin: true }` ([router/routes/admin/properties.ts](frontend/src/router/routes/admin/properties.ts)).
+- `/admin/properties` es una ruta padre sin `name` con tres hijos (`""`, `promotions`, `imports`), donde `promotions` es a su vez padre de `""` y `new`, y solo el padre de todo declara `meta: { requiresAuth: true, requiresAdmin: true }` ([router/routes/admin/properties.ts](frontend/src/router/routes/admin/properties.ts)).
 - El guard resuelve `requiresAdmin` con `to.matched.some(...)`, por lo que el `meta` del padre alcanza para proteger a los hijos ([router/index.ts](frontend/src/router/index.ts)).
-- `AdminPropertiesLayout.vue` renderiza las tabs con `RouterLink` en modo `custom`, aplicando clases según `isExactActive` ([AdminPropertiesLayout.vue](frontend/src/views/admin/properties/AdminPropertiesLayout.vue)).
+- `AdminTabsNav.vue` renderiza las tabs con `RouterLink` en modo `custom` y elige entre `isExactActive` e `isActive` según si la ruta de la tab es prefijo de la de otra ([AdminTabsNav.vue](frontend/src/components/admin/shared/AdminTabsNav.vue)).
+- `AdminPropertiesLayout.vue` y `AdminPromotionsLayout.vue` usan el mismo `AdminTabsNav`, y solo el primero pasa `stretch` ([AdminPropertiesLayout.vue](frontend/src/views/admin/properties/AdminPropertiesLayout.vue), [AdminPromotionsLayout.vue](frontend/src/views/admin/properties/promotions/AdminPromotionsLayout.vue)).
 - El guard `requiresAdmin` llama `authStore.fillUserData()` si `!authStore.accountId` antes de chequear `isAdmin` — evita que un admin sea rebotado en un deep-link directo ([router/index.ts](frontend/src/router/index.ts)).
 - `AdminHomeView.vue` muestra 4 KPI cards con valor placeholder `"—"` — sin wiring a ningún endpoint de conteo todavía ([views/admin/AdminHomeView.vue](frontend/src/views/admin/AdminHomeView.vue)).
-- `BulkUploadPropertiesModal.upload()` encadena `POST /v1/admin/properties/bulk/upload-url` → `fetch(upload_url, { method: "PUT" })` → `POST /v1/admin/properties/bulk` con `{ storage_key }`, y emite `queued` con el `batch_id` antes de cerrar ([components/admin/properties/BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/BulkUploadPropertiesModal.vue)).
-- El `PUT` a storage no usa `propertiesApi`: es `fetch` nativo sin credenciales, porque la firma va en el query string ([components/admin/properties/BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/BulkUploadPropertiesModal.vue)).
-- La presigned URL se pide dentro de `upload()`, no en `onFileChange()` ([components/admin/properties/BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/BulkUploadPropertiesModal.vue)).
-- El modal compara `file.size` contra `presigned.max_size_bytes` antes de subir; no hay validación de tamaño del lado del servidor en el flujo de presigned PUT ([components/admin/properties/BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/BulkUploadPropertiesModal.vue)).
-- `AdminPropertiesImportsView.vue` monta `<BulkUploadPropertiesModal v-model="isBulkModalOpen" />` sin listener de `@queued` ([AdminPropertiesImportsView.vue](frontend/src/views/admin/properties/AdminPropertiesImportsView.vue)).
-- `AdminPropertiesModerationView.vue` renderiza `AdminPropertiesTable` + `PaginationArrows` + `AdminPropertyPreviewPanel`, alimentados por `useAdminProperties`, con `onMounted(load)` ([AdminPropertiesModerationView.vue](frontend/src/views/admin/properties/AdminPropertiesModerationView.vue)).
-- `AdminPropertiesModerationView.vue` autoselecciona la primera fila con un `watch` sobre `rows`, reasignando solo si la seleccionada no está en la página actual ([AdminPropertiesModerationView.vue](frontend/src/views/admin/properties/AdminPropertiesModerationView.vue)).
+- `BulkUploadPropertiesModal.upload()` encadena `POST /v1/admin/properties/bulk/upload-url` → `fetch(upload_url, { method: "PUT" })` → `POST /v1/admin/properties/bulk` con `{ storage_key }`, y emite `queued` con el `batch_id` antes de cerrar ([BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/imports/BulkUploadPropertiesModal.vue)).
+- El `PUT` a storage no usa `propertiesApi`: es `fetch` nativo sin credenciales, porque la firma va en el query string ([BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/imports/BulkUploadPropertiesModal.vue)).
+- La presigned URL se pide dentro de `upload()`, no en `onFileChange()` ([BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/imports/BulkUploadPropertiesModal.vue)).
+- El modal compara `file.size` contra `presigned.max_size_bytes` antes de subir; no hay validación de tamaño del lado del servidor en el flujo de presigned PUT ([BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/imports/BulkUploadPropertiesModal.vue)).
+- `AdminImportsView.vue` monta `<BulkUploadPropertiesModal v-model="isBulkModalOpen" />` sin listener de `@queued` ([AdminImportsView.vue](frontend/src/views/admin/properties/imports/AdminImportsView.vue)).
+- `AdminModerationView.vue` compone `AdminSplitView` con `AdminPropertiesTable`, `PaginationArrows` y `AdminPropertyPreviewPanel`, alimentados por `useAdminProperties`, con `onMounted(load)` ([AdminModerationView.vue](frontend/src/views/admin/properties/moderation/AdminModerationView.vue)).
+- `useRowSelection` autoselecciona la primera fila y reasigna solo si la seleccionada no está en la lista actual; con lista vacía deja `selectedId` en `null` ([useRowSelection.ts](frontend/src/composables/admin/useRowSelection.ts)).
+- `AdminSplitView.vue` expone los slots `table`, `footer` y `panel`, y no conoce el dominio de lo que se lista ([AdminSplitView.vue](frontend/src/components/admin/shared/AdminSplitView.vue)).
 - `BaseTable.vue` declara `generic="T"` y expone un slot por columna nombrado `cell.column.id`, con `<FlexRender>` como contenido por defecto ([BaseTable.vue](frontend/src/components/shared/BaseTable.vue)).
 - `AdminPropertiesTable.vue` define 6 columnas —`verification_status`, `property_type`, `listing_type`, `price`, `created_at`, `status`— y agrega la de acciones solo si el padre pasa el slot ([AdminPropertiesTable.vue](frontend/src/components/admin/properties/AdminPropertiesTable.vue)).
 - `BaseTable.vue` acepta `rowKey` y `selectedKey` opcionales y emite `rowClick`; sin `rowKey` no marca ninguna fila como seleccionada ([BaseTable.vue](frontend/src/components/shared/BaseTable.vue)).
@@ -241,9 +303,24 @@ Tampoco hay módulo de API admin. Se evaluó crear `src/api/adminApi.ts` y **se 
 - No existe `src/api/adminApi.ts` — el directorio `src/api/` tiene solo `avmApi`, `catalogApi`, `interceptors`, `propertiesApi` y `usersApi`, uno por servicio ([api/](frontend/src/api)).
 - No existe ningún botón de bulk-import en `AdminCatalogView.vue` — el endpoint de catálogo requiere `locality_id`, no es una acción global ([views/admin/catalog/AdminCatalogView.vue](frontend/src/views/admin/catalog/AdminCatalogView.vue)).
 - `propertiesApi` tiene `timeout: 8000`, suficiente ahora que los tres requests del modal son cortos ([api/propertiesApi.ts](frontend/src/api/propertiesApi.ts)).
-- `AdminPropertiesModerationView.vue` no declara ningún `<template #actions>`, así que `AdminPropertiesTable` no agrega la columna de acciones ([AdminPropertiesModerationView.vue](frontend/src/views/admin/properties/AdminPropertiesModerationView.vue), [AdminPropertiesTable.vue](frontend/src/components/admin/properties/AdminPropertiesTable.vue)).
-- `AdminModerationForm.vue` construye las opciones de sus dos selects desde `VERIFICATION_TRANSITIONS` y `LISTING_STATUS_TRANSITIONS` ([moderationTransitions.ts](frontend/src/constants/moderationTransitions.ts), [AdminModerationForm.vue](frontend/src/components/admin/properties/AdminModerationForm.vue)).
-- `AdminModerationForm.vue` no importa `propertiesApi`: emite `save` con los campos que cambiaron y nada más ([AdminModerationForm.vue](frontend/src/components/admin/properties/AdminModerationForm.vue)).
-- El textarea del motivo solo se renderiza cuando el target de verificación elegido es `rejected`, y bloquea "Guardar" si está vacío ([AdminModerationForm.vue](frontend/src/components/admin/properties/AdminModerationForm.vue)).
+- Ninguna vista declara `<template #actions>`, así que `AdminPropertiesTable` no agrega la columna de acciones ([AdminModerationView.vue](frontend/src/views/admin/properties/moderation/AdminModerationView.vue), [AdminPropertiesTable.vue](frontend/src/components/admin/properties/AdminPropertiesTable.vue)).
+- `AdminModerationForm.vue` construye las opciones de sus dos selects desde las props `allowedVerificationTargets` y `allowedStatusTargets`, que por default son `[]` ([AdminModerationForm.vue](frontend/src/components/admin/properties/moderation/AdminModerationForm.vue)).
+- No existe ninguna tabla de transiciones en el frontend: `constants/moderationTransitions.ts` fue eliminado ([constants/](frontend/src/constants)).
+- `AdminModerationForm.vue` no importa `propertiesApi`: emite `save` con los campos que cambiaron y nada más ([AdminModerationForm.vue](frontend/src/components/admin/properties/moderation/AdminModerationForm.vue)).
+- El textarea del motivo solo se renderiza cuando el target de verificación elegido es `rejected`, y bloquea "Guardar" si está vacío ([AdminModerationForm.vue](frontend/src/components/admin/properties/moderation/AdminModerationForm.vue)).
+- `AdminPropertyPreviewPanel.vue` tipa la respuesta como `AdminPropertyDetail` y le pasa al formulario los `allowed_*` que trae el detalle ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue), [types/admin.ts](frontend/src/types/admin.ts)).
 - `AdminPropertyPreviewPanel.vue` monta el formulario detrás de `v-if="property"` y reenvía su `save` con el `propertyId` ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue)).
-- `useAdminProperties` expone `load`, `next` y `prev`, pero no una recarga de la página actual ([useAdminProperties.ts](frontend/src/composables/admin/useAdminProperties.ts)).
+- `useAdminProperties` expone `load`, `reload`, `next` y `prev`; `reload` refetchea la página actual con los filtros vigentes y `load` resetea a la 1 ([useAdminProperties.ts](frontend/src/composables/admin/useAdminProperties.ts)).
+- `usePagination.replaceCurrentPage` reemplaza la página visible y trunca las siguientes, y retrocede una página si la nueva viene vacía ([usePagination.ts](frontend/src/composables/shared/usePagination.ts)).
+- `useModerateProperty.moderate()` manda el PATCH de verificación antes que el de status y devuelve `true` si al menos uno se aplicó ([useModerateProperty.ts](frontend/src/composables/admin/useModerateProperty.ts)).
+- `AdminPropertyPreviewPanel.vue` expone `refresh()` con `defineExpose`, y `AdminModerationView` solo lo invoca si la fila seleccionada sobrevivió al `reload()` ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue), [AdminModerationView.vue](frontend/src/views/admin/properties/moderation/AdminModerationView.vue)).
+- `PROPERTIES_ENDPOINTS` declara `adminVerification` y `adminStatus`, y `useModerateProperty` es su único consumidor ([propertiesEndpoints.ts](frontend/src/constants/propertiesEndpoints.ts), [useModerateProperty.ts](frontend/src/composables/admin/useModerateProperty.ts)).
+- `AdminPromotionsCreateView.vue` pide el listado admin con `{ status: "active", is_promoted: false }` ([AdminPromotionsCreateView.vue](frontend/src/views/admin/properties/promotions/AdminPromotionsCreateView.vue)).
+- `AdminPromotionsActiveView.vue` lista `GET /v1/admin/promotions` vía `useActivePromotions` y selecciona por `property_id` ([AdminPromotionsActiveView.vue](frontend/src/views/admin/properties/promotions/AdminPromotionsActiveView.vue), [useActivePromotions.ts](frontend/src/composables/admin/useActivePromotions.ts)).
+- `AdminPropertyPreviewPanel.vue` no importa ningún formulario: expone un slot `footer` con la property cargada como slot prop ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue)).
+- `AdminPromotionForm.vue` acota la duración a 1–60 días y la prioridad a un select de 1 a 5, y no llama a la API ([AdminPromotionForm.vue](frontend/src/components/admin/properties/promotions/AdminPromotionForm.vue)).
+- `RemovePromotionModal.vue` no hace el DELETE: emite `confirm` y `close` ([RemovePromotionModal.vue](frontend/src/components/admin/properties/promotions/RemovePromotionModal.vue)).
+- `useActivePromotions` expone `load`, `reload`, `remove`, `next` y `prev`, y pide cada página al servidor sin acumular las anteriores ([useActivePromotions.ts](frontend/src/composables/admin/useActivePromotions.ts)).
+- `usePromoteProperty` distingue `DUPLICATE_ACTIVE_PROMOTION` de `PROPERTY_NOT_READY_FOR_PROMOTION` leyendo `code` de la respuesta ([usePromoteProperty.ts](frontend/src/composables/admin/usePromoteProperty.ts)).
+- `useRowSelection` acepta un extractor de clave y por defecto usa `row.id` ([useRowSelection.ts](frontend/src/composables/admin/useRowSelection.ts)).
+- `AdminPromotionsTable.vue` usa `row.property_id` como `rowKey` y muestra columnas de prioridad y vencimiento ([AdminPromotionsTable.vue](frontend/src/components/admin/properties/promotions/AdminPromotionsTable.vue)).
