@@ -1,7 +1,7 @@
 ---
 title: Dominio listing — properties-service
 status: draft
-last-verified: 2026-08-02
+last-verified: 2026-08-09
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -14,6 +14,7 @@ related:
   - "[[adr-single-listing-type-per-property]]"
   - "[[adr-verification-reversible-lifecycle]]"
   - "[[properties-service-admin]]"
+  - "[[adr-transitions-served-by-backend]]"
 sources:
   - ../../../sources/properties-service/2026-05-28-foundational-exploration.md
   - ../../../sources/properties-service/2026-06-22-public-storefront-cache-invalidation.md
@@ -21,6 +22,7 @@ sources:
   - ../../../sources/properties-service/2026-07-13-owner-listings-order-by-created-at.md
   - ../../../sources/properties-service/2026-07-15-property-images-status-leak-fix.md
   - ../../../sources/properties-service/2026-08-02-moderation-lifecycle-verified-not-terminal.md
+  - ../../../sources/properties-service/2026-08-09-promotions-schema-pagination-and-expiry-filter.md
 ---
 
 ## TL;DR
@@ -37,7 +39,7 @@ El dominio del **dueño** sobre sus propiedades: crear, editar, borrar, controla
 | `GetPropertyUseCase` | `use_cases/property_core/get_property.py` | Detalle con cache-aside; reglas de visibilidad por status/owner. |
 | `GetMyPropertiesUseCase` | `use_cases/property_core/get_my_properties.py` | Lista del owner — todos los estados, cache por usuario (`client_properties`), ordenada por `created_at desc`. |
 | `GetPublicUserPropertiesUseCase` | `use_cases/property_core/get_public_user_properties.py` | Vitrina pública de otro usuario — solo `active`, paginada por offset y ordenada por `created_at desc`, devuelve `PublicUserPropertiesResponse(items, has_more)`, cache por página. |
-| `SetPropertyVisibilityUseCase` | `use_cases/property_core/set_property_visibility.py` | Toggle de visibilidad del dueño. |
+| `SetPropertyVisibilityUseCase` | `use_cases/property_core/set_property_visibility.py` | Toggle de visibilidad del dueño (`draft ↔ active`), contra `OWNER_VISIBILITY_TRANSITIONS`. |
 | `RequestPresignedUrlsUseCase` | `use_cases/images/request_presigned_urls.py` | Crea batch + URLs presignadas PUT. |
 | `ConfirmImageUploadsUseCase` | `use_cases/images/confirm_image_uploads.py` | Valida batch y materializa `PropertyImage`; degrada la verificación. |
 | `DeletePropertyImagesUseCase` | `use_cases/images/delete_property_images.py` | Borra imágenes del owner; degrada la verificación. |
@@ -128,6 +130,7 @@ Estados del batch: `pending → ready → confirmed`, con ramas `expired` (TTL v
 ## Claims
 
 - Al crear, si el barrio no pertenece a la ciudad declarada se lanza `InconsistentLocationError` comparando `guard.locality_id` con `loc.city_id` ([create_property.py:27-31](backend/properties-service/src/app/services/listing/use_cases/property_core/create_property.py#L27-L31)).
+- `SetPropertyVisibilityUseCase` lee `OWNER_VISIBILITY_TRANSITIONS` del módulo compartido de transiciones, que solo mapea `draft → active` y `active → draft` ([set_property_visibility.py](backend/properties-service/src/app/services/listing/use_cases/property_core/set_property_visibility.py), [status_transitions.py](backend/properties-service/src/app/services/shared/helpers/status_transitions.py)).
 - Una propiedad nueva nace con `status=draft` y `verification_status=unverified` ([create_property.py:69-70](backend/properties-service/src/app/services/listing/use_cases/property_core/create_property.py#L69-L70)).
 - Los índices H3 se computan localmente con `h3.latlng_to_cell` en resoluciones 9 y 7 ([geometry.py:11-13](backend/properties-service/src/app/services/shared/helpers/geometry.py#L11-L13)).
 - `GetProperty` solo cachea propiedades con `status=active` ([get_property.py:54-62](backend/properties-service/src/app/services/listing/use_cases/property_core/get_property.py#L54-L62)).
@@ -136,6 +139,7 @@ Estados del batch: `pending → ready → confirmed`, con ramas `expired` (TTL v
 - Confirm rechaza si `confirmed_keys` no es subconjunto de `expected_keys` con `BatchNotConsistentError` ([confirm_image_uploads.py:74-81](backend/properties-service/src/app/services/listing/use_cases/images/confirm_image_uploads.py#L74-L81)).
 - Confirm exige estado `ready`; un batch `pending` se marca `failed` ([confirm_image_uploads.py:65-72](backend/properties-service/src/app/services/listing/use_cases/images/confirm_image_uploads.py#L65-L72)).
 - `create_count` está acotado a `[1, MAX_IMAGES_PER_PROPERTY]` por el schema ([listing_schemas.py:90-92](backend/properties-service/src/app/services/listing/schemas/listing_schemas.py#L90-L92)).
+- `DeletePropertyUseCase` invalida `feed_ads_global()` y `feed_ads_by_city()` además de las keys del dueño: una property promocionada que se borra seguiría sirviéndose como aviso pago hasta el TTL ([delete_property.py](backend/properties-service/src/app/services/listing/use_cases/property_core/delete_property.py)).
 - `DeleteProperty` es soft-delete: setea `status=inactive` + `deleted_at` + `deleted_by`, no borra filas ([delete_property.py:21-23](backend/properties-service/src/app/services/listing/use_cases/property_core/delete_property.py#L21-L23)).
 - `GetPublicUserProperties` devuelve solo `status=active`, paginadas por offset con `LIMIT PUBLIC_PROPERTIES_PAGE_SIZE` (21) — la DB devuelve hasta 21 filas, el UC retorna las primeras 20 y deduce `has_more` del conteo ([sql_property_repository.py:37-52](backend/properties-service/src/app/services/listing/adapters/sql_property_repository.py#L37-L52), [get_public_user_properties.py](backend/properties-service/src/app/services/listing/use_cases/property_core/get_public_user_properties.py)).
 - La respuesta de la vitrina pública es `PublicUserPropertiesResponse(items, has_more)` — el cache guarda el dict completo incluyendo `has_more`; trata `cached is not None` como hit válido para usuarios sin listings ([property_card.py](backend/properties-service/src/app/services/shared/schemas/property_card.py)).
