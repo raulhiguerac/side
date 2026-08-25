@@ -12,7 +12,10 @@ export const PROPERTIES_ENDPOINTS = {
   adminStatus: (id: string) => `/v1/admin/properties/${id}/status`,
   /** GET lista las promocionadas (como `PropertyCardSchema`, no como promociones); POST crea una. */
   adminPromotions: "/v1/admin/promotions",
-  /** GET las de una property; DELETE baja la activa — el path va por property, no por id de promoción. */
+  /** DELETE baja la promoción activa — el path va por property, no por id de promoción. */
   adminPropertyPromotions: (id: string) =>
     `/v1/admin/properties/${id}/promotions`,
+  adminBulkJobs: "/v1/admin/properties/bulk",
+  /** El único que trae los errores de la corrida; el listado solo cuenta cuántos. */
+  adminBulkJobStatus: (id: string) => `/v1/admin/properties/bulk/${id}/status`,
 };
