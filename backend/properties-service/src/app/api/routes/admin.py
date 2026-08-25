@@ -11,6 +11,7 @@ from app.api.deps.admin import (
     get_bulk_create_properties_runner,
     get_bulk_create_properties_uc,
     get_bulk_job_status_uc,
+    get_bulk_jobs_uc,
     get_create_promotion_uc,
     get_delete_promotion_uc,
     get_list_all_promotions_uc,
@@ -22,6 +23,7 @@ from app.api.deps.admin import (
 from app.api.deps.auth import require_admin
 from app.schemas.principal import Principal
 from app.services.admin.schemas.admin_schemas import (
+    AdminBulkJobsPage,
     AdminPromotionsPage,
     AdminPropertiesPage,
     AdminPropertyDetailSchema,
@@ -31,6 +33,7 @@ from app.services.admin.schemas.admin_schemas import (
     BulkUploadUrlRequest,
     BulkUploadUrlResponse,
     CreatePromotionRequest,
+    GetBulkJobsAdminRequest,
     GetPromotionsAdminRequest,
     GetPropertiesAdminRequest,
     SetEstimatedPriceRequest,
@@ -40,6 +43,7 @@ from app.services.admin.schemas.admin_schemas import (
 from app.services.admin.use_cases.bulk_create_properties import BulkCreatePropertiesUseCase
 from app.services.admin.use_cases.estimated_price.set_estimated_price import SetEstimatedPriceUseCase
 from app.services.admin.use_cases.get_bulk_job_status import GetBulkJobStatusUseCase
+from app.services.admin.use_cases.get_bulk_jobs import GetBulkJobsAdminUseCase
 from app.services.admin.use_cases.request_bulk_upload_url import RequestBulkUploadUrlUseCase
 from app.services.admin.use_cases.get_properties import GetPropertiesAdminUseCase
 from app.services.admin.use_cases.get_property_detail import GetPropertyDetailAdminUseCase
@@ -114,6 +118,20 @@ async def bulk_create_properties(
     )
 
     return BulkJobAccepted(batch_id=batch_id)
+
+
+@router.get(
+    "/properties/bulk",
+    response_model=AdminBulkJobsPage,
+    status_code=status.HTTP_200_OK,
+)
+async def get_bulk_jobs(
+    filters: Annotated[GetBulkJobsAdminRequest, Depends()],
+    uc: Annotated[GetBulkJobsAdminUseCase, Depends(get_bulk_jobs_uc)],
+) -> AdminBulkJobsPage:
+    """Declarada antes de `/properties/{property_id}`: al revés esa gana el match
+    y `bulk` se intenta parsear como UUID, que es un 422."""
+    return await uc.execute(request=filters)
 
 
 @router.get(
