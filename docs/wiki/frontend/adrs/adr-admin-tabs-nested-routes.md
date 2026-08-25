@@ -1,7 +1,7 @@
 ---
 title: "ADR-0009 — Las tabs del panel admin son rutas hijas, no un switch de componentes"
 status: stable
-last-verified: 2026-08-01
+last-verified: 2026-08-24
 owners: [frontend]
 related:
   - "[[frontend-admin-panel]]"
@@ -9,7 +9,8 @@ related:
   - "[[adr-hash-history-static-hosting]]"
   - "[[adr-admin-offset-pagination]]"
   - "[[properties-service-admin]]"
-sources: [../../../sources/frontend/2026-08-01-admin-panel-tabs-moderation-preview.md]
+  - "[[adr-admin-filters-in-query-params]]"
+sources: [../../../sources/frontend/2026-08-01-admin-panel-tabs-moderation-preview.md, ../../../sources/frontend/2026-08-24-admin-url-filters-and-imports-tab.md]
 decision-date: 2026-08-01
 decision-status: accepted
 ---
@@ -57,6 +58,8 @@ Lo demás refuerza sin decidir: cada tab es un chunk lazy aparte, cada vista hac
 
 - `adminPropertiesRoutes` declara `/admin/properties` con `children` y sin `name` en el registro padre ([router/routes/admin/properties.ts](frontend/src/router/routes/admin/properties.ts)).
 - El hijo con `path: ""` lleva `name: "admin-properties"` ([router/routes/admin/properties.ts](frontend/src/router/routes/admin/properties.ts)).
+- Los filtros de moderación e importaciones viajan como query params y las vistas los leen de `route.query`, que es la apuesta con la que se tomó esta decisión ([AdminModerationView.vue](frontend/src/views/admin/properties/moderation/AdminModerationView.vue), [AdminImportsView.vue](frontend/src/views/admin/properties/imports/AdminImportsView.vue), ver [[adr-admin-filters-in-query-params]]).
+- La selección del panel sigue en un `ref` local y no en la URL ([useRowSelection.ts](frontend/src/composables/admin/useRowSelection.ts)).
 - Solo el registro padre declara `meta: { requiresAuth: true, requiresAdmin: true }` ([router/routes/admin/properties.ts](frontend/src/router/routes/admin/properties.ts)).
 - `AdminPropertiesLayout.vue` usa `RouterLink` con la prop `custom` y aplica clases según `isExactActive` del slot ([AdminPropertiesLayout.vue](frontend/src/views/admin/properties/AdminPropertiesLayout.vue)).
 - `AdminPropertiesLayout.vue` no importa las vistas hijas: las monta vía `<RouterView />` ([AdminPropertiesLayout.vue](frontend/src/views/admin/properties/AdminPropertiesLayout.vue)).

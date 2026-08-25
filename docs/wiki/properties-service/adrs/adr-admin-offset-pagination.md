@@ -1,13 +1,13 @@
 ---
 title: "ADR-0009 — El listado admin pagina por offset, no con el cursor opaco del feed"
 status: stable
-last-verified: 2026-07-28
+last-verified: 2026-08-24
 owners: [properties-service]
 related:
   - "[[properties-service-admin]]"
   - "[[adr-feed-opaque-cursor]]"
   - "[[frontend-admin-panel]]"
-sources: [../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md]
+sources: [../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md, ../../../sources/properties-service/2026-08-24-bulk-jobs-listing-endpoint.md]
 decision-date: 2026-07-28
 decision-status: accepted
 ---
@@ -47,4 +47,5 @@ La evidencia de que esto duele está en el propio front: `useFeed.ts` mantiene u
 
 - `GetPropertiesAdminRequest` acepta `page` (≥1) y `page_size` (1-100) como query params, y el UC calcula `offset = (page - 1) * page_size` ([admin_schemas.py](backend/properties-service/src/app/services/admin/schemas/admin_schemas.py), [get_properties.py](backend/properties-service/src/app/services/admin/use_cases/get_properties.py)).
 - `AdminPropertiesPage` expone `total`, que sale de `count_all`; el feed no devuelve ningún total ([admin_schemas.py](backend/properties-service/src/app/services/admin/schemas/admin_schemas.py)).
+- Los tres listados admin —`GET /admin/properties`, `GET /admin/promotions` y `GET /admin/properties/bulk`— aceptan `page`/`page_size` y devuelven `total` en su página ([admin_schemas.py](backend/properties-service/src/app/services/admin/schemas/admin_schemas.py)).
 - `useFeed.ts` mantiene un `cursorStack` para soportar la navegación hacia atrás del feed ([useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
