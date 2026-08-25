@@ -1,5 +1,14 @@
 <template>
   <AdminSplitView :error="error">
+    <template #filters>
+      <AdminFilterBar
+        :filters="MODERATION_FILTERS"
+        :initial="urlFilters"
+        :loading="loading"
+        @apply="onApplyFilters"
+      />
+    </template>
+
     <template #table>
       <AdminPropertiesTable
         :rows="rows"
@@ -49,16 +58,47 @@
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onMounted, useTemplateRef, watch } from "vue";
+import { computed, nextTick, useTemplateRef, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import PaginationArrows from "@/components/shared/PaginationArrows.vue";
 import AdminSplitView from "@/components/admin/shared/AdminSplitView.vue";
+import AdminFilterBar from "@/components/admin/shared/AdminFilterBar.vue";
 import AdminPropertiesTable from "@/components/admin/properties/AdminPropertiesTable.vue";
 import AdminPropertyPreviewPanel from "@/components/admin/properties/AdminPropertyPreviewPanel.vue";
 import AdminModerationForm from "@/components/admin/properties/moderation/AdminModerationForm.vue";
 import { useAdminProperties } from "@/composables/admin/useAdminProperties";
 import { useModerateProperty } from "@/composables/admin/useModerateProperty";
 import { useRowSelection } from "@/composables/admin/useRowSelection";
-import type { ModerationPayload } from "@/types/admin";
+import {
+  LISTING_STATUS_LABELS,
+  VERIFICATION_STATUS_LABELS,
+} from "@/constants/propertyStatus";
+import { sanitizeFilterQuery } from "@/utils/adminFilters";
+import type {
+  AdminFilterDefinition,
+  AdminPropertiesFilters,
+  ModerationPayload,
+} from "@/types/admin";
+
+/** Los dos filtros del listado admin que son enums; `owner_id` e `is_promoted` no
+ * entran en un select. */
+const MODERATION_FILTERS: readonly AdminFilterDefinition[] = [
+  {
+    key: "verification_status",
+    label: "Verificación",
+    options: VERIFICATION_STATUS_LABELS,
+    allLabel: "Todas",
+  },
+  {
+    key: "status",
+    label: "Estado",
+    options: LISTING_STATUS_LABELS,
+    allLabel: "Todos",
+  },
+];
+
+const route = useRoute();
+const router = useRouter();
 
 const {
   rows,
@@ -102,5 +142,19 @@ async function onSave(payload: ModerationPayload, propertyId: string) {
 /** Los mensajes son de la property moderada: cambiar de fila los invalida. */
 watch(selectedId, resetModeration);
 
-onMounted(load);
+/** La URL manda: así el filtro se comparte, se bookmarkea y el back del navegador
+ * lo deshace. `page` sigue en memoria, que la paginación es incremental. */
+const urlFilters = computed(() =>
+  sanitizeFilterQuery(route.query, MODERATION_FILTERS)
+);
+
+function onApplyFilters(values: Record<string, string>) {
+  // `push` y no `replace`: volver atrás devuelve el filtro anterior.
+  router.push({ query: values });
+}
+
+// Los valores ya salieron saneados contra el enum, que es el mismo del backend.
+watch(urlFilters, (filters) => load(filters as AdminPropertiesFilters), {
+  immediate: true,
+});
 </script>
