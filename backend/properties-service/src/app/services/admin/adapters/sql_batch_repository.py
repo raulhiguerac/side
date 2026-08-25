@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import update
-from sqlmodel import Session
+from sqlmodel import Session, func, select
 
 from app.models.bulk_job import BulkJob, JobStatus, JobType
 from app.services.admin.ports.bulk_job_repository import BulkJobRepository
@@ -29,6 +29,57 @@ class SqlBatchRepository(BulkJobRepository):
 
     def get_by_id(self, *, job_id: uuid.UUID) -> BulkJob | None:
         return self.session.get(BulkJob, job_id)
+
+    def get_all(
+        self,
+        *,
+        status: JobStatus | None = None,
+        has_errors: bool | None = None,
+        created_from: datetime | None = None,
+        created_to: datetime | None = None,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> list[BulkJob]:
+        stmt = select(BulkJob).where(BulkJob.deleted_at.is_(None))
+        if status:
+            stmt = stmt.where(BulkJob.status == status)
+        if has_errors is not None:
+            # cardinality y no array_length: sobre un array vacío da 0, no NULL.
+            dropped_rows = func.cardinality(BulkJob.errors) > 0
+            stmt = stmt.where(dropped_rows if has_errors else ~dropped_rows)
+        if created_from is not None:
+            stmt = stmt.where(BulkJob.created_at >= created_from)
+        if created_to is not None:
+            stmt = stmt.where(BulkJob.created_at <= created_to)
+
+        # Sin orden explícito Postgres no garantiza ninguno, y paginar sobre eso
+        # repite o se salta filas entre páginas.
+        stmt = stmt.order_by(BulkJob.created_at.desc()).offset(offset).limit(limit)
+
+        return list(self.session.exec(stmt).all())
+
+    def count_all(
+        self,
+        *,
+        status: JobStatus | None = None,
+        has_errors: bool | None = None,
+        created_from: datetime | None = None,
+        created_to: datetime | None = None,
+    ) -> int:
+        stmt = select(func.count()).select_from(BulkJob).where(BulkJob.deleted_at.is_(None))
+
+        if status is not None:
+            stmt = stmt.where(BulkJob.status == status)
+        if has_errors is not None:
+            # cardinality y no array_length: sobre un array vacío da 0, no NULL.
+            dropped_rows = func.cardinality(BulkJob.errors) > 0
+            stmt = stmt.where(dropped_rows if has_errors else ~dropped_rows)
+        if created_from is not None:
+            stmt = stmt.where(BulkJob.created_at >= created_from)
+        if created_to is not None:
+            stmt = stmt.where(BulkJob.created_at <= created_to)
+
+        return self.session.exec(stmt).one()
 
     def update_status(
         self,

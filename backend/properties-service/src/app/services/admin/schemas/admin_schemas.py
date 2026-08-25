@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from pydantic import ConfigDict, Field, model_validator
 
-from app.models.bulk_job import JobStatus
+from app.models.bulk_job import JobStatus, JobType
 from app.models.listing import Currency, ListingStatus, ListingType, PropertyType, VerificationStatus
 from app.schemas.base import StrictBase
 from app.services.shared.schemas.property_card import PropertyCardSchema
@@ -182,3 +182,42 @@ class BulkJobStatusResponse(StrictBase):
     # is the total the run read.
     inserted: int = 0
     errors: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class GetBulkJobsAdminRequest(StrictBase):
+    """Filters for the import history. No sort field: a history is always read
+    newest first, and a second order would only ever be a curiosity."""
+
+    status: Optional[JobStatus] = None
+    # Runs that dropped rows, which is the only reason to go looking.
+    has_errors: Optional[bool] = None
+    created_from: Optional[datetime] = None
+    created_to: Optional[datetime] = None
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=100)
+
+
+class AdminBulkJobSchema(StrictBase):
+    """Row of the import history. Carries error_count and not the errors: a run
+    can drop thousands, and the status endpoint already serves the full list."""
+
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    id: uuid.UUID
+    job_type: JobType
+    status: JobStatus
+    inserted: int
+    error_count: int
+    retry_of_job_id: Optional[uuid.UUID] = None
+    storage_key: str
+    # Past this the CSV is gone from storage, so the run can no longer be replayed.
+    expires_at: datetime
+    created_at: datetime
+    created_by: Optional[uuid.UUID] = None
+
+
+class AdminBulkJobsPage(StrictBase):
+    items: list[AdminBulkJobSchema]
+    total: int
+    page: int
+    page_size: int
