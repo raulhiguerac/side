@@ -2,6 +2,11 @@
   <div class="flex items-start gap-6">
     <!-- `flex-[3]`/`flex-[2]` reparten después del gap; `min-w-0` deja que la tabla se encoja. -->
     <div class="min-w-0 flex-[3]">
+      <!-- Los filtros van sobre la tabla, no sobre el panel: filtran lo listado. -->
+      <div v-if="$slots.filters" class="mb-4">
+        <slot name="filters" />
+      </div>
+
       <p
         v-if="error"
         class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"
@@ -31,6 +36,7 @@
 defineProps<{ error?: string | null }>();
 
 defineSlots<{
+  filters?: () => unknown;
   table: () => unknown;
   footer?: () => unknown;
   panel?: () => unknown;
