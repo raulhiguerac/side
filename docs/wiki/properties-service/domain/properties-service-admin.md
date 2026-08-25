@@ -1,7 +1,7 @@
 ---
 title: Dominio admin — properties-service
 status: draft
-last-verified: 2026-08-09
+last-verified: 2026-08-24
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -17,7 +17,7 @@ related:
   - "[[properties-service-bulk-create-worker]]"
   - "[[properties-service-users]]"
   - "[[properties-service-search]]"
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md, ../../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md, ../../../sources/properties-service/2026-08-01-bulk-import-pending-verification.md, ../../../sources/properties-service/2026-08-02-moderation-lifecycle-verified-not-terminal.md, ../../../sources/properties-service/2026-08-09-server-driven-transitions-and-promotable-filter.md, ../../../sources/properties-service/2026-08-09-promotions-schema-pagination-and-expiry-filter.md]
+sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md, ../../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md, ../../../sources/properties-service/2026-08-01-bulk-import-pending-verification.md, ../../../sources/properties-service/2026-08-02-moderation-lifecycle-verified-not-terminal.md, ../../../sources/properties-service/2026-08-09-server-driven-transitions-and-promotable-filter.md, ../../../sources/properties-service/2026-08-09-promotions-schema-pagination-and-expiry-filter.md, ../../../sources/properties-service/2026-08-24-bulk-jobs-listing-endpoint.md]
 ---
 
 ## TL;DR
@@ -137,7 +137,7 @@ Ambas señales se preservan por separado para servir como labels de training del
 
 **Resuelto end-to-end el 2026-07-27.** El dominio admin ya no ejecuta el import: `BulkCreatePropertiesUseCase` (`use_cases/bulk_create_properties.py`) **solo encola** — valida el retry, crea la fila en `bulk_jobs` y devuelve el `batch_id`. El procesamiento vive en `BulkCreatePropertiesWorker` (`workers/bulk_create_properties_worker.py`), que corre en background. Ver [[properties-service-bulk-create-worker]] para el detalle técnico completo.
 
-Flujo en tres pasos: `POST /admin/properties/bulk/upload-url` (201, presigned PUT) → el front sube el CSV directo a MinIO → `POST /admin/properties/bulk` con la `storage_key` (202 + `batch_id`, agenda `BackgroundTasks`) → `GET /admin/properties/bulk/{job_id}/status` para polling.
+Flujo en tres pasos: `POST /admin/properties/bulk/upload-url` (201, presigned PUT) → el front sube el CSV directo a MinIO → `POST /admin/properties/bulk` con la `storage_key` (202 + `batch_id`, agenda `BackgroundTasks`) → `GET /admin/properties/bulk/{job_id}/status` para polling. Desde el 2026-08-24 hay un cuarto endpoint, `GET /admin/properties/bulk`, que lista las corridas sin exigir un id de antemano.
 
 Responsabilidades del UC de encolado:
 
@@ -149,6 +149,25 @@ Responsabilidades del UC de encolado:
 > **`owner_id` = el admin importador (2026-07-16) — cerrado.** El CSV ahora trae una columna `email` por fila y el worker resuelve `email → account_id` contra users-service (ver [[properties-service-users]]), poblando `Property.owner_id` con la cuenta real. `created_by` sigue siendo `principal.sub` (auditoría de quién ejecutó el import), que siempre estuvo bien. Un email sin cuenta activa **no** se asigna a nadie: la fila falla con `"owner not resolved for email"` y queda registrada en `bulk_jobs.errors`.
 
 > **Trazabilidad — se deriva, no se almacena.** `Property.bulk_job_id` se declaró en `f3a0c4d` y se **eliminó el 2026-07-27** sin haber llegado nunca a una migración: nadie la escribía, y con ids determinísticos el set de properties de un import se reconstruye desde el CSV (`uuid5` por `external_id`), que sigue en storage vía `bulk_jobs.storage_key`. Ver [[adr-bulk-idempotent-external-id]]. Costo asumido: no hay forma de consultar en SQL directo qué properties salieron de qué import.
+
+## Historial de imports (`GET /admin/properties/bulk`, 2026-08-24)
+
+Devuelve `AdminBulkJobsPage` — `{items, total, page, page_size}` — con filtros por `status`, `has_errors`, `created_from` y `created_to`. Cierra un hueco concreto: hasta acá el único endpoint de lectura era el status por `job_id`, que exige un id que hay que tener de antemano, y el front lo descartaba al cerrar el modal de subida. Guardarlo del lado del cliente no alcanzaba — ese id vive en un navegador, no lo ve otro admin y no responde "qué importé la semana pasada".
+
+**Sin campo de orden, a propósito.** Un historial se lee siempre del más reciente; un `sort` configurable sería una opción que nadie usa en el otro sentido. Va fijo en `ORDER BY created_at DESC`, dentro del repo.
+
+**La fila lleva `error_count`, no los errores.** Una corrida puede tirar miles de `BulkRowError`, y veinte de esas en una página es un payload que nadie lee. El detalle completo ya lo sirve `GET /admin/properties/bulk/{job_id}/status`, así que el par queda con la misma forma que el resto del panel: listado liviano para escanear, detalle por id para decidir. Efecto lateral: ese endpoint de status, que no tenía consumidor, pasó a tenerlo.
+
+**El orden de declaración de la ruta no es cosmético.** `GET /properties/bulk` tiene que registrarse **antes** de `GET /properties/{property_id}` ([admin.py:128](backend/properties-service/src/app/api/routes/admin.py#L128) vs [admin.py:166](backend/properties-service/src/app/api/routes/admin.py#L166)). Al revés, FastAPI resuelve en orden de registro, matchea la de path param con `property_id="bulk"`, falla al parsearlo como UUID y devuelve **422 sin llegar nunca al handler** — un error que parece del cliente y no lo es.
+
+Dos detalles del adapter:
+
+- El filtro `has_errors` usa `cardinality(errors) > 0` y **no** `array_length(errors, 1)`: sobre un array vacío `array_length` devuelve `NULL` en vez de `0`, así que `has_errors=false` perdería justo las corridas limpias que pide.
+- `get_all` y `count_all` filtran los dos por `deleted_at IS NULL`, y `get_all` ordena antes del `offset`: sin orden garantizado, paginar puede repetir o saltear filas entre páginas.
+
+**No cachea**, siguiendo el precedente que ya documenta `ListAllPromotionsUseCase`: vista interna, pocas filas, poco frecuente. En este servicio la cache aparece en admin solo cuando el dato es compartido con el feed público — leer la misma entrada (`GetPropertyDetailAdminUseCase`) o invalidarla (`DeletePromotionUseCase`). Además, cachear un historial garantizaría mostrar `pending` sobre un job que ya terminó.
+
+Las dos queries (página y conteo) van **secuenciales, no con `asyncio.gather`**, por el mismo motivo que el listado de properties: comparten la `Session` del UoW.
 
 ## Listado admin (`GET /admin/properties`)
 
@@ -231,3 +250,10 @@ Devolvía una lista de un solo elemento con la card de la property, nunca las pr
 - `Account` en users-service tiene `account_id` y `email` como únicos identificadores indexados/únicos — no existe ningún campo de documento de identidad (cédula) ([account.py:37-53](backend/users-service/src/app/models/account.py#L37-L53)).
 - `Property.promotions` es una relación viewonly cuyo `primaryjoin` filtra `is_active` **y** `ends_at > now()` ([listing.py](backend/properties-service/src/app/models/listing.py), [promotion.py](backend/properties-service/src/app/models/promotion.py)).
 - `is_promoted` en `PropertyCardSchema` se calcula desde la presencia de promociones activas ([property_card.py:64-69](backend/properties-service/src/app/services/shared/schemas/property_card.py#L64-L69)).
+- `GET /admin/properties/bulk` devuelve `AdminBulkJobsPage` y está declarada antes que `GET /admin/properties/{property_id}` ([admin.py:128](backend/properties-service/src/app/api/routes/admin.py#L128), [admin.py:166](backend/properties-service/src/app/api/routes/admin.py#L166)).
+- `GetBulkJobsAdminRequest` acepta `status`, `has_errors`, `created_from`, `created_to`, `page` y `page_size`, y no declara ningún campo de orden ([admin_schemas.py](backend/properties-service/src/app/services/admin/schemas/admin_schemas.py)).
+- `AdminBulkJobSchema` declara `error_count` y no incluye los `errors` ([admin_schemas.py](backend/properties-service/src/app/services/admin/schemas/admin_schemas.py)).
+- `GetBulkJobsAdminUseCase` deriva `error_count` de `len(job.errors)` en vez de validar el modelo directo ([get_bulk_jobs.py](backend/properties-service/src/app/services/admin/use_cases/get_bulk_jobs.py)).
+- El filtro `has_errors` se traduce a `cardinality(errors) > 0` en `get_all` y `count_all` ([sql_batch_repository.py:48](backend/properties-service/src/app/services/admin/adapters/sql_batch_repository.py#L48), [sql_batch_repository.py:75](backend/properties-service/src/app/services/admin/adapters/sql_batch_repository.py#L75)).
+- `get_all` de `bulk_jobs` filtra `deleted_at IS NULL` y ordena por `created_at DESC` antes de aplicar `offset`/`limit` ([sql_batch_repository.py:43](backend/properties-service/src/app/services/admin/adapters/sql_batch_repository.py#L43), [sql_batch_repository.py:57](backend/properties-service/src/app/services/admin/adapters/sql_batch_repository.py#L57)).
+- `GetBulkJobsAdminUseCase` recibe solo el `uow`, sin `CachePort` ([get_bulk_jobs.py](backend/properties-service/src/app/services/admin/use_cases/get_bulk_jobs.py), [admin.py](backend/properties-service/src/app/api/deps/admin.py)).

@@ -1,7 +1,7 @@
 ---
 title: Bulk-create worker — streaming CSV desde MinIO (properties-service)
 status: stable
-last-verified: 2026-08-01
+last-verified: 2026-08-24
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -18,6 +18,7 @@ sources:
   - ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md
   - ../../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md
   - ../../../sources/properties-service/2026-08-01-bulk-import-pending-verification.md
+  - ../../../sources/properties-service/2026-08-24-bulk-jobs-listing-endpoint.md
 ---
 
 ## TL;DR
@@ -171,11 +172,12 @@ Quedan dos consecuencias abiertas, registradas en [[open-items]]: las filas impo
 - El tamaño del upload **no es enforceable** en un presigned PUT plano: `max_size_bytes` viaja al cliente como hint. Un límite duro requeriría presigned POST con `content-length-range`.
 - El lookup de owner es **case-sensitive** de punta a punta.
 - `JobStatus` solo tiene `pending/completed/failed` — no hay `processing` (un job corriendo es indistinguible de uno encolado salvo por el chequeo de stale) ni `expired`.
+- **El worker no invalida ninguna cache tras escribir.** Persiste por chunks con el upsert de `bulk_insert` y no toca Redis, mientras que los writes admin equivalentes sí borran sus keys. En filas nuevas el daño es acotado (feed y mapa tienen TTL de 300s), pero el reimport —lo que la idempotencia del `external_id` habilita— hace UPDATE sobre filas cuyo `properties:detail:{id}` vive 6 horas y `properties:user:{owner}` 30 minutos: corregir un precio por CSV y no verlo cambiar en toda la tarde. Ver [[open-items]].
 - La construcción de objetos ORM sigue en el worker y no detrás del repo — deuda preexistente, ya marcada con un `# TODO: refactor` en `create_property.py`; se difiere para arreglar los flujos single y bulk juntos.
 
 ## Claims
 
-- El flujo bulk son tres endpoints: `POST /admin/properties/bulk/upload-url` (201, presigned PUT), `POST /admin/properties/bulk` (202 + `batch_id`) y `GET /admin/properties/bulk/{job_id}/status` (200) ([admin.py](backend/properties-service/src/app/api/routes/admin.py)).
+- El flujo bulk son cuatro endpoints: `POST /admin/properties/bulk/upload-url` (201, presigned PUT), `POST /admin/properties/bulk` (202 + `batch_id`), `GET /admin/properties/bulk` (200, historial paginado) y `GET /admin/properties/bulk/{job_id}/status` (200) ([admin.py](backend/properties-service/src/app/api/routes/admin.py)).
 - `POST /admin/properties/bulk` recibe `BulkCreatePropertiesRequest{storage_key, retry_of_job_id}` y agenda el worker con `background_tasks.add_task(...)`; no recibe `UploadFile` ([admin.py](backend/properties-service/src/app/api/routes/admin.py)).
 - `run_bulk_create_properties` abre su propia `Session(engine)` en vez de reusar la del request, porque las dependencias `yield` se cierran antes de que corra el `BackgroundTask` ([admin.py](backend/properties-service/src/app/api/deps/admin.py)).
 - `RequestBulkUploadUrlUseCase` valida la extensión contra `PROPERTIES_BULK_UPLOAD_POLICY`, genera la key como `{principal.sub}/{uuid4}{ext}` y no persiste ninguna fila ([request_bulk_upload_url.py](backend/properties-service/src/app/services/admin/use_cases/request_bulk_upload_url.py)).

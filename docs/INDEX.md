@@ -106,6 +106,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0009 — Las tabs del panel admin son rutas hijas, no un switch de componentes](wiki/frontend/adrs/adr-admin-tabs-nested-routes.md)
 - [ADR-0010 — Moderar se hace en el panel de vista previa, con un formulario de guardado explícito](wiki/frontend/adrs/adr-moderation-panel-staged-form.md)
 - [ADR-0011 — Promocionar vive en su propia sub-tab, no en el panel de moderación](wiki/frontend/adrs/adr-promotions-own-subtab.md)
+- [ADR-0012 — Los filtros del panel admin viven en la URL, no en el composable](wiki/frontend/adrs/adr-admin-filters-in-query-params.md)
 
 ## properties-service
 
@@ -115,7 +116,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 ### domain/
 - [properties-service-listing](wiki/properties-service/domain/properties-service-listing.md) — CRUD del dueño + flujo de imágenes presigned/batch + visibilidad
 - [properties-service-search](wiki/properties-service/domain/properties-service-search.md) — feed orgánico+ads con fallback de preferencias + feed-mapa por H3
-- [properties-service-admin](wiki/properties-service/domain/properties-service-admin.md) — moderación (state machine), precios estimados dual, promociones, encolado del bulk import
+- [properties-service-admin](wiki/properties-service/domain/properties-service-admin.md) — moderación (state machine), precios estimados dual, promociones, encolado del bulk import + historial de imports
 - [properties-service-bulk-create-worker](wiki/properties-service/domain/properties-service-bulk-create-worker.md) — import async end-to-end: presigned PUT, BackgroundTasks con sesión propia, persistencia por chunk de 2500, cierre del BulkJob
 
 ### integrations/

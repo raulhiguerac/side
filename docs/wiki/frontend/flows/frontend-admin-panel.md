@@ -1,7 +1,7 @@
 ---
 title: Panel admin (frontend)
 status: draft
-last-verified: 2026-08-09
+last-verified: 2026-08-24
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -18,6 +18,7 @@ related:
   - "[[adr-verification-reversible-lifecycle]]"
   - "[[adr-transitions-served-by-backend]]"
   - "[[adr-promotions-own-subtab]]"
+  - "[[adr-admin-filters-in-query-params]]"
   - "[[open-items]]"
 sources:
   - ../../../sources/frontend/2026-07-16-admin-panel-nav-and-hub.md
@@ -29,11 +30,12 @@ sources:
   - ../../../sources/frontend/2026-08-02-moderation-panel-form-over-buttons.md
   - ../../../sources/frontend/2026-08-09-moderation-wiring-and-promotions-shell.md
   - ../../../sources/frontend/2026-08-09-promotions-tab-wired.md
+  - ../../../sources/frontend/2026-08-24-admin-url-filters-and-imports-tab.md
 ---
 
 ## TL;DR
 
-Panel admin embebido en la app existente (no un subdominio separado): un link condicional en el nav, rutas gateadas por rol, y una vista hub que orquesta hacia propiedades y catálogo. Desde el 2026-08-01 la sección de propiedades es un layout con tres tabs como rutas hijas (moderación, promociones, importaciones), y la de moderación combina tabla paginada + panel de vista previa. Desde el 2026-08-02 el panel lleva además el **formulario de moderación**, y desde el 2026-08-09 ese guardado **llega a la API**: moderar funciona punta a punta. Promociones quedó cableada el mismo día en dos sub-tabs: activas (listar y quitar) y promocionar (elegir y crear). Lo que sigue faltando son los filtros de la cola y toda la sección de catálogo.
+Panel admin embebido en la app existente (no un subdominio separado): un link condicional en el nav, rutas gateadas por rol, y una vista hub que orquesta hacia propiedades y catálogo. Desde el 2026-08-01 la sección de propiedades es un layout con tres tabs como rutas hijas (moderación, promociones, importaciones), y la de moderación combina tabla paginada + panel de vista previa. Desde el 2026-08-02 el panel lleva además el **formulario de moderación**, y desde el 2026-08-09 ese guardado **llega a la API**: moderar funciona punta a punta. Promociones quedó cableada el mismo día en dos sub-tabs: activas (listar y quitar) y promocionar (elegir y crear). Desde el 2026-08-24 los filtros de la cola viven en la URL y la tab de importaciones lista las corridas contra su endpoint nuevo. Lo que sigue faltando es el relanzar de un import y toda la sección de catálogo.
 
 ## Por qué embebido, no subdominio
 
@@ -134,6 +136,8 @@ La versión anterior de esta página documentaba que `POST /admin/properties/bul
 
 Peor: el `batch_id` se descarta al cerrar y **no existe ningún endpoint que liste los bulk jobs**, solo `GET /admin/properties/bulk/{job_id}/status`, que exige un id que ya haya que tener. El diseño de "revisar el resultado en otro lado" necesita primero un `GET /admin/properties/bulk`; `bulk_jobs` ya guarda todo lo que esa vista mostraría, y de paso le daría un punto de entrada al flujo de retry.
 
+> **Cerrado el 2026-08-24.** El endpoint existe ([[properties-service-admin]]) y la tab lo consume: `useBulkJobs` lista las corridas y el panel de la derecha pide los errores por id. Sigue abierto lo otro que decía este párrafo — el toast de confirmación al encolar (el `emit("queued")` sigue sin escucha) y el flujo de retry, que necesita un endpoint propio.
+
 ## Forma del panel: tabla, no el card grid del feed
 
 El grid del feed optimiza para "cuál me gusta" — imagen, precio, ambientes. Moderar es "cuáles necesitan acción": más filas visibles a la vez, columnas alineadas para escanear, acciones por fila. Los filtros van **en la misma vista** que la tabla, porque el loop es filtrar → mirar → actuar → filtrar de nuevo, y separarlos obliga a ida y vuelta de navegación.
@@ -223,7 +227,7 @@ La división queda: `load()` para aplicar o cambiar filtros, `reload()` para ref
 
 ## Lo que falta para cerrar la moderación
 
-- **El filtro por `verification_status`.** Todo el diseño del formulario staged asume una cola filtrada por `pending`, y la vista todavía no manda filtros: se ve el inventario entero mezclado. Cuando entre, `useRowSelection` debería conservar el índice en vez de saltar a la primera fila — hoy moderar la fila 7 la hace desaparecer y el panel salta a la 1, no a la que ocupó su lugar.
+- ~~**El filtro por `verification_status`.**~~ **Hecho el 2026-08-24**: la tab filtra por `verification_status` y `status` desde la URL (ver abajo y [[adr-admin-filters-in-query-params]]). Sigue pendiente el matiz que traía este ítem: `useRowSelection` salta a la primera fila en vez de conservar el índice, así que moderar la fila 7 deja al panel parado en la 1.
 - **Las importadas antes del 2026-08-01 siguen en `unverified`** y necesitan backfill ([[open-items]]).
 - **El precio estimado quedó fuera del panel**, y no solo por alcance: `admin_estimated_price` y `ml_estimated_price` no están en ningún schema de respuesta, así que el input sería write-only — escribir un precio sin ver el guardado ni el del modelo. Además no es moderación: es una señal de pricing para el AVM.
 
@@ -263,9 +267,30 @@ components/admin/
 
 `AdminPropertiesTable` y `AdminPropertyPreviewPanel` quedan en la raíz de `properties/` a propósito: la tabla la usan moderación y promocionar, y el panel las tres vistas. Meterlas bajo `moderation/` mentiría sobre quién las consume. Las vistas siguen el mismo corte (`views/admin/properties/{moderation,promotions,imports}/`), y ahí las que ya vivían en su carpeta perdieron el `Properties` redundante del nombre.
 
-## Estado del cableado: 9 de 22 endpoints admin con consumer
+## Los filtros viven en la URL (2026-08-24)
 
-El total bajó de 23 a 22 porque `GET /admin/properties/{id}/promotions` se borró ([[properties-service-admin]]). En properties-service hay **9 de 11** cableados —listado, detalle, los dos pasos del bulk upload, los dos PATCH de moderación y los tres de promociones— y quedan 2 sin consumer, los dos bloqueados de siempre: el precio estimado (write-only, ningún schema lo devuelve) y el status de un bulk job (no hay endpoint que liste los jobs). En catalog-service son **11 de 11** sin cablear — `AdminCatalogView` está vacía.
+`AdminFilterBar` es un componente tonto: recibe las definiciones de filtro —`key`, `label` y el `{ value: label }` de las constantes de estado—, mantiene un borrador local y solo lo emite al hacer click. Quien manda es la vista, que empuja los valores a la query y recarga desde ahí. El detalle de por qué, y las alternativas descartadas, están en [[adr-admin-filters-in-query-params]].
+
+Lo que hay que saber al usarlo:
+
+- **La barra entra por un slot `filters` de `AdminSplitView`**, en la columna izquierda y sobre la tabla, que es lo que filtra. El slot es opcional y no deja margen si nadie lo llena.
+- **Aplicar sin filtros emite `{}`**, no `status=""`. La ausencia de param significa "sin filtrar"; el string vacío sería un valor inválido contra el enum del backend.
+- **El borrador se siembra con todas las keys, incluso vacías.** Sobre una key ausente el `<option value="">` no tiene qué marcar como seleccionada, y el select aparecería en blanco tras un reload con filtro puesto.
+- **`has_errors` viaja como `"true"`/`"false"`** y lo parsea Pydantic del lado del backend; los filtros de fecha no se exponen porque el componente todavía no tiene inputs de fecha.
+
+## La tab de importaciones, cableada (2026-08-24)
+
+Antes de cablearla se montó como **mock estático** —datos ficticios, banner de aviso, botones inertes— para revisar el layout mientras el endpoint no existía. Eso permitió discutir columnas y panel sin backend, y el reemplazo por datos reales fue un cambio acotado.
+
+La forma final reusa el patrón de las otras tabs con una diferencia que importa: **el panel recibe la fila entera, no solo el id**. `GET /admin/properties/bulk/{job_id}/status` devuelve el estado y los errores, pero no `expires_at` ni `retry_of_job_id`, que son los que deciden si el CSV todavía se puede relanzar — y esos ya vinieron en el listado. El fetch de errores ni siquiera se dispara si la fila trae `error_count: 0`.
+
+`useBulkJobs` se calcó de `useActivePromotions` (pide siempre la página al servidor) y **no** de `useAdminProperties` (que acumula páginas en memoria vía `usePagination`): relanzar un job agrega una corrida arriba y correría todas las demás, así que una copia local se desalinearía sola.
+
+Quedan dos botones puestos y sin acción, a la espera de backend: relanzar el job y descargar el CSV de errores. Y dos límites del diseño que solo se ven con datos reales: un job `failed` global muestra `0/0` sin explicar por qué —`bulk_jobs` guarda errores por fila, no un mensaje de job— y una cadena de varios reintentos del mismo archivo es difícil de seguir en una lista plana.
+
+## Estado del cableado: 11 de 23 endpoints admin con consumer (2026-08-24)
+
+El total volvió a 23 con el `GET /admin/properties/bulk` nuevo ([[properties-service-admin]]). En properties-service hay **11 de 12** cableados: listado, detalle, los dos pasos del bulk upload, los dos PATCH de moderación, los tres de promociones, y desde el 2026-08-24 el historial de imports y el status por `job_id` —que hasta entonces no tenía consumer y ahora alimenta los errores del panel—. Queda **uno** sin cablear: `POST /admin/properties/{id}/estimated-price`, write-only porque ningún schema de respuesta devuelve esos campos, y que además no invalida cache ([[open-items]]). En catalog-service siguen **11 de 11** sin cablear — `AdminCatalogView` está vacía.
 
 Tampoco hay módulo de API admin. Se evaluó crear `src/api/adminApi.ts` y **se descartó**: las instancias de axios del proyecto son una por servicio, y "admin" no es un servicio — los endpoints admin viven en properties y en catalog. En su lugar la ruta se agregó a `constants/propertiesEndpoints.ts` y el fetch vive en el composable, que es el patrón que ya usan `useFeed` y `useProfileListings`.
 
@@ -324,3 +349,10 @@ Tampoco hay módulo de API admin. Se evaluó crear `src/api/adminApi.ts` y **se 
 - `usePromoteProperty` distingue `DUPLICATE_ACTIVE_PROMOTION` de `PROPERTY_NOT_READY_FOR_PROMOTION` leyendo `code` de la respuesta ([usePromoteProperty.ts](frontend/src/composables/admin/usePromoteProperty.ts)).
 - `useRowSelection` acepta un extractor de clave y por defecto usa `row.id` ([useRowSelection.ts](frontend/src/composables/admin/useRowSelection.ts)).
 - `AdminPromotionsTable.vue` usa `row.property_id` como `rowKey` y muestra columnas de prioridad y vencimiento ([AdminPromotionsTable.vue](frontend/src/components/admin/properties/promotions/AdminPromotionsTable.vue)).
+- `AdminFilterBar` emite `apply` solo desde el click y omite los valores vacíos ([AdminFilterBar.vue](frontend/src/components/admin/shared/AdminFilterBar.vue)).
+- `AdminModerationView` filtra por `verification_status` y `status`, y `AdminImportsView` por `status` y `has_errors`, en ambos casos desde `route.query` ([AdminModerationView.vue](frontend/src/views/admin/properties/moderation/AdminModerationView.vue), [AdminImportsView.vue](frontend/src/views/admin/properties/imports/AdminImportsView.vue)).
+- `useBulkJobs` pide siempre la página al servidor y no usa `usePagination` ([useBulkJobs.ts](frontend/src/composables/admin/useBulkJobs.ts)).
+- `AdminBulkJobPanel` recibe la fila como prop y solo llama a `adminBulkJobStatus` cuando `error_count` es distinto de cero ([AdminBulkJobPanel.vue](frontend/src/components/admin/properties/imports/AdminBulkJobPanel.vue)).
+- `BulkJobRow` declara `error_count` y no un array de errores ([types/admin.ts](frontend/src/types/admin.ts)).
+- El botón de relanzar de `AdminBulkJobPanel` no tiene handler: se deshabilita si el job está `pending` o si `expires_at` ya pasó ([AdminBulkJobPanel.vue](frontend/src/components/admin/properties/imports/AdminBulkJobPanel.vue)).
+- `AdminImportsView` ya no monta el empty state fijo: renderiza `AdminSplitView` con la tabla de corridas ([AdminImportsView.vue](frontend/src/views/admin/properties/imports/AdminImportsView.vue)).
