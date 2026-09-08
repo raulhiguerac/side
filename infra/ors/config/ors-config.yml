@@ -16,7 +16,7 @@ ors:
   engine:
     profile_default:
       build:
-        source_file: /home/ors/files/osm_bogota.pbf
+        source_file: /home/ors/files/bogota.osm.pbf
     profiles:
       driving-car:
         enabled: true

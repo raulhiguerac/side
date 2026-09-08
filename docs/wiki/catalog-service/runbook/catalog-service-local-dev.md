@@ -1,16 +1,21 @@
 ---
 title: Runbook — catalog-service local dev
 status: draft
-last-verified: 2026-07-13
+last-verified: 2026-09-07
 owners: [catalog-service]
 related:
   - "[[catalog-service]]"
   - "[[catalog-service-architecture]]"
   - "[[analytics-service-local-dev]]"
-sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
+sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md]
 ---
 
 ## TL;DR
+
+> **Actualizado 2026-09-07 — el arranque ya no es manual.** `make bootstrap && make up`
+> levanta los 21 servicios, aplica migraciones y siembra datos. Este runbook queda
+> como referencia de los detalles internos del servicio y de como correrlo a mano
+> cuando lo estas debuggeando. Ver [`README.md`](README.md) para el flujo normal.
 
 Mismo workflow devcontainer-first que [[analytics-service-local-dev]]: abrir el repo en VS Code → "Reopen in Container" → docker-compose levanta toda la infra (incluyendo `catalog-ms-db` con PostGIS). Después, a mano dentro del devcontainer: `cd backend/catalog-service && uv sync && correr migraciones + uvicorn`. Auth se prueba con **cookie** `access_token` (no header Bearer — distinto a analytics). El catálogo se siembra hoy manualmente vía bulk endpoints — sin script de seed.
 
@@ -18,8 +23,8 @@ Mismo workflow devcontainer-first que [[analytics-service-local-dev]]: abrir el 
 
 - Docker Desktop corriendo.
 - VS Code con extensión **Dev Containers**.
-- Repo clonado.
-- Archivo `.env` en el root (compartido con users-service hoy).
+- Repo clonado, `.env.local` completado y `make bootstrap` corrido.
+- `.env.local` completado (7 valores) y `make bootstrap` corrido.
 - **`MAPBOX_API_KEY`** propia para probar `/geo-resolution/resolve-neighborhood` (deprecado, ver [[adr-mapbox-frontend-only]]). No necesaria si solo vas a usar `/by-coordinates`.
 
 ## Levantar el entorno
@@ -51,7 +56,7 @@ Dentro del devcontainer:
 ```bash
 cd /workspace/backend/catalog-service
 uv sync
-# crear .env del servicio — ver siguiente sección
+# el .env.dev del servicio ya viene versionado; no hay que crearlo
 uv run alembic upgrade head     # aplicar migraciones
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -73,7 +78,7 @@ REDIS_URL=redis://redis:6379/3
 # Auth (Keycloak del compose)
 KC_JWKS_URL=http://keycloak:8080/realms/master/protocol/openid-connect/certs
 KC_ISSUER=http://keycloak:8080/realms/master
-OIDC_AUDIENCE=account
+OIDC_AUDIENCE=users-ms
 ADMIN_ROLE=admin
 
 # Mapbox (solo necesario hasta el refactor de /geo-resolution; ver ADR-0005)

@@ -1,7 +1,7 @@
 ---
 title: Runbook — analytics-service local dev
 status: stable
-last-verified: 2026-07-13
+last-verified: 2026-09-07
 owners: [analytics-service]
 related:
   - "[[analytics-service]]"
@@ -13,9 +13,15 @@ sources:
   - ../../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md
   - ../../../sources/analytics-service/2026-05-25-worker-wiring-fixes.md
   - ../../../sources/analytics-service/2026-05-25-unit-test-suite.md
+  - ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md
 ---
 
 ## TL;DR
+
+> **Actualizado 2026-09-07 — el arranque ya no es manual.** `make bootstrap && make up`
+> levanta los 21 servicios, aplica migraciones y siembra datos. Este runbook queda
+> como referencia de los detalles internos del servicio y de como correrlo a mano
+> cuando lo estas debuggeando. Ver [`README.md`](README.md) para el flujo normal.
 
 Flujo: abrir el repo en VS Code → "Reopen in Container" → docker-compose levanta toda la infra (Postgres por servicio + Keycloak + Redis + MinIO + MLflow). Después, **a mano**: `cd backend/analytics-service && uv sync && PYTHONPATH=src uv run uvicorn app.main:app --reload --port 8000`.
 
@@ -25,8 +31,8 @@ El servicio analytics **no está como service en el compose** — se corre manua
 
 - Docker Desktop (o engine equivalente) corriendo.
 - VS Code con la extensión **Dev Containers** (`ms-vscode-remote.remote-containers`).
-- Repo clonado.
-- Archivo `.env` en el root del repo (se necesita para el users-service hoy; si no está, pedirlo al equipo).
+- Repo clonado, `.env.local` completado y `make bootstrap` corrido.
+- `.env.local` completado (7 valores) y `make bootstrap` corrido.
 
 ## Levantar el entorno
 
@@ -65,7 +71,7 @@ Dentro del devcontainer:
 ```bash
 cd /workspace/backend/analytics-service
 uv sync
-# crear .env del servicio — ver siguiente sección
+# el .env.dev del servicio ya viene versionado; no hay que crearlo
 
 # API web
 PYTHONPATH=src uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -100,7 +106,7 @@ AWS_SECRET_ACCESS_KEY=minioadmin
 # Auth — Keycloak JWT (ver [[adr-auth-keycloak-jwt]])
 KC_JWKS_URL=http://keycloak:8080/realms/<realm>/protocol/openid-connect/certs
 KC_ISSUER=http://keycloak:8080/realms/<realm>
-OIDC_AUDIENCE=account
+OIDC_AUDIENCE=users-ms
 
 # Kafka — consumer listing-created (solo necesario para el worker, no para el web server)
 KAFKA_SERVER=broker:29092
@@ -111,7 +117,7 @@ KAFKA_DLQ_TOPIC=listing-created-dlq
 WORKER_PRINCIPAL=<uuid-del-principal-de-sistema>
 ```
 
-Reemplazar `<realm>` con el nombre del realm en Keycloak (ver `infra/keycloak/realm.template.json`).
+El realm es `core` (ver `infra/keycloak/realm-dev.json`).
 
 Los nombres de host (`analytics-ms-db`, `mlflow`, `minio`, `redis`) resuelven en la red `dev-net` del compose desde dentro del devcontainer.
 
@@ -124,13 +130,13 @@ El endpoint está expuesto en `POST /v1/predict`. Requiere un JWT válido — el
 3. Validar que la response tenga `id`, `predicted_price`, `model_version`, `created_at`.
 4. Opcionalmente revisar el registro insertado: `psql -h analytics-ms-db -U admin -d analytics-ms-db -c "SELECT * FROM predictions ORDER BY created_at DESC LIMIT 1;"`
 
-Gaps #1, #2 y #4 ya están resueltos. **Gap #3 (bucket `mlflow-artifacts`) sigue abierto** — ver Known gaps abajo.
+Los gaps #1 a #4 están resueltos: desde el 2026-09-07 `minio-init` crea el bucket y la cuenta con scope.
 
 ## Known gaps
 
 ~~1. **No hay `analytics-ms-db` en `docker-compose.yml`**.~~ ✓ Resuelto — DB y migraciones corriendo (2026-05-25).
 ~~2. **No hay migraciones Alembic aplicadas**.~~ ✓ `alembic upgrade head` aplicado, tabla `predictions` activa (2026-05-25).
-3. **El bucket `mlflow-artifacts` no se crea automáticamente en MinIO** — **sigue abierto** (re-verificado 2026-07-13): `MINIO_DEFAULT_BUCKETS` en `docker-compose.yml` solo declara `mi-casa-en-minutos`; no hay init container ni script `mc mb` en el repo que cree `mlflow-artifacts`. `--default-artifact-root s3://mlflow-artifacts/` de MLflow apunta a un bucket que no existe hasta que alguien lo crea a mano.
+~~3. **El bucket `mlflow-artifacts` no se crea automáticamente en MinIO**.~~ ✓ Resuelto 2026-09-07: el servicio `minio-init` lo crea junto con los otros tres y le adjunta la policy `mlflow` a un usuario propio. `MINIO_DEFAULT_BUCKETS` se eliminó del compose — la imagen `minio/minio` nunca leyó esa variable (es de Bitnami), así que no hacía nada.
 ~~4. **No hay modelo seed en MLflow**.~~ ✓ `bogota-avm` con alias `production` disponible — `/predict` y worker batch funcionando end-to-end (2026-05-25).
 ~~5. **El `.env.example` del servicio está incompleto**.~~ ✓ Env vars MLflow, auth y Kafka documentadas arriba (2026-05-25).
 ~~6. **La FastAPI dependency de auth no existe**.~~ ✓ Implementada en `api/deps/auth.py` (2026-05-20).
@@ -158,8 +164,12 @@ psql -h analytics-ms-db -U admin -d analytics_service_db
 # Ver logs de un service del compose desde el devcontainer
 docker logs mlflow -f
 
-# Recargar el realm de Keycloak (si cambia infra/keycloak/realm.template.json)
-docker compose restart keycloak
+# Re-aplicar los client secrets de Keycloak (idempotente)
+docker compose up keycloak-init
+
+# Reimportar el realm de cero: --import-realm salta si el realm ya existe,
+# asi que hay que borrar el volumen primero
+docker compose down && docker volume rm side_keycloak-postgres-data
 ```
 
 ## Claims
@@ -170,7 +180,7 @@ docker compose restart keycloak
 - Keycloak escucha en host port **8180** mapeado al 8080 interno del container ([docker-compose.yml:98-99](docker-compose.yml#L98-L99)).
 - MinIO API en host port 9000, consola en 9001 ([docker-compose.yml:130-132](docker-compose.yml#L130-L132)).
 - MLflow en host port 5000 con SQLite como backend store en `/mlflow/mlflow.db` ([docker-compose.yml:156](docker-compose.yml#L156)).
-- MLflow `--default-artifact-root` apunta a `s3://mlflow-artifacts/`, bucket que **no** está en `MINIO_DEFAULT_BUCKETS` ([docker-compose.yml:138](docker-compose.yml#L138), [docker-compose.yml:157](docker-compose.yml#L157)).
+- MLflow `--default-artifact-root` apunta a `s3://mlflow-artifacts/`, creado por el servicio `minio-init` desde el 2026-09-07 ([docker-compose.yml](docker-compose.yml)).
 - El `postCreateCommand` del devcontainer ejecuta `setup-analytics-kernel.sh`, que registra un Jupyter kernel llamado `analytics` ([devcontainer.json:34](.devcontainer/devcontainer.json#L34), [setup-analytics-kernel.sh](data/ml/AVM/scripts/setup-analytics-kernel.sh)).
 - El Dockerfile de analytics-service usa `python:3.10-slim` + uv + `ENV PYTHONPATH=/app/src` + uvicorn sobre `app.main:app` puerto 8000 ([Dockerfile](backend/analytics-service/Dockerfile)).
 - `PYTHONPATH=src` es obligatorio para correr el web server o el worker localmente — sin esto `import app` falla con `ModuleNotFoundError`.

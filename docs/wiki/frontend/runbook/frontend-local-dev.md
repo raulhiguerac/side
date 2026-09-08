@@ -1,7 +1,7 @@
 ---
 title: Runbook — frontend local dev
 status: draft
-last-verified: 2026-07-13
+last-verified: 2026-09-07
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -12,9 +12,15 @@ sources:
   - ../../../sources/frontend/2026-05-21-foundational-qa.md
   - ../../../sources/frontend/2026-06-28-devcontainer-proxy-chrome-fix.md
   - ../../../sources/frontend/2026-07-13-vscode-port-forwarding-breaks-requests.md
+  - ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md
 ---
 
 ## TL;DR
+
+> **Actualizado 2026-09-07 — el arranque ya no es manual.** `make bootstrap && make up`
+> levanta los 21 servicios, aplica migraciones y siembra datos. Este runbook queda
+> como referencia de los detalles internos del servicio y de como correrlo a mano
+> cuando lo estas debuggeando. Ver [`README.md`](README.md) para el flujo normal.
 
 Mismo patrón devcontainer-first que los backends. Dentro del devcontainer: `cd frontend && npm install && npm run serve` → SPA en **`http://localhost:8080/#/`**. Backend en `:8000` (users), `:8001` (catalog) — corren a mano desde el devcontainer en terminales separadas. CORS abierto temporalmente. Ningún tooling de tests/e2e configurado todavía.
 
@@ -22,7 +28,7 @@ Mismo patrón devcontainer-first que los backends. Dentro del devcontainer: `cd 
 
 - Docker Desktop corriendo.
 - VS Code con extensión **Dev Containers**.
-- Repo clonado.
+- Repo clonado, `.env.local` completado y `make bootstrap` corrido.
 - `.env` del root presente (compartido para todos los services).
 - **Node 20 y pnpm/npm** ya vienen en la imagen del devcontainer ([.devcontainer/Dockerfile](.devcontainer/Dockerfile)). No instalar Node en el host.
 

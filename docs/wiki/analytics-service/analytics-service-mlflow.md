@@ -8,7 +8,7 @@ related:
   - "[[analytics-service-architecture]]"
   - "[[avm-training]]"
   - "[[adr-mlflow-minio-stack]]"
-sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md]
+sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md, ../../sources/_shared/2026-09-07-entorno-dev-migrable.md]
 ---
 
 ## TL;DR
@@ -73,7 +73,7 @@ El schema de input del modelo se infiere con `infer_signature(input_example, ...
 | `mlflow` | mlflow:v3.12.0-full | 5000 | Backend store: SQLite en `/mlflow/mlflow.db` |
 | `minio` | minio:RELEASE.2025-09-07 | 9000 (API), 9001 (console) | Artifact store S3-compatible |
 
-`mlflow` usa `--default-artifact-root s3://mlflow-artifacts/` — el bucket no está en `MINIO_DEFAULT_BUCKETS` y debe crearse manualmente desde http://localhost:9001 antes del primer training run.
+`mlflow` usa `--default-artifact-root s3://mlflow-artifacts/`. Desde el 2026-09-07 el bucket lo crea el servicio `minio-init` del compose, junto con el usuario `side-mlflow-dev` cuya policy `mlflow` da acceso solo a ese bucket.
 
 ## Relación con el pipeline de training
 
@@ -88,7 +88,10 @@ El shape de features que MLflow espera coincide con `PredictionRequest` excluyen
 - `online_predict` usa `.iloc[0]` (scalar), `batch_predict` usa `.tolist()` (lista) ([mlflow/model.py:36-40](backend/analytics-service/src/app/integrations/ml/mlflow/model.py#L36-L40)).
 - `AVMModelAdapter` hardcodea `model_name="bogota-avm"` y `alias="production"` ([avm_model_adapter.py:11,16](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L11-L16)).
 - `property_id` se excluye del dict enviado a MLflow vía `exclude={'property_id'}` ([avm_model_adapter.py:12,17](backend/analytics-service/src/app/services/prediction/adapters/avm_model_adapter.py#L12-L17)).
-- El bucket `mlflow-artifacts` no está en `MINIO_DEFAULT_BUCKETS` — debe crearse manualmente antes del primer training run ([docker-compose.yml:138](docker-compose.yml#L138)).
+- El bucket `mlflow-artifacts` y el usuario `side-mlflow-dev` los crea `minio-init`; la policy incluye `ListBucket` y las acciones de multipart, que el SDK de MLflow necesita ([infra/minio/policies/mlflow-artifacts-policy.json](infra/minio/policies/mlflow-artifacts-policy.json)).
+- `mlflow-init` (2026-09-07) siembra el registro y los artifacts antes de que arranque el server: copia `infra/mlflow/registry/mlflow.db` al volumen `mlflow_data` y espeja `infra/mlflow/artifacts/` a `s3://mlflow-artifacts/`. Ambos pasos tienen centinela y no pisan nada existente ([infra/dev/mlflow-init.sh](infra/dev/mlflow-init.sh)).
+- Se restaura el sqlite en vez de registrar por API porque el `MLmodel` del modelo trae horneados `artifact_path` (`s3://mlflow-artifacts/3/models/m-62a127.../artifacts`), `model_id` y `run_id`: registrar por API generaria ids nuevos que no coinciden con los del propio artefacto. Por eso los artifacts se restauran preservando el prefijo `3/`.
+- `mc mirror` **no** salta los objetos ya presentes: falla con `Overwrite not allowed` y aun asi devuelve exit 0, asi que `mlflow-init` cuenta los objetos del prefijo antes y despues en vez de confiar en el codigo de salida.
 - MLflow usa SQLite como backend store en `/mlflow/mlflow.db` dentro del container ([docker-compose.yml:156](docker-compose.yml#L156)).
 - El schema de MLflow se infiere de `input_example` en `final_train` — si `year_built` es no nulo en el ejemplo, MLflow lo marca `long required` y rechaza `null` en runtime antes de que corra el preprocessing ([trainer.py](data/ml/AVM/training/pipeline/trainer.py)).
 - `_year_to_antiguedad(None)` devuelve `'sin especificar'` correctamente, pero la validación del schema MLflow rechaza `null` antes de llegar al preprocessor ([transforms/encoders.py:18-20](data/ml/AVM/training/transforms/encoders.py#L18-L20)).

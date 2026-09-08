@@ -14,7 +14,10 @@ dependencies = [
     "filetype>=1.2.0",
     "psycopg2-binary>=2.9.11",
     "pydantic>=2.12.5",
+    # cryptography la necesita PyJWT para RS256 y hasta ahora llegaba solo por
+    # transitividad de otro paquete. Va explicita.
     "pyjwt>=2.10.1",
+    "cryptography>=46.0.5",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",

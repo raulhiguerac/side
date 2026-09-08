@@ -1,24 +1,29 @@
 ---
 title: Runbook — users-service local dev
 status: draft
-last-verified: 2026-07-15
+last-verified: 2026-09-07
 owners: [users-service]
 related:
   - "[[users-service]]"
   - "[[users-service-architecture]]"
   - "[[users-service-keycloak]]"
   - "[[catalog-service-local-dev]]"
-sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md]
+sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md]
 ---
 
 ## TL;DR
+
+> **Actualizado 2026-09-07 — el arranque ya no es manual.** `make bootstrap && make up`
+> levanta los 21 servicios, aplica migraciones y siembra datos. Este runbook queda
+> como referencia de los detalles internos del servicio y de como correrlo a mano
+> cuando lo estas debuggeando. Ver [`README.md`](README.md) para el flujo normal.
 
 Workflow devcontainer-first como el resto. La infra (Keycloak + `users-ms-db` + Redis + MinIO) la levanta el compose. A mano: `cd backend/users-service && uv sync && migraciones + uvicorn`. **Keycloak debe estar configurado** con los dos clients (admin + auth) y sus secrets. El `.env.example` está casi completo, con dos trampas: la API key de Brevo y los dos secrets de Keycloak.
 
 ## Prerequisites
 
 - Docker Desktop + VS Code con Dev Containers.
-- Repo clonado y `.env` en el root.
+- Repo clonado, `.env.local` completado y `make bootstrap` corrido.
 - **Keycloak corriendo** con realm + dos clients configurados (uno admin con service account, uno de auth con direct grant).
 - **MinIO** + bucket de fotos de perfil.
 - Una **API key de Brevo** para probar emails (reset / reactivación).
@@ -38,7 +43,7 @@ Workflow devcontainer-first como el resto. La infra (Keycloak + `users-ms-db` + 
 ```bash
 cd /workspace/backend/users-service
 uv sync
-# crear .env del servicio — ver siguiente sección
+# el .env.dev del servicio ya viene versionado; no hay que crearlo
 uv run alembic upgrade head
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -64,7 +69,7 @@ KC_AUTH_SECRET=<auth-client-secret>
 # Validación de JWT (lado consumidor)
 KC_JWKS_URL=http://keycloak:8080/realms/master/protocol/openid-connect/certs
 KC_ISSUER=http://keycloak:8080/realms/master
-OIDC_AUDIENCE=account
+OIDC_AUDIENCE=users-ms
 
 # Storage (MinIO)
 PROFILE_PHOTOS_BUCKET=profile-photos
@@ -91,10 +96,26 @@ CACHE_REACTIVATION_TTL_SECONDS=900
 
 ## Configurar Keycloak (primera vez)
 
-1. Admin UI en http://localhost:8180 (admin/admin).
-2. En el realm, crear un **client admin** con *Service accounts enabled* y rol `manage-users` del `realm-management`. Copiar su secret → `KC_ADMIN_SECRET`.
-3. Crear un **client de auth** con *Direct access grants enabled*. Copiar su secret → `KC_AUTH_SECRET`.
-4. Asegurar que `account` esté en el audience de los tokens (`OIDC_AUDIENCE=account`), o ajustar.
+Desde el 2026-09-07 esto **no se hace a mano**: `infra/keycloak/realm-dev.json` trae los dos
+clientes, el rol de realm `admin`, el client scope `api-audience` (de donde sale el `aud:
+users-ms`) y los role mappings del service account. El servicio `keycloak-init` fija los dos
+secrets en cada `up` con los valores de `backend/users-service/.env.dev`.
+
+1. Admin UI en http://localhost:8180 (admin/admin) — solo para inspeccionar.
+2. `docker compose up keycloak-init` re-aplica los secrets si algo quedó desincronizado.
+3. **Ojo**: `--import-realm` salta si el realm ya existe (`Realm 'core' already exists. Import
+   skipped`). Editar el JSON no tiene efecto hasta borrar el volumen `keycloak-postgres-data`.
+   Por eso lo que debe reconciliarse vive en `keycloak-init`, no en el JSON.
+
+### Usuario semilla
+
+`keycloak-init` crea `dev@example.com` / `dev12345` con el rol de realm `admin`, porque el export
+excluye las cuentas humanas y un realm recien importado no tiene con quien loguearse. Solo dev:
+el realm no tiene password policy. Las credenciales se configuran en el bloque `environment` de
+`keycloak-init` en el compose.
+
+El password se setea con `--temporary=false`; sin eso Keycloak deja un `UPDATE_PASSWORD`
+pendiente y el password grant falla con `Account is not fully set up`.
 
 ## Probar registro + login
 

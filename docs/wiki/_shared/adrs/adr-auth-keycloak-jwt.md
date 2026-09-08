@@ -1,7 +1,7 @@
 ---
 title: ADR-0001 — Auth vía Keycloak JWT
 status: stable
-last-verified: 2026-06-20
+last-verified: 2026-09-07
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -40,6 +40,7 @@ Para flujos server-to-server (consumer async de analytics), el `principal` es un
 
 ## Claims
 
+- `KC_HOSTNAME` esta fijado a la URL absoluta `http://localhost:8180`, de modo que el `iss` del token es el mismo se pida por el hostname interno o por el puerto publicado; los cuatro servicios validan contra ese valor en `KC_ISSUER` ([docker-compose.yml](docker-compose.yml)).
 - Cada microservicio backend tiene un `api/deps/` que resuelve el JWT a un `principal`.
 - Los UCs reciben `principal: uuid.UUID`, nunca el token.
 - En `analytics-service`, la dependency existe desde 2026-05-20 en `api/deps/auth.py` (`get_current_principal`). Lee la cookie `access_token`, valida JWT vía `PyJWKClient`, retorna `Principal`. Errores en `core/exceptions/auth.py` (no en el dep).

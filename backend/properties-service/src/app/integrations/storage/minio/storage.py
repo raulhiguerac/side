@@ -10,8 +10,8 @@ from app.integrations.storage.minio.mappers.error_mapper import translate_storag
 class StorageClient:
     def __init__(self) -> None:
         minio_url = os.getenv("MINIO_URL")
-        access_key = os.getenv("AWS_ACCESS_KEY_ID")
-        secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        access_key = os.getenv("ACCESS_KEY_PROPERTIES")
+        secret_key = os.getenv("SECRET_KEY_PROPERTIES")
 
         if not minio_url:
             raise StorageMisconfiguredError(context={"missing": "MINIO_URL"})

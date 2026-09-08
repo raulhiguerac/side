@@ -1,4 +1,5 @@
 .env
+.env.local
 __pycache__/
 *.py[cod]
 *$py.class
@@ -8,3 +9,17 @@ __pycache__/
 *.osm.pbf
 *.geojson
 **/.ipynb_checkpoints/
+
+# Artefactos que viven en R2, no en git (ver .env.local.example y `make bootstrap`)
+infra/seeds/*
+!infra/seeds/.gitkeep
+infra/ors/files/*
+!infra/ors/files/.gitkeep
+# Grafos de ORS: 176 MB derivados del .pbf, se reconstruyen solos.
+infra/ors/graphs/*
+!infra/ors/graphs/.gitkeep
+# Modelo AVM y registro de MLflow: 48 MB, vienen de R2.
+infra/mlflow/artifacts/*
+!infra/mlflow/artifacts/.gitkeep
+infra/mlflow/registry/*
+!infra/mlflow/registry/.gitkeep

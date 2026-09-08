@@ -16,6 +16,7 @@ sources:
   - ../../../sources/properties-service/2026-07-22-bulk-create-properties-refactor.md
   - ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md
   - ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md
+  - ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md
 ---
 
 ## TL;DR
@@ -154,7 +155,7 @@ Los 1.256 fallos de geo mezclan tres causas que **no se han separado**: basura d
 ## Gaps conocidos
 
 - Los CSV de seed (`seed_bogota_500.csv`, `seed_bogota_5k.csv`) **no tienen las columnas `external_id` ni `email`**; con `StrictBase(extra="forbid")` y ambos campos requeridos, hoy fallarían el 100% de las filas.
-- `BUCKET_BULK_PROPERTIES` tiene default vacío, no está en el `.env` raíz, y nada en el repo crea buckets de MinIO.
+- `BUCKET_BULK_PROPERTIES` se declara en `backend/properties-service/.env.dev` y el bucket `properties` lo crea `minio-init` desde el 2026-09-07.
 - El tamaño del upload **no es enforceable** en un presigned PUT plano: `max_size_bytes` viaja al cliente como hint. Un límite duro requeriría presigned POST con `content-length-range`.
 - El lookup de owner es **case-sensitive** de punta a punta.
 - `JobStatus` solo tiene `pending/completed/failed` — no hay `processing` (un job corriendo es indistinguible de uno encolado salvo por el chequeo de stale) ni `expired`.
