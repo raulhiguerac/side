@@ -11,7 +11,8 @@ __pycache__/
 **/.ipynb_checkpoints/
 
 # Artefactos que viven en R2, no en git (ver .env.local.example y `make bootstrap`)
-infra/seeds/
+infra/seeds/*
+!infra/seeds/.gitkeep
 infra/ors/files/*
 !infra/ors/files/.gitkeep
 # Grafos de ORS: 176 MB derivados del .pbf, se reconstruyen solos.

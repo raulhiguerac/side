@@ -1,7 +1,7 @@
 ---
 title: Runbook — users-service local dev
 status: draft
-last-verified: 2026-07-15
+last-verified: 2026-09-07
 owners: [users-service]
 related:
   - "[[users-service]]"
@@ -13,12 +13,17 @@ sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md]
 
 ## TL;DR
 
+> **Actualizado 2026-09-07 — el arranque ya no es manual.** `make bootstrap && make up`
+> levanta los 21 servicios, aplica migraciones y siembra datos. Este runbook queda
+> como referencia de los detalles internos del servicio y de como correrlo a mano
+> cuando lo estas debuggeando. Ver [`README.md`](README.md) para el flujo normal.
+
 Workflow devcontainer-first como el resto. La infra (Keycloak + `users-ms-db` + Redis + MinIO) la levanta el compose. A mano: `cd backend/users-service && uv sync && migraciones + uvicorn`. **Keycloak debe estar configurado** con los dos clients (admin + auth) y sus secrets. El `.env.example` está casi completo, con dos trampas: la API key de Brevo y los dos secrets de Keycloak.
 
 ## Prerequisites
 
 - Docker Desktop + VS Code con Dev Containers.
-- Repo clonado y `.env` en el root.
+- Repo clonado, `.env.local` completado y `make bootstrap` corrido.
 - **Keycloak corriendo** con realm + dos clients configurados (uno admin con service account, uno de auth con direct grant).
 - **MinIO** + bucket de fotos de perfil.
 - Una **API key de Brevo** para probar emails (reset / reactivación).
@@ -38,7 +43,7 @@ Workflow devcontainer-first como el resto. La infra (Keycloak + `users-ms-db` + 
 ```bash
 cd /workspace/backend/users-service
 uv sync
-# crear .env del servicio — ver siguiente sección
+# el .env.dev del servicio ya viene versionado; no hay que crearlo
 uv run alembic upgrade head
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```

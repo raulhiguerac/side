@@ -17,6 +17,11 @@ sources:
 
 ## TL;DR
 
+> **Actualizado 2026-09-07 — el arranque ya no es manual.** `make bootstrap && make up`
+> levanta los 21 servicios, aplica migraciones y siembra datos. Este runbook queda
+> como referencia de los detalles internos del servicio y de como correrlo a mano
+> cuando lo estas debuggeando. Ver [`README.md`](README.md) para el flujo normal.
+
 Flujo: abrir el repo en VS Code → "Reopen in Container" → docker-compose levanta toda la infra (Postgres por servicio + Keycloak + Redis + MinIO + MLflow). Después, **a mano**: `cd backend/analytics-service && uv sync && PYTHONPATH=src uv run uvicorn app.main:app --reload --port 8000`.
 
 El servicio analytics **no está como service en el compose** — se corre manual dentro del devcontainer.
@@ -25,8 +30,8 @@ El servicio analytics **no está como service en el compose** — se corre manua
 
 - Docker Desktop (o engine equivalente) corriendo.
 - VS Code con la extensión **Dev Containers** (`ms-vscode-remote.remote-containers`).
-- Repo clonado.
-- Archivo `.env` en el root del repo (se necesita para el users-service hoy; si no está, pedirlo al equipo).
+- Repo clonado, `.env.local` completado y `make bootstrap` corrido.
+- `.env.local` completado (7 valores) y `make bootstrap` corrido.
 
 ## Levantar el entorno
 
@@ -65,7 +70,7 @@ Dentro del devcontainer:
 ```bash
 cd /workspace/backend/analytics-service
 uv sync
-# crear .env del servicio — ver siguiente sección
+# el .env.dev del servicio ya viene versionado; no hay que crearlo
 
 # API web
 PYTHONPATH=src uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000

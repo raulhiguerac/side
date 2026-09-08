@@ -1,7 +1,7 @@
 ---
 title: Runbook — properties-service local dev
 status: draft
-last-verified: 2026-07-15
+last-verified: 2026-09-07
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -13,13 +13,18 @@ sources: [../../../sources/properties-service/2026-05-28-foundational-exploratio
 
 ## TL;DR
 
+> **Actualizado 2026-09-07 — el arranque ya no es manual.** `make bootstrap && make up`
+> levanta los 21 servicios, aplica migraciones y siembra datos. Este runbook queda
+> como referencia de los detalles internos del servicio y de como correrlo a mano
+> cuando lo estas debuggeando. Ver [`README.md`](README.md) para el flujo normal.
+
 Mismo workflow devcontainer-first que [[catalog-service-local-dev]]: abrir el repo en VS Code → "Reopen in Container" → docker-compose levanta la infra (incluyendo `properties-ms-db` con PostGIS). Después, a mano: `cd backend/properties-service && uv sync && migraciones + uvicorn`. Auth por **cookie** `access_token`. Necesita catalog-service corriendo (con seed geo) para crear listings, y MinIO para el flujo de imágenes.
 
 ## Prerequisites
 
 - Docker Desktop corriendo.
 - VS Code con extensión **Dev Containers**.
-- Repo clonado y `.env` en el root.
+- Repo clonado, `.env.local` completado y `make bootstrap` corrido.
 - **catalog-service corriendo y con seed geo** — sin barrios/ciudades válidos no se pueden crear listings.
 - **MinIO** + bucket de fotos para el flujo de imágenes.
 
@@ -43,7 +48,7 @@ Dentro del devcontainer:
 ```bash
 cd /workspace/backend/properties-service
 uv sync
-# crear .env del servicio — ver siguiente sección
+# el .env.dev del servicio ya viene versionado; no hay que crearlo
 uv run alembic upgrade head
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
