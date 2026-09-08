@@ -11,6 +11,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [glossary](wiki/_shared/glossary.md) — términos cross-cutting (AVM, IDECA, habímetro, Keycloak, MLflow, hex pattern, principal, POI, etc.)
 - [architecture](wiki/_shared/architecture.md) — visión global del monorepo, hex pattern, patrones de comunicación (sync HTTP + async messaging), decisiones cross-cutting
 - [dev-workflow](wiki/_shared/dev-workflow.md) — reglas de trabajo: discuss-before-code (CLAUDE.md) + pre-commit hook de wiki staleness
+- [local-bootstrap](wiki/_shared/local-bootstrap.md) — como levantar el monorepo en una maquina limpia: topologia del compose, los one-shots de infra, que viaja por git y que por R2
 - [open-items](wiki/_shared/open-items.md) — backlog vivo de gaps y deuda técnica cross-service (checklist marcable entre sesiones)
 - [project-roadmap-2026](wiki/_shared/project-roadmap-2026.md) — fases del producto: completado (catálogo, users, AVM), en progreso (properties), pendiente (infra K3s, heatmap DWH, notifications-ms, payments-ms)
 - [business-model](wiki/_shared/business-model.md) — monetización por fases (promocionados, comisiones, B2B data, FinTech), análisis competitivo (Cerouno, Rentpana, Habi), moat y features planeadas
@@ -21,6 +22,8 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
   - [ADR-0004 — Impresiones y clicks vía beacon de cliente + collector + Kafka](wiki/_shared/adrs/adr-impressions-beacon-pipeline.md)
   - [ADR-0005 — Cache como capa opcional; degradación silenciosa a DB](wiki/_shared/adrs/adr-cache-optional-layer.md)
   - [ADR-0006 — Librería interna compartida para clientes de infra (Redis/MinIO)](wiki/_shared/adrs/adr-shared-infra-lib.md)
+  - [ADR-0007 — Config de dev versionada, secretos en .env.local, artefactos en R2](wiki/_shared/adrs/adr-dev-config-versioned-artifacts-in-r2.md)
+  - [ADR-0008 — La infra se reconcilia con init jobs idempotentes](wiki/_shared/adrs/adr-infra-reconciled-by-init-jobs.md)
 
 ## analytics-service (piloto)
 

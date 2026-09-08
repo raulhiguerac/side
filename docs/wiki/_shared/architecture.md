@@ -1,10 +1,11 @@
 ---
 title: Arquitectura del monorepo
 status: draft
-last-verified: 2026-07-15
+last-verified: 2026-09-07
 owners: [_shared]
 related:
   - "[[glossary]]"
+  - "[[local-bootstrap]]"
   - "[[dev-workflow]]"
   - "[[adr-auth-keycloak-jwt]]"
   - "[[adr-geo-enrichment-at-write-time]]"
@@ -122,12 +123,15 @@ La resolución `(lat, lon) → barrio_ideca` ocurre **al crear el listing en `pr
 ### Cache como capa opcional (degradación silenciosa)
 Redis es optimización, no dependencia crítica. Todos los servicios envuelven las operaciones de cache en `except Exception: pass` — si Redis cae, degradan a lectura directa de DB sin propagar error al cliente. El TTL de cada servicio actúa como red de seguridad contra datos stale. Ver `[[adr-cache-optional-layer]]`.
 
-### Dev environment unificado
-Todo el desarrollo local ocurre dentro de un [[glossary#devcontainer]] levantado por `docker-compose.yml` en el root. Los servicios no contaminan el host del developer. Ver el runbook de cada servicio (ej: `[[analytics-service-local-dev]]`).
+### Dev environment unificado y migrable
+Todo corre en contenedores: el único requisito del host es Docker. `docker-compose.yml` define los cuatro microservicios, el frontend y la infra, más seis one-shots que reconcilian el estado de Keycloak, MinIO, las bases y MLflow en cada `up`. El devcontainer sigue existiendo para trabajar adentro, pero ya no es el único camino.
+
+La config determinista de dev está versionada en `backend/<servicio>/.env.dev`; solo siete valores viajan a mano en `.env.local`, y los binarios y datos los baja `make bootstrap` desde Cloudflare R2. Ver `[[local-bootstrap]]`, `[[adr-dev-config-versioned-artifacts-in-r2]]` y `[[adr-infra-reconciled-by-init-jobs]]`.
 
 ## Claims
 
 - El backend está en `backend/<service>/` con un subdirectorio por microservicio.
+- Los cuatro microservicios y el frontend corren como services del compose con el código montado y hot-reload; su entrypoint aplica `alembic upgrade head` antes de arrancar ([docker-compose.yml](docker-compose.yml), [service-entrypoint.sh](infra/dev/service-entrypoint.sh)).
 - El frontend Vue vive en `frontend/`.
 - El training ML vive en `data/ml/AVM/`, fuera de `backend/`.
 - Cada servicio backend sigue el layout `src/app/{api,core,services/<domain>/{adapters,ports,schemas,use_cases},...}` (verificable comparando estructuras de `catalog-service` y `analytics-service`).

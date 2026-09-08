@@ -8,7 +8,7 @@ related:
   - "[[properties-service-architecture]]"
   - "[[catalog-service-local-dev]]"
   - "[[analytics-service-local-dev]]"
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md]
+sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md]
 ---
 
 ## TL;DR

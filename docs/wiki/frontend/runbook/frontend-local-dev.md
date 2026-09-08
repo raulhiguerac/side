@@ -12,6 +12,7 @@ sources:
   - ../../../sources/frontend/2026-05-21-foundational-qa.md
   - ../../../sources/frontend/2026-06-28-devcontainer-proxy-chrome-fix.md
   - ../../../sources/frontend/2026-07-13-vscode-port-forwarding-breaks-requests.md
+  - ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md
 ---
 
 ## TL;DR

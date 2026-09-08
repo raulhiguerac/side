@@ -8,7 +8,7 @@ related:
   - "[[users-service-architecture]]"
   - "[[users-service-keycloak]]"
   - "[[catalog-service-local-dev]]"
-sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md]
+sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md]
 ---
 
 ## TL;DR

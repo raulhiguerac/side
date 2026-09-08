@@ -8,7 +8,7 @@ related:
   - "[[analytics-service-architecture]]"
   - "[[avm-training]]"
   - "[[adr-mlflow-minio-stack]]"
-sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md]
+sources: [../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md, ../../sources/frontend/2026-05-29-avm-form-wiring-predict.md, ../../sources/_shared/2026-09-07-entorno-dev-migrable.md]
 ---
 
 ## TL;DR

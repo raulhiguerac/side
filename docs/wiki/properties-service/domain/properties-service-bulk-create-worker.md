@@ -16,6 +16,7 @@ sources:
   - ../../../sources/properties-service/2026-07-22-bulk-create-properties-refactor.md
   - ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md
   - ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md
+  - ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md
 ---
 
 ## TL;DR

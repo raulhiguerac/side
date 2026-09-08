@@ -6,8 +6,10 @@ owners: [_shared]
 related:
   - "[[architecture]]"
   - "[[glossary]]"
+  - "[[local-bootstrap]]"
 sources:
   - ../../sources/_shared/2026-05-23-repo-tooling-claude-md-precommit.md
+  - ../../sources/_shared/2026-09-07-entorno-dev-migrable.md
 ---
 
 ## TL;DR
@@ -16,7 +18,8 @@ Dos reglas de trabajo cross-cutting: (1) discutir antes de codificar (enforced v
 
 ## Levantar el entorno
 
-`make bootstrap && make up`. El unico requisito del host es Docker; los comandos
+Los comandos, los puertos y el detalle de la topologia estan en [[local-bootstrap]]
+y en [`README.md`](README.md). Resumido: `make bootstrap && make up`. El unico requisito del host es Docker; los comandos
 y los puertos estan en [`README.md`](README.md). Tres cosas que conviene entender
 antes de tocar nada:
 

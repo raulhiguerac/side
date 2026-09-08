@@ -13,6 +13,7 @@ sources:
   - ../../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md
   - ../../../sources/analytics-service/2026-05-25-worker-wiring-fixes.md
   - ../../../sources/analytics-service/2026-05-25-unit-test-suite.md
+  - ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md
 ---
 
 ## TL;DR

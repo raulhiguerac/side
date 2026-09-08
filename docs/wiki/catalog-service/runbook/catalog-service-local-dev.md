@@ -7,7 +7,7 @@ related:
   - "[[catalog-service]]"
   - "[[catalog-service-architecture]]"
   - "[[analytics-service-local-dev]]"
-sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
+sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md]
 ---
 
 ## TL;DR
