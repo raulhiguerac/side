@@ -113,7 +113,11 @@ services:
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: password
 
-      KC_HOSTNAME: localhost
+      # URL absoluta a proposito: con solo el hostname, Keycloak 26 infiere
+      # esquema y puerto del request, y el `iss` del token sale distinto segun
+      # entres por keycloak:8080 o por el puerto publicado. Fijarlo hace que
+      # todos los tokens declaren el mismo issuer, que es el que valida KC_ISSUER.
+      KC_HOSTNAME: http://localhost:8180
       KC_HOSTNAME_STRICT: false
       KC_HOSTNAME_STRICT_HTTPS: false
 
