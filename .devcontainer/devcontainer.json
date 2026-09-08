@@ -8,7 +8,7 @@
 	},
   "service": "develop",
   "workspaceFolder": "/workspace",
-  "forwardPorts": [8000, 5432, 8080],
+  "forwardPorts": [8000, 8001, 8002, 8003, 8080, 8180, 9001, 5000, 5540],
   "customizations": {
     "vscode": {
       "extensions": [

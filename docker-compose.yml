@@ -6,13 +6,19 @@ services:
     working_dir: /workspace
     volumes:
       - .:/workspace
-    ports:
-      - "8000:8000"
-      - "5173:5173"
-      - "8080:8080"
     command: sleep infinity
     env_file:
-      - .env
+      - backend/users-service/.env.dev
+      - backend/catalog-service/.env.dev
+      - backend/properties-service/.env.dev
+      - backend/analytics-service/.env.dev
+      - path: .env.local
+        required: false
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+      keycloak-init:
+        condition: service_completed_successfully
     networks:
       - dev-net
 
@@ -24,6 +30,11 @@ services:
       POSTGRES_PASSWORD: admin
     volumes:
       - users-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d identity_service_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - dev-net
   
@@ -35,6 +46,11 @@ services:
       POSTGRES_PASSWORD: admin
     volumes:
       - catalog-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d catalog_service_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - dev-net
   
@@ -46,6 +62,11 @@ services:
       POSTGRES_PASSWORD: admin
     volumes:
       - properties-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d properties-ms-db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - dev-net
   
@@ -57,6 +78,11 @@ services:
       POSTGRES_PASSWORD: admin
     volumes:
       - analytics-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d analytics-ms-db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - dev-net
 
@@ -68,6 +94,11 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - keycloak-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - dev-net
 
@@ -98,7 +129,37 @@ services:
     ports:
       - "8180:8080"
     volumes:
-      - ./infra/keycloak/realm.template.json:/opt/keycloak/data/import/realm.json:ro
+      - ./infra/keycloak/realm-dev.json:/opt/keycloak/data/import/realm.json:ro
+    healthcheck:
+      # La imagen no trae curl; /dev/tcp sobre el management port (9000).
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000;
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3;
+          grep -q '"status": "UP"' <&3
+      interval: 5s
+      timeout: 5s
+      retries: 40
+    networks:
+      - dev-net
+
+  # Fija los client secrets, que el export del realm enmascara. Corre en cada
+  # `up` porque `--import-realm` salta si el realm ya existe.
+  keycloak-init:
+    image: quay.io/keycloak/keycloak:26.4.7
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    volumes:
+      - ./infra/keycloak/init.sh:/init.sh:ro
+    environment:
+      KC_URL: http://keycloak:8080
+      KC_BOOTSTRAP_ADMIN: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    env_file:
+      - backend/users-service/.env.dev
+    entrypoint: ["/bin/sh", "/init.sh"]
     networks:
       - dev-net
   
@@ -108,6 +169,11 @@ services:
       - '6379:6379'
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     networks:
       - dev-net
   
@@ -122,7 +188,8 @@ services:
     environment:
       REDISINSIGHT_HOST: redis
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
   
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z-cpuv1
@@ -135,14 +202,75 @@ services:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
-      MINIO_DEFAULT_BUCKETS: mi-casa-en-minutos
     command: server --console-address ":9001" /data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - dev-net
+
+  # Buckets, policies y un usuario por servicio con scope propio.
+  # Idempotente: `mc mb --ignore-existing`, `policy create` y `user add` se
+  # pueden re-correr; ningun servicio usa ya las credenciales root.
+  minio-init:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./infra/minio/policies:/policies:ro
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    env_file:
+      - backend/users-service/.env.dev
+      - backend/properties-service/.env.dev
+      - backend/analytics-service/.env.dev
+    entrypoint: >
+      sh -c "
+      mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
+      mc mb --ignore-existing local/profile-photos local/property-images local/properties local/mlflow-artifacts &&
+      mc admin policy create local users-service /policies/profile-photos-policy.json &&
+      mc admin policy create local properties-service /policies/properties-policy.json &&
+      mc admin policy create local mlflow /policies/mlflow-artifacts-policy.json &&
+      mc admin user add local $$ACCESS_KEY $$SECRET_KEY &&
+      mc admin policy attach local users-service --user $$ACCESS_KEY &&
+      mc admin user add local $$ACCESS_KEY_PROPERTIES $$SECRET_KEY_PROPERTIES &&
+      mc admin policy attach local properties-service --user $$ACCESS_KEY_PROPERTIES &&
+      mc admin user add local $$AWS_ACCESS_KEY_ID $$AWS_SECRET_ACCESS_KEY &&
+      mc admin policy attach local mlflow --user $$AWS_ACCESS_KEY_ID
+      "
     networks:
       - dev-net
   
+  # Siembra el registro y los artifacts del AVM. Corre antes del server porque
+  # el backend store es sqlite y no se le escribe por debajo a un proceso vivo.
+  mlflow-init:
+    image: minio/mc
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      MINIO_URL: http://minio:9000
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - mlflow_data:/mlflow
+      - ./infra/mlflow/artifacts:/artifacts:ro
+      - ./infra/mlflow/registry:/registry:ro
+      - ./infra/dev/mlflow-init.sh:/init.sh:ro
+    entrypoint: ["/bin/sh", "/init.sh"]
+    networks:
+      - dev-net
+
   mlflow:
     image: ghcr.io/mlflow/mlflow:v3.12.0-full
     container_name: mlflow
+    depends_on:
+      mlflow-init:
+        condition: service_completed_successfully
     ports:
       - "5000:5000"
     volumes:
@@ -156,6 +284,11 @@ services:
       --backend-store-uri sqlite:////mlflow/mlflow.db
       --default-artifact-root s3://mlflow-artifacts/
       --allowed-hosts "*"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
     networks:
       - dev-net
   
@@ -182,17 +315,22 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
     networks:
       - dev-net
 
   topic-init:
     image: apache/kafka:latest
     depends_on:
-      - kafka-broker
+      kafka-broker:
+        condition: service_healthy
     entrypoint: [ 
       "sh", "-c",
-      "sleep 10 && \
-      /opt/kafka/bin/kafka-topics.sh --bootstrap-server broker:29092 --create --if-not-exists --topic listing-created --partitions 1 --replication-factor 1 && \
+      "/opt/kafka/bin/kafka-topics.sh --bootstrap-server broker:29092 --create --if-not-exists --topic listing-created --partitions 1 --replication-factor 1 && \
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server broker:29092 --create --if-not-exists --topic price-predicted --partitions 1 --replication-factor 1 && \
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server broker:29092 --create --if-not-exists --topic listing-created-dlq --partitions 1 --replication-factor 1"
     ]
@@ -206,9 +344,215 @@ services:
     environment:
       JAVA_OPTS: "-Xmx6g -Xms1g"
     volumes:
-      - ./data/ml/AVM/data/bogota-260510.osm.pbf:/home/ors/files/osm_bogota.pbf
+      # Directorio, no archivo: si se montara el .pbf directo y no existiera,
+      # Docker crearia un directorio con ese nombre y ORS fallaria sin decir por que.
+      # El .pbf lo baja `make bootstrap` desde R2; los grafos se regeneran solos.
+      - ./infra/ors/files:/home/ors/files
       - ./infra/ors/graphs:/home/ors/graphs
       - ./infra/ors/config:/home/ors/config
+    networks:
+      - dev-net
+
+  # --- Aplicaciones -------------------------------------------------------
+  # Codigo montado y uvicorn --reload: editar en el host recarga el proceso.
+  # El entrypoint corre `alembic upgrade head` antes de levantar.
+
+  users:
+    build:
+      context: ./backend/users-service
+    depends_on:
+      users-ms-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak-init:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      SERVICE_NAME: users-service
+      SERVICE_PORT: "8000"
+    env_file:
+      - backend/users-service/.env.dev
+      - path: .env.local
+        required: false
+    volumes:
+      - ./backend/users-service/src:/app/src
+      - ./infra/dev/service-entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+    ports:
+      - "8000:8000"
+    networks:
+      - dev-net
+
+  catalog:
+    build:
+      context: ./backend/catalog-service
+    depends_on:
+      catalog-ms-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak-init:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      SERVICE_NAME: catalog-service
+      SERVICE_PORT: "8001"
+    env_file:
+      - backend/catalog-service/.env.dev
+      - path: .env.local
+        required: false
+    volumes:
+      - ./backend/catalog-service/src:/app/src
+      - ./infra/dev/service-entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/docs')"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+    ports:
+      - "8001:8001"
+    networks:
+      - dev-net
+
+  properties:
+    build:
+      context: ./backend/properties-service
+    depends_on:
+      properties-ms-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak-init:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      catalog:
+        condition: service_started
+    environment:
+      SERVICE_NAME: properties-service
+      SERVICE_PORT: "8002"
+    env_file:
+      - backend/properties-service/.env.dev
+      - path: .env.local
+        required: false
+    volumes:
+      - ./backend/properties-service/src:/app/src
+      - ./infra/dev/service-entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/docs')"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+    ports:
+      - "8002:8002"
+    networks:
+      - dev-net
+
+  analytics:
+    build:
+      context: ./backend/analytics-service
+    depends_on:
+      analytics-ms-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak-init:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      mlflow:
+        condition: service_healthy
+    environment:
+      SERVICE_NAME: analytics-service
+      SERVICE_PORT: "8003"
+    env_file:
+      - backend/analytics-service/.env.dev
+      - path: .env.local
+        required: false
+    volumes:
+      - ./backend/analytics-service/src:/app/src
+      - ./infra/dev/service-entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/docs')"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+    ports:
+      - "8003:8003"
+    networks:
+      - dev-net
+
+  frontend:
+    build:
+      context: ./frontend
+    env_file:
+      - path: .env.local
+        required: false
+    volumes:
+      - ./frontend:/app
+      # Volumen anonimo: conserva el node_modules de la imagen y evita que el
+      # bind mount del host lo tape.
+      - /app/node_modules
+    ports:
+      - "8080:8080"
+    networks:
+      - dev-net
+
+  # --- Seed ----------------------------------------------------------------
+  # Espera a que los servicios esten healthy: sus entrypoints corren alembic, y
+  # los dumps son --data-only (asumen el esquema ya creado).
+  seed-db:
+    image: postgres:17
+    depends_on:
+      catalog:
+        condition: service_healthy
+      properties:
+        condition: service_healthy
+      users:
+        condition: service_healthy
+    env_file:
+      - backend/users-service/.env.dev
+      - backend/catalog-service/.env.dev
+      - backend/properties-service/.env.dev
+    volumes:
+      - ./infra/seeds:/seeds:ro
+      - ./infra/dev/seed-db.sh:/seed-db.sh:ro
+    entrypoint: ["/bin/sh", "/seed-db.sh"]
+    networks:
+      - dev-net
+
+  # Crea el usuario dev por el endpoint de registro real, no por INSERT: el
+  # `account_id` de la fila tiene que ser el `sub` que asigna Keycloak.
+  seed-dev-user:
+    image: python:3.12-slim
+    depends_on:
+      seed-db:
+        condition: service_completed_successfully
+    environment:
+      USERS_URL: http://users:8000
+      KC_URL: http://keycloak:8080
+      KC_BOOTSTRAP_ADMIN: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Solo dev. El dominio no puede ser .local ni .test: email-validator
+      # rechaza los TLD de uso especial y el Principal de pydantic no valida.
+      KC_DEV_USER: dev@example.com
+      KC_DEV_PASSWORD: dev12345
+    env_file:
+      - backend/users-service/.env.dev
+    volumes:
+      - ./infra/dev/seed-dev-user.py:/seed-dev-user.py:ro
+    command: ["python", "/seed-dev-user.py"]
     networks:
       - dev-net
 
