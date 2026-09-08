@@ -64,7 +64,7 @@ KC_AUTH_SECRET=<auth-client-secret>
 # Validación de JWT (lado consumidor)
 KC_JWKS_URL=http://keycloak:8080/realms/master/protocol/openid-connect/certs
 KC_ISSUER=http://keycloak:8080/realms/master
-OIDC_AUDIENCE=account
+OIDC_AUDIENCE=users-ms
 
 # Storage (MinIO)
 PROFILE_PHOTOS_BUCKET=profile-photos
@@ -91,10 +91,26 @@ CACHE_REACTIVATION_TTL_SECONDS=900
 
 ## Configurar Keycloak (primera vez)
 
-1. Admin UI en http://localhost:8180 (admin/admin).
-2. En el realm, crear un **client admin** con *Service accounts enabled* y rol `manage-users` del `realm-management`. Copiar su secret → `KC_ADMIN_SECRET`.
-3. Crear un **client de auth** con *Direct access grants enabled*. Copiar su secret → `KC_AUTH_SECRET`.
-4. Asegurar que `account` esté en el audience de los tokens (`OIDC_AUDIENCE=account`), o ajustar.
+Desde el 2026-09-07 esto **no se hace a mano**: `infra/keycloak/realm-dev.json` trae los dos
+clientes, el rol de realm `admin`, el client scope `api-audience` (de donde sale el `aud:
+users-ms`) y los role mappings del service account. El servicio `keycloak-init` fija los dos
+secrets en cada `up` con los valores de `backend/users-service/.env.dev`.
+
+1. Admin UI en http://localhost:8180 (admin/admin) — solo para inspeccionar.
+2. `docker compose up keycloak-init` re-aplica los secrets si algo quedó desincronizado.
+3. **Ojo**: `--import-realm` salta si el realm ya existe (`Realm 'core' already exists. Import
+   skipped`). Editar el JSON no tiene efecto hasta borrar el volumen `keycloak-postgres-data`.
+   Por eso lo que debe reconciliarse vive en `keycloak-init`, no en el JSON.
+
+### Usuario semilla
+
+`keycloak-init` crea `dev@example.com` / `dev12345` con el rol de realm `admin`, porque el export
+excluye las cuentas humanas y un realm recien importado no tiene con quien loguearse. Solo dev:
+el realm no tiene password policy. Las credenciales se configuran en el bloque `environment` de
+`keycloak-init` en el compose.
+
+El password se setea con `--temporary=false`; sin eso Keycloak deja un `UPDATE_PASSWORD`
+pendiente y el password grant falla con `Account is not fully set up`.
 
 ## Probar registro + login
 

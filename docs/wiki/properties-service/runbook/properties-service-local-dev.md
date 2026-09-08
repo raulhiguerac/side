@@ -65,7 +65,7 @@ REDIS_URL=redis://redis:6379/2
 # Auth (Keycloak del compose)
 KC_JWKS_URL=http://keycloak:8080/realms/master/protocol/openid-connect/certs
 KC_ISSUER=http://keycloak:8080/realms/master
-OIDC_AUDIENCE=account
+OIDC_AUDIENCE=users-ms
 ADMIN_ROLE=admin
 
 # Dependencia geo

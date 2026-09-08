@@ -79,7 +79,7 @@ Es el agregado central del dominio inmobiliario. Tres responsabilidades:
 ## Roadmap inmediato
 
 - [ ] Worker que consuma `price-predicted` de analytics y llame `set_estimated_price` (path ML hoy huérfano)
-- [ ] Completar `.env.example` (Keycloak, MinIO, `CATALOG_URL`, TTLs)
+- [x] Completar la config de entorno — resuelto 2026-09-07 en `backend/properties-service/.env.dev`
 - [ ] Materializar la migración en CI/seed reproducible
 
 ## Related
