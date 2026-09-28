@@ -24,6 +24,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
   - [ADR-0006 — Librería interna compartida para clientes de infra (Redis/MinIO)](wiki/_shared/adrs/adr-shared-infra-lib.md)
   - [ADR-0007 — Config de dev versionada, secretos en .env.local, artefactos en R2](wiki/_shared/adrs/adr-dev-config-versioned-artifacts-in-r2.md)
   - [ADR-0008 — La infra se reconcilia con init jobs idempotentes](wiki/_shared/adrs/adr-infra-reconciled-by-init-jobs.md)
+  - [ADR-0009 — SeaweedFS como S3 de dev y rclone como cliente](wiki/_shared/adrs/adr-seaweedfs-dev-object-storage.md)
 
 ## analytics-service (piloto)
 

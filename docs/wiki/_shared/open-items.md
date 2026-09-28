@@ -1,7 +1,7 @@
 ---
 title: Open items — gaps y deuda técnica cross-service
 status: draft
-last-verified: 2026-09-07
+last-verified: 2026-09-27
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -22,7 +22,8 @@ related:
   - "[[frontend-architecture]]"
   - "[[adr-vue-cli-deferred-vite-migration]]"
   - "[[adr-firebase-removal]]"
-sources: [../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md, ../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md, ../../sources/users-service/2026-06-23-public-profile-endpoint.md, ../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../sources/properties-service/2026-07-17-bulk-async-redesign-presigned-retry.md, ../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md, ../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../sources/properties-service/2026-07-22-bulk-create-properties-refactor.md, ../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../sources/users-service/2026-07-27-resolve-accounts-by-email.md, ../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md, ../../sources/frontend/2026-07-28-admin-panel-groundwork.md, ../../sources/_shared/2026-09-07-entorno-dev-migrable.md]
+  - "[[adr-seaweedfs-dev-object-storage]]"
+sources: [../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md, ../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md, ../../sources/users-service/2026-06-23-public-profile-endpoint.md, ../../sources/properties-service/2026-07-16-bulk-create-sync-timeout-risk.md, ../../sources/properties-service/2026-07-16-bulk-create-owner-id-resolution.md, ../../sources/properties-service/2026-07-17-bulk-async-redesign-presigned-retry.md, ../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md, ../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md, ../../sources/properties-service/2026-07-22-bulk-create-properties-refactor.md, ../../sources/properties-service/2026-07-27-bulk-async-import-worker.md, ../../sources/users-service/2026-07-27-resolve-accounts-by-email.md, ../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md, ../../sources/frontend/2026-07-28-admin-panel-groundwork.md, ../../sources/_shared/2026-09-07-entorno-dev-migrable.md, ../../sources/_shared/2026-09-27-minio-a-seaweedfs-y-rclone.md]
 ---
 
 ## TL;DR
@@ -72,6 +73,7 @@ Backlog vivo de gaps detectados al documentar la wiki (2026-05-28): cosas que el
 
 - [ ] **Refactor `/geo-resolution` en catalog.** Deprecar `resolve-neighborhood` (forward Mapbox, duplica el SDK del front). `by-coordinates` ya tiene `BackgroundTasks` de POIs ✅ y `locality_id` ✅ — solo falta deprecar el otro endpoint. Ver [[catalog-service]], [[adr-mapbox-frontend-only]].
 - [ ] **Restricción de HTTP referrer** en la API key de Google Maps antes de producción (en dev corre sin restricción de dominio). Ver [[adr-gmaps-places-geocoding]].
+- [ ] **Una API key de Google Maps quedó en el historial de git.** Estuvo hardcodeada en `frontend/public/index.html` entre los commits `66629bc` y `faf5cdb`. El repo es privado, pero antes de abrirlo hay que rotarla o restringirla por dominio. Detectado 2026-09-27.
 
 ### Deuda geo / ML
 
@@ -158,15 +160,35 @@ Los tres pilares están ausentes hoy. Sin los tres juntos es imposible diagnosti
 #### Pilar 3 — Trazas
 - [ ] **Trazas distribuidas (OpenTelemetry).** Un request del feed puede tocar gateway → properties-service → catalog-service sin forma de correlacionar latencias hoy. Stack: `opentelemetry-sdk` + exportador a Jaeger o Tempo. Expandir el `correlation_id` existente a W3C TraceContext para propagación automática entre MSs. Ver [[architecture]].
 
+### Storage S3 — dev y prod
+
+- [ ] **Borrar `infra/minio/policies/`.** Nada lo monta desde que el storage de dev pasó a SeaweedFS (2026-09-27); los permisos viven en `infra/seaweedfs/s3.json`. Se conserva hasta decidir borrarlo. Ver [[adr-seaweedfs-dev-object-storage]].
+- [ ] **Validar `make up` completo tras el cambio a SeaweedFS.** Se probaron `minio`, `minio-init`, `mlflow-init` y `mlflow` por separado (incluida la descarga del modelo con las credenciales de analytics), pero no el stack entero en limpio.
+- [ ] **URLs públicas de storage con R2 en prod.** users y properties arman `{STORAGE_PUBLIC_BASE_URL}/{bucket}/{key}` (`build_public_url`, `confirm_image_uploads.py`). R2 sirve lo público por dominio propio o `r2.dev`, que apuntan a **un** bucket sin su nombre en la ruta, así que esas URLs saldrían mal. Opciones: sacar el bucket de la URL o un dominio por bucket. Además R2 necesita CORS configurado en el bucket de imágenes. Detectado 2026-09-27.
+
+### Despliegue k8s (rama `infra/k8s`)
+
+Detectados 2026-09-27 cruzando la rama con `main`; la rama salió antes de los cambios de config del 2026-09-07 y va 5 commits detrás.
+
+- [ ] **Credenciales de storage de properties desalineadas.** `values/properties.yaml` define `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`, pero `storage.py` lee `ACCESS_KEY_PROPERTIES`/`SECRET_KEY_PROPERTIES`: properties no se autenticaría contra el storage.
+- [ ] **El Job de migraciones no encuentra `alembic.ini`.** Corre `uv run alembic upgrade head` desde `WORKDIR /app`, pero `alembic.ini` vive en `src/app/` (el entrypoint de dev hace `cd /app/src/app`). Además, sin `--no-sync`, `uv run` puede intentar sincronizar dependencias en el pod.
+- [ ] **PostGIS en CNPG: imagen solo amd64 y extensión sin crear.** `ghcr.io/cloudnative-pg/postgis:17` no publica arm64, así que no arranca en kind sobre Mac arm64. Y el `bootstrap.initdb` no tiene `postInitApplicationSQL` con `CREATE EXTENSION postgis`: las migraciones de properties no la crean y fallan con `type "geometry" does not exist` (en dev lo resuelve `infra/postgis/init.sql`).
+- [ ] **`k8s/infra/minio/` espera MinIO, que ya no se distribuye.** Decidir SeaweedFS en el cluster o R2; con R2 aplica el ítem de URLs públicas y CORS de la sección anterior. Ver [[adr-seaweedfs-dev-object-storage]].
+- [ ] **Nombres de buckets distintos entre dev y k8s.** k8s usa `property-photos`/`property-bulk`; dev usa `property-images`/`properties`. Alinear antes de que confundan.
+- [ ] **Argo CD y los hooks de Helm del Job de migraciones.** Argo mapea `pre-install`/`pre-upgrade` a PreSync y `post-install`/`post-upgrade` a PostSync, sin distinguir install de upgrade. Con `post-install,pre-upgrade` el Job corre dos veces por sync, y en el primer sync la fase PreSync corre antes de que exista el Cluster de CNPG: el secret `<app>-cluster-app` no existe y el pod queda en `CreateContainerConfigError`. Opciones: anotaciones `argocd.argoproj.io/hook` con sync-waves (Cluster antes, migración después), o la DB en su propia Application dentro de un app-of-apps.
+
 ### analytics-service — gaps funcionales
 
 - [ ] **Kafka worker no levantado en startup.** `runner.py` del consumer existe pero no se llama desde `main.py` — el pipeline batch (listings → predicciones) está off by default. Fix: levantar el worker en el evento de startup de FastAPI. Ver [[analytics-service-kafka-consumer]], [[analytics-service]].
+- [ ] **`WORKER_PRINCIPAL` es un UUID de una DB vieja.** El valor en `backend/analytics-service/.env.dev` no existe en una DB sembrada en otra máquina. Hoy no rompe porque el worker de Kafka no está en el compose (ver ítem anterior). Detectado 2026-09-27.
 - [ ] **Promotions domain sin cache invalidation efectiva.** Los UCs `create.py` y `delete.py` de promotions tienen `except Exception: pass` en las operaciones de cache — las invalidaciones no se ejecutan si Redis tiene un error transitorio. Fix: separar la lógica de invalidación del manejo de errores de cache. Ver [[properties-service-admin]].
 
 ### Bordes operativos
 
 - [ ] **Las migraciones de properties-service no crean la extension PostGIS; las de catalog si.** `9e29546801f9` (catalog) hace `CREATE EXTENSION`, y ninguna de las tres de properties lo hace. Hoy no rompe porque `properties-ms-db` usa la imagen `postgis/postgis`, que habilita la extension en la DB que crea `POSTGRES_DB` al inicializar el volumen. Pero cualquier DB creada despues —un `prop_test`, una restauracion a otra base, un Postgres plano— falla con `type "geometry" does not exist` en la primera migracion. Detectado 2026-09-07 ensayando la restauracion de los dumps en una DB limpia. Es una linea en una migracion nueva y alinea los dos servicios geo. Ver [[properties-service]], [[catalog-service]].
 - [ ] **El devcontainer comparte un solo venv entre los 4 servicios, y eso enmascara dependencias faltantes.** `UV_PROJECT_ENVIRONMENT=/home/vscode/.venv` en `devcontainer.json` hace que `uv sync` de cualquier servicio escriba en el mismo entorno, asi que un paquete que solo declara catalog queda disponible para properties. Es exactamente lo que escondio el bug de `cryptography` hasta que cada servicio tuvo su imagen (2026-09-07). Mientras exista, "funciona en el devcontainer" no prueba que el `pyproject` de ese servicio este completo — la prueba real es `docker compose build <svc>`. Ver [[dev-workflow]].
+- [ ] **`FRONT_BASE_URL` de users no tiene esquema ni TLD.** Vale `app.micasaenminutos`, así que los links de reset de password que arma `request_reset_password.py` salen rotos; el propio `.env.dev` lo advierte. Detectado 2026-09-27.
+- [ ] **`forwardPorts` del devcontainer apunta al contenedor `develop`, que no corre servicios.** Los servicios publican sus propios puertos en el host, así que esa lista hoy no reenvía nada útil. Revisar si quitarla o pasar a la forma `servicio:puerto`. Detectado 2026-09-27.
 - [ ] **users-service — health router sin montar.** `routes/health.py` existe pero `api_router` no lo incluye; no hay `/v1/health`. Ver [[users-service]].
 - [ ] **Seeds reproducibles.** catalog se siembra manual vía bulk endpoints; properties no tiene script de seed. Definir side-container o script de seed al startup. Ver [[catalog-service-local-dev]].
 - [ ] **`tests/integration/` es scaffolding vacío en los 4 servicios.** Existen las carpetas (`adapters/`, `api/`, `services/`, `performance/` con solo `__init__.py`) y un `conftest.py` con TODOs sin implementar ("Add fixtures for test_engine, test_session, mock services, TestClient with dependency overrides") — verificado en catalog-service, mismo patrón en properties/users/analytics. Hoy solo hay unit tests con `MagicMock`/`AsyncMock` sobre UoW y cache, que nunca pasan por el `Depends()` real de FastAPI. Esto dejó pasar un bug real: `resolve_isochrone_uc` no inyectaba `cache` (ver [[catalog-service-ors]]) y ningún test lo detectó porque todos construían el UC a mano con mocks ya inyectados, sin pasar por el wiring de DI. Implementación sugerida: `TestClient(app)` end-to-end con `dependency_overrides` solo para DB/cache (SQLite en memoria o testcontainers), dejando que FastAPI resuelva la cadena de `Depends()` real. Ver [[catalog-service-local-dev]], [[adr-cache-optional-layer]].
@@ -213,7 +235,7 @@ Los tres pilares están ausentes hoy. Sin los tres juntos es imposible diagnosti
 
 - El `aud: users-ms` sale del client scope `api-audience` (`included.custom.audience`), asignado por defecto a `users-ms-auth`; el protocol mapper homónimo en el propio cliente tiene la config vacía y no aporta nada ([infra/keycloak/realm-dev.json](infra/keycloak/realm-dev.json)).
 - El partial export del realm excluye las cuentas humanas pero sí incluye `service-account-users-ms-admin` con sus `clientRoles` de `realm-management`, que es lo que el export viejo sin usuarios había perdido ([infra/keycloak/realm-dev.json](infra/keycloak/realm-dev.json)).
-- `minio-init` crea los buckets `profile-photos`, `property-images`, `properties` y `mlflow-artifacts`, y un usuario con policy propia por servicio; es idempotente y `develop` depende de que termine bien ([docker-compose.yml](docker-compose.yml), [infra/minio/policies/](infra/minio/policies)).
+- `minio-init` crea los buckets `profile-photos`, `property-images`, `properties` y `mlflow-artifacts`; los usuarios por servicio y sus permisos se declaran en `infra/seaweedfs/s3.json`. Es idempotente y `develop` depende de que termine bien ([docker-compose.yml](docker-compose.yml), [infra/seaweedfs/s3.json](infra/seaweedfs/s3.json)).
 - properties-service leía `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` (credenciales root) hasta el 2026-09-07, ignorando el usuario `properties-ms` que ya existía con scope correcto en MinIO ([storage.py:13-14](backend/properties-service/src/app/integrations/storage/minio/storage.py#L13-L14)).
 - El directorio `workers/` de properties-service contiene el bulk-create worker y sus helpers, pero ningún consumer Kafka ([workers/](backend/properties-service/src/app/workers)).
 - El path ML de `SetEstimatedPriceUseCase` (principal=None) no tiene caller al 2026-05-28 ([set_estimated_price.py:26-32](backend/properties-service/src/app/services/admin/use_cases/estimated_price/set_estimated_price.py#L26-L32)).

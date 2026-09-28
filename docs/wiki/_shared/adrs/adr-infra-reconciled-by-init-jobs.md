@@ -1,7 +1,7 @@
 ---
 title: ADR-0008 — La infra se reconcilia con init jobs idempotentes, no se restaura de archivos de estado
 status: stable
-last-verified: 2026-09-07
+last-verified: 2026-09-27
 owners: [_shared]
 related:
   - "[[local-bootstrap]]"
@@ -9,8 +9,10 @@ related:
   - "[[adr-auth-keycloak-jwt]]"
   - "[[analytics-service-mlflow]]"
   - "[[users-service-keycloak]]"
+  - "[[adr-seaweedfs-dev-object-storage]]"
 sources:
   - ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md
+  - ../../../sources/_shared/2026-09-27-minio-a-seaweedfs-y-rclone.md
 ---
 
 ## TL;DR
@@ -40,6 +42,9 @@ MinIO tenia el problema simetrico: las policies de `infra/minio/policies/` no la
 aplicaba nadie, y `MINIO_DEFAULT_BUCKETS` en el compose no hacia nada porque esa
 variable es de la imagen de Bitnami, no de `minio/minio`.
 
+> **Enmienda 2026-09-27.** El storage pasó a SeaweedFS ([[adr-seaweedfs-dev-object-storage]]).
+> Usuarios y permisos ya no los reconcilia `minio-init`: se declaran en `infra/seaweedfs/s3.json`.
+
 ## Decision
 
 Cada pieza de infra con estado tiene un one-shot que la lleva a su forma esperada
@@ -47,7 +52,7 @@ en cada `up`, con `depends_on: service_completed_successfully` aguas abajo:
 
 | Job | Reconcilia |
 |---|---|
-| `minio-init` | Buckets, policies y un usuario con scope por servicio |
+| `minio-init` | Los buckets (usuarios y permisos van en `s3.json`) |
 | `keycloak-init` | Los client secrets, que el export del realm enmascara |
 | `seed-db` | Los dumps, saltando tablas que ya tienen filas |
 | `seed-dev-user` | El usuario dev, via el endpoint de registro real |
@@ -58,9 +63,10 @@ en cada `up`, con `depends_on: service_completed_successfully` aguas abajo:
 1. **Idempotente siempre.** Corre en cada `up`, asi que una segunda corrida tiene
    que ser inofensiva.
 2. **Centinela, no confianza en el exit code.** Se chequea el estado antes de
-   escribir. Esto no es teorico: `mc mirror` falla con `Overwrite not allowed`
-   sobre objetos existentes **y aun asi devuelve 0**, asi que un init que confie
-   en el codigo de salida reporta exito sin haber sincronizado nada.
+   escribir o se verifica despues. No es teorico: `mc mirror` fallaba con
+   `Overwrite not allowed` sobre objetos existentes **y aun asi devolvia 0**, y
+   con R2 transfiere 0 B y tambien sale en 0. Hoy `mlflow-init` confirma cada
+   archivo con `rclone check`.
 3. **Nunca pisar datos.** Los seeds saltan si la tabla tiene filas y `mlflow-init`
    no reemplaza un `mlflow.db` existente. Empezar de cero es explicito
    (`make reset`), no un efecto colateral de levantar el entorno.
@@ -91,6 +97,6 @@ en cada `up`, con `depends_on: service_completed_successfully` aguas abajo:
 
 - `--import-realm` salta la importacion si el realm ya existe; el log de Keycloak lo registra como `Realm 'core' already exists. Import skipped`.
 - Los cinco one-shots son idempotentes y ninguno pisa datos existentes ([docker-compose.yml](docker-compose.yml), [infra/dev/](infra/dev)).
-- `mc mirror` falla sobre objetos ya presentes y devuelve exit 0, por lo que `mlflow-init` verifica contando objetos antes y despues ([mlflow-init.sh](infra/dev/mlflow-init.sh)).
-- `MINIO_DEFAULT_BUCKETS` no lo lee la imagen `minio/minio`; se elimino del compose el 2026-09-07.
+- `mlflow-init` no confia en el exit code de la copia: verifica con `rclone check --one-way` que cada artifact local este en S3 con el mismo tamaño y hash ([mlflow-init.sh](infra/dev/mlflow-init.sh)).
+- `minio-init` solo crea buckets; los usuarios S3 y sus permisos se declaran en `infra/seaweedfs/s3.json` ([docker-compose.yml](docker-compose.yml)).
 - `develop` declara `depends_on` con `service_completed_successfully` sobre `minio-init` y `keycloak-init` ([docker-compose.yml](docker-compose.yml)).

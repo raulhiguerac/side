@@ -8,7 +8,7 @@
 	},
   "service": "develop",
   "workspaceFolder": "/workspace",
-  "forwardPorts": [8000, 8001, 8002, 8003, 8080, 8180, 9001, 5000, 5540],
+  "forwardPorts": [8000, 8001, 8002, 8003, 8080, 8180, 8888, 5050, 5540],
   "customizations": {
     "vscode": {
       "extensions": [
@@ -19,7 +19,8 @@
         "mariorodeghiero.vue-theme",
         "ms-toolsai.jupyter",
         "dbcode.dbcode",
-        "bradlc.vscode-tailwindcss"
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.makefile-tools"
       ]
     }
   },

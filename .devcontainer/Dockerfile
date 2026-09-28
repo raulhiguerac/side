@@ -1,10 +1,9 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-22.04
 
-ARG NODE_VERSION=20
+ARG NODE_VERSION=24
 
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
     && apt-get install -y nodejs \
-    && npm install -g npm@latest \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

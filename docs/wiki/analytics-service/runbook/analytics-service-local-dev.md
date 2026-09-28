@@ -1,19 +1,21 @@
 ---
 title: Runbook — analytics-service local dev
 status: stable
-last-verified: 2026-09-07
+last-verified: 2026-09-27
 owners: [analytics-service]
 related:
   - "[[analytics-service]]"
   - "[[analytics-service-architecture]]"
   - "[[avm-training]]"
   - "[[adr-mlflow-minio-stack]]"
+  - "[[adr-seaweedfs-dev-object-storage]]"
 sources:
   - ../../../sources/analytics-service/2026-05-19-foundational-qa.md
   - ../../../sources/analytics-service/2026-05-20-prediction-wiring-and-batch-uc.md
   - ../../../sources/analytics-service/2026-05-25-worker-wiring-fixes.md
   - ../../../sources/analytics-service/2026-05-25-unit-test-suite.md
   - ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md
+  - ../../../sources/_shared/2026-09-27-minio-a-seaweedfs-y-rclone.md
 ---
 
 ## TL;DR
@@ -56,8 +58,8 @@ El servicio analytics **no está como service en el compose** — se corre manua
 | `keycloak` | keycloak:26.4.7 | **8180** | IdP — admin UI en http://localhost:8180 | admin / admin |
 | `redis` | redis:latest | 6379 | Cache + rate limit | n/a |
 | `redisinsight` | redis/redisinsight | 5540 | UI de Redis — http://localhost:5540 | n/a |
-| `minio` | minio/minio:RELEASE.2025-09-07T16-13-09Z-cpuv1 | 9000 (API), **9001** (console) | Artifact store — console en http://localhost:9001 | minioadmin / minioadmin |
-| `mlflow` | mlflow:v3.12.0-full | 5000 | Model registry + tracking — UI en http://localhost:5000 | n/a |
+| `minio` | chrislusf/seaweedfs:4.47 | 9000 (S3), **8888** (UI del filer) | Artifact store (SeaweedFS) — archivos en http://localhost:8888 | S3 admin: minioadmin / minioadmin |
+| `mlflow` | mlflow:v3.12.0-full | **5050** | Model registry + tracking — UI en http://localhost:5050 | n/a |
 | `kafka-broker` | apache/kafka:latest | 9092 | Broker Kafka — `advertised.listeners` interno `broker:29092` | n/a |
 | `topic-init` | apache/kafka:latest | — | One-shot: crea los topics `listing-created`, `price-predicted`, `listing-created-dlq` | n/a |
 | `router` | openrouteservice/openrouteservice:nightly | 8082 | ORS — usado por catalog-service, no por analytics | n/a |
@@ -96,12 +98,12 @@ curl http://localhost:8000/v1/health
 DATABASE_URL=postgresql://admin:admin@analytics-ms-db:5432/analytics-ms-db
 REDIS_URL=redis://redis:6379/2
 
-# MLflow + MinIO (artifact store)
+# MLflow + SeaweedFS (artifact store, servicio `minio`)
 MLFLOW_TRACKING_URI=http://mlflow:5000
 MLFLOW_S3_ENDPOINT_URL=http://minio:9000
 MLFLOW_MODEL_URI=models:/bogota-avm@production
-AWS_ACCESS_KEY_ID=minioadmin
-AWS_SECRET_ACCESS_KEY=minioadmin
+AWS_ACCESS_KEY_ID=side-mlflow-dev
+AWS_SECRET_ACCESS_KEY=side-mlflow-dev-secret
 
 # Auth — Keycloak JWT (ver [[adr-auth-keycloak-jwt]])
 KC_JWKS_URL=http://keycloak:8080/realms/<realm>/protocol/openid-connect/certs
@@ -130,7 +132,7 @@ El endpoint está expuesto en `POST /v1/predict`. Requiere un JWT válido — el
 3. Validar que la response tenga `id`, `predicted_price`, `model_version`, `created_at`.
 4. Opcionalmente revisar el registro insertado: `psql -h analytics-ms-db -U admin -d analytics-ms-db -c "SELECT * FROM predictions ORDER BY created_at DESC LIMIT 1;"`
 
-Los gaps #1 a #4 están resueltos: desde el 2026-09-07 `minio-init` crea el bucket y la cuenta con scope.
+Los gaps #1 a #4 están resueltos: `minio-init` crea el bucket y la cuenta con scope está declarada en `infra/seaweedfs/s3.json` (desde el 2026-09-27; ver [[adr-seaweedfs-dev-object-storage]]).
 
 ## Known gaps
 
@@ -178,9 +180,9 @@ docker compose down && docker volume rm side_keycloak-postgres-data
 - `analytics-service` (la app) NO está incluida como service en el compose — solo su DB (`analytics-ms-db`) lo está.
 - El `develop` service monta el repo root en `/workspace` ([docker-compose.yml:7-8](docker-compose.yml#L7-L8)).
 - Keycloak escucha en host port **8180** mapeado al 8080 interno del container ([docker-compose.yml:98-99](docker-compose.yml#L98-L99)).
-- MinIO API en host port 9000, consola en 9001 ([docker-compose.yml:130-132](docker-compose.yml#L130-L132)).
-- MLflow en host port 5000 con SQLite como backend store en `/mlflow/mlflow.db` ([docker-compose.yml:156](docker-compose.yml#L156)).
-- MLflow `--default-artifact-root` apunta a `s3://mlflow-artifacts/`, creado por el servicio `minio-init` desde el 2026-09-07 ([docker-compose.yml](docker-compose.yml)).
+- El storage S3 (SeaweedFS, servicio `minio`) escucha en host port 9000 y publica la UI del filer en 8888 ([docker-compose.yml](docker-compose.yml)).
+- MLflow en host port 5050 con SQLite como backend store en `/mlflow/mlflow.db` ([docker-compose.yml](docker-compose.yml)).
+- MLflow `--default-artifact-root` apunta a `s3://mlflow-artifacts/`, creado por el servicio `minio-init` con `rclone mkdir` ([docker-compose.yml](docker-compose.yml)).
 - El `postCreateCommand` del devcontainer ejecuta `setup-analytics-kernel.sh`, que registra un Jupyter kernel llamado `analytics` ([devcontainer.json:34](.devcontainer/devcontainer.json#L34), [setup-analytics-kernel.sh](data/ml/AVM/scripts/setup-analytics-kernel.sh)).
 - El Dockerfile de analytics-service usa `python:3.10-slim` + uv + `ENV PYTHONPATH=/app/src` + uvicorn sobre `app.main:app` puerto 8000 ([Dockerfile](backend/analytics-service/Dockerfile)).
 - `PYTHONPATH=src` es obligatorio para correr el web server o el worker localmente — sin esto `import app` falla con `ModuleNotFoundError`.
