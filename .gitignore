@@ -23,3 +23,7 @@ infra/mlflow/artifacts/*
 !infra/mlflow/artifacts/.gitkeep
 infra/mlflow/registry/*
 !infra/mlflow/registry/.gitkeep
+
+# Generados localmente: el lock lo escribe VS Code y los example-* los reescribe ORS al arrancar.
+.devcontainer/devcontainer-lock.json
+infra/ors/config/example-ors-config.*
