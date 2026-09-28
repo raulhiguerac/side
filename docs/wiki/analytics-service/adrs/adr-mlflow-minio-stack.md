@@ -1,13 +1,14 @@
 ---
 title: ADR-0001 — MLflow + MinIO como stack ML
 status: stable
-last-verified: 2026-06-20
+last-verified: 2026-09-27
 owners: [analytics-service]
 related:
   - "[[analytics-service-architecture]]"
   - "[[avm-training]]"
   - "[[analytics-service-mlflow]]"
-sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md]
+  - "[[adr-seaweedfs-dev-object-storage]]"
+sources: [../../../sources/analytics-service/2026-05-19-foundational-qa.md, ../../../sources/_shared/2026-09-27-minio-a-seaweedfs-y-rclone.md]
 decision-date: 2026-05-19
 decision-status: accepted
 ---
@@ -32,6 +33,9 @@ Restricciones:
 - **MinIO self-hosted** como artifact store, configurado como S3 endpoint (`MLFLOW_S3_ENDPOINT_URL`).
 - `analytics-service` consume el modelo vía un adapter MLflow leyendo del alias `production`.
 
+> **Enmienda 2026-09-27.** En dev, el artifact store pasó de MinIO a SeaweedFS, porque MinIO
+> retiró sus imágenes. MLflow y el código no cambian: siguen hablando S3. Ver [[adr-seaweedfs-dev-object-storage]].
+
 ## Alternativas consideradas
 
 - **SageMaker / Vertex AI / Databricks** — managed end-to-end pero requieren créditos cloud y atan al proveedor.
@@ -53,4 +57,4 @@ Restricciones:
 
 - El servicio carga el modelo en `ModelClient.__init__` desde el URI configurado en `MLFLOW_MODEL_URI` ([mlflow/model.py:29](backend/analytics-service/src/app/integrations/ml/mlflow/model.py#L29)).
 - 5 env vars son obligatorias en startup del cliente MLflow: `MLFLOW_TRACKING_URI`, `MLFLOW_S3_ENDPOINT_URL`, `MLFLOW_MODEL_URI`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` ([mlflow/model.py:11-23](backend/analytics-service/src/app/integrations/ml/mlflow/model.py#L11-L23)).
-- El stack es S3-compatible vía MinIO — el código usa boto3 transparente vía MLflow.
+- El artifact store es S3-compatible (SeaweedFS en dev, servicio `minio`) — el código usa boto3 transparente vía MLflow ([docker-compose.yml](docker-compose.yml)).

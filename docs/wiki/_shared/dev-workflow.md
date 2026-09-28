@@ -1,15 +1,17 @@
 ---
 title: Dev workflow — reglas de trabajo del monorepo
 status: stable
-last-verified: 2026-09-07
+last-verified: 2026-09-27
 owners: [_shared]
 related:
   - "[[architecture]]"
   - "[[glossary]]"
   - "[[local-bootstrap]]"
+  - "[[adr-seaweedfs-dev-object-storage]]"
 sources:
   - ../../sources/_shared/2026-05-23-repo-tooling-claude-md-precommit.md
   - ../../sources/_shared/2026-09-07-entorno-dev-migrable.md
+  - ../../sources/_shared/2026-09-27-minio-a-seaweedfs-y-rclone.md
 ---
 
 ## TL;DR
@@ -31,8 +33,8 @@ valores: las cuatro claves de R2 y las de Mapbox, Brevo y Google Maps. Los
 binarios y los datos no van al repo: los baja `make bootstrap` desde R2.
 
 **Reconciliar, no restaurar.** Cuatro one-shots dejan la infra en su estado
-esperado en cada `up`, y todos son idempotentes: `minio-init` (buckets, policies
-y un usuario con scope por servicio), `keycloak-init` (los client secrets, que el
+esperado en cada `up`, y todos son idempotentes: `minio-init` (los buckets; los
+usuarios S3 se declaran en `infra/seaweedfs/s3.json`), `keycloak-init` (los client secrets, que el
 export del realm enmascara), `seed-db` (los dumps, saltando tablas que ya tienen
 filas) y `mlflow-init` (el registro y los artifacts del AVM). El patron existe
 porque `--import-realm` de Keycloak salta si el realm ya existe: lo que tiene que

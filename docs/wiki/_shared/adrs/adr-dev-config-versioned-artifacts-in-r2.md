@@ -1,15 +1,17 @@
 ---
 title: ADR-0007 — Config de dev versionada, secretos en .env.local, artefactos en R2
 status: stable
-last-verified: 2026-09-07
+last-verified: 2026-09-27
 owners: [_shared]
 related:
   - "[[local-bootstrap]]"
   - "[[dev-workflow]]"
   - "[[architecture]]"
   - "[[adr-infra-reconciled-by-init-jobs]]"
+  - "[[adr-seaweedfs-dev-object-storage]]"
 sources:
   - ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md
+  - ../../../sources/_shared/2026-09-27-minio-a-seaweedfs-y-rclone.md
 ---
 
 ## TL;DR
@@ -53,10 +55,13 @@ R2 se eligio sobre las alternativas por:
 
 - **S3 API con credenciales estaticas**, scripteable sin interaccion humana. Eso
   descarta Google Drive, que necesita un flujo OAuth por maquina.
-- **`mc` ya esta en el stack** por MinIO, asi que el pull reusa el mismo cliente
-  y el mismo patron que `minio-init`. Cero herramientas nuevas.
+- **Cliente S3 en contenedor**: el pull corre con rclone (`provider=Cloudflare`),
+  configurado solo por env. Originalmente era `mc`, que ya estaba en el stack por
+  MinIO, pero `mc mirror` lista con `metadata=true` — extension de MinIO que R2
+  no implementa (`ListObjectsV2 search parameter metadata not implemented`) — y
+  termina transfiriendo 0 B. Se cambio a rclone el 2026-09-27.
 - **Egress gratis**, a diferencia de S3 de AWS.
-- **Sin prerequisitos en el host**: `mc` corre en contenedor, mientras que Git LFS
+- **Sin prerequisitos en el host**: rclone corre en contenedor, mientras que Git LFS
   obliga a un `git lfs install` por maquina y consume cuota de GitHub.
 
 Se descartaron ademas GitHub Releases (assets subidos y versionados a mano) y
@@ -66,7 +71,7 @@ Hugging Face (segundo repo que mantener sincronizado).
 
 `runtime/` (~85 MB) es obligatorio para arrancar; `datasets/` (~480 MB) solo hace
 falta para reentrenar el AVM. Las rutas dentro de `runtime/` espejan las del repo,
-asi que el pull es un `mc mirror` directo.
+asi que el pull es un `rclone copy` directo.
 
 ## Consecuencias
 
@@ -83,5 +88,5 @@ asi que el pull es un `mc mirror` directo.
 - La config determinista de dev esta versionada en `backend/<svc>/.env.dev` y `frontend/.env.development`; ninguno de los dos esta gitignoreado ([.gitignore](.gitignore)).
 - `.env.local` declara siete valores y esta gitignoreado ([.env.local.example](.env.local.example)).
 - Los directorios de artefactos (`infra/ors/files`, `infra/seeds`, `infra/mlflow/*`) estan gitignoreados con un `.gitkeep` versionado para que existan tras el clone ([.gitignore](.gitignore)).
-- `make bootstrap` y `make data-pull` bajan los dos prefijos con `mc` en contenedor, sin instalar nada en el host ([Makefile](Makefile)).
+- `make bootstrap` y `make data-pull` bajan los dos prefijos con rclone en contenedor, sin instalar nada en el host ([Makefile](Makefile)).
 - Los cinco `.env.example` se eliminaron el 2026-09-07; su contenido salio de cruzar cada `os.getenv` y campo de `BaseSettings` contra el codigo.
