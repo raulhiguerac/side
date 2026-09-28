@@ -30,23 +30,8 @@ if [ ! -d /artifacts/3 ]; then
   exit 1
 fi
 
-mc alias set local "$MINIO_URL" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null
-
-# Centinela, igual que seed-db: `mc mirror` NO salta los objetos existentes,
-# falla con "Overwrite not allowed" y ademas devuelve 0, asi que sin este
-# chequeo el init reportaria exito sin haber sincronizado nada.
-remote=$(mc ls --recursive local/mlflow-artifacts/3/ 2>/dev/null | wc -l)
-local_n=$(mc ls --recursive /artifacts/3/ 2>/dev/null | wc -l)
-
-if [ "$remote" -gt 0 ]; then
-  echo "  skip   artifacts — s3://mlflow-artifacts/3/ ya tiene $remote objetos"
-else
-  mc mirror --quiet --exclude ".gitkeep" /artifacts/ local/mlflow-artifacts/
-  remote=$(mc ls --recursive local/mlflow-artifacts/3/ 2>/dev/null | wc -l)
-  if [ "$remote" != "$local_n" ]; then
-    echo "  ERROR: se subieron $remote de $local_n objetos" >&2
-    exit 1
-  fi
-  echo "  carga  artifacts -> s3://mlflow-artifacts/ ($remote objetos)"
-fi
+# `rclone copy` salta lo que ya esta igual; `check` falla si falta o difiere algo.
+rclone copy -q /artifacts/3/ s3:mlflow-artifacts/3/
+rclone check -q --one-way /artifacts/3/ s3:mlflow-artifacts/3/
+echo "  ok     artifacts -> s3://mlflow-artifacts/3/ ($(find /artifacts/3 -type f | wc -l) objetos)"
 echo "mlflow-init: ok"

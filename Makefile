@@ -3,7 +3,14 @@
 
 SHELL := /bin/bash
 COMPOSE := docker compose
-MC := docker run --rm --user $$(id -u):$$(id -g) -e HOME=/tmp -v "$$(PWD):/w" -w /w --entrypoint sh minio/mc
+R2_ENV := set -a; . ./.env.local; set +a; \
+	RCLONE_CONFIG_R2_ACCESS_KEY_ID="$$R2_ACCESS_KEY_ID" \
+	RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$$R2_SECRET_ACCESS_KEY" \
+	RCLONE_CONFIG_R2_ENDPOINT="https://$$R2_ACCOUNT_ID.r2.cloudflarestorage.com"
+RCLONE := docker run --rm --user $$(id -u):$$(id -g) -e HOME=/tmp -v "$(CURDIR):/w" \
+	-e RCLONE_CONFIG=/dev/null -e RCLONE_CONFIG_R2_TYPE=s3 -e RCLONE_CONFIG_R2_PROVIDER=Cloudflare \
+	-e RCLONE_CONFIG_R2_ACCESS_KEY_ID -e RCLONE_CONFIG_R2_SECRET_ACCESS_KEY -e RCLONE_CONFIG_R2_ENDPOINT \
+	rclone/rclone:1.75.1
 
 .DEFAULT_GOAL := help
 .PHONY: help bootstrap up down stop reset seed data-pull logs ps
@@ -31,17 +38,11 @@ check-artifacts:
 # --- Artefactos --------------------------------------------------------------
 
 bootstrap: check-env ## Baja de R2 lo que no vive en git (~85 MB): pbf, seeds y modelo AVM
-	@set -a; . ./.env.local; set +a; \
-	$(MC) -c "mc alias set r2 https://$$R2_ACCOUNT_ID.r2.cloudflarestorage.com \
-		$$R2_ACCESS_KEY_ID $$R2_SECRET_ACCESS_KEY --api S3v4 >/dev/null && \
-		mc mirror --overwrite r2/$$R2_BUCKET/runtime/ /w/"
+	@$(R2_ENV) $(RCLONE) copy -v --stats-one-line "r2:$$R2_BUCKET/runtime/" /w/
 	@echo "bootstrap: ok"
 
 data-pull: check-env ## Baja los datasets pesados de entrenamiento (~480 MB). Opcional.
-	@set -a; . ./.env.local; set +a; \
-	$(MC) -c "mc alias set r2 https://$$R2_ACCOUNT_ID.r2.cloudflarestorage.com \
-		$$R2_ACCESS_KEY_ID $$R2_SECRET_ACCESS_KEY --api S3v4 >/dev/null && \
-		mc mirror --overwrite r2/$$R2_BUCKET/datasets/ /w/"
+	@$(R2_ENV) $(RCLONE) copy -v --stats-one-line "r2:$$R2_BUCKET/datasets/" /w/
 
 # --- Ciclo de vida -----------------------------------------------------------
 
@@ -54,8 +55,8 @@ up: check-artifacts ## Levanta todo el stack
 	@echo "  analytics  http://localhost:8003/docs"
 	@echo "  frontend   http://localhost:8080"
 	@echo "  keycloak   http://localhost:8180   admin/admin"
-	@echo "  minio      http://localhost:9001   minioadmin/minioadmin"
-	@echo "  mlflow     http://localhost:5000"
+	@echo "  seaweedfs  http://localhost:8888   (S3 en :9000, minioadmin/minioadmin)"
+	@echo "  mlflow     http://localhost:5050"
 	@echo ""
 	@echo "  login de dev: dev@example.com / dev12345 (rol admin)"
 

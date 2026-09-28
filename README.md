@@ -53,7 +53,7 @@ son valores de `localhost` y fijarlos es lo que hace el entorno reproducible.
 | frontend | http://localhost:8080 | |
 | Keycloak | http://localhost:8180 | `admin` / `admin` |
 | MinIO | http://localhost:9001 | `minioadmin` / `minioadmin` |
-| MLflow | http://localhost:5000 | |
+| MLflow | http://localhost:5050 | |
 | RedisInsight | http://localhost:5540 | |
 | ORS | http://localhost:8082/ors | |
 

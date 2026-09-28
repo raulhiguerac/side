@@ -1,0 +1,28 @@
+{
+  "identities": [
+    {
+      "name": "admin",
+      "credentials": [{ "accessKey": "minioadmin", "secretKey": "minioadmin" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    },
+    {
+      "name": "users-service",
+      "credentials": [{ "accessKey": "side-users-dev", "secretKey": "side-users-dev-secret" }],
+      "actions": ["Read:profile-photos", "Write:profile-photos"]
+    },
+    {
+      "name": "properties-service",
+      "credentials": [{ "accessKey": "side-properties-dev", "secretKey": "side-properties-dev-secret" }],
+      "actions": ["Read:property-images", "Write:property-images", "Read:properties", "Write:properties"]
+    },
+    {
+      "name": "mlflow",
+      "credentials": [{ "accessKey": "side-mlflow-dev", "secretKey": "side-mlflow-dev-secret" }],
+      "actions": ["Read:mlflow-artifacts", "Write:mlflow-artifacts", "List:mlflow-artifacts"]
+    },
+    {
+      "name": "anonymous",
+      "actions": ["Read:profile-photos", "Read:property-images"]
+    }
+  ]
+}
