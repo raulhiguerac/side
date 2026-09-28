@@ -1,7 +1,7 @@
 ---
 title: Runbook — frontend local dev
 status: draft
-last-verified: 2026-09-07
+last-verified: 2026-09-27
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -17,10 +17,10 @@ sources:
 
 ## TL;DR
 
-> **Actualizado 2026-09-07 — el arranque ya no es manual.** `make bootstrap && make up`
-> levanta los 21 servicios, aplica migraciones y siembra datos. Este runbook queda
-> como referencia de los detalles internos del servicio y de como correrlo a mano
-> cuando lo estas debuggeando. Ver [`README.md`](README.md) para el flujo normal.
+> **Actualizado 2026-09-27 — las apps vuelven a correrse a mano.** `make bootstrap && make up`
+> levanta solo la infra: los servicios de aplicacion y los seeds estan comentados en
+> `docker-compose.yml`, y cada server se arranca dentro del devcontainer. Este runbook
+> sirve de referencia para eso; ante diferencias, manda el [`README.md`](README.md).
 
 Mismo patrón devcontainer-first que los backends. Dentro del devcontainer: `cd frontend && npm install && npm run serve` → SPA en **`http://localhost:8080/#/`**. Backend en `:8000` (users), `:8001` (catalog) — corren a mano desde el devcontainer en terminales separadas. CORS abierto temporalmente. Ningún tooling de tests/e2e configurado todavía.
 
@@ -29,8 +29,8 @@ Mismo patrón devcontainer-first que los backends. Dentro del devcontainer: `cd 
 - Docker Desktop corriendo.
 - VS Code con extensión **Dev Containers**.
 - Repo clonado, `.env.local` completado y `make bootstrap` corrido.
-- `.env` del root presente (compartido para todos los services).
-- **Node 20 y pnpm/npm** ya vienen en la imagen del devcontainer ([.devcontainer/Dockerfile](.devcontainer/Dockerfile)). No instalar Node en el host.
+- `frontend/.env.development` versionado con las URLs de los servicios; la key de Google Maps va en `.env.local`.
+- **Node 24 y pnpm/npm** ya vienen en la imagen del devcontainer ([.devcontainer/Dockerfile](.devcontainer/Dockerfile)). No instalar Node en el host.
 
 ## Levantar el entorno
 
@@ -201,8 +201,8 @@ npm run build -- --report   # genera dist/report.html (webpack-bundle-analyzer)
 - Env vars del frontend usan prefijo `VUE_APP_*` (requerido por Vue CLI 5) ([.env.example](frontend/.env.example)).
 - En dev, si no se setean `VUE_APP_*_URL`, `config/index.ts` usa paths de proxy (`/api/users`, etc.) — el proxy de `vue.config.js` los reenvía al backend correspondiente ([config/index.ts](frontend/src/config/index.ts), [vue.config.js](frontend/vue.config.js)).
 - El proxy webpack es obligatorio en Chrome con devcontainer: subresource requests cross-port a localhost quedan stalled indefinidamente por la interacción de VS Code port forwarding con el keep-alive de Chrome ([vue.config.js](frontend/vue.config.js)).
-- El devcontainer ([.devcontainer/Dockerfile](.devcontainer/Dockerfile)) incluye Node 20 + uv + pnpm preinstalados.
-- El `develop` service del compose forwarda los ports 8000, 5173, 8080 — el 8080 es justo el que usa Vue CLI por default ([docker-compose.yml:10-12](docker-compose.yml#L10-L12)).
+- El devcontainer ([.devcontainer/Dockerfile](.devcontainer/Dockerfile)) incluye Node 24 + uv + pnpm preinstalados.
+- `forwardPorts` del devcontainer reenvía 8000-8003, 8080, 8180, 8888, 5050 y 5540 — el 8080 es justo el que usa Vue CLI por default ([devcontainer.json](.devcontainer/devcontainer.json)).
 - Backends NO están como service en el compose — se corren manualmente desde dentro del devcontainer (mismo patrón que [[analytics-service-local-dev]] y [[catalog-service-local-dev]]).
 - No hay tests configurados (ningún framework de test en `devDependencies`).
 - Un `WARNING uvicorn.error: Invalid HTTP request received.` en el log de un backend, junto con un 400 de body vacío en el frontend, indica un problema de transporte (proxy/port-forwarding) antes de descartar el código de la app — verificar con `lsof -iTCP:<puerto>` quién escucha realmente ese puerto.

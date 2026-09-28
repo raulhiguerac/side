@@ -20,27 +20,29 @@ sources:
 
 ## TL;DR
 
-`make bootstrap && make up` levanta el monorepo entero en una maquina limpia; el
-unico requisito del host es Docker. Siete valores viajan a mano en `.env.local`;
+`make bootstrap && make up` levanta la infra en una maquina limpia; el unico
+requisito del host es Docker. Por ahora las apps y los seeds estan comentados en el
+compose y se corren a mano en el devcontainer. Siete valores viajan a mano en `.env.local`;
 todo lo demas o esta versionado o lo baja `make bootstrap` desde Cloudflare R2.
 
 ## Topologia
 
-El compose define 24 services en tres grupos:
+El compose define 17 services activos en dos grupos, mas un tercero comentado:
 
 | Grupo | Services |
 |---|---|
-| Aplicaciones | `users` (8000), `catalog` (8001), `properties` (8002), `analytics` (8003), `frontend` (8080) |
-| Infra | 5 Postgres, `keycloak`, `redis`, `redisinsight`, `minio`, `mlflow`, `kafka-broker`, `router` (ORS), `develop` |
-| One-shots | `minio-init`, `keycloak-init`, `topic-init`, `seed-db`, `seed-dev-user`, `mlflow-init` |
+| Infra | 5 Postgres (`catalog-ms-db` y `properties-ms-db` construidos desde `infra/postgis`), `keycloak`, `redis`, `redisinsight`, `minio` (SeaweedFS), `mlflow`, `kafka-broker`, `router` (ORS), `develop` |
+| One-shots | `minio-init`, `keycloak-init`, `topic-init`, `mlflow-init` |
+| Comentados | `users` (8000), `catalog` (8001), `properties` (8002), `analytics` (8003), `frontend` (8080), `seed-db`, `seed-dev-user` |
 
-Los cuatro MS corren con el codigo montado y `uvicorn --reload`, y su entrypoint
-([service-entrypoint.sh](infra/dev/service-entrypoint.sh)) aplica `alembic upgrade
-head` antes de levantar. El devcontainer (`develop`) sigue existiendo para
-trabajar adentro, pero ya no publica puertos: los toman los servicios, y VS Code
-los reenvia via `forwardPorts`.
+Por ahora los servers y el front se levantan a mano dentro del devcontainer
+(`develop`), y VS Code reenvia sus puertos al host via `forwardPorts`. Los bloques
+comentados siguen en el compose: al reactivarlos, cada MS vuelve a correr con el
+codigo montado, `uvicorn --reload` y un entrypoint
+([service-entrypoint.sh](infra/dev/service-entrypoint.sh)) que aplica `alembic
+upgrade head` antes de levantar.
 
-El encadenamiento es por healthcheck, no por `sleep`: 14 de los 24 services
+El encadenamiento es por healthcheck, no por `sleep`: 10 de los 17 services
 declaran uno, y las dependencias usan `service_healthy` o
 `service_completed_successfully`.
 
@@ -48,7 +50,7 @@ declaran uno, y las dependencias usan `service_healthy` o
 
 | Origen | Contenido |
 |---|---|
-| git | Config determinista de dev (`backend/<svc>/.env.dev`, `frontend/.env.development`), el realm de Keycloak, las policies de MinIO, los scripts de init |
+| git | Config determinista de dev (`backend/<svc>/.env.dev`, `frontend/.env.development`), el realm de Keycloak, los permisos S3 (`infra/seaweedfs/s3.json`), los scripts de init |
 | `.env.local` (gitignoreado) | Siete valores: 4 de Cloudflare R2 + Mapbox, Brevo y Google Maps |
 | R2 `runtime/` (~85 MB) | El `.pbf` de Bogota, los dumps de seed y el modelo AVM con su registro |
 | R2 `datasets/` (~480 MB) | Scrape y CSVs de entrenamiento. Opcional, `make data-pull` |
@@ -73,9 +75,9 @@ Todos idempotentes, todos con centinela. Ver
   [[adr-seaweedfs-dev-object-storage]].
 - **`keycloak-init`** — fija los client secrets de `users-ms-admin` y
   `users-ms-auth`, que el export del realm enmascara como `**********`.
-- **`seed-db`** — restaura los 4 dumps saltando las tablas que ya tienen filas.
+- **`seed-db`** (comentado por ahora) — restaura los 4 dumps saltando las tablas que ya tienen filas.
   Espera a que los servicios esten healthy porque los dumps son `--data-only`.
-- **`seed-dev-user`** — crea `dev@example.com` llamando a `POST /v1/auth/register`
+- **`seed-dev-user`** (comentado por ahora) — crea `dev@example.com` llamando a `POST /v1/auth/register`
   y le asigna el rol `admin`. No hace INSERT: `accounts.account_id` tiene que ser
   el `sub` que asigna Keycloak, y ese invariante vive en `RegisterAccountUseCase`.
   Por eso `keycloak-init` **no** puede pre-crear ese usuario.
@@ -98,9 +100,9 @@ listado con `metadata=true`, que R2 no implementa, y transfiere 0 B.
 
 - `make bootstrap` exige `.env.local` con las 4 claves de R2 y aborta con el comando de arreglo si falta ([Makefile](Makefile)).
 - `make up` aborta si falta el `.pbf`, los dumps de seed o el registro de MLflow ([Makefile](Makefile)).
-- El compose define 24 services, de los cuales 6 son one-shots y 14 declaran healthcheck ([docker-compose.yml](docker-compose.yml)).
-- El entrypoint de los cuatro MS corre `alembic upgrade head` antes de uvicorn ([service-entrypoint.sh](infra/dev/service-entrypoint.sh)).
-- `develop` no publica puertos; los publican los servicios de aplicacion ([docker-compose.yml](docker-compose.yml)).
+- El compose define 17 services activos, de los cuales 4 son one-shots y 10 declaran healthcheck; las apps y los seeds estan comentados ([docker-compose.yml](docker-compose.yml)).
+- `service-entrypoint.sh` corre `alembic upgrade head` antes de uvicorn; hoy no lo monta ningun service activo ([service-entrypoint.sh](infra/dev/service-entrypoint.sh)).
+- `develop` no publica puertos; las apps que corren dentro llegan al host via `forwardPorts` ([devcontainer.json](.devcontainer/devcontainer.json)).
 - Los grafos de ORS se reconstruyen desde el `.pbf` y cada perfil guarda en `stamp.txt` el tamano en bytes del `.pbf` con el que se construyo.
 - `seed-dev-user` crea el usuario por `POST /v1/auth/register`, no por INSERT ([seed-dev-user.py](infra/dev/seed-dev-user.py)).
 - `minio-init` y `mlflow-init` usan la imagen `rclone/rclone:1.75.1`; ninguno depende de `mc` ([docker-compose.yml](docker-compose.yml)).

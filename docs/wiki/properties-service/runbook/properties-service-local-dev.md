@@ -1,7 +1,7 @@
 ---
 title: Runbook — properties-service local dev
 status: draft
-last-verified: 2026-09-07
+last-verified: 2026-09-27
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -13,10 +13,10 @@ sources: [../../../sources/properties-service/2026-05-28-foundational-exploratio
 
 ## TL;DR
 
-> **Actualizado 2026-09-07 — el arranque ya no es manual.** `make bootstrap && make up`
-> levanta los 21 servicios, aplica migraciones y siembra datos. Este runbook queda
-> como referencia de los detalles internos del servicio y de como correrlo a mano
-> cuando lo estas debuggeando. Ver [`README.md`](README.md) para el flujo normal.
+> **Actualizado 2026-09-27 — las apps vuelven a correrse a mano.** `make bootstrap && make up`
+> levanta solo la infra: los servicios de aplicacion y los seeds estan comentados en
+> `docker-compose.yml`, y cada server se arranca dentro del devcontainer. Este runbook
+> sirve de referencia para eso; ante diferencias, manda el [`README.md`](README.md).
 
 Mismo workflow devcontainer-first que [[catalog-service-local-dev]]: abrir el repo en VS Code → "Reopen in Container" → docker-compose levanta la infra (incluyendo `properties-ms-db` con PostGIS). Después, a mano: `cd backend/properties-service && uv sync && migraciones + uvicorn`. Auth por **cookie** `access_token`. Necesita catalog-service corriendo (con seed geo) para crear listings, y MinIO para el flujo de imágenes.
 
@@ -35,7 +35,7 @@ Subset del compose que necesita properties-service:
 | Servicio | Imagen | Para qué | Credenciales |
 |---|---|---|---|
 | `develop` | build local | El devcontainer (tu shell) | n/a |
-| `properties-ms-db` | **`postgis/postgis:17-master`** | DB de properties | admin / admin |
+| `properties-ms-db` | **build `infra/postgis`** | DB de properties | admin / admin |
 | `catalog-ms-db` + catalog | postgis | Dependencia geo (write time) | admin / admin |
 | `keycloak` (+ db) | keycloak:26.4.7 | IdP — admin UI en :8180 | admin / admin |
 | `redis` | redis:latest | Cache de detalle/feed/mapa/batch | n/a |
@@ -163,7 +163,7 @@ docker exec -it $(docker ps -qf name=redis) redis-cli
 
 ## Claims
 
-- properties-service usa la imagen `postgis/postgis:17-master` para `properties-ms-db` ([docker-compose.yml:41-42](docker-compose.yml#L41-L42)).
+- `properties-ms-db` se construye desde la imagen propia `infra/postgis` (`postgres:17` + `postgresql-17-postgis-3`); su `init.sql` crea la extension, que las migraciones de properties no crean ([infra/postgis/init.sql](infra/postgis/init.sql)).
 - El servicio lee la connection string desde `DATABASE_PROPERTIES_URL` (renombrado desde `DATABASE_URL` el 2026-05-31, commit `e5938ad`) ([core/config/settings.py:7](backend/properties-service/src/app/core/config/settings.py#L7)).
 - `CATALOG_URL` se lee directamente de env en el constructor de `CatalogClient`, no vía settings ([catalog_client.py:12-14](backend/properties-service/src/app/integrations/catalog/catalog_client.py#L12-L14)).
 - Auth lee el JWT desde la cookie `access_token` ([api/deps/auth.py:46](backend/properties-service/src/app/api/deps/auth.py#L46)).

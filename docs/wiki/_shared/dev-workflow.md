@@ -26,7 +26,7 @@ y los puertos estan en [`README.md`](README.md). Tres cosas que conviene entende
 antes de tocar nada:
 
 **Que va a git y que no.** La config determinista de dev —contrasenas de Postgres,
-secrets de Keycloak, claves de MinIO— esta versionada a proposito en
+secrets de Keycloak, claves S3— esta versionada a proposito en
 `backend/<servicio>/.env.dev`: son valores de `localhost`, y fijarlos es lo que
 hace el entorno reproducible. En `.env.local` (gitignoreado) van solo siete
 valores: las cuatro claves de R2 y las de Mapbox, Brevo y Google Maps. Los
@@ -36,12 +36,17 @@ binarios y los datos no van al repo: los baja `make bootstrap` desde R2.
 esperado en cada `up`, y todos son idempotentes: `minio-init` (los buckets; los
 usuarios S3 se declaran en `infra/seaweedfs/s3.json`), `keycloak-init` (los client secrets, que el
 export del realm enmascara), `seed-db` (los dumps, saltando tablas que ya tienen
-filas) y `mlflow-init` (el registro y los artifacts del AVM). El patron existe
+filas; comentado por ahora junto con las apps) y `mlflow-init` (el registro y los artifacts del AVM). El patron existe
 porque `--import-realm` de Keycloak salta si el realm ya existe: lo que tiene que
 poder re-aplicarse no puede vivir en un archivo de import.
 
 **Los seeds no borran.** Cada uno chequea una tabla centinela y salta si ya hay
 datos. Para empezar de cero esta `make reset`, que pide confirmacion.
+
+**Por ahora las apps corren en el devcontainer.** Los servicios de aplicacion y los
+seeds estan comentados en el compose: `make up` levanta solo la infra, y cada
+server y el front se arrancan a mano dentro de `develop`. `make seed` no funciona
+mientras tanto.
 
 ## CLAUDE.md — discuss before code
 
@@ -89,8 +94,8 @@ El devcontainer lo hace automático vía `postCreateCommand`. En el host hay que
 
 ## Claims
 
-- `make bootstrap` baja de R2 los artefactos que no viven en git (~85 MB: el .pbf de Bogota, los dumps de seed y el modelo AVM) y `make up` levanta los 21 servicios del compose ([Makefile](Makefile), [README.md](README.md)).
-- Los cuatro one-shots de infra (`minio-init`, `keycloak-init`, `seed-db`, `mlflow-init`) son idempotentes y corren en cada `up`; ninguno pisa datos existentes ([docker-compose.yml](docker-compose.yml)).
+- `make bootstrap` baja de R2 los artefactos que no viven en git (~85 MB: el .pbf de Bogota, los dumps de seed y el modelo AVM) y `make up` levanta los 17 servicios activos del compose, que hoy son solo infra ([Makefile](Makefile), [docker-compose.yml](docker-compose.yml)).
+- Los one-shots activos (`minio-init`, `keycloak-init`, `topic-init`, `mlflow-init`) son idempotentes y corren en cada `up`; ninguno pisa datos existentes. `seed-db` y `seed-dev-user` estan comentados ([docker-compose.yml](docker-compose.yml)).
 - `.env.local` lleva solo siete valores; el resto de la config de dev esta versionada en `backend/<servicio>/.env.dev` ([.env.local.example](.env.local.example)).
 - `.claude/CLAUDE.md` existe en la raíz del repo y se carga al inicio de cada sesión de Claude Code ([.claude/CLAUDE.md](.claude/CLAUDE.md)).
 - `.pre-commit-config.yaml` define un hook local `wiki-staleness-check` con `language: system` y `exit 0` — nunca bloquea commits ([.pre-commit-config.yaml](.pre-commit-config.yaml)).

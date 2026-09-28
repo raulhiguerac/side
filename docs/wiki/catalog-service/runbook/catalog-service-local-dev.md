@@ -1,7 +1,7 @@
 ---
 title: Runbook — catalog-service local dev
 status: draft
-last-verified: 2026-09-07
+last-verified: 2026-09-27
 owners: [catalog-service]
 related:
   - "[[catalog-service]]"
@@ -12,10 +12,10 @@ sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../
 
 ## TL;DR
 
-> **Actualizado 2026-09-07 — el arranque ya no es manual.** `make bootstrap && make up`
-> levanta los 21 servicios, aplica migraciones y siembra datos. Este runbook queda
-> como referencia de los detalles internos del servicio y de como correrlo a mano
-> cuando lo estas debuggeando. Ver [`README.md`](README.md) para el flujo normal.
+> **Actualizado 2026-09-27 — las apps vuelven a correrse a mano.** `make bootstrap && make up`
+> levanta solo la infra: los servicios de aplicacion y los seeds estan comentados en
+> `docker-compose.yml`, y cada server se arranca dentro del devcontainer. Este runbook
+> sirve de referencia para eso; ante diferencias, manda el [`README.md`](README.md).
 
 Mismo workflow devcontainer-first que [[analytics-service-local-dev]]: abrir el repo en VS Code → "Reopen in Container" → docker-compose levanta toda la infra (incluyendo `catalog-ms-db` con PostGIS). Después, a mano dentro del devcontainer: `cd backend/catalog-service && uv sync && correr migraciones + uvicorn`. Auth se prueba con **cookie** `access_token` (no header Bearer — distinto a analytics). El catálogo se siembra hoy manualmente vía bulk endpoints — sin script de seed.
 
@@ -40,8 +40,8 @@ Subset del compose que necesita catalog-service:
 
 | Servicio | Imagen | Host port | Para qué | Credenciales |
 |---|---|---|---|---|
-| `develop` | build local | 8000, 5173, 8080 | El devcontainer (tu shell) | n/a |
-| `catalog-ms-db` | **`postgis/postgis:17-master`** | (interno) | DB de catalog (PostGIS; properties-ms-db también lo usa) | admin / admin |
+| `develop` | build local | vía `forwardPorts` (8000-8003, 8080, …) | El devcontainer (tu shell); acá corren las apps | n/a |
+| `catalog-ms-db` | **build `infra/postgis`** | (interno) | DB de catalog (PostGIS; properties-ms-db usa la misma imagen) | admin / admin |
 | `keycloak-db` | postgres:17 | (interno) | DB de Keycloak | keycloak / password |
 | `keycloak` | keycloak:26.4.7 | **8180** | IdP — admin UI en http://localhost:8180 | admin / admin |
 | `redis` | redis:latest | 6379 | Cache forward geocode + lock + FetchZone short-circuit | n/a |
@@ -207,7 +207,7 @@ docker logs $(docker ps -qf name=keycloak) -f
 
 ## Claims
 
-- catalog-service usa `postgis/postgis:17-master`; properties-service también la usa para su DB ([docker-compose.yml:31](docker-compose.yml#L31), [docker-compose.yml:42](docker-compose.yml#L42)).
+- `catalog-ms-db` y `properties-ms-db` se construyen desde la imagen propia `infra/postgis` (`postgres:17` + `postgresql-17-postgis-3`), y su `init.sql` crea la extension al inicializar la base ([infra/postgis/Dockerfile](infra/postgis/Dockerfile), [docker-compose.yml](docker-compose.yml)).
 - El servicio lee la connection string desde `DATABASE_CATALOG_URL` (no `DATABASE_URL`) ([core/config/settings.py:8](backend/catalog-service/src/app/core/config/settings.py#L8)).
 - Auth lee JWT desde la cookie `access_token`, no del header `Authorization` ([api/deps/auth.py:45](backend/catalog-service/src/app/api/deps/auth.py#L45)).
 - El `.env.example` del servicio declara `DATABASE_URL`, `REDIS_URL` y `ORS_URL`; sigue faltando `DATABASE_CATALOG_URL`, Keycloak, `ADMIN_ROLE` y `MAPBOX_API_KEY` ([backend/catalog-service/.env.example](backend/catalog-service/.env.example)).

@@ -73,7 +73,7 @@ Punto geográfico con atributos categorizables (escuela, parque, hospital, trans
 Operación espacial que determina si un punto (lat, lon) cae dentro de un polígono. En `catalog-service` se ejecuta como `ST_Contains(neighborhoods.geom, point)` de [[#postgis]], acelerado por un pre-filtro con [[#h3]] (`h3_cells` array indexed via GIN).
 
 ### PostGIS
-Extensión de PostgreSQL que agrega tipos geométricos (Point, Polygon, MultiPolygon) y operaciones espaciales (ST_Contains, ST_Distance, etc.). En `side` lo usan `catalog-service` y `properties-service` (image `postgis/postgis:17-master`) con `geoalchemy2` como cliente SQLAlchemy. Los Postgres de `users-service` y `keycloak-db` van sin PostGIS.
+Extensión de PostgreSQL que agrega tipos geométricos (Point, Polygon, MultiPolygon) y operaciones espaciales (ST_Contains, ST_Distance, etc.). En `side` lo usan `catalog-service` y `properties-service` (imagen propia `infra/postgis`: `postgres:17` + PostGIS) con `geoalchemy2` como cliente SQLAlchemy. Los Postgres de `users-service` y `keycloak-db` van sin PostGIS.
 
 ### principal
 UUID que identifica al actor que origina una request — usualmente un usuario, pero también puede ser un sistema (system ID) en flujos server-to-server (ej: el consumer Kafka de `analytics-service`). Se obtiene resolviendo el JWT vía una FastAPI dependency. Los use cases reciben el `principal` ya resuelto, nunca el token.

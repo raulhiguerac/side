@@ -1,7 +1,7 @@
 ---
 title: properties-service
 status: draft
-last-verified: 2026-07-13
+last-verified: 2026-09-27
 owners: [properties-service]
 related:
   - "[[architecture]]"
@@ -70,7 +70,7 @@ Es el agregado central del dominio inmobiliario. Tres responsabilidades:
 ## Stack
 
 - **FastAPI + Uvicorn** — HTTP layer
-- **SQLModel + Postgres + PostGIS** (imagen `postgis/postgis:17-master`) con `geoalchemy2` + `shapely`
+- **SQLModel + Postgres + PostGIS** (imagen propia `infra/postgis` (`postgres:17` + `postgresql-17-postgis-3`)) con `geoalchemy2` + `shapely`
 - **Redis** — cache de detalle, mis-propiedades, ads del feed, celdas del mapa, batch de imágenes
 - **MinIO / S3** (`boto3`) — fotos de propiedades vía URLs presignadas
 - **h3** — indexación espacial dual (r9 ~300m detalle, r7 ~5km mapa)
@@ -101,4 +101,4 @@ Es el agregado central del dominio inmobiliario. Tres responsabilidades:
 - Auth lee el JWT desde la cookie `access_token`, no del header `Authorization` ([api/deps/auth.py:46](backend/properties-service/src/app/api/deps/auth.py#L46)).
 - `workers/` solo contiene `__init__.py` — no hay consumer Kafka al 2026-05-28 ([workers/](backend/properties-service/src/app/workers)).
 - `create_property` valida contra catalog que el barrio pertenece a la ciudad antes de persistir ([create_property.py:25-31](backend/properties-service/src/app/services/listing/use_cases/property_core/create_property.py#L25-L31)).
-- El servicio usa la imagen `postgis/postgis:17-master` para su DB `properties-ms-db` ([docker-compose.yml:41-42](docker-compose.yml#L41-L42)).
+- `properties-ms-db` se construye desde `infra/postgis`, cuyo `init.sql` crea la extension PostGIS ([infra/postgis/Dockerfile](infra/postgis/Dockerfile), [docker-compose.yml](docker-compose.yml)).

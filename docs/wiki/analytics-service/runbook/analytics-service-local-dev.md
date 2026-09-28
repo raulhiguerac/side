@@ -20,10 +20,10 @@ sources:
 
 ## TL;DR
 
-> **Actualizado 2026-09-07 — el arranque ya no es manual.** `make bootstrap && make up`
-> levanta los 21 servicios, aplica migraciones y siembra datos. Este runbook queda
-> como referencia de los detalles internos del servicio y de como correrlo a mano
-> cuando lo estas debuggeando. Ver [`README.md`](README.md) para el flujo normal.
+> **Actualizado 2026-09-27 — las apps vuelven a correrse a mano.** `make bootstrap && make up`
+> levanta solo la infra: los servicios de aplicacion y los seeds estan comentados en
+> `docker-compose.yml`, y cada server se arranca dentro del devcontainer. Este runbook
+> sirve de referencia para eso; ante diferencias, manda el [`README.md`](README.md).
 
 Flujo: abrir el repo en VS Code → "Reopen in Container" → docker-compose levanta toda la infra (Postgres por servicio + Keycloak + Redis + MinIO + MLflow). Después, **a mano**: `cd backend/analytics-service && uv sync && PYTHONPATH=src uv run uvicorn app.main:app --reload --port 8000`.
 
@@ -51,8 +51,8 @@ El servicio analytics **no está como service en el compose** — se corre manua
 |---|---|---|---|---|
 | `develop` | build local | 8000, 5173, 8080 | El devcontainer (tu shell) | n/a |
 | `users-ms-db` | postgres:17 | (interno) | DB de users-service | admin / admin |
-| `catalog-ms-db` | postgis/postgis:17-master | (interno) | DB de catalog-service | admin / admin |
-| `properties-ms-db` | postgis/postgis:17-master | (interno) | DB de properties-service | admin / admin |
+| `catalog-ms-db` | build `infra/postgis` | (interno) | DB de catalog-service | admin / admin |
+| `properties-ms-db` | build `infra/postgis` | (interno) | DB de properties-service | admin / admin |
 | `analytics-ms-db` | postgres:17 | (interno) | DB de analytics-service — `POSTGRES_DB: analytics-ms-db` | admin / admin |
 | `keycloak-db` | postgres:17 | (interno) | DB de Keycloak | keycloak / password |
 | `keycloak` | keycloak:26.4.7 | **8180** | IdP — admin UI en http://localhost:8180 | admin / admin |
@@ -190,4 +190,4 @@ docker compose down && docker volume rm side_keycloak-postgres-data
 - `api/deps/` tiene tres archivos: `auth.py` (JWT cookie → `get_current_principal`), `db.py` (session), `prediction.py` (model + UoW + UC); `__init__.py` vacío.
 - `UnauthorizedError` y `ForbiddenError` viven en `core/exceptions/auth.py`, no en `api/deps/auth.py` ([core/exceptions/auth.py](backend/analytics-service/src/app/core/exceptions/auth.py)).
 - El endpoint `POST /v1/predict` está activo desde 2026-05-20 — wired en `api/routes/predict.py` e incluido en `api/main.py`.
-- El devcontainer base es Ubuntu 22.04 + Node 20 + uv 0.5.21 + pnpm ([.devcontainer/Dockerfile](.devcontainer/Dockerfile)).
+- El devcontainer base es Ubuntu 22.04 + Node 24 + uv 0.5.21 + pnpm ([.devcontainer/Dockerfile](.devcontainer/Dockerfile)).

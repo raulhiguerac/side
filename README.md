@@ -18,9 +18,14 @@ make bootstrap                     # baja ~85 MB de R2: pbf, seeds y modelo AVM
 make up
 ```
 
-El primer arranque tarda **10-15 minutos**: construye cinco imágenes, reconstruye
-los grafos de ORS desde el `.pbf` (~2,5 min) y aplica migraciones y seeds. Los
+`make up` levanta la infra: bases, Keycloak, Redis, Kafka, SeaweedFS (S3), MLflow y
+ORS. El primer arranque reconstruye los grafos de ORS desde el `.pbf` (~2,5 min); los
 siguientes son de segundos.
+
+> **Por ahora las apps corren a mano en el devcontainer.** Los servicios de
+> aplicación y los seeds están comentados en `docker-compose.yml`: dentro del
+> devcontainer, cada servicio se migra con `alembic upgrade head` y se levanta con
+> uvicorn, y el front con `npm run serve`.
 
 ```bash
 make          # lista todos los comandos
@@ -38,11 +43,14 @@ credencial que baja los artefactos no puede vivir dentro de los artefactos.
 | `BREVO_API_KEY` | Brevo |
 | `VUE_APP_GMAPS_KEY` | Google Cloud Console |
 
-Todo lo demás —contraseñas de Postgres, secrets de Keycloak, claves de MinIO— es
+Todo lo demás —contraseñas de Postgres, secrets de Keycloak, claves S3— es
 determinista, vive en `backend/<servicio>/.env.dev` y está versionado a propósito:
 son valores de `localhost` y fijarlos es lo que hace el entorno reproducible.
 
 ## Qué corre y dónde
+
+Las apps responden en estas URLs cuando las levantás en el devcontainer (VS Code
+reenvía los puertos vía `forwardPorts`):
 
 | | URL | Credenciales |
 |---|---|---|
@@ -52,14 +60,16 @@ son valores de `localhost` y fijarlos es lo que hace el entorno reproducible.
 | analytics-service | http://localhost:8003/docs | |
 | frontend | http://localhost:8080 | |
 | Keycloak | http://localhost:8180 | `admin` / `admin` |
-| MinIO | http://localhost:9001 | `minioadmin` / `minioadmin` |
+| SeaweedFS (S3 en `:9000`) | http://localhost:8888 (UI del filer) | S3 admin: `minioadmin` / `minioadmin` |
 | MLflow | http://localhost:5050 | |
 | RedisInsight | http://localhost:5540 | |
 | ORS | http://localhost:8082/ors | |
 
 **Usuario de dev:** `dev@example.com` / `dev12345`, con rol `admin`. Lo crea
 `seed-dev-user` llamando al endpoint de registro real, así que su fila en
-`accounts` y su usuario de Keycloak comparten id.
+`accounts` y su usuario de Keycloak comparten id. Mientras los seeds estén
+comentados en el compose, `make seed` no funciona: los dumps y este usuario hay que
+cargarlos a mano.
 
 ## Qué vive en R2 y por qué
 

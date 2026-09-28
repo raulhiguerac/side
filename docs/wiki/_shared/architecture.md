@@ -1,7 +1,7 @@
 ---
 title: Arquitectura del monorepo
 status: draft
-last-verified: 2026-09-07
+last-verified: 2026-09-27
 owners: [_shared]
 related:
   - "[[glossary]]"
@@ -131,7 +131,7 @@ La config determinista de dev está versionada en `backend/<servicio>/.env.dev`;
 ## Claims
 
 - El backend está en `backend/<service>/` con un subdirectorio por microservicio.
-- Los cuatro microservicios y el frontend corren como services del compose con el código montado y hot-reload; su entrypoint aplica `alembic upgrade head` antes de arrancar ([docker-compose.yml](docker-compose.yml), [service-entrypoint.sh](infra/dev/service-entrypoint.sh)).
+- Los cuatro microservicios y el frontend están comentados en el compose y hoy se corren a mano en el devcontainer; al reactivarlos, su entrypoint aplica `alembic upgrade head` antes de arrancar ([docker-compose.yml](docker-compose.yml), [service-entrypoint.sh](infra/dev/service-entrypoint.sh)).
 - El frontend Vue vive en `frontend/`.
 - El training ML vive en `data/ml/AVM/`, fuera de `backend/`.
 - Cada servicio backend sigue el layout `src/app/{api,core,services/<domain>/{adapters,ports,schemas,use_cases},...}` (verificable comparando estructuras de `catalog-service` y `analytics-service`).

@@ -1,7 +1,7 @@
 ---
 title: ADR-0001 — PostGIS + h3 híbrido para spatial queries
 status: stable
-last-verified: 2026-07-18
+last-verified: 2026-09-27
 owners: [catalog-service]
 related:
   - "[[catalog-service-architecture]]"
@@ -47,7 +47,7 @@ Diseño híbrido:
 - ✅ **Cerrado 2026-06-23 para `get_location_by_point`**: el read path de `/geo-resolution/by-coordinates` ahora hace `WHERE h3_cells.any($h3_index) AND ST_Contains(geom, point)` primero (acota a 1-3 candidatos vecinos cuando la celda ya está poblada); si no hay candidatos (celda fría, nunca poblada), cae a un `ST_Contains` completo sobre todos los barrios con `geom`. Importante: el pre-filtro **nunca decide solo** — siempre se valida con `ST_Contains`, porque una celda h3 puede solapar 2 barrios cerca de un borde y el pre-filtro solo podía devolver el vecino equivocado.
 - ❌ **Sigue abierto para `get_neighborhood_by_coordinates`** (resolve-neighborhood por dirección, vía Mapbox forward geocode): sigue haciendo `ST_Contains` directo sin pre-filtro por `h3_cells`. No se tocó en este fix.
 - ❌ Cold start lento por barrio: la primera vez que un punto cae en un barrio, el `h3_cells` está `NULL` y cae al `ST_Contains` completo (más caro, pero correcto). El `background_tasks.add_task(poi_uc.execute, ...)` en `/by-coordinates` puebla la celda para la próxima request. Pre-fill batch sigue siendo mitigación posible si hace falta acelerar el primer hit.
-- ❌ Más deps (`geoalchemy2`, `h3`, `postgis/postgis:17-master` image) vs `postgres:17` plano.
+- ❌ Más deps (`geoalchemy2`, `h3`, una imagen de Postgres con PostGIS) vs `postgres:17` plano. Desde 2026-09-27 es una imagen propia (`infra/postgis`), porque `postgis/postgis` no publica arm64.
 
 ## Claims
 
@@ -60,4 +60,4 @@ Diseño híbrido:
 - `get_location_by_points` (batch, 2026-07-18) aplica el mismo patrón de dos pasadas (prefiltro h3 vía `unnest`+`LATERAL JOIN`, luego fallback sin prefiltro solo para los misses) en vez de N llamadas a `get_location_by_point` ([sql_georeferentiation_repository.py](backend/catalog-service/src/app/services/geo_resolution/adapters/sql/georeferentiation_repository.py)).
 - `BulkEnrichNeighborhoodGeometriesUseCase` y `EnrichNeighborhoodGeometryUseCase` precomputan `h3_cells` con `h3_cells_for_geojson()` al setear `geom`, además del lazy-fill vía `ResolvePoiUseCase` ([shared/helpers/geometry.py](backend/catalog-service/src/app/services/shared/helpers/geometry.py)).
 - `update_neighborhood_h3_cells` evita duplicados: `h3_cells = CASE WHEN h3_cells.any(h3_index) THEN h3_cells ELSE array_append(h3_cells, h3_index) END` ([sql/georeferentiation_repository.py:39-48](backend/catalog-service/src/app/services/geo_resolution/adapters/sql/georeferentiation_repository.py#L39-L48)).
-- catalog-service usa la imagen `postgis/postgis:17-master`; properties-service también la usa para su DB ([docker-compose.yml:31](docker-compose.yml#L31), [docker-compose.yml:42](docker-compose.yml#L42)).
+- `catalog-ms-db` y `properties-ms-db` se construyen desde `infra/postgis` (`postgres:17` + `postgresql-17-postgis-3`) ([infra/postgis/Dockerfile](infra/postgis/Dockerfile), [docker-compose.yml](docker-compose.yml)).

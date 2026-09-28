@@ -1,7 +1,7 @@
 ---
 title: Runbook — users-service local dev
 status: draft
-last-verified: 2026-09-07
+last-verified: 2026-09-27
 owners: [users-service]
 related:
   - "[[users-service]]"
@@ -13,10 +13,10 @@ sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md,
 
 ## TL;DR
 
-> **Actualizado 2026-09-07 — el arranque ya no es manual.** `make bootstrap && make up`
-> levanta los 21 servicios, aplica migraciones y siembra datos. Este runbook queda
-> como referencia de los detalles internos del servicio y de como correrlo a mano
-> cuando lo estas debuggeando. Ver [`README.md`](README.md) para el flujo normal.
+> **Actualizado 2026-09-27 — las apps vuelven a correrse a mano.** `make bootstrap && make up`
+> levanta solo la infra: los servicios de aplicacion y los seeds estan comentados en
+> `docker-compose.yml`, y cada server se arranca dentro del devcontainer. Este runbook
+> sirve de referencia para eso; ante diferencias, manda el [`README.md`](README.md).
 
 Workflow devcontainer-first como el resto. La infra (Keycloak + `users-ms-db` + Redis + MinIO) la levanta el compose. A mano: `cd backend/users-service && uv sync && migraciones + uvicorn`. **Keycloak debe estar configurado** con los dos clients (admin + auth) y sus secrets. El `.env.example` está casi completo, con dos trampas: la API key de Brevo y los dos secrets de Keycloak.
 
@@ -109,10 +109,11 @@ secrets en cada `up` con los valores de `backend/users-service/.env.dev`.
 
 ### Usuario semilla
 
-`keycloak-init` crea `dev@example.com` / `dev12345` con el rol de realm `admin`, porque el export
-excluye las cuentas humanas y un realm recien importado no tiene con quien loguearse. Solo dev:
-el realm no tiene password policy. Las credenciales se configuran en el bloque `environment` de
-`keycloak-init` en el compose.
+`seed-dev-user` crea `dev@example.com` / `dev12345` llamando a `POST /v1/auth/register` y le
+asigna el rol de realm `admin`, porque el export excluye las cuentas humanas y un realm recien
+importado no tiene con quien loguearse. Solo dev: el realm no tiene password policy. Las
+credenciales se configuran en el bloque `environment` de `seed-dev-user` en el compose, que hoy
+esta comentado junto con las apps: mientras tanto, el usuario se registra a mano.
 
 El password se setea con `--temporary=false`; sin eso Keycloak deja un `UPDATE_PASSWORD`
 pendiente y el password grant falla con `Account is not fully set up`.

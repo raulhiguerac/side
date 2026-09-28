@@ -44,6 +44,7 @@ variable es de la imagen de Bitnami, no de `minio/minio`.
 
 > **Enmienda 2026-09-27.** El storage pasó a SeaweedFS ([[adr-seaweedfs-dev-object-storage]]).
 > Usuarios y permisos ya no los reconcilia `minio-init`: se declaran en `infra/seaweedfs/s3.json`.
+> `seed-db` y `seed-dev-user` estan comentados en el compose mientras las apps corren en el devcontainer.
 
 ## Decision
 
@@ -96,7 +97,7 @@ en cada `up`, con `depends_on: service_completed_successfully` aguas abajo:
 ## Claims
 
 - `--import-realm` salta la importacion si el realm ya existe; el log de Keycloak lo registra como `Realm 'core' already exists. Import skipped`.
-- Los cinco one-shots son idempotentes y ninguno pisa datos existentes ([docker-compose.yml](docker-compose.yml), [infra/dev/](infra/dev)).
+- Los one-shots son idempotentes y ninguno pisa datos existentes; `seed-db` y `seed-dev-user` estan comentados en el compose ([docker-compose.yml](docker-compose.yml), [infra/dev/](infra/dev)).
 - `mlflow-init` no confia en el exit code de la copia: verifica con `rclone check --one-way` que cada artifact local este en S3 con el mismo tamaño y hash ([mlflow-init.sh](infra/dev/mlflow-init.sh)).
 - `minio-init` solo crea buckets; los usuarios S3 y sus permisos se declaran en `infra/seaweedfs/s3.json` ([docker-compose.yml](docker-compose.yml)).
 - `develop` declara `depends_on` con `service_completed_successfully` sobre `minio-init` y `keycloak-init` ([docker-compose.yml](docker-compose.yml)).

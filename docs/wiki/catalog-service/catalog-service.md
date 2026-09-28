@@ -1,7 +1,7 @@
 ---
 title: catalog-service
 status: draft
-last-verified: 2026-07-18
+last-verified: 2026-09-27
 owners: [catalog-service]
 related:
   - "[[architecture]]"
@@ -79,7 +79,7 @@ Beneficios: menos latencia, sin costo Mapbox en backend, sin cache de forward ge
 ## Stack
 
 - **FastAPI + Uvicorn** — HTTP layer
-- **SQLModel + Postgres + PostGIS** (imagen `postgis/postgis:17-master`) con `geoalchemy2`
+- **SQLModel + Postgres + PostGIS** (imagen propia `infra/postgis` (`postgres:17` + `postgresql-17-postgis-3`)) con `geoalchemy2`
 - **Redis** — caché de forward geocoding + caché + lock de POI fetch zones
 - **Mapbox** — forward geocoding (legacy en `resolve-neighborhood`)
 - **Overpass API** — POIs desde OpenStreetMap por bbox
@@ -114,7 +114,7 @@ Beneficios: menos latencia, sin costo Mapbox en backend, sin cache de forward ge
 - `require_admin` chequea `settings.ADMIN_ROLE in principal.roles` con `roles` extraídos de `realm_access.roles` del JWT ([api/deps/auth.py:99-104](backend/catalog-service/src/app/api/deps/auth.py#L99-L104)).
 - `/geo-resolution/resolve-neighborhood` dispara la población de POIs vía `BackgroundTasks.add_task(poi_uc.execute, ...)` fire-and-forget ([api/routes/geo_resolution.py:32-38](backend/catalog-service/src/app/api/routes/geo_resolution.py#L32-L38)).
 - `/geo-resolution/by-coordinates` dispara el background task de POIs desde 2026-06-11 ([api/routes/geo_resolution.py](backend/catalog-service/src/app/api/routes/geo_resolution.py#L43-L59)).
-- catalog-service y properties-service usan la imagen `postgis/postgis:17-master` en el `docker-compose.yml`; los Postgres de users-service y keycloak son `postgres:17` plano.
+- catalog-service y properties-service construyen su DB desde `infra/postgis` (`postgres:17` + PostGIS) en el `docker-compose.yml`; los Postgres de users-service, analytics-service y keycloak son `postgres:17` plano.
 - 6 routers, 22 endpoints en total al 2026-07-18 (contados directo de los decoradores `@router.get/post/patch` en `src/app/api/routes/*.py`: admin 11, countries 1, geo_resolution 4, health 1, localities 3, neighborhoods 2).
 - `POST /geo-resolution/by-coordinates/bulk` (agregado 2026-07-18) resuelve un lote de `{id, lat, lon}` en una sola respuesta, vía `BulkResolveLocationsByCoordinatesUseCase` + `get_location_by_points` (unnest + LATERAL JOIN) ([api/routes/geo_resolution.py](backend/catalog-service/src/app/api/routes/geo_resolution.py)).
 - `POST /geo-resolution/reachable-pois` está implementado y wireado end-to-end: `services/geo_resolution/use_cases/resolve_isochrone.py` + integración ORS en `integrations/georef/ors/routing.py` ([api/routes/geo_resolution.py:67-72](backend/catalog-service/src/app/api/routes/geo_resolution.py#L67-L72)).

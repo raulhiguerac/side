@@ -37,7 +37,7 @@ scrape) vivian solo en la maquina de desarrollo.
 
 | Categoria | Donde vive | Ejemplos |
 |---|---|---|
-| Config determinista de dev | git, en `backend/<svc>/.env.dev` | Contrasenas de Postgres, secrets de clientes Keycloak, claves de MinIO, hostnames, TTLs |
+| Config determinista de dev | git, en `backend/<svc>/.env.dev` | Contrasenas de Postgres, secrets de clientes Keycloak, claves S3, hostnames, TTLs |
 | Secretos que solo un humano aporta | `.env.local`, gitignoreado | Las 4 claves de R2 + Mapbox, Brevo, Google Maps |
 | Binarios y datos | Cloudflare R2, bajados por `make bootstrap` | `.pbf`, dumps de seed, modelo AVM |
 
