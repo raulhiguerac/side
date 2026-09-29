@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-08-09
+last-verified: 2026-09-28
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -41,6 +41,7 @@ sources:
   - ../../sources/frontend/2026-07-28-admin-panel-groundwork.md
   - ../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md
   - ../../sources/frontend/2026-08-01-admin-panel-tabs-moderation-preview.md
+  - ../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md
 ---
 
 ## TL;DR
@@ -58,7 +59,7 @@ frontend/
 │   ├── shims-vue.d.ts            # types para imports .vue
 │   ├── assets/                   # tailwind.css, logo, etc.
 │   ├── config/
-│   │   └── index.ts              # API.USERS_BASE_URL, CATALOG_BASE_URL, AVM_BASE_URL (port 8002), STORAGE_KEYS
+│   │   └── index.ts              # API.USERS_BASE_URL, CATALOG_BASE_URL, AVM_BASE_URL (port 8003), STORAGE_KEYS
 │   ├── router/
 │   │   ├── index.ts              # instancia router + beforeEach guard; importa 6 módulos
 │   │   └── routes/
@@ -119,7 +120,7 @@ frontend/
 │   │   │   ├── detail/PropertyDetailView   # /listing/:id
 │   │   │   └── edit/EditPropertyView       # /properties/:id/edit — ver [[frontend-property-edit-form]]
 │   │   ├── dev/{DevPlaygroundView, CreatePropertyDevView}  # sin auth, dev only
-│   │   └── admin/{AdminHomeView, properties/{AdminPropertiesLayout, moderation/AdminModerationView, promotions/{AdminPromotionsLayout, AdminPromotionsActiveView, AdminPromotionsCreateView}, imports/AdminImportsView}, catalog/AdminCatalogView}  # requiresAdmin — ver [[frontend-admin-panel]]
+│   │   └── admin/{AdminHomeView, properties/{AdminPropertiesLayout, moderation/AdminModerationView, promotions/{AdminPromotionsLayout, AdminPromotionsActiveView, AdminPromotionsCreateView}, imports/AdminImportsView}, catalog/{AdminCatalogView, neighborhoods/AdminNeighborhoodsView, localities/AdminLocalitiesView, divisions/AdminDivisionsView, countries/AdminCountriesView}}  # requiresAdmin — ver [[frontend-admin-panel]]
 │   └── components/
 │       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState, PrimaryButton, BaseTable}
 │       ├── onboarding/{IntentSelector, LocalitySelector, NeighborhoodSelector, PropertyTypeSelector}
@@ -381,8 +382,8 @@ devServer: {
   proxy: {
     "/api/users":      { target: "http://localhost:8000", changeOrigin: true, pathRewrite: { "^/api/users": "" } },
     "/api/catalog":    { target: "http://localhost:8001", changeOrigin: true, pathRewrite: { "^/api/catalog": "" } },
-    "/api/avm":        { target: "http://localhost:8002", changeOrigin: true, pathRewrite: { "^/api/avm": "" } },
-    "/api/properties": { target: "http://localhost:8003", changeOrigin: true, pathRewrite: { "^/api/properties": "" } },
+    "/api/avm":        { target: "http://localhost:8003", changeOrigin: true, pathRewrite: { "^/api/avm": "" } },
+    "/api/properties": { target: "http://localhost:8002", changeOrigin: true, pathRewrite: { "^/api/properties": "" } },
   }
 }
 ```

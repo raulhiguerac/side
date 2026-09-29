@@ -1,7 +1,7 @@
 ---
 title: Runbook — frontend local dev
 status: draft
-last-verified: 2026-09-27
+last-verified: 2026-09-28
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -13,6 +13,7 @@ sources:
   - ../../../sources/frontend/2026-06-28-devcontainer-proxy-chrome-fix.md
   - ../../../sources/frontend/2026-07-13-vscode-port-forwarding-breaks-requests.md
   - ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md
+  - ../../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md
 ---
 
 ## TL;DR
@@ -69,8 +70,8 @@ Las vars `VUE_APP_*_URL` son **opcionales en dev** — si no están seteadas, `c
 # Solo necesarias para staging/prod o para apuntar a un backend remoto:
 VUE_APP_USERS_URL=http://localhost:8000
 VUE_APP_CATALOG_URL=http://localhost:8001
-VUE_APP_AVM_URL=http://localhost:8002
-VUE_APP_PROPERTIES_URL=http://localhost:8003
+VUE_APP_AVM_URL=http://localhost:8003
+VUE_APP_PROPERTIES_URL=http://localhost:8002
 VUE_APP_IPAPI_URL=https://ipapi.co/json/
 ```
 
@@ -143,9 +144,11 @@ cd /workspace/frontend
 npm run build
 ```
 
-Salida: `dist/` con assets estáticos. Deploy planeado en bucket público (ver [[adr-hash-history-static-hosting]]).
+Salida: `dist/` con assets estáticos. Deploy planeado en bucket público (ver [[adr-hash-history-static-hosting]]). **Update 2026-09-28:** el destino no está definido. La alternativa en exploración es servir `dist/` desde el clúster de `infra/k8s`, con `/api/*` en el Gateway; si se elige, ese ADR queda superseded.
 
-**Sin pipeline de CI/CD configurado al 2026-05-21** — el build se hace a mano cuando toque deployar.
+⚠️ **Hoy `npm run build` falla**: `vue-cli-service build` corre ESLint y aborta ([[open-items]]).
+
+**Sin pipeline de CI/CD al 2026-09-28**: no existe `.github/workflows`, así que ni lint, ni typecheck, ni build corren solos.
 
 ## Linting
 
@@ -157,12 +160,13 @@ Configurado con ESLint + `@vue/eslint-config-typescript` + Prettier. Hay un `.es
 
 ## Tests
 
-**Sin tooling de tests configurado al 2026-05-21**:
+**Sin tooling de tests ni de typecheck al 2026-09-28**:
 - No `vitest` ni `@vue/test-utils` en `devDependencies`.
+- No `vue-tsc`: nada chequea tipos fuera del editor.
 - No directorio `tests/` ni `__tests__/`.
 - No script `test` en `package.json`.
 
-Worth flag para cuando se priorice testing — gap conocido.
+El camino propuesto (Vite antes que Vitest, tests en composables y utils, CI por PR) está en [[open-items]], en "Camino del front a production grade".
 
 ## Known gaps (actualizado 2026-06-28)
 

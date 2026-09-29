@@ -1,14 +1,14 @@
 ---
 title: frontend
 status: draft
-last-verified: 2026-07-29
+last-verified: 2026-09-28
 owners: [frontend]
 related:
   - "[[architecture]]"
   - "[[frontend-architecture]]"
   - "[[frontend-onboarding-flow]]"
   - "[[frontend-local-dev]]"
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md, ../../sources/frontend/2026-06-20-property-detail-view-refactor.md, ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md, ../../sources/frontend/2026-06-28-endpoint-coverage-and-stepimages.md, ../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md, ../../sources/frontend/2026-06-20-property-detail-view-refactor.md, ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md, ../../sources/frontend/2026-06-28-endpoint-coverage-and-stepimages.md, ../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md, ../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md]
 ---
 
 ## TL;DR
@@ -101,7 +101,8 @@ Detalle de cada patrón en [[frontend-architecture]].
 
 - [x] **Remover Firebase** ✅ resuelto 2026-07-28 — dep, imports y handler fuera; botones comentados a la espera de Keycloak Brokering. El cleanup del endpoint backend no hizo falta: `/v1/auth/login/google` nunca existió. Ver [[adr-firebase-removal]].
 - [x] **Centralizar axios** ✅ resuelto 2026-06-28 — instancias dedicadas por servicio + interceptor silent refresh + webpack proxy. Ver [[frontend-architecture]].
-- [ ] **Vite migration** — post-cierre de todos los microservicios backend.
+- [ ] **Vite migration** — post-cierre de todos los microservicios backend ([[adr-vue-cli-deferred-vite-migration]]). Propuesta 2026-09-28: adelantarla como paso previo a los tests, ver [[open-items]].
+- [ ] **Production grade** — tests, typecheck, CI, build verde y entrega. Plan en 7 pasos en [[open-items]].
 - [ ] **Cerrar CORS** en backends pre-producción — hoy `allow_origins=["*"]` en catalog.
 - [ ] **Implementar `/v1/properties/mine`** en properties-service para activar `/properties` end-to-end.
 - [ ] **Error handling robusto** en `LoginView` / `RegisterView` (hoy mensaje genérico).
@@ -134,4 +135,4 @@ Detalle de cada patrón en [[frontend-architecture]].
 - `vue.config.js` reconoce que Vue CLI está en maintenance ("Vue CLI is in maintenance mode") ([vue.config.js:13](frontend/vue.config.js#L13)).
 - Onboarding tiene 4 pasos definidos en `useOnboarding.ts` (`STEP_MAP`): intent, city, neighborhood, property_type ([composables/useOnboarding.ts:11-16](frontend/src/composables/useOnboarding.ts#L11-L16)).
 - CORS del backend hoy está `allow_origins=["*"]` (catalog-service), temporal pre-producción ([backend/catalog-service/src/app/main.py:18-23](backend/catalog-service/src/app/main.py#L18-L23)).
-- El feed de propiedades en `/properties` consume `GET /v1/search/feed` (properties-service puerto 8003) con `paramsSerializer: { indexes: null }` para evitar bracket notation que FastAPI no parsea ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
+- El feed de propiedades en `/properties` consume `GET /v1/search/feed` (properties-service puerto 8002) con `paramsSerializer: { indexes: null }` para evitar bracket notation que FastAPI no parsea ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
