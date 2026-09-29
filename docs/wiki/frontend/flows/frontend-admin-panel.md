@@ -1,7 +1,7 @@
 ---
 title: Panel admin (frontend)
 status: draft
-last-verified: 2026-08-24
+last-verified: 2026-09-28
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -19,6 +19,9 @@ related:
   - "[[adr-transitions-served-by-backend]]"
   - "[[adr-promotions-own-subtab]]"
   - "[[adr-admin-filters-in-query-params]]"
+  - "[[adr-mapbox-geocoding-leaflet-rendering]]"
+  - "[[catalog-service-catalog-admin]]"
+  - "[[catalog-service-geo-catalog]]"
   - "[[open-items]]"
 sources:
   - ../../../sources/frontend/2026-07-16-admin-panel-nav-and-hub.md
@@ -31,6 +34,8 @@ sources:
   - ../../../sources/frontend/2026-08-09-moderation-wiring-and-promotions-shell.md
   - ../../../sources/frontend/2026-08-09-promotions-tab-wired.md
   - ../../../sources/frontend/2026-08-24-admin-url-filters-and-imports-tab.md
+  - ../../../sources/frontend/2026-09-28-admin-catalog-geometry-design.md
+  - ../../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md
 ---
 
 ## TL;DR
@@ -64,7 +69,11 @@ Se eligió primer nivel sobre el dropdown porque la moderación se espera que se
 | `/admin/properties/promotions` (`path: ""`) | `admin-properties-promotions` | `promotions/AdminPromotionsActiveView.vue` |
 | `/admin/properties/promotions/new` | `admin-properties-promotions-new` | `promotions/AdminPromotionsCreateView.vue` |
 | `/admin/properties/imports` | `admin-properties-imports` | `imports/AdminImportsView.vue` |
-| `/admin/catalog` | `admin-catalog` | `views/admin/catalog/AdminCatalogView.vue` |
+| `/admin/catalog` | — | `views/admin/catalog/AdminCatalogView.vue` (padre con tabs) |
+| `/admin/catalog` (`path: ""`) | `admin-catalog` | `neighborhoods/AdminNeighborhoodsView.vue` |
+| `/admin/catalog/localities` | `admin-catalog-localities` | `localities/AdminLocalitiesView.vue` |
+| `/admin/catalog/admin-divisions` | `admin-catalog-admin-divisions` | `divisions/AdminDivisionsView.vue` |
+| `/admin/catalog/countries` | `admin-catalog-countries` | `countries/AdminCountriesView.vue` |
 
 `home.ts`/`properties.ts`/`catalog.ts` se combinan en un barrel `index.ts` (`adminRoutes`) importado en `router/index.ts`.
 
@@ -294,10 +303,35 @@ El total volvió a 23 con el `GET /admin/properties/bulk` nuevo ([[properties-se
 
 Tampoco hay módulo de API admin. Se evaluó crear `src/api/adminApi.ts` y **se descartó**: las instancias de axios del proyecto son una por servicio, y "admin" no es un servicio — los endpoints admin viven en properties y en catalog. En su lugar la ruta se agregó a `constants/propertiesEndpoints.ts` y el fetch vive en el composable, que es el patrón que ya usan `useFeed` y `useProfileListings`.
 
+## Sección de catálogo — diseño (2026-09-28)
+
+**Update 2026-09-28 — tabs montadas.** `AdminCatalogView.vue` ya funciona como layout: título, `AdminTabsNav` y `RouterView`. Tiene cuatro rutas hijas, con los mismos nombres de recurso que el backend. `admin-catalog` pasó al hijo por defecto (Barrios), así que la card del hub no cambió. Cada tab es un `EmptyState` hasta que exista el read path admin. El archivo conserva su nombre aunque sea un layout; alinearlo a `AdminCatalogLayout.vue` es opcional.
+
+Con lo pendiente de propiedades bloqueado por backend (precios estimados, relanzar job, CSV de errores), catálogo es lo siguiente. El boceto reusa `AdminSplitView`:
+
+- **Tabs** Barrios · Localidades · Divisiones · Países.
+- **Filtros en cascada** país → división → localidad, más estado, "tiene geometría" y búsqueda.
+- **Tabla de barrios**: silueta del polígono (o un placeholder "sin geometría"), nombre, código y estado, con una barra de cobertura encima ("38 de 42 con geometría").
+- **Panel**: el polígono sobre el mapa base con los vecinos atenuados, área, número de vértices, centroide, aviso de superposición y las acciones editar / reemplazar geometría / desactivar.
+- **Acciones bulk** (CSV de barrios, GeoJSON de geometrías) visibles solo con una localidad elegida. Resuelve la UX que quedó pendiente porque el bulk de catálogo necesita `locality_id` (ver "Acciones rápidas").
+
+**Visualización.** El admin valida polígonos (forma, ubicación, superposiciones, huecos), y eso pide 2D con mapa base:
+
+- la silueta de la fila con **d3-geo** (`geoPath` + `fitSize`), que sirve también para la miniatura que le falta a la tabla de propiedades;
+- el panel con **Leaflet**, que ya está instalado.
+
+d3 no está en el repo ([[adr-mapbox-geocoding-leaflet-rendering]]), así que habría que agregar solo `d3-geo`. **El 3D queda descartado para el admin** porque la perspectiva deforma justo los bordes que se comparan. Queda para un dashboard analítico (extrusión por precio/m² o cantidad de listings) con MapLibre `fill-extrusion` o deck.gl.
+
+**Bloqueo de backend.** Catalog no tiene read path admin. Sus endpoints admin son todos de escritura, los `GET` públicos esconden lo inactivo y ninguno devuelve la geometría ([[catalog-service-catalog-admin]], [[catalog-service-geo-catalog]]). Falta un `GET` admin paginado que incluya inactivos, con un FeatureCollection GeoJSON simplificado por localidad ([[open-items]]).
+
+**Catálogo sería la quinta copia del esqueleto admin**, y su jerarquía no se parece a la tabla con preview de moderación: la forma de la sección se decide antes de copiar (ver [[open-items]]).
+
+Preguntas abiertas: navegar por filtros en cascada o entrar desde un mapa de la ciudad, y si el aviso de superposición entra en la primera iteración.
+
 ## Decisiones diferidas
 
 - **Roles admin granulares** (super-admin / catalog-admin / properties-admin): descartado por prematuro — sin evidencia de necesitarlo, y el diseño de roles de Keycloak (lista de strings) lo hace barato de agregar después. Importante: no sería un cambio solo de `users-service` — `catalog-service` y `properties-service` cada uno valida su propio `require_admin` contra su propio JWT.
-- **KPIs reales, gráficos**: bloqueado en tener endpoints de conteo reales. D3 (ya usado en el mapa) probablemente sea excesivo para indicadores simples de tendencia — se reservaría para analítica real con series/multi-dimensión.
+- **KPIs reales, gráficos**: bloqueado en tener endpoints de conteo reales. D3 —que no está instalado, ver [[adr-mapbox-geocoding-leaflet-rendering]]— probablemente sea excesivo para indicadores simples de tendencia — se reservaría para analítica real con series/multi-dimensión.
 
 ## Claims
 
@@ -356,3 +390,8 @@ Tampoco hay módulo de API admin. Se evaluó crear `src/api/adminApi.ts` y **se 
 - `BulkJobRow` declara `error_count` y no un array de errores ([types/admin.ts](frontend/src/types/admin.ts)).
 - El botón de relanzar de `AdminBulkJobPanel` no tiene handler: se deshabilita si el job está `pending` o si `expires_at` ya pasó ([AdminBulkJobPanel.vue](frontend/src/components/admin/properties/imports/AdminBulkJobPanel.vue)).
 - `AdminImportsView` ya no monta el empty state fijo: renderiza `AdminSplitView` con la tabla de corridas ([AdminImportsView.vue](frontend/src/views/admin/properties/imports/AdminImportsView.vue)).
+- `BulkUploadPropertiesModal.vue` escribe a mano los paths `/v1/admin/properties/bulk/upload-url` y `/v1/admin/properties/bulk` en vez de tomarlos de `PROPERTIES_ENDPOINTS` ([BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/imports/BulkUploadPropertiesModal.vue), [propertiesEndpoints.ts](frontend/src/constants/propertiesEndpoints.ts)).
+- `/admin/catalog` es una ruta padre sin `name` con cuatro hijos (`""`, `localities`, `admin-divisions`, `countries`), el `name` `admin-catalog` vive en el hijo por defecto, y solo el padre declara `meta: { requiresAuth: true, requiresAdmin: true }` ([router/routes/admin/catalog.ts](frontend/src/router/routes/admin/catalog.ts)).
+- `AdminCatalogView.vue` monta `AdminTabsNav` con las tabs Barrios, Localidades, Divisiones y Países, y un `RouterView` ([AdminCatalogView.vue](frontend/src/views/admin/catalog/AdminCatalogView.vue)).
+- Las cuatro vistas de catálogo solo renderizan `EmptyState`; ninguna llama a la API ([views/admin/catalog/](frontend/src/views/admin/catalog)).
+- `package.json` del frontend no declara `d3` ni `d3-geo` ([package.json](frontend/package.json)).
