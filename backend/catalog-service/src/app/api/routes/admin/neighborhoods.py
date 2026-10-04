@@ -1,13 +1,17 @@
 import json
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 
 from app.api.deps.catalog_admin.neighborhoods import (
     bulk_create_neighborhoods_uc,
     bulk_enrich_neighborhood_geometries_uc,
     create_neighborhood_uc,
     enrich_neighborhood_geometry_uc,
+    get_neighborhood_detail_uc,
+    list_neighborhood_geometries_uc,
+    list_neighborhoods_uc,
     update_neighborhood_uc,
 )
 from app.api.deps.upload_validation import (
@@ -20,7 +24,12 @@ from app.services.catalog_admin.schemas.neighborhood import (
     BulkCreateNeighborhoodsResult,
     BulkEnrichNeighborhoodGeometriesResult,
     CreateNeighborhoodRequest,
+    ListNeighborhoodGeometriesRequest,
+    ListNeighborhoodsAdminRequest,
+    NeighborhoodAdminDetail,
+    NeighborhoodAdminPage,
     NeighborhoodAdminResponse,
+    NeighborhoodGeometryItem,
     UpdateNeighborhoodRequest,
 )
 from app.services.catalog_admin.use_cases.neighborhood.bulk_create import (
@@ -35,11 +44,44 @@ from app.services.catalog_admin.use_cases.neighborhood.create import (
 from app.services.catalog_admin.use_cases.neighborhood.enrich_geometry import (
     EnrichNeighborhoodGeometryUseCase,
 )
+from app.services.catalog_admin.use_cases.neighborhood.get_detail import (
+    GetNeighborhoodDetailUseCase,
+)
+from app.services.catalog_admin.use_cases.neighborhood.list_all import (
+    ListNeighborhoodsUseCase,
+)
+from app.services.catalog_admin.use_cases.neighborhood.list_geometries import (
+    ListNeighborhoodGeometriesUseCase,
+)
 from app.services.catalog_admin.use_cases.neighborhood.update import (
     UpdateNeighborhoodUseCase,
 )
 
 router = APIRouter()
+
+
+@router.get("/neighborhoods", response_model=NeighborhoodAdminPage)
+async def list_neighborhoods(
+    req: ListNeighborhoodsAdminRequest = Depends(),
+    uc: ListNeighborhoodsUseCase = Depends(list_neighborhoods_uc),
+) -> NeighborhoodAdminPage:
+    return await uc.execute(req=req)
+
+
+@router.get("/neighborhoods/geometries", response_model=list[NeighborhoodGeometryItem])
+async def list_neighborhood_geometries(
+    req: Annotated[ListNeighborhoodGeometriesRequest, Query()],
+    uc: ListNeighborhoodGeometriesUseCase = Depends(list_neighborhood_geometries_uc),
+) -> list[NeighborhoodGeometryItem]:
+    return await uc.execute(req=req)
+
+
+@router.get("/neighborhoods/{neighborhood_id}", response_model=NeighborhoodAdminDetail)
+async def get_neighborhood_detail(
+    neighborhood_id: uuid.UUID,
+    uc: GetNeighborhoodDetailUseCase = Depends(get_neighborhood_detail_uc),
+) -> NeighborhoodAdminDetail:
+    return await uc.execute(neighborhood_id=neighborhood_id)
 
 
 @router.post("/neighborhoods", response_model=NeighborhoodAdminResponse, status_code=201)

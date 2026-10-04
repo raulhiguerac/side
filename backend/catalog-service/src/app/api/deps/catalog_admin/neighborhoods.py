@@ -15,10 +15,37 @@ from app.services.catalog_admin.use_cases.neighborhood.create import (
 from app.services.catalog_admin.use_cases.neighborhood.enrich_geometry import (
     EnrichNeighborhoodGeometryUseCase,
 )
+from app.services.catalog_admin.use_cases.neighborhood.get_detail import (
+    GetNeighborhoodDetailUseCase,
+)
+from app.services.catalog_admin.use_cases.neighborhood.list_all import (
+    ListNeighborhoodsUseCase,
+)
+from app.services.catalog_admin.use_cases.neighborhood.list_geometries import (
+    ListNeighborhoodGeometriesUseCase,
+)
 from app.services.catalog_admin.use_cases.neighborhood.update import (
     UpdateNeighborhoodUseCase,
 )
 from app.services.shared.ports.cache import CachePort
+
+
+def list_neighborhoods_uc(
+    uow: CatalogAdminUnitOfWork = Depends(get_uow),
+) -> ListNeighborhoodsUseCase:
+    return ListNeighborhoodsUseCase(uow=uow)
+
+
+def list_neighborhood_geometries_uc(
+    uow: CatalogAdminUnitOfWork = Depends(get_uow),
+) -> ListNeighborhoodGeometriesUseCase:
+    return ListNeighborhoodGeometriesUseCase(uow=uow)
+
+
+def get_neighborhood_detail_uc(
+    uow: CatalogAdminUnitOfWork = Depends(get_uow),
+) -> GetNeighborhoodDetailUseCase:
+    return GetNeighborhoodDetailUseCase(uow=uow)
 
 
 def create_neighborhood_uc(
