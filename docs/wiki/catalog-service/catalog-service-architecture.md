@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna de catalog-service
 status: stable
-last-verified: 2026-07-13
+last-verified: 2026-10-04
 owners: [catalog-service]
 related:
   - "[[architecture]]"
@@ -11,12 +11,12 @@ related:
   - "[[adr-poi-cache-aside]]"
   - "[[adr-isochrone-ors-h3]]"
   - "[[adr-geospatial-feature-engineering]]"
-sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md]
+sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md]
 ---
 
 ## TL;DR
 
-Hex pattern estándar del backend con **3 dominios activos** (vs el mono-dominio de [[analytics-service]]): `catalog_admin` (writes admin), `geo_catalog` (reads frontend), `geo_resolution` (providers + reverse geocoding). Cache layer compartido (`CachePort` + `RedisCacheAdapter`) en `services/shared/`. Postgres con [[glossary#postgis]] para spatial. Auth via **cookie** `access_token` JWT validado contra JWKS de Keycloak (patrón distinto al de analytics, que usa header).
+Hex pattern estándar del backend con **3 dominios activos** (vs el mono-dominio de [[analytics-service]]): `catalog_admin` (writes + reads admin), `geo_catalog` (reads frontend), `geo_resolution` (providers + reverse geocoding). Cache layer compartido (`CachePort` + `RedisCacheAdapter`) en `services/shared/`. Postgres con [[glossary#postgis]] para spatial. Auth via **cookie** `access_token` JWT validado contra JWKS de Keycloak (patrón distinto al de analytics, que usa header).
 
 ## Layout
 
@@ -26,7 +26,7 @@ src/app/
 │   ├── deps/
 │   │   ├── auth.py             # get_current_principal, require_admin, jwks_client global
 │   │   ├── db.py
-│   │   ├── catalog_admin.py    # DI factories para los UCs de catalog_admin
+│   │   ├── catalog_admin/      # DI por entidad (countries, admin_divisions, localities, neighborhoods) + uow.py
 │   │   ├── geo_catalog.py      # DI factories para los UCs de geo_catalog
 │   │   ├── geo_resolution.py   # DI factories para los UCs de geo_resolution
 │   │   └── upload_validation.py
@@ -40,7 +40,7 @@ src/app/
 │       ├── localities.py
 │       ├── neighborhoods.py
 │       ├── geo_resolution.py
-│       └── admin.py
+│       └── admin/              # __init__ monta /admin + require_admin; un subrouter por entidad
 ├── core/
 │   ├── config/settings.py      # DB, Redis, Keycloak, cache TTLs, h3 res, Overpass timeout
 │   ├── exceptions/             # base, cache, catalog_admin, geo_catalog, geo_resolution, validation
@@ -57,7 +57,7 @@ src/app/
 │   └── location.py             # Country, AdminDivision, Locality, Neighborhood, POI, FetchZone
 ├── schemas/                    # principal, base DTOs
 ├── services/
-│   ├── catalog_admin/          # writes + bulk uploads
+│   ├── catalog_admin/          # writes, bulk uploads y reads admin
 │   ├── geo_catalog/            # reads frontend
 │   ├── geo_resolution/         # reverse + POI population
 │   └── shared/                 # CachePort + RedisCacheAdapter + helpers
@@ -68,12 +68,13 @@ Reglas comunes ya documentadas en [[architecture]] — hex pattern, ports como `
 
 ## Dominio `catalog_admin`
 
-Writes al catálogo. UCs por entidad + bulk uploads:
+Writes al catálogo y reads admin de barrios. Los UCs viven en una carpeta por entidad (`use_cases/{country,admin_division,locality,neighborhood}/`), igual que rutas y DI:
 
 | Pieza | Archivos |
 |---|---|
-| UCs CRUD | `create_country`, `update_country`, `create_admin_division`, `update_admin_division`, `create_locality`, `update_locality`, `create_neighborhood`, `update_neighborhood` |
-| UCs bulk | `bulk_create_neighborhoods` (CSV), `bulk_enrich_neighborhood_geometries` (GeoJSON FeatureCollection), `enrich_neighborhood_geometry` (single GeoJSON) |
+| UCs CRUD | `{country,admin_division,locality,neighborhood}/{create,update}.py` |
+| UCs bulk | `neighborhood/bulk_create.py` (CSV), `neighborhood/bulk_enrich_geometries.py` (GeoJSON FeatureCollection), `neighborhood/enrich_geometry.py` (single GeoJSON) |
+| UCs reads admin | `neighborhood/list_all.py`, `neighborhood/get_detail.py`, `neighborhood/list_geometries.py` (sin cache) |
 | Ports | `country_repository`, `admin_division_repository`, `locality_repository`, `neighborhood_repository`, `unit_of_work` |
 | Adapters SQL | `sql_country_repository`, `sql_admin_division_repository`, `sql_locality_repository`, `sql_neighborhood_repository`, `sql_unit_of_work` |
 | Helpers | `file_parser.NeighborhoodFileParser` (parsea CSV), `db_error_translator` (mapea errores SQL a errores de dominio) |

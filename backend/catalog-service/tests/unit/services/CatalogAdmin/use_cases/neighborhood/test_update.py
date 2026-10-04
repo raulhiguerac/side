@@ -1,10 +1,19 @@
 import uuid
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.core.exceptions.catalog_admin import NeighborhoodAdminNotFoundError, NeighborhoodConflictError
-from app.services.catalog_admin.schemas.neighborhood import UpdateNeighborhoodRequest, NeighborhoodAdminResponse
-from app.services.catalog_admin.use_cases.update_neighborhood import UpdateNeighborhoodUseCase
+import pytest
+
+from app.core.exceptions.catalog_admin import (
+    NeighborhoodAdminNotFoundError,
+    NeighborhoodConflictError,
+)
+from app.services.catalog_admin.schemas.neighborhood import (
+    NeighborhoodAdminResponse,
+    UpdateNeighborhoodRequest,
+)
+from app.services.catalog_admin.use_cases.neighborhood.update import (
+    UpdateNeighborhoodUseCase,
+)
 
 LOCALITY_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 NEIGHBORHOOD_ID = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
@@ -50,8 +59,8 @@ def uc(mock_uow, mock_cache):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.update_neighborhood.geom_to_geojson", return_value=None)
-@patch("app.services.catalog_admin.use_cases.update_neighborhood.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.update.geom_to_geojson", return_value=None)
+@patch("app.services.catalog_admin.use_cases.neighborhood.update.run_in_threadpool")
 async def test_updates_neighborhood_caches_and_invalidates_list(mock_run, _mock_geom, uc, mock_uow, mock_cache):
     neighborhood = _make_db_neighborhood()
     mock_run.return_value = neighborhood
@@ -66,8 +75,8 @@ async def test_updates_neighborhood_caches_and_invalidates_list(mock_run, _mock_
 
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.update_neighborhood.geom_to_geojson", return_value=None)
-@patch("app.services.catalog_admin.use_cases.update_neighborhood.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.update.geom_to_geojson", return_value=None)
+@patch("app.services.catalog_admin.use_cases.neighborhood.update.run_in_threadpool")
 async def test_normalizes_search_name_when_name_updated(mock_run, _mock_geom, uc, mock_uow, mock_cache):
     neighborhood = _make_db_neighborhood()
     mock_run.return_value = neighborhood
@@ -82,7 +91,7 @@ async def test_normalizes_search_name_when_name_updated(mock_run, _mock_geom, uc
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.update_neighborhood.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.update.run_in_threadpool")
 async def test_raises_not_found_when_neighborhood_missing(mock_run, uc, mock_uow):
     mock_run.return_value = None
 
@@ -97,8 +106,8 @@ async def test_raises_not_found_when_neighborhood_missing(mock_run, uc, mock_uow
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.update_neighborhood.translate_db_error")
-@patch("app.services.catalog_admin.use_cases.update_neighborhood.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.update.translate_db_error")
+@patch("app.services.catalog_admin.use_cases.neighborhood.update.run_in_threadpool")
 async def test_rolls_back_and_raises_on_db_error(mock_run, mock_translate, uc, mock_uow, mock_cache):
     mock_run.return_value = _make_db_neighborhood()
     mock_uow.commit.side_effect = Exception("unique constraint")
@@ -116,8 +125,8 @@ async def test_rolls_back_and_raises_on_db_error(mock_run, mock_translate, uc, m
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.update_neighborhood.geom_to_geojson", return_value=None)
-@patch("app.services.catalog_admin.use_cases.update_neighborhood.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.update.geom_to_geojson", return_value=None)
+@patch("app.services.catalog_admin.use_cases.neighborhood.update.run_in_threadpool")
 async def test_survives_cache_failure(mock_run, _mock_geom, uc, mock_uow, mock_cache):
     mock_run.return_value = _make_db_neighborhood()
     mock_cache.set_json.side_effect = Exception("Redis down")

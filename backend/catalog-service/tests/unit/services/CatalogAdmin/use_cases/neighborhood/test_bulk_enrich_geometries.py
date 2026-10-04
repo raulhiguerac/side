@@ -1,9 +1,14 @@
 import uuid
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.services.catalog_admin.schemas.neighborhood import BulkEnrichNeighborhoodGeometriesResult
-from app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries import BulkEnrichNeighborhoodGeometriesUseCase
+import pytest
+
+from app.services.catalog_admin.schemas.neighborhood import (
+    BulkEnrichNeighborhoodGeometriesResult,
+)
+from app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries import (
+    BulkEnrichNeighborhoodGeometriesUseCase,
+)
 
 LOCALITY_ID = uuid.UUID("c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a33")
 
@@ -84,7 +89,7 @@ async def test_returns_zero_when_features_lack_name_field(uc, mock_uow):
 
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.run_in_threadpool")
 async def test_returns_zero_matched_when_no_db_match(mock_run, uc, mock_uow):
     mock_run.return_value = []  # DB no encontró ninguno
 
@@ -101,9 +106,9 @@ async def test_returns_zero_matched_when_no_db_match(mock_run, uc, mock_uow):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.h3_cells_for_geojson")
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.geom_from_geojson")
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.h3_cells_for_geojson")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.geom_from_geojson")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.run_in_threadpool")
 async def test_full_match_updates_and_commits(mock_run, mock_geom, mock_h3, uc, mock_uow, mock_cache):
     mock_geom.return_value = MagicMock()
     mock_h3.return_value = ["89283082803ffff"]
@@ -125,9 +130,9 @@ async def test_full_match_updates_and_commits(mock_run, mock_geom, mock_h3, uc, 
 
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.h3_cells_for_geojson")
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.geom_from_geojson")
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.h3_cells_for_geojson")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.geom_from_geojson")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.run_in_threadpool")
 async def test_partial_match_reports_unmatched(mock_run, mock_geom, mock_h3, uc, mock_uow, mock_cache):
     mock_geom.return_value = MagicMock()
     mock_h3.return_value = []
@@ -146,9 +151,9 @@ async def test_partial_match_reports_unmatched(mock_run, mock_geom, mock_h3, uc,
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.h3_cells_for_geojson")
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.geom_from_geojson")
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.h3_cells_for_geojson")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.geom_from_geojson")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.run_in_threadpool")
 async def test_invalidates_cache_for_each_matched_neighborhood(mock_run, mock_geom, mock_h3, uc, mock_uow, mock_cache):
     mock_geom.return_value = MagicMock()
     mock_h3.return_value = []
@@ -169,9 +174,9 @@ async def test_invalidates_cache_for_each_matched_neighborhood(mock_run, mock_ge
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.h3_cells_for_geojson")
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.geom_from_geojson")
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.h3_cells_for_geojson")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.geom_from_geojson")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.run_in_threadpool")
 async def test_uses_custom_name_field(mock_run, mock_geom, mock_h3, uc, mock_uow, mock_cache):
     """IDECA usa SCANOMBRE en vez de name."""
     mock_geom.return_value = MagicMock()
@@ -198,9 +203,9 @@ async def test_uses_custom_name_field(mock_run, mock_geom, mock_h3, uc, mock_uow
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.h3_cells_for_geojson")
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.geom_from_geojson")
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.h3_cells_for_geojson")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.geom_from_geojson")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.run_in_threadpool")
 async def test_normalizes_accents_before_lookup(mock_run, mock_geom, mock_h3, uc, mock_uow, mock_cache):
     """'Usaquén' y 'usaquen' deben considerarse el mismo nombre."""
     mock_geom.return_value = MagicMock()
@@ -228,7 +233,7 @@ async def test_normalizes_accents_before_lookup(mock_run, mock_geom, mock_h3, uc
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.bulk_enrich_neighborhood_geometries.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_enrich_geometries.run_in_threadpool")
 async def test_deduplicates_features_with_same_name(mock_run, uc, mock_uow):
     geojson = {
         "features": [

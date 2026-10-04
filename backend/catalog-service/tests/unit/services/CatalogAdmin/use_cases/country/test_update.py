@@ -1,10 +1,14 @@
 import uuid
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.core.exceptions.catalog_admin import CountryNotFoundError, CountryConflictError
-from app.services.catalog_admin.schemas.country import UpdateCountryRequest, CountryResponse
-from app.services.catalog_admin.use_cases.update_country import UpdateCountryUseCase
+import pytest
+
+from app.core.exceptions.catalog_admin import CountryConflictError, CountryNotFoundError
+from app.services.catalog_admin.schemas.country import (
+    CountryResponse,
+    UpdateCountryRequest,
+)
+from app.services.catalog_admin.use_cases.country.update import UpdateCountryUseCase
 
 COUNTRY_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 
@@ -49,7 +53,7 @@ def uc(mock_uow, mock_cache):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.update_country.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.country.update.run_in_threadpool")
 async def test_updates_country_caches_fresh_data(mock_run, uc, mock_uow, mock_cache):
     country = _make_db_country()
     mock_run.return_value = country
@@ -67,7 +71,7 @@ async def test_updates_country_caches_fresh_data(mock_run, uc, mock_uow, mock_ca
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.update_country.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.country.update.run_in_threadpool")
 async def test_raises_not_found_when_country_missing(mock_run, uc, mock_uow):
     mock_run.return_value = None
 
@@ -82,8 +86,8 @@ async def test_raises_not_found_when_country_missing(mock_run, uc, mock_uow):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.update_country.translate_db_error")
-@patch("app.services.catalog_admin.use_cases.update_country.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.country.update.translate_db_error")
+@patch("app.services.catalog_admin.use_cases.country.update.run_in_threadpool")
 async def test_rolls_back_and_raises_on_db_error(mock_run, mock_translate, uc, mock_uow, mock_cache):
     mock_run.return_value = _make_db_country()
     mock_uow.commit.side_effect = Exception("unique constraint")
@@ -101,7 +105,7 @@ async def test_rolls_back_and_raises_on_db_error(mock_run, mock_translate, uc, m
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.update_country.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.country.update.run_in_threadpool")
 async def test_survives_cache_failure(mock_run, uc, mock_uow, mock_cache):
     mock_run.return_value = _make_db_country()
     mock_cache.set_json.side_effect = Exception("Redis down")

@@ -1,7 +1,7 @@
 ---
 title: ADR-0004 — GeoJSON upload pattern para polígonos de barrios
 status: stable
-last-verified: 2026-07-15
+last-verified: 2026-10-04
 owners: [catalog-service]
 related:
   - "[[catalog-service-catalog-admin]]"
@@ -62,9 +62,9 @@ Flujo operativo esperado:
 
 ## Claims
 
-- Tres endpoints distintos para uploads ([api/routes/admin.py:161-201](backend/catalog-service/src/app/api/routes/admin.py#L161-L201)).
+- Tres endpoints distintos para uploads ([api/routes/admin/neighborhoods.py:104-144](backend/catalog-service/src/app/api/routes/admin/neighborhoods.py#L104-L144)).
 - `NeighborhoodFileParser` acepta `.csv`, `.json`, `.txt` ([file_parser.py](backend/catalog-service/src/app/services/catalog_admin/helpers/file_parser.py)).
-- Matching usa `_normalize` (NFKD + lowercase + strip) tanto al crear como al enriquecer ([bulk_create_neighborhoods.py:19-21](backend/catalog-service/src/app/services/catalog_admin/use_cases/bulk_create_neighborhoods.py#L19-L21), [bulk_enrich_neighborhood_geometries.py:23-25](backend/catalog-service/src/app/services/catalog_admin/use_cases/bulk_enrich_neighborhood_geometries.py#L23-L25)).
-- `BulkEnrichNeighborhoodGeometriesUseCase` retorna `matched`, `unmatched`, `updated` para diagnóstico ([bulk_enrich_neighborhood_geometries.py:95-99](backend/catalog-service/src/app/services/catalog_admin/use_cases/bulk_enrich_neighborhood_geometries.py#L95-L99)).
-- Dedup en `neighborhood_lookup` por "primer match gana" — colisiones de nombre normalizado se descartan silenciosamente ([bulk_enrich_neighborhood_geometries.py:44-45](backend/catalog-service/src/app/services/catalog_admin/use_cases/bulk_enrich_neighborhood_geometries.py#L44-L45)).
-- `geom_from_geojson` vive en `services/shared/helpers/geometry.py` ([bulk_enrich_neighborhood_geometries.py:17](backend/catalog-service/src/app/services/catalog_admin/use_cases/bulk_enrich_neighborhood_geometries.py#L17)).
+- Matching usa `_normalize` (NFKD + lowercase + strip) tanto al crear como al enriquecer ([neighborhood/bulk_create.py:19-21](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/bulk_create.py#L19-L21), [neighborhood/bulk_enrich_geometries.py:23-25](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/bulk_enrich_geometries.py#L23-L25)).
+- `BulkEnrichNeighborhoodGeometriesUseCase` retorna `matched`, `unmatched`, `updated` para diagnóstico ([neighborhood/bulk_enrich_geometries.py:95-99](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/bulk_enrich_geometries.py#L95-L99)).
+- Dedup en `neighborhood_lookup` por "primer match gana" — colisiones de nombre normalizado se descartan silenciosamente ([neighborhood/bulk_enrich_geometries.py:44-45](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/bulk_enrich_geometries.py#L44-L45)).
+- `geom_from_geojson` vive en `services/shared/helpers/geometry.py` ([neighborhood/bulk_enrich_geometries.py:17](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/bulk_enrich_geometries.py#L17)).
