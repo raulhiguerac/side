@@ -1,9 +1,14 @@
 import uuid
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.services.catalog_admin.schemas.neighborhood import BulkCreateNeighborhoodsResult
-from app.services.catalog_admin.use_cases.bulk_create_neighborhoods import BulkCreateNeighborhoodsUseCase
+import pytest
+
+from app.services.catalog_admin.schemas.neighborhood import (
+    BulkCreateNeighborhoodsResult,
+)
+from app.services.catalog_admin.use_cases.neighborhood.bulk_create import (
+    BulkCreateNeighborhoodsUseCase,
+)
 
 LOCALITY_ID = uuid.UUID("c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a33")
 
@@ -41,7 +46,7 @@ def uc(mock_uow, mock_cache):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.bulk_create_neighborhoods.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_create.run_in_threadpool")
 async def test_bulk_insert_happy_path(mock_run, uc, mock_uow):
     mock_run.return_value = None
 
@@ -54,7 +59,7 @@ async def test_bulk_insert_happy_path(mock_run, uc, mock_uow):
 
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.bulk_create_neighborhoods.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_create.run_in_threadpool")
 async def test_returns_empty_result_when_no_records(mock_run, uc, mock_uow):
     mock_run.return_value = None
 
@@ -69,7 +74,7 @@ async def test_returns_empty_result_when_no_records(mock_run, uc, mock_uow):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.bulk_create_neighborhoods.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_create.run_in_threadpool")
 async def test_fallback_row_by_row_on_bulk_insert_failure(mock_run, uc, mock_uow):
     """Si bulk_insert falla, debe intentar row-by-row con savepoints."""
     mock_run.side_effect = [Exception("constraint violation"), None, None, None]
@@ -84,7 +89,7 @@ async def test_fallback_row_by_row_on_bulk_insert_failure(mock_run, uc, mock_uow
 
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.bulk_create_neighborhoods.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_create.run_in_threadpool")
 async def test_fallback_skips_failing_rows_and_reports_errors(mock_run, uc, mock_uow):
     """En fallback, filas que fallan se reportan en errors pero las demás se insertan."""
     # bulk_insert falla, luego row 1 ok, row 2 falla, row 3 ok
@@ -100,7 +105,7 @@ async def test_fallback_skips_failing_rows_and_reports_errors(mock_run, uc, mock
 
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.bulk_create_neighborhoods.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_create.run_in_threadpool")
 async def test_fallback_does_not_commit_when_all_rows_fail(mock_run, uc, mock_uow):
     """Si todas las filas fallan en fallback, no debe hacer commit."""
     mock_run.side_effect = [
@@ -122,7 +127,7 @@ async def test_fallback_does_not_commit_when_all_rows_fail(mock_run, uc, mock_uo
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-@patch("app.services.catalog_admin.use_cases.bulk_create_neighborhoods.run_in_threadpool")
+@patch("app.services.catalog_admin.use_cases.neighborhood.bulk_create.run_in_threadpool")
 async def test_normalizes_search_name(mock_run, uc, mock_uow):
     """search_name debe ser lowercase sin tildes."""
     captured = []

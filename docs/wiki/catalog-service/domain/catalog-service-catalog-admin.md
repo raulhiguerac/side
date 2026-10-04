@@ -37,8 +37,8 @@ Todo bajo `/v1/admin/*`, protegido globalmente con `Depends(require_admin)` (ver
 
 | Pieza | Archivo |
 |---|---|
-| UCs CRUD por entidad | `use_cases/{create,update}_{country,admin_division,locality,neighborhood}.py` |
-| UCs bulk | `use_cases/bulk_create_neighborhoods.py`, `use_cases/bulk_enrich_neighborhood_geometries.py`, `use_cases/enrich_neighborhood_geometry.py` |
+| UCs CRUD por entidad | `use_cases/{country,admin_division,locality,neighborhood}/{create,update}.py` |
+| UCs bulk | `use_cases/neighborhood/{bulk_create,bulk_enrich_geometries,enrich_geometry}.py` |
 | Ports por entidad | `ports/{country,admin_division,locality,neighborhood}_repository.py`, `ports/unit_of_work.py` |
 | Adapters SQL | `adapters/sql_{country,admin_division,locality,neighborhood}_repository.py`, `adapters/sql_unit_of_work.py` |
 | Helpers | `helpers/file_parser.py`, `helpers/db_error_translator.py` |
@@ -46,7 +46,7 @@ Todo bajo `/v1/admin/*`, protegido globalmente con `Depends(require_admin)` (ver
 
 ## Patrón de UC estándar (update)
 
-[update_country.py](backend/catalog-service/src/app/services/catalog_admin/use_cases/update_country.py) es representativo:
+[country/update.py](backend/catalog-service/src/app/services/catalog_admin/use_cases/country/update.py) es representativo:
 
 1. `uow.countries.get_by_id(country_id)` → si no existe, `CountryNotFoundError`.
 2. Aplicar `request.model_dump(exclude_unset=True)` con `setattr` — patch semántico.
@@ -66,7 +66,7 @@ Endpoint recibe `UploadFile`. La ruta llama [`NeighborhoodFileParser().parse(fil
 - `.json` / `.txt` → `json.loads` → list of dicts.
 - Otra extensión → `ValueError`.
 
-Flujo del UC ([bulk_create_neighborhoods.py](backend/catalog-service/src/app/services/catalog_admin/use_cases/bulk_create_neighborhoods.py)):
+Flujo del UC ([neighborhood/bulk_create.py](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/bulk_create.py)):
 
 1. Mapea cada dict a `Neighborhood(locality_id, code, postal_code, name, search_name=_normalize(name), latitude, longitude, is_active)` con `_normalize` (NFKD + lowercase + strip de tildes).
 2. **Happy path**: `uow.neighborhoods.bulk_insert(model_list)` + `commit()`. Devuelve `BulkCreateNeighborhoodsResult(created=N, errors=[])`. **Bug encontrado y corregido 2026-06-23**: `bulk_insert` armaba el `INSERT` con `n.model_dump()`, que serializa `created_at`/`updated_at` como `NULL` explícito (son `server_default`, sin default de Python) — violaba el `NOT NULL` y hacía que el happy path **siempre** fallara, cayendo siempre al fallback fila-por-fila sin que nadie lo notara (el fallback "funcionaba", así que el bug quedaba invisible). Fix: `model_dump(exclude={"created_at", "updated_at"})`.
@@ -83,7 +83,7 @@ El patrón "intentar bulk, caer a row-by-row con savepoint" es similar al que us
 
 Recibe un `geojson` dict y `name_field: str` (nombre del attribute en `properties` que matchea el nombre del barrio).
 
-Flujo ([bulk_enrich_neighborhood_geometries.py](backend/catalog-service/src/app/services/catalog_admin/use_cases/bulk_enrich_neighborhood_geometries.py)):
+Flujo ([neighborhood/bulk_enrich_geometries.py](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/bulk_enrich_geometries.py)):
 
 1. Construye `neighborhood_lookup: dict[str, dict]` — mapa de `_normalize(props[name_field]) → feature`. Dedup por nombre normalizado (primer match gana).
 2. `uow.neighborhoods.get_many_by_search_names(locality_id, search_names)` — fetch en una query.
@@ -95,7 +95,7 @@ Flujo ([bulk_enrich_neighborhood_geometries.py](backend/catalog-service/src/app/
 
 Logging detallado para diagnóstico de matching imperfecto (sample de unmatched, conteos por etapa).
 
-**Precompute de `h3_cells` (2026-07-18)**: además de `geom`, este UC ahora calcula la cobertura H3 completa del polígono (`h3_cells_for_geojson` → `h3.geo_to_cells(geojson, resolution)`) y la persiste junto con la geometría — antes `h3_cells` solo se llenaba incrementalmente vía el side-effect de `ResolvePoiUseCase` en `geo_resolution` (ver [[catalog-service-poi-lifecycle]]). `EnrichNeighborhoodGeometryUseCase` ([enrich_neighborhood_geometry.py](backend/catalog-service/src/app/services/catalog_admin/use_cases/enrich_neighborhood_geometry.py)) — la contraparte single-record, para un solo GeoJSON `Polygon`/`MultiPolygon` vía `POST /neighborhoods/{id}/geometry` — hace exactamente lo mismo: setea `db_model.geom` y `db_model.h3_cells` juntos antes del commit.
+**Precompute de `h3_cells` (2026-07-18)**: además de `geom`, este UC ahora calcula la cobertura H3 completa del polígono (`h3_cells_for_geojson` → `h3.geo_to_cells(geojson, resolution)`) y la persiste junto con la geometría — antes `h3_cells` solo se llenaba incrementalmente vía el side-effect de `ResolvePoiUseCase` en `geo_resolution` (ver [[catalog-service-poi-lifecycle]]). `EnrichNeighborhoodGeometryUseCase` ([neighborhood/enrich_geometry.py](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/enrich_geometry.py)) — la contraparte single-record, para un solo GeoJSON `Polygon`/`MultiPolygon` vía `POST /neighborhoods/{id}/geometry` — hace exactamente lo mismo: setea `db_model.geom` y `db_model.h3_cells` juntos antes del commit.
 
 ## Translator de errores SQL → dominio
 
@@ -151,11 +151,11 @@ Llamadas a `cache_client.*` siempre wrapeadas en `try/except pass` — cache bes
 ## Claims
 
 - Todo `/admin/*` está protegido vía `Depends(require_admin)` en el `APIRouter` ([admin.py:74](backend/catalog-service/src/app/api/routes/admin.py#L74)).
-- `BulkCreateNeighborhoodsUseCase` intenta bulk insert primero y cae a row-by-row con savepoints (`begin_nested`/`rollback_to_savepoint`) si el bulk falla ([bulk_create_neighborhoods.py:45-83](backend/catalog-service/src/app/services/catalog_admin/use_cases/bulk_create_neighborhoods.py#L45-L83)).
+- `BulkCreateNeighborhoodsUseCase` intenta bulk insert primero y cae a row-by-row con savepoints (`begin_nested`/`rollback_to_savepoint`) si el bulk falla ([neighborhood/bulk_create.py:45-83](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/bulk_create.py#L45-L83)).
 - `SqlNeighborhoodAdminRepository.bulk_insert` excluye `created_at`/`updated_at` del `model_dump()` antes del `INSERT` — sin esto, el `NOT NULL` de esas columnas (`server_default`, sin default Python) rechazaba el insert y el happy path nunca corría ([sql_neighborhood_repository.py:33-37](backend/catalog-service/src/app/services/catalog_admin/adapters/sql_neighborhood_repository.py#L33-L37)). Corregido 2026-06-23.
-- `BulkEnrichNeighborhoodGeometriesUseCase` matchea features de GeoJSON con barrios por `search_name` normalizado (NFKD + lowercase + strip) y reporta `unmatched` ([bulk_enrich_neighborhood_geometries.py:37-99](backend/catalog-service/src/app/services/catalog_admin/use_cases/bulk_enrich_neighborhood_geometries.py#L37-L99)).
-- `BulkEnrichNeighborhoodGeometriesUseCase` y `EnrichNeighborhoodGeometryUseCase` precomputan `h3_cells` (cobertura completa del polígono) junto con `geom`, vía `h3_cells_for_geojson(geometry, resolution=settings.H3_RESOLUTION)` ([bulk_enrich_neighborhood_geometries.py](backend/catalog-service/src/app/services/catalog_admin/use_cases/bulk_enrich_neighborhood_geometries.py), [enrich_neighborhood_geometry.py](backend/catalog-service/src/app/services/catalog_admin/use_cases/enrich_neighborhood_geometry.py)). Agregado 2026-07-18.
+- `BulkEnrichNeighborhoodGeometriesUseCase` matchea features de GeoJSON con barrios por `search_name` normalizado (NFKD + lowercase + strip) y reporta `unmatched` ([neighborhood/bulk_enrich_geometries.py:37-99](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/bulk_enrich_geometries.py#L37-L99)).
+- `BulkEnrichNeighborhoodGeometriesUseCase` y `EnrichNeighborhoodGeometryUseCase` precomputan `h3_cells` (cobertura completa del polígono) junto con `geom`, vía `h3_cells_for_geojson(geometry, resolution=settings.H3_RESOLUTION)` ([neighborhood/bulk_enrich_geometries.py](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/bulk_enrich_geometries.py), [neighborhood/enrich_geometry.py](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/enrich_geometry.py)). Agregado 2026-07-18.
 - `db_error_translator.translate_db_error` mapea constraints PG → errores de dominio vía regex sobre el message string ([db_error_translator.py:25-62](backend/catalog-service/src/app/services/catalog_admin/helpers/db_error_translator.py#L25-L62)).
-- Las llamadas a `cache_client` están envueltas en `try/except pass` — cache es best-effort, su caída no rompe writes ([update_country.py:42-48](backend/catalog-service/src/app/services/catalog_admin/use_cases/update_country.py#L42-L48)).
+- Las llamadas a `cache_client` están envueltas en `try/except pass` — cache es best-effort, su caída no rompe writes ([country/update.py:42-48](backend/catalog-service/src/app/services/catalog_admin/use_cases/country/update.py#L42-L48)).
 - El parser de archivos acepta `.csv`, `.json`, `.txt`; cualquier otra extensión lanza `ValueError` ([file_parser.py:8-14](backend/catalog-service/src/app/services/catalog_admin/helpers/file_parser.py#L8-L14)).
 - `_normalize` (NFKD+lowercase+strip) está duplicada idéntica en `bulk_create_neighborhoods` y `bulk_enrich_neighborhood_geometries`.
