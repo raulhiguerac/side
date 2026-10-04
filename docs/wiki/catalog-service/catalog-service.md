@@ -1,7 +1,7 @@
 ---
 title: catalog-service
 status: draft
-last-verified: 2026-09-27
+last-verified: 2026-10-04
 owners: [catalog-service]
 related:
   - "[[architecture]]"
@@ -9,7 +9,7 @@ related:
   - "[[catalog-service-catalog-admin]]"
   - "[[catalog-service-geo-catalog]]"
   - "[[catalog-service-poi-lifecycle]]"
-sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md]
+sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md, ../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md]
 ---
 
 ## TL;DR
@@ -28,7 +28,7 @@ Tres jobs distintos:
 
 | Dominio | Estado | Qué hace |
 |---|---|---|
-| `catalog_admin` | implementado | CRUD + bulk uploads (CSV de barrios, GeoJSON de polígonos). Protegido con `require_admin`. |
+| `catalog_admin` | implementado | CRUD + bulk uploads (CSV de barrios, GeoJSON de polígonos) y reads admin de barrios para el panel (listado, detalle, vecinos por bbox). Protegido con `require_admin`. |
 | `geo_catalog` | implementado | Reads para frontend: countries, localities (by-country / by-admin-division / by-id), neighborhoods (by-localities / by-id). |
 | `geo_resolution` | implementado | Resolución `(lat, lon) → barrio` y población lazy de POIs vía Overpass. |
 
@@ -49,6 +49,7 @@ Tres jobs distintos:
 | GET | `/v1/geo-resolution/by-coordinates?lat&lon` | frontend / properties-service | público |
 | POST | `/v1/geo-resolution/by-coordinates/bulk` | properties-service (bulk create, futuro caller) | público |
 | POST | `/v1/geo-resolution/reachable-pois` | frontend (`NearbyPlaces.vue`, "Cerca del lugar") | público |
+| GET | `/v1/admin/neighborhoods` (paginado + filtros), `/v1/admin/neighborhoods/{id}`, `/v1/admin/neighborhoods/geometries?bbox` | panel admin (tab de barrios) | `require_admin` |
 | POST/PATCH | `/v1/admin/{countries,admin-divisions,localities,neighborhoods}` | UI admin futura, scripts | `require_admin` |
 | POST | `/v1/admin/localities/{id}/neighborhoods/bulk` (CSV upload) | UI admin | `require_admin` |
 | POST | `/v1/admin/.../bulk/geometry` (GeoJSON FeatureCollection) | UI admin | `require_admin` |
@@ -110,11 +111,11 @@ Beneficios: menos latencia, sin costo Mapbox en backend, sin cache de forward ge
 
 - `catalog-service` define 3 dominios bajo `src/app/services/`: `catalog_admin`, `geo_catalog`, `geo_resolution` ([services/](backend/catalog-service/src/app/services)).
 - El router incluye 6 sub-routers: `health`, `countries`, `localities`, `neighborhoods`, `geo_resolution`, `admin` ([api/main.py:3-10](backend/catalog-service/src/app/api/main.py#L3-L10)).
-- Las rutas `/admin/*` están protegidas globalmente vía `Depends(require_admin)` en el `APIRouter` ([api/routes/admin.py:74](backend/catalog-service/src/app/api/routes/admin.py#L74)).
+- Las rutas `/admin/*` están protegidas globalmente vía `Depends(require_admin)` en el `APIRouter` del paquete `routes/admin/`, que monta un subrouter por entidad ([api/routes/admin/__init__.py:6-10](backend/catalog-service/src/app/api/routes/admin/__init__.py#L6-L10)).
 - `require_admin` chequea `settings.ADMIN_ROLE in principal.roles` con `roles` extraídos de `realm_access.roles` del JWT ([api/deps/auth.py:99-104](backend/catalog-service/src/app/api/deps/auth.py#L99-L104)).
 - `/geo-resolution/resolve-neighborhood` dispara la población de POIs vía `BackgroundTasks.add_task(poi_uc.execute, ...)` fire-and-forget ([api/routes/geo_resolution.py:32-38](backend/catalog-service/src/app/api/routes/geo_resolution.py#L32-L38)).
 - `/geo-resolution/by-coordinates` dispara el background task de POIs desde 2026-06-11 ([api/routes/geo_resolution.py](backend/catalog-service/src/app/api/routes/geo_resolution.py#L43-L59)).
 - catalog-service y properties-service construyen su DB desde `infra/postgis` (`postgres:17` + PostGIS) en el `docker-compose.yml`; los Postgres de users-service, analytics-service y keycloak son `postgres:17` plano.
-- 6 routers, 22 endpoints en total al 2026-07-18 (contados directo de los decoradores `@router.get/post/patch` en `src/app/api/routes/*.py`: admin 11, countries 1, geo_resolution 4, health 1, localities 3, neighborhoods 2).
+- 6 routers, 25 endpoints en total al 2026-10-04 (contados directo de los decoradores `@router.get/post/patch` en `src/app/api/routes/`: admin 14 — countries 2, admin_divisions 2, localities 2, neighborhoods 8 —, countries 1, geo_resolution 4, health 1, localities 3, neighborhoods 2).
 - `POST /geo-resolution/by-coordinates/bulk` (agregado 2026-07-18) resuelve un lote de `{id, lat, lon}` en una sola respuesta, vía `BulkResolveLocationsByCoordinatesUseCase` + `get_location_by_points` (unnest + LATERAL JOIN) ([api/routes/geo_resolution.py](backend/catalog-service/src/app/api/routes/geo_resolution.py)).
 - `POST /geo-resolution/reachable-pois` está implementado y wireado end-to-end: `services/geo_resolution/use_cases/resolve_isochrone.py` + integración ORS en `integrations/georef/ors/routing.py` ([api/routes/geo_resolution.py:67-72](backend/catalog-service/src/app/api/routes/geo_resolution.py#L67-L72)).
