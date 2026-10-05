@@ -27,3 +27,9 @@ infra/mlflow/registry/*
 # Generados localmente: el lock lo escribe VS Code y los example-* los reescribe ORS al arrancar.
 .devcontainer/devcontainer-lock.json
 infra/ors/config/example-ors-config.*
+
+# Scripts y artefactos para levantar los servicios en el devcontainer
+up_dev_env.sh
+down_dev_env.sh
+logs/
+.dev/

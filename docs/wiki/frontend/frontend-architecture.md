@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-09-28
+last-verified: 2026-10-04
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -42,6 +42,7 @@ sources:
   - ../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md
   - ../../sources/frontend/2026-08-01-admin-panel-tabs-moderation-preview.md
   - ../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md
+  - ../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md
 ---
 
 ## TL;DR
@@ -93,7 +94,10 @@ frontend/
 │   │   │   ├── useActivePromotions.ts # promociones vigentes: pagina por servidor + remove()
 │   │   │   ├── useModerateProperty.ts # traduce el payload del form a uno o dos PATCH
 │   │   │   ├── usePromoteProperty.ts  # POST de promoción; distingue los dos 409 por `code`
-│   │   │   └── useRowSelection.ts     # selección de fila válida frente a cambios de la lista, con extractor de clave
+│   │   │   ├── useRowSelection.ts     # selección de fila válida frente a cambios de la lista, con extractor de clave
+│   │   │   ├── useAdminNeighborhoods.ts  # listado admin de barrios: página por servidor, sin cache incremental
+│   │   │   ├── useNeighborhoodDetail.ts  # detalle de la fila elegida; descarta respuestas viejas
+│   │   │   └── useNeighborhoodNeighbors.ts  # vecinos por bbox (bbox repetido en la query)
 │   │   └── users/
 │   │       └── useProfileListings.ts  # fetchUserListings(id, offset) — función pura, sin estado (la paginación vive en usePagination)
 │   ├── utils/
@@ -101,14 +105,15 @@ frontend/
 │   │   └── date.ts                # formatShortDate — Intl construido una vez a nivel módulo
 │   ├── constants/
 │   │   ├── propertyStatus.ts      # LISTING_STATUS_* y VERIFICATION_STATUS_* (labels + badges)
-│   │   ├── pagination.ts          # PAGE_SIZE por vista (MY_PROPERTIES, PUBLIC_PROFILE, ADMIN_PROPERTIES, ADMIN_PROMOTIONS)
+│   │   ├── catalogEndpoints.ts    # paths de catalog-service (countries, localitiesByCountry, adminNeighborhoods, adminNeighborhood, adminNeighborhoodGeometries)
+│   │   ├── pagination.ts          # PAGE_SIZE por vista (MY_PROPERTIES, PUBLIC_PROFILE, ADMIN_PROPERTIES, ADMIN_PROMOTIONS, ADMIN_BULK_JOBS, ADMIN_NEIGHBORHOODS)
 │   │   └── propertiesEndpoints.ts # paths de properties-service (me, byId, byUser, visibility, images, adminList, adminDetail, adminVerification, adminStatus, adminPromotions, adminPropertyPromotions)
 │   ├── types/
 │   │   ├── user.ts
 │   │   ├── feed.ts               # PropertyCard (API shape), PropertyCardUI (UI shape), PropertyImageCard, ListingStatus
 │   │   ├── properties.ts         # PropertyDetail, PropertyLocationDetail, CreatePropertyForm, PropertyEditForm
 │   │   ├── pois.ts               # OrsProfile, GeoJsonPolygon, ReachablePoiItem, RangeGroup, CATEGORY_META, CATEGORY_PRIORITY
-│   │   └── admin.ts              # AdminPropertyRow, AdminPropertyDetail, AdminPromotionRow, AdminPropertiesPage/AdminPromotionsPage, AdminPropertiesFilters, Moderation/PromotionPayload
+│   │   └── admin/                # un módulo por tema, sin index.ts: properties, moderation, promotions, bulk, filters (AdminFilterDefinition), catalog (barrios)
 │   ├── views/                    # páginas-ruta
 │   │   ├── public/{HomeView, AboutView, PublicProfileView}  # /users/:userId
 │   │   ├── auth/{LoginView, RegisterView, ResetPasswordView}
@@ -335,7 +340,7 @@ Hash history (`createWebHashHistory`) — ver [[adr-hash-history-static-hosting]
 
 | Archivo | baseURL (dev) | `withCredentials` | Auth interceptor |
 |---|---|---|---|
-| `catalogApi.ts` | `/api/catalog` | No | No — catálogo es público |
+| `catalogApi.ts` | `/api/catalog` | Sí (desde 2026-10-04) | Sí — los endpoints `/admin` leen la cookie |
 | `avmApi.ts` | `/api/avm` | No | No — sin auth hoy |
 | `usersApi.ts` | `/api/users` | Sí | Sí |
 | `propertiesApi.ts` | `/api/properties` | Sí | Sí |
@@ -376,6 +381,8 @@ response 401
 ### Webpack devServer proxy
 
 Las baseURLs usan rutas relativas (`/api/users`, `/api/catalog`, etc.) para desarrollo. `vue.config.js` configura el proxy:
+
+> **Gap 2026-10-04:** la intención es usar el proxy, pero `frontend/.env.development` define `VUE_APP_*_URL=http://localhost:800x` y `config/index.ts` las prefiere sobre las rutas relativas. Hoy el front llama directo a cada backend, el proxy no se usa y CORS sí aplica. Ver [[open-items]].
 
 ```js
 devServer: {
@@ -546,7 +553,8 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 - `detectLocation` usa el provider externo `ipapi.co` para inferir país por IP ([stores/user.ts:69](frontend/src/stores/user.ts#L69)).
 - El guard del router llama `checkAuth()` solo si `_authChecked === false` ([router/index.ts:104-110](frontend/src/router/index.ts#L104-L110)).
 - `useOnboarding` mantiene `activeComponent` como `shallowRef<Component | null>` — `shallowRef` porque los componentes Vue son reactivos por sí solos ([composables/useOnboarding.ts:19](frontend/src/composables/useOnboarding.ts#L19)).
-- Hay 4 instancias de axios dedicadas por servicio: `catalogApi` y `avmApi` (sin `withCredentials`, sin interceptor — son APIs públicas); `usersApi` y `propertiesApi` (con `withCredentials: true` y `applyAuthInterceptor`) ([api/](frontend/src/api/)).
+- Hay 4 instancias de axios dedicadas por servicio: `avmApi` sin `withCredentials` ni interceptor; `usersApi`, `propertiesApi` y `catalogApi` con `withCredentials: true` y `applyAuthInterceptor` ([api/](frontend/src/api/), [catalogApi.ts:8-11](frontend/src/api/catalogApi.ts#L8-L11)).
+- `config/index.ts` usa `VUE_APP_CATALOG_URL` si está definida y si no `/api/catalog`; `frontend/.env.development` la define como `http://localhost:8001` ([config/index.ts:3](frontend/src/config/index.ts#L3), [.env.development](frontend/.env.development)).
 - `applyAuthInterceptor` intercepta 401, refresca token con POST `/v1/auth/refresh` (timeout 3s), reintenta la request original; si el refresh falla, llama `forceLogout()` (logout real vía `authStore`, no un hard redirect) ([api/interceptors.ts](frontend/src/api/interceptors.ts)).
 - `AUTH_ENTRYPOINTS` (`/auth/login`, `/auth/register`) están excluidos del retry-refresh del interceptor — un 401 ahí es credenciales inválidas, no sesión expirada ([api/interceptors.ts](frontend/src/api/interceptors.ts)).
 - `checkAuth()` es la única llamada de `auth.ts` que usa `axios` puro en vez de `usersApi` — un 401 ahí es "no autenticado" (normal para anónimos), y pasarla por el interceptor dispararía `forceLogout()`/redirect para cualquier visitante sin sesión ([stores/auth.ts](frontend/src/stores/auth.ts)).

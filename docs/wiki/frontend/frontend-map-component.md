@@ -1,7 +1,7 @@
 ---
 title: Componente de mapa reusable (MapUser)
 status: stable
-last-verified: 2026-06-20
+last-verified: 2026-10-04
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -16,6 +16,7 @@ sources:
   - ../../sources/frontend/2026-06-09-mapview-leaflet-implementation.md
   - ../../sources/frontend/2026-06-15-poi-detail-view-mapuser-cluster.md
   - ../../sources/frontend/2026-06-20-property-detail-view-refactor.md
+  - ../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md
 ---
 
 ## TL;DR
@@ -245,6 +246,15 @@ Ver [[adr-mapbox-geocoding-leaflet-rendering]] para la decisión de stack (Leafl
 - `POI_COLORS`/`POI_BUCKET_LABELS` centralizados en `constants/poiColors.ts`; nuevo componente reusable `MapLegend.vue`.
 - `MapUser` usado en `DevPlaygroundView` (AVM), `MapView` (feed-mapa) y `NearbyPlaces` (dentro de `PropertyDetailView`, POI section).
 
+## Segundo mapa: `NeighborhoodMap.vue` del panel admin (2026-10-04)
+
+El panel de barrios ([[frontend-admin-panel]]) usa un componente propio y no `MapUser`, que está pensado para marcadores con cluster, tiene zoom mínimo 14 y no expone `fitBounds`. `NeighborhoodMap` es igual de tonto, pero dibuja polígonos:
+
+- `LMap` + tiles de OSM + dos `LGeoJson`: los vecinos abajo (gris, tooltip con el nombre) y el barrio elegido encima (verde marca).
+- **Vista fija**: sin controles de zoom, arrastre, rueda ni teclado. El encuadre lo decide el barrio: `fitBounds` sobre su geometría con 24 px de padding, o el centroide con zoom 15 si no tiene geometría.
+- Tras encuadrar emite `bounds` con `[oeste, sur, este, norte]` de `map.getBounds()`, que es el bbox con el que el panel pide los vecinos.
+- El `center` solo se usa para arrancar y el `watch` observa geometría, latitud y longitud como fuentes separadas. Con `:center="[lat, lon]"` inline cada render generaba un array nuevo y se formaba un ciclo: vecinos → re-render → reencuadre → vecinos.
+
 ## Claims
 
 - `MapUser.vue` usa `@vue-leaflet/vue-leaflet` (`LMap`, `LTileLayer`, `LMarker`, `LIcon`) ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
@@ -271,3 +281,6 @@ Ver [[adr-mapbox-geocoding-leaflet-rendering]] para la decisión de stack (Leafl
 - Cada marker del cluster con `label` definido recibe `bindPopup(buildPoiPopupHtml(m))` — Leaflet lo muestra al click sin manejo de eventos adicional ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - `escapeHtml` (`div.textContent`/`innerHTML`) sanitiza cada campo del POI antes de interpolarlo en el HTML del popup — el dato viene de OSM/Overpass, fuente externa ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - `MapLegend.vue` (`components/map/`) es un componente sin estado que itera `POI_COLORS`/`POI_BUCKET_LABELS` — pensado para reusarse en `AvmView` además de `NearbyPlaces` ([components/map/MapLegend.vue](frontend/src/components/map/MapLegend.vue)).
+- `NeighborhoodMap.vue` desactiva zoom y arrastre en `MAP_OPTIONS` y encuadra con `fitBounds` sobre la geometría del barrio ([NeighborhoodMap.vue:49](frontend/src/components/admin/catalog/neighborhoods/NeighborhoodMap.vue#L49), [:98](frontend/src/components/admin/catalog/neighborhoods/NeighborhoodMap.vue#L98)).
+- `NeighborhoodMap.vue` emite `bounds` como `[oeste, sur, este, norte]` desde `map.getBounds()` ([NeighborhoodMap.vue:106](frontend/src/components/admin/catalog/neighborhoods/NeighborhoodMap.vue#L106)).
+- El `watch` de `NeighborhoodMap.vue` observa `geometry`, `center[0]` y `center[1]` como fuentes separadas ([NeighborhoodMap.vue:116](frontend/src/components/admin/catalog/neighborhoods/NeighborhoodMap.vue#L116)).
