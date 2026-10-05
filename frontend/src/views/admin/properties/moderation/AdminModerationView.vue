@@ -74,11 +74,9 @@ import {
   VERIFICATION_STATUS_LABELS,
 } from "@/constants/propertyStatus";
 import { sanitizeFilterQuery } from "@/utils/adminFilters";
-import type {
-  AdminFilterDefinition,
-  AdminPropertiesFilters,
-  ModerationPayload,
-} from "@/types/admin";
+import type { AdminFilterDefinition } from "@/types/admin/filters";
+import type { ModerationPayload } from "@/types/admin/moderation";
+import type { AdminPropertiesFilters } from "@/types/admin/properties";
 
 /** Los dos filtros del listado admin que son enums; `owner_id` e `is_promoted` no
  * entran en un select. */

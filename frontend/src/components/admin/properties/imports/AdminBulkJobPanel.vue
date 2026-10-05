@@ -133,7 +133,7 @@ import type {
   BulkJobRow,
   BulkJobRowError,
   BulkJobStatusDetail,
-} from "@/types/admin";
+} from "@/types/admin/bulk";
 
 /** El detalle de una corrida: la fila llega entera desde el listado y acá solo
  * se piden los errores, que ese listado cuenta pero no trae. */

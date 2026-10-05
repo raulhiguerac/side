@@ -108,7 +108,7 @@
 import { computed, ref, watch } from "vue";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import { formatShortDate } from "@/utils/date";
-import type { PromotionPayload } from "@/types/admin";
+import type { PromotionPayload } from "@/types/admin/promotions";
 
 /**
  * Formulario de promoción. No llama a la API: emite duración y prioridad, y

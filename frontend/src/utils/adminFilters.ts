@@ -1,5 +1,5 @@
 import type { LocationQuery } from "vue-router";
-import type { AdminFilterDefinition } from "@/types/admin";
+import type { AdminFilterDefinition } from "@/types/admin/filters";
 
 /** Deja solo las keys definidas con un valor del enum: la query la escribe
  * cualquiera, y `?status=banana` es un 422 del backend. */

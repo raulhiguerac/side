@@ -51,7 +51,7 @@
 <script lang="ts" setup>
 import { ref, watch } from "vue";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
-import type { AdminFilterDefinition } from "@/types/admin";
+import type { AdminFilterDefinition } from "@/types/admin/filters";
 
 /** Barra de filtros de las vistas admin: recibe los filtros con sus opciones y
  * devuelve los valores elegidos, sin saber qué se está filtrando. */

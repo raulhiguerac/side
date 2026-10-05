@@ -53,7 +53,7 @@ import AdminPromotionForm from "@/components/admin/properties/promotions/AdminPr
 import { useAdminProperties } from "@/composables/admin/useAdminProperties";
 import { usePromoteProperty } from "@/composables/admin/usePromoteProperty";
 import { useRowSelection } from "@/composables/admin/useRowSelection";
-import type { PromotionPayload } from "@/types/admin";
+import type { PromotionPayload } from "@/types/admin/promotions";
 
 /**
  * Las elegibles son el mismo listado admin de moderación, así que reusa su

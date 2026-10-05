@@ -70,7 +70,7 @@ import { useBulkJobs } from "@/composables/admin/useBulkJobs";
 import { useRowSelection } from "@/composables/admin/useRowSelection";
 import { BULK_JOB_STATUS_LABELS } from "@/constants/bulkJobStatus";
 import { sanitizeFilterQuery } from "@/utils/adminFilters";
-import type { AdminFilterDefinition } from "@/types/admin";
+import type { AdminFilterDefinition } from "@/types/admin/filters";
 
 /** `has_errors` va como select de dos opciones: el backend lo recibe como bool y
  * Pydantic parsea el `"true"`/`"false"` de la query. Las fechas todavía no. */
