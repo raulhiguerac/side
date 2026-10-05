@@ -138,7 +138,7 @@ import {
   LISTING_STATUS_LABELS,
   VERIFICATION_STATUS_LABELS,
 } from "@/constants/propertyStatus";
-import type { ModerationPayload } from "@/types/admin";
+import type { ModerationPayload } from "@/types/admin/moderation";
 import type { ListingStatus } from "@/types/feed";
 import type { VerificationStatus } from "@/types/properties";
 

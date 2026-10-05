@@ -2,7 +2,7 @@ import { ref } from "vue";
 import axios from "axios";
 import propertiesApi from "@/api/propertiesApi";
 import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
-import type { PromotionPayload } from "@/types/admin";
+import type { PromotionPayload } from "@/types/admin/promotions";
 
 /** Crea la promoción de una property; un solo POST, a diferencia de moderar. */
 

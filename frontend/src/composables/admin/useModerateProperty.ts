@@ -2,7 +2,7 @@ import { ref } from "vue";
 import axios from "axios";
 import propertiesApi from "@/api/propertiesApi";
 import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
-import type { ModerationPayload } from "@/types/admin";
+import type { ModerationPayload } from "@/types/admin/moderation";
 
 /** Traduce el payload del formulario a uno o dos PATCH. */
 

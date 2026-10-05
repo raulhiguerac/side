@@ -70,7 +70,7 @@ import {
   BULK_JOB_STATUS_LABELS,
   BULK_JOB_STATUS_BADGE_CLASSES,
 } from "@/constants/bulkJobStatus";
-import type { BulkJobRow } from "@/types/admin";
+import type { BulkJobRow } from "@/types/admin/bulk";
 
 /** El historial de importaciones: qué corrió, cómo terminó y cuánto entró. */
 defineProps<{

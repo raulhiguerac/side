@@ -93,7 +93,7 @@ import { usePropertyDetail } from "@/composables/properties/usePropertyDetail";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import PropertyOverview from "@/components/properties/detail/PropertyOverview.vue";
 import PhotoGalleryPopup from "@/components/properties/photos/PhotoGalleryPopup.vue";
-import type { AdminPropertyDetail } from "@/types/admin";
+import type { AdminPropertyDetail } from "@/types/admin/properties";
 
 const props = defineProps<{ propertyId: string | null }>();
 

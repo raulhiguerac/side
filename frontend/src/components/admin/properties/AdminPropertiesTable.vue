@@ -63,7 +63,7 @@ import {
   VERIFICATION_STATUS_LABELS,
   VERIFICATION_STATUS_BADGE_CLASSES,
 } from "@/constants/propertyStatus";
-import type { AdminPropertyRow } from "@/types/admin";
+import type { AdminPropertyRow } from "@/types/admin/properties";
 
 defineProps<{
   rows: AdminPropertyRow[];

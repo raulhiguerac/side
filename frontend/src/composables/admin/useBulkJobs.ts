@@ -2,13 +2,11 @@ import { computed, ref } from "vue";
 import propertiesApi from "@/api/propertiesApi";
 import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
 import { PAGE_SIZE } from "@/constants/pagination";
-import type { BulkJobRow, BulkJobsPage } from "@/types/admin";
-
-/** Los filtros que acepta `GetBulkJobsAdminRequest`; las fechas todavía no se exponen. */
-export interface BulkJobsFilters {
-  status?: string;
-  has_errors?: string;
-}
+import type {
+  BulkJobRow,
+  BulkJobsFilters,
+  BulkJobsPage,
+} from "@/types/admin/bulk";
 
 /** El historial paginado por offset. Se pide siempre al servidor: relanzar
  * agrega una corrida arriba y una copia local quedaría corrida. */

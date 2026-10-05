@@ -40,7 +40,7 @@ import type { ColumnDef } from "@tanstack/vue-table";
 import BaseTable from "@/components/shared/BaseTable.vue";
 import { formatCurrency } from "@/utils/money";
 import { formatShortDate } from "@/utils/date";
-import type { AdminPromotionRow } from "@/types/admin";
+import type { AdminPromotionRow } from "@/types/admin/promotions";
 import type { PropertyCard } from "@/types/feed";
 
 /**

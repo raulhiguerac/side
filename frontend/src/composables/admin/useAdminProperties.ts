@@ -7,7 +7,7 @@ import type {
   AdminPropertiesFilters,
   AdminPropertiesPage,
   AdminPropertyRow,
-} from "@/types/admin";
+} from "@/types/admin/properties";
 
 async function fetchAdminProperties(
   page: number,

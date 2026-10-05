@@ -1,4 +1,4 @@
-import type { BulkJobStatus } from "@/types/admin";
+import type { BulkJobStatus } from "@/types/admin/bulk";
 
 export const BULK_JOB_STATUS_LABELS: Record<BulkJobStatus, string> = {
   pending: "En curso",

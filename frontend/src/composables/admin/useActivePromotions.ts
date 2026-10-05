@@ -3,7 +3,10 @@ import axios from "axios";
 import propertiesApi from "@/api/propertiesApi";
 import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
 import { PAGE_SIZE } from "@/constants/pagination";
-import type { AdminPromotionRow, AdminPromotionsPage } from "@/types/admin";
+import type {
+  AdminPromotionRow,
+  AdminPromotionsPage,
+} from "@/types/admin/promotions";
 
 /**
  * Las promociones activas, paginadas por offset como el listado admin. Cada fila
