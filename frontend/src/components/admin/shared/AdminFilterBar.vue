@@ -2,8 +2,10 @@
   <div
     class="border-brand-divider flex w-full flex-col gap-4 rounded-2xl border bg-white px-5 py-4 sm:flex-row sm:items-end"
   >
-    <!-- Dos tercios para los filtros, uno para el disparador. -->
-    <div class="flex min-w-0 flex-[2] flex-wrap gap-4">
+    <div
+      class="flex min-w-0 flex-wrap gap-4"
+      :class="filtersWidth === 'full' ? 'flex-1' : 'flex-[2]'"
+    >
       <div
         v-for="filter in filters"
         :key="filter.key"
@@ -15,16 +17,28 @@
         >
           {{ filter.label }}
         </label>
-        <select
+        <input
+          v-if="filter.type === 'search'"
           :id="`admin-filter-${filter.key}`"
           v-model="draft[filter.key]"
+          type="search"
+          :placeholder="filter.placeholder"
           :disabled="loading"
           class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none disabled:opacity-50"
+          @keydown.enter.prevent="apply"
+        />
+        <select
+          v-else
+          :id="`admin-filter-${filter.key}`"
+          v-model="draft[filter.key]"
+          :disabled="loading || isBlocked(filter)"
+          class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none disabled:opacity-50"
+          @change="resetDependents(filter.key)"
         >
           <!-- Sin la opción vacía, filtrar una vez esconde el resto para siempre. -->
           <option value="">{{ filter.allLabel ?? "Todas" }}</option>
           <option
-            v-for="(label, value) in filter.options"
+            v-for="(label, value) in optionsFor(filter)"
             :key="value"
             :value="value"
           >
@@ -34,7 +48,10 @@
       </div>
     </div>
 
-    <div class="flex flex-1 justify-end">
+    <div
+      class="flex justify-end"
+      :class="filtersWidth === 'full' ? 'flex-none' : 'flex-1'"
+    >
       <button
         type="button"
         :disabled="loading"
@@ -51,7 +68,11 @@
 <script lang="ts" setup>
 import { ref, watch } from "vue";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
-import type { AdminFilterDefinition } from "@/types/admin/filters";
+import type {
+  AdminAsyncSelectFilter,
+  AdminFilterDefinition,
+  AdminFilterOptions,
+} from "@/types/admin/filters";
 
 /** Barra de filtros de las vistas admin: recibe los filtros con sus opciones y
  * devuelve los valores elegidos, sin saber qué se está filtrando. */
@@ -62,10 +83,13 @@ const props = withDefaults(
      * filtrada y los selects en blanco. */
     initial?: Record<string, string>;
     loading?: boolean;
+    /** `two-thirds`: filtros 2/3 y botón 1/3. `full`: el botón ocupa solo su ancho. */
+    filtersWidth?: "two-thirds" | "full";
   }>(),
   {
     initial: () => ({}),
     loading: false,
+    filtersWidth: "two-thirds",
   }
 );
 
@@ -82,6 +106,52 @@ function syncFromInitial() {
   );
 }
 
+const asyncOptions = ref<Record<string, AdminFilterOptions>>({});
+/** Por key: si el padre cambia dos veces rápido, la respuesta vieja no pisa a la nueva. */
+const latestRequest: Record<string, number> = {};
+
+function optionsFor(filter: AdminFilterDefinition): AdminFilterOptions {
+  if (filter.type === "async-select")
+    return asyncOptions.value[filter.key] ?? {};
+  if (filter.type === "search") return {};
+  return filter.options;
+}
+
+function isBlocked(filter: AdminFilterDefinition): boolean {
+  return (
+    filter.type === "async-select" &&
+    !!filter.dependsOn &&
+    !draft.value[filter.dependsOn]
+  );
+}
+
+async function loadOptions(filter: AdminAsyncSelectFilter) {
+  const request = (latestRequest[filter.key] ?? 0) + 1;
+  latestRequest[filter.key] = request;
+
+  let options: AdminFilterOptions = {};
+  if (!isBlocked(filter)) {
+    try {
+      options = await filter.loadOptions({ ...draft.value });
+    } catch {
+      options = {};
+    }
+  }
+  if (latestRequest[filter.key] === request)
+    asyncOptions.value[filter.key] = options;
+}
+
+/** Al cambiar un padre se vacían sus hijos (y los hijos de esos) y se recargan.
+ * Va en el `@change` y no en un watch: sembrar desde la URL no debe vaciar nada. */
+function resetDependents(key: string) {
+  for (const filter of props.filters) {
+    if (filter.type !== "async-select" || filter.dependsOn !== key) continue;
+    draft.value[filter.key] = "";
+    loadOptions(filter);
+    resetDependents(filter.key);
+  }
+}
+
 function apply() {
   // Las vacías se omiten: `verification_status=""` es un 422, el backend valida el enum.
   emit(
@@ -92,7 +162,14 @@ function apply() {
 
 /** Manda el padre: tras aplicar cambia la URL y el borrador se resiembra desde ahí.
  * No hay bucle porque solo el click emite. */
-watch(() => [props.filters, props.initial], syncFromInitial, {
-  immediate: true,
-});
+watch(
+  () => [props.filters, props.initial],
+  () => {
+    syncFromInitial();
+    for (const filter of props.filters) {
+      if (filter.type === "async-select") loadOptions(filter);
+    }
+  },
+  { immediate: true }
+);
 </script>
