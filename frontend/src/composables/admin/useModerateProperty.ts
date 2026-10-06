@@ -19,11 +19,11 @@ function messageForError(error: unknown): string {
 
   switch (error.response?.status) {
     case 409:
-      return "El cambio ya no es válido — la propiedad cambió de estado. Recargá para ver el estado actual.";
+      return "El cambio ya no es válido — la propiedad cambió de estado. Recarga para ver el estado actual.";
     case 404:
       return "La propiedad ya no existe";
     case 403:
-      return "No tenés permisos para moderar";
+      return "No tienes permisos para moderar";
     case 422:
       return "El backend rechazó los datos del formulario";
     default:

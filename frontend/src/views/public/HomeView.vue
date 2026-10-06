@@ -219,7 +219,7 @@
             Propiedades que se<br />adaptan a lo que buscas
           </h3>
           <p class="text-brand-muted text-xs leading-relaxed">
-            Filtrá por barrio, tipo, precio y dejá que el onboarding haga el
+            Filtra por barrio, tipo, precio y deja que el onboarding haga el
             resto.
           </p>
         </div>
@@ -252,7 +252,7 @@
         Encuentra, compara y decide<br />con datos reales.
       </h2>
       <p class="text-white/60 text-sm lg:text-base max-w-sm leading-relaxed">
-        Configurá tu búsqueda en 2 minutos. Gratis, sin agentes y sin comisión.
+        Configura tu búsqueda en 2 minutos. Gratis, sin agentes y sin comisión.
       </p>
       <div class="flex flex-col sm:flex-row gap-4">
         <router-link
@@ -283,7 +283,7 @@ const currentSlide = ref(0);
 const howItWorks = [
   {
     title: "Dinos qué buscas",
-    body: "Nada de scroll infinito. Cuéntanos qué querés y filtramos por tí. Barrio, tipo, presupuesto — una sola vez.",
+    body: "Nada de scroll infinito. Cuéntanos qué quieres y filtramos por ti. Barrio, tipo, presupuesto — una sola vez.",
   },
   {
     title: "Solo lo que te sirve",

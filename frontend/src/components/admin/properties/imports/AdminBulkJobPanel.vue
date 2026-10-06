@@ -12,7 +12,7 @@
     </div>
 
     <p v-if="!job" class="text-brand-muted px-5 py-12 text-center text-sm">
-      Elegí una importación de la tabla.
+      Elige una importación de la tabla.
     </p>
 
     <template v-else>
