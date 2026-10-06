@@ -9,6 +9,7 @@ import type {
   AdminPropertyRow,
 } from "@/types/admin/properties";
 import { pageRange } from "@/utils/pagination";
+import { logger } from "@/utils/logger";
 
 async function fetchAdminProperties(
   page: number,
@@ -67,7 +68,7 @@ export function useAdminProperties() {
       pagination.setItems(data.items, hasMoreAfter(data.items.length));
     } catch (e) {
       error.value = "No se pudieron cargar las propiedades";
-      console.error("admin properties load failed", e);
+      logger.error("admin properties load failed", e);
       serverTotal.value = 0;
       pagination.setItems([], false);
     } finally {
@@ -94,7 +95,7 @@ export function useAdminProperties() {
       );
     } catch (e) {
       error.value = "No se pudo actualizar la lista";
-      console.error("admin properties reload failed", e);
+      logger.error("admin properties reload failed", e);
     } finally {
       loading.value = false;
     }
@@ -119,7 +120,7 @@ export function useAdminProperties() {
       });
     } catch (e) {
       error.value = "No se pudo cargar la página siguiente";
-      console.error("admin properties next page failed", e);
+      logger.error("admin properties next page failed", e);
     } finally {
       loading.value = false;
     }

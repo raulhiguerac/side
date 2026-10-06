@@ -2,6 +2,7 @@ import { ref } from "vue";
 import propertiesApi from "@/api/propertiesApi";
 import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
 import type { PropertyCard } from "@/types/feed";
+import { logger } from "@/utils/logger";
 
 export function useMyProperties() {
   const properties = ref<PropertyCard[]>([]);
@@ -15,7 +16,7 @@ export function useMyProperties() {
       );
       properties.value = data;
     } catch (error) {
-      console.error("Error al cargar propiedades:", error);
+      logger.error("Error al cargar propiedades:", error);
       properties.value = [];
     } finally {
       isLoading.value = false;

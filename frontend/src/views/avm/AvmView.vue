@@ -80,6 +80,7 @@ import type {
 } from "@/composables/avm/useAvmForm";
 import type { MarkerData } from "@/types/maps";
 import avmApi from "@/api/avmApi";
+import { logger } from "@/utils/logger";
 import { API } from "@/config";
 
 const showResult = ref(false);
@@ -124,7 +125,7 @@ async function onSubmit(data: {
     price.value = await fetchPredict(avmPayload);
     showResult.value = true;
   } catch (error) {
-    console.error("Error al predecir el precio:", error);
+    logger.error("Error al predecir el precio:", error);
   }
 }
 

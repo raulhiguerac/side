@@ -8,6 +8,7 @@ import type {
   AdminPromotionsPage,
 } from "@/types/admin/promotions";
 import { pageRange } from "@/utils/pagination";
+import { logger } from "@/utils/logger";
 
 /**
  * Las promociones activas, paginadas por offset como el listado admin. Cada fila
@@ -51,7 +52,7 @@ export function useActivePromotions() {
       page.value = data.page;
     } catch (e) {
       error.value = "No se pudieron cargar las promociones activas";
-      console.error("admin active promotions load failed", e);
+      logger.error("admin active promotions load failed", e);
       promotions.value = [];
       total.value = 0;
     } finally {
@@ -74,7 +75,7 @@ export function useActivePromotions() {
       );
       return true;
     } catch (e) {
-      console.error("admin promotion removal failed", e);
+      logger.error("admin promotion removal failed", e);
       removeError.value =
         axios.isAxiosError(e) && e.response?.status === 404
           ? "Esta propiedad ya no tiene una promoción activa."

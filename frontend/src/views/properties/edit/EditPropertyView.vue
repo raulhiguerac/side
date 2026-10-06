@@ -76,6 +76,7 @@ import type {
   PropertyDetail,
   PropertyEditForm as EditForm,
 } from "@/types/properties";
+import { logger } from "@/utils/logger";
 
 const route = useRoute();
 const router = useRouter();
@@ -148,7 +149,7 @@ async function handleSave() {
     );
     router.push("/properties");
   } catch (error) {
-    console.error("Error al guardar los cambios:", error);
+    logger.error("Error al guardar los cambios:", error);
     saveError.value = "No se pudo guardar los cambios. Intenta de nuevo.";
   }
 }

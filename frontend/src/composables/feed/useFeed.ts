@@ -9,6 +9,7 @@ import type {
   PageCache,
 } from "@/types/feed";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
+import { logger } from "@/utils/logger";
 
 async function fetchFeed(
   preferences: FeedPreferences,
@@ -22,7 +23,7 @@ async function fetchFeed(
     });
     return data as FeedPage;
   } catch (error) {
-    console.error("Error al obtener listings:", error);
+    logger.error("Error al obtener listings:", error);
     return { items: [], next_cursor: null };
   }
 }
@@ -91,8 +92,6 @@ export function useFeed() {
       data.value = properties.items;
       nextCursor.value = properties.next_cursor;
       await updateLookup(properties.items);
-
-      console.log(data.value);
     } finally {
       loading.value = false;
     }

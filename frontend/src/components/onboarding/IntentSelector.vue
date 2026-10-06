@@ -68,6 +68,7 @@ import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
 import { API } from "@/config";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
+import { logger } from "@/utils/logger";
 
 export type Intent = "buyer" | "seller" | "renter" | "explorer";
 
@@ -225,7 +226,7 @@ const saveIntent = async () => {
     originalValue.value = props.modelValue;
     emit("saved", props.modelValue);
   } catch (error) {
-    console.error("Error al guardar intent:", error);
+    logger.error("Error al guardar intent:", error);
   } finally {
     isLoading.value = false;
   }

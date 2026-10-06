@@ -1,6 +1,7 @@
 import { STORAGE_KEYS } from "@/config";
 import catalogApi from "@/api/catalogApi";
 import { useUserStore } from "@/stores/user";
+import { logger } from "@/utils/logger";
 
 export async function getCitiesByCountry(id: string) {
   try {
@@ -13,7 +14,7 @@ export async function getCitiesByCountry(id: string) {
     sessionStorage.setItem(key, JSON.stringify(data));
     return data;
   } catch (error) {
-    console.error("Error al obtener las ciudades soportadas:", error);
+    logger.error("Error al obtener las ciudades soportadas:", error);
   }
 }
 
@@ -49,7 +50,7 @@ export async function getNeighborhoodsByLocalities(localityIds: string[]) {
       );
     }
   } catch (error) {
-    console.error("Error al obtener los barrios:", error);
+    logger.error("Error al obtener los barrios:", error);
   }
 
   return cached;
@@ -67,7 +68,7 @@ export async function locations() {
       localStorage.setItem(STORAGE_KEYS.COUNTRIES, JSON.stringify(data));
       return data;
     } catch (error) {
-      console.error("Error al obtener los paises soportados:", error);
+      logger.error("Error al obtener los paises soportados:", error);
     }
   };
 
@@ -107,6 +108,6 @@ export async function getNeighborhood(
       country_id: coords.country_id,
     };
   } catch (error) {
-    console.error("Error al obtener los barrios:", error);
+    logger.error("Error al obtener los barrios:", error);
   }
 }

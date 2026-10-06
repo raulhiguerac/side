@@ -10,6 +10,7 @@ import type {
   ReachablePoiItem,
 } from "@/types/pois";
 import { CATEGORY_META, CATEGORY_PRIORITY } from "@/types/pois";
+import { logger } from "@/utils/logger";
 
 interface CategoryGroup {
   label: string;
@@ -51,7 +52,7 @@ async function fetchPois(
     );
     return data as Array<ReachablePoisResult>;
   } catch (error) {
-    console.error("Error al obtener pois:", error);
+    logger.error("Error al obtener pois:", error);
     return [];
   }
 }
