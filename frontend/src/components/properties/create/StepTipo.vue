@@ -244,23 +244,43 @@ import {
   Bath,
   Check,
 } from "@lucide/vue";
-import type { CreatePropertyForm } from "@/types/properties";
+import {
+  LISTING_TYPE_LABELS,
+  PROPERTY_TYPE_LABELS,
+} from "@/constants/propertyLabels";
+import type { ListingType, PropertyType } from "@/types/feed";
+import type { ChoiceOption, CreatePropertyForm } from "@/types/properties";
 
 defineProps<{ form: CreatePropertyForm; attempted?: boolean }>();
 const emit = defineEmits<{ (e: "update:form", v: CreatePropertyForm): void }>();
 
-const propertyTypes = [
-  { value: "house", label: "Casa", desc: "Ideal para familias", icon: Home },
+const propertyTypes: ChoiceOption<PropertyType>[] = [
+  {
+    value: "house",
+    label: PROPERTY_TYPE_LABELS.house,
+    desc: "Ideal para familias",
+    icon: Home,
+  },
   {
     value: "apartment",
-    label: "Apartamento",
+    label: PROPERTY_TYPE_LABELS.apartment,
     desc: "Vida urbana y moderna",
     icon: Building2,
   },
 ];
-const listingTypes = [
-  { value: "sale", label: "Venta", desc: "Transfiere la propiedad", icon: Tag },
-  { value: "rent", label: "Arriendo", desc: "Ingreso mensual fijo", icon: Key },
+const listingTypes: ChoiceOption<ListingType>[] = [
+  {
+    value: "sale",
+    label: LISTING_TYPE_LABELS.sale,
+    desc: "Transfiere la propiedad",
+    icon: Tag,
+  },
+  {
+    value: "rent",
+    label: LISTING_TYPE_LABELS.rent,
+    desc: "Ingreso mensual fijo",
+    icon: Key,
+  },
 ];
 const conditions = [
   { value: "new", label: "Nueva", icon: Sparkles },

@@ -1,4 +1,4 @@
-import type { ListingStatus } from "@/types/feed";
+import type { ListingStatus, ListingType, PropertyType } from "@/types/feed";
 import type { PropertyDetail, VerificationStatus } from "@/types/properties";
 
 /**
@@ -14,8 +14,8 @@ export interface AdminPropertyDetail extends PropertyDetail {
 export interface AdminPropertyRow {
   id: string;
   owner_id: string;
-  property_type: "house" | "apartment";
-  listing_type: "sale" | "rent";
+  property_type: PropertyType;
+  listing_type: ListingType;
   status: ListingStatus;
   verification_status: VerificationStatus;
   rejection_reason: string | null;
