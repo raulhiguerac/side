@@ -6,6 +6,7 @@ import type {
   NeighborhoodAdminFilters,
   NeighborhoodAdminPage,
 } from "@/types/admin/catalog";
+import { pageRange } from "@/utils/pagination";
 
 const FILTER_KEYS: (keyof NeighborhoodAdminFilters)[] = [
   "locality_id",
@@ -64,11 +65,15 @@ export function useAdminNeighborhoods() {
   );
 
   /** Rango visible, 1-indexado, para el "Mostrando X-Y de Z". */
-  const range = computed(() => {
-    if (!page.value?.total_items) return { from: 0, to: 0 };
-    const from = (currentPage.value - 1) * page.value.items_per_page + 1;
-    return { from, to: from + page.value.items.length - 1 };
-  });
+  const range = computed(() =>
+    page.value
+      ? pageRange(
+          currentPage.value,
+          page.value.items_per_page,
+          page.value.items.length
+        )
+      : pageRange(1, 0, 0)
+  );
 
   return {
     rows: computed(() => page.value?.items ?? []),

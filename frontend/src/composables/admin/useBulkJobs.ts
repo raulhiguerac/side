@@ -7,6 +7,7 @@ import type {
   BulkJobsFilters,
   BulkJobsPage,
 } from "@/types/admin/bulk";
+import { pageRange } from "@/utils/pagination";
 
 /** El historial paginado por offset. Se pide siempre al servidor: relanzar
  * agrega una corrida arriba y una copia local quedaría corrida. */
@@ -23,11 +24,9 @@ export function useBulkJobs() {
     () => page.value * PAGE_SIZE.ADMIN_BULK_JOBS < total.value
   );
 
-  const range = computed(() => {
-    if (!total.value) return { from: 0, to: 0 };
-    const from = (page.value - 1) * PAGE_SIZE.ADMIN_BULK_JOBS + 1;
-    return { from, to: from + jobs.value.length - 1 };
-  });
+  const range = computed(() =>
+    pageRange(page.value, PAGE_SIZE.ADMIN_BULK_JOBS, jobs.value.length)
+  );
 
   async function load(next = page.value, nextFilters = filters.value) {
     loading.value = true;

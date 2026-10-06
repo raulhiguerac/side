@@ -10,21 +10,14 @@
     </template>
 
     <template #footer>
-      <div
-        v-if="serverTotal"
-        class="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-between"
-      >
-        <p class="text-brand-muted text-sm">
-          Mostrando {{ range.from }}-{{ range.to }} de
-          {{ serverTotal.toLocaleString("es-CO") }}
-        </p>
-        <PaginationArrows
-          :has-prev="hasPrev"
-          :has-next="hasNext"
-          @prev="prev"
-          @next="next"
-        />
-      </div>
+      <AdminPaginationFooter
+        :range="range"
+        :total="serverTotal"
+        :has-prev="hasPrev"
+        :has-next="hasNext"
+        @prev="prev"
+        @next="next"
+      />
     </template>
 
     <template #panel>
@@ -45,7 +38,7 @@
 
 <script lang="ts" setup>
 import { onMounted, watch } from "vue";
-import PaginationArrows from "@/components/shared/PaginationArrows.vue";
+import AdminPaginationFooter from "@/components/admin/shared/AdminPaginationFooter.vue";
 import AdminSplitView from "@/components/admin/shared/AdminSplitView.vue";
 import AdminPropertiesTable from "@/components/admin/properties/AdminPropertiesTable.vue";
 import AdminPropertyPreviewPanel from "@/components/admin/properties/AdminPropertyPreviewPanel.vue";
