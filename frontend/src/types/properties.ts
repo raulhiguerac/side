@@ -100,3 +100,12 @@ export interface ChoiceOption<V extends string> {
   desc?: string;
   icon: Component;
 }
+
+export interface NumericFieldOption {
+  key: "area_m2" | "bedrooms" | "bathrooms";
+  label: string;
+  icon: Component;
+  min: string;
+  step: string;
+  placeholder: string;
+}

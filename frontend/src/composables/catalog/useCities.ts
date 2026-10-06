@@ -4,15 +4,6 @@ import {
   getCitiesByCountry,
 } from "@/composables/catalog/useLocation";
 
-interface Locality {
-  id: string;
-  name: string;
-  admin_division: {
-    id: string;
-    name: string;
-  };
-}
-
 const countryUser = ref<string | undefined>(undefined);
 export const cities = ref<Map<string, string>>(new Map());
 
@@ -21,6 +12,6 @@ export async function load() {
   countryUser.value = result.countryUser;
   if (result.countryUser) {
     const data = await getCitiesByCountry(result.countryUser);
-    cities.value = new Map(data.map((city: Locality) => [city.id, city.name]));
+    cities.value = new Map((data ?? []).map((city) => [city.id, city.name]));
   }
 }

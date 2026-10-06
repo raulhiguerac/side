@@ -64,3 +64,12 @@ export interface AuthUser extends AuthProfile {
   id?: string;
   email?: string;
 }
+
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  account_type: "person" | "organization";
+}

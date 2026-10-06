@@ -332,11 +332,8 @@
 
 <script setup lang="ts">
 import { ref, useTemplateRef, watch } from "vue";
-import {
-  useAvmForm,
-  type AvmFormPayload,
-  type SelectedPlace,
-} from "@/composables/avm/useAvmForm";
+import { useAvmForm, type AvmFormPayload } from "@/composables/avm/useAvmForm";
+import type { SelectedPlace } from "@/types/maps";
 import { getNeighborhood } from "@/composables/catalog/useLocation";
 
 const emit = defineEmits<{

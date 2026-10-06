@@ -95,6 +95,7 @@
 <script lang="ts" setup>
 /** Pantalla de recuperación de contraseña. */
 import { ref } from "vue";
+import axios from "axios";
 import usersApi from "@/api/usersApi";
 import router from "@/router";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
@@ -120,10 +121,11 @@ const resetPasswordUser = async () => {
 
     // Éxito: el reset no loguea, solo avisa que revises el correo.
     router.push("/login");
-  } catch (error: any) {
-    // Fallo (400, 500, etc.)
+  } catch (error) {
     errorMessage.value =
-      error.response?.data?.message || "Error al solicitar el cambio";
+      (axios.isAxiosError<{ message?: string }>(error) &&
+        error.response?.data?.message) ||
+      "Error al solicitar el cambio";
   } finally {
     // 4. Pase lo que pase, quitamos el cargando
     isLoading.value = false;

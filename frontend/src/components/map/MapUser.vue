@@ -1,6 +1,5 @@
 <template>
   <l-map
-    ref="mapRef"
     v-model:zoom="zoom"
     v-model:center="internalCenter"
     @moveend="onMoveEnd"
@@ -66,6 +65,7 @@ import type { MarkerData, MarkerImageType } from "@/types/maps";
 import { markerIconMap } from "@/constants/markerIcons";
 import { POI_COLORS } from "@/constants/poiColors";
 import type { LeafletEvent } from "leaflet";
+import type {} from "leaflet.markercluster"; // tipos de L.MarkerClusterGroup
 
 const SPECIAL_TYPES: MarkerImageType[] = ["subject", "house", "apartment"];
 
@@ -125,8 +125,8 @@ const emit = defineEmits<{
   ];
 }>();
 
-const mapRef = ref<InstanceType<typeof LMap> | null>(null);
-let clusterGroup: any = null;
+let map: L.Map | null = null;
+let clusterGroup: L.MarkerClusterGroup | null = null;
 
 const specialMarkers = computed(() =>
   props.markers.filter((m) => SPECIAL_TYPES.includes(m.imageType))
@@ -136,12 +136,11 @@ const poiMarkers = computed(() =>
 );
 
 function buildCluster() {
-  const map = (mapRef.value as any)?.leafletObject as L.Map | undefined;
   if (!map) return;
 
   if (clusterGroup) map.removeLayer(clusterGroup);
 
-  clusterGroup = new MarkerClusterGroup({
+  const group: L.MarkerClusterGroup = new MarkerClusterGroup({
     maxClusterRadius: 50,
     chunkedLoading: true,
   });
@@ -154,21 +153,22 @@ function buildCluster() {
       iconSize: [10, 10],
       iconAnchor: [5, 5],
     });
-    const marker = L.marker([m.lat, m.lon], { icon }).addTo(clusterGroup);
+    const marker = L.marker([m.lat, m.lon], { icon }).addTo(group);
     if (m.label) marker.bindPopup(buildPoiPopupHtml(m));
   }
 
-  map.addLayer(clusterGroup);
+  map.addLayer(group);
+  clusterGroup = group;
 }
 
-function onMapReady() {
+function onMapReady(instance: L.Map) {
+  map = instance;
   buildCluster();
 }
 
 watch(poiMarkers, buildCluster, { deep: true });
 
 onUnmounted(() => {
-  const map = (mapRef.value as any)?.leafletObject as L.Map | undefined;
   if (map && clusterGroup) map.removeLayer(clusterGroup);
 });
 
