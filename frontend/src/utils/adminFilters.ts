@@ -1,8 +1,8 @@
 import type { LocationQuery } from "vue-router";
 import type { AdminFilterDefinition } from "@/types/admin/filters";
 
-/** Deja solo las keys definidas con un valor del enum: la query la escribe
- * cualquiera, y `?status=banana` es un 422 del backend. */
+/** Deja solo las keys definidas y, en los selects fijos, solo valores del enum: la
+ * query la escribe cualquiera, y `?status=banana` es un 422 del backend. */
 export function sanitizeFilterQuery(
   query: LocationQuery,
   filters: readonly AdminFilterDefinition[]
@@ -12,7 +12,13 @@ export function sanitizeFilterQuery(
   for (const filter of filters) {
     // Una key repetida llega como array: ahí no hay un valor único que aplicar.
     const value = query[filter.key];
-    if (typeof value === "string" && value in filter.options) {
+    if (typeof value !== "string" || !value) continue;
+    // Async y búsqueda no tienen enum que mirar: los valida el backend.
+    if (
+      filter.type === "async-select" ||
+      filter.type === "search" ||
+      value in filter.options
+    ) {
       clean[filter.key] = value;
     }
   }

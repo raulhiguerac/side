@@ -1,7 +1,7 @@
 ---
 title: Runbook — frontend local dev
 status: draft
-last-verified: 2026-09-27
+last-verified: 2026-10-04
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -13,6 +13,8 @@ sources:
   - ../../../sources/frontend/2026-06-28-devcontainer-proxy-chrome-fix.md
   - ../../../sources/frontend/2026-07-13-vscode-port-forwarding-breaks-requests.md
   - ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md
+  - ../../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md
+  - ../../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md
 ---
 
 ## TL;DR
@@ -69,12 +71,13 @@ Las vars `VUE_APP_*_URL` son **opcionales en dev** — si no están seteadas, `c
 # Solo necesarias para staging/prod o para apuntar a un backend remoto:
 VUE_APP_USERS_URL=http://localhost:8000
 VUE_APP_CATALOG_URL=http://localhost:8001
-VUE_APP_AVM_URL=http://localhost:8002
-VUE_APP_PROPERTIES_URL=http://localhost:8003
+VUE_APP_AVM_URL=http://localhost:8003
+VUE_APP_PROPERTIES_URL=http://localhost:8002
 VUE_APP_IPAPI_URL=https://ipapi.co/json/
 ```
 
 Notas:
+- **Gap 2026-10-04:** `frontend/.env.development` sí define las cuatro `VUE_APP_*_URL` apuntando a `localhost:800x`, así que en dev hoy el front llama directo y el proxy no se usa. La intención es el proxy; ver known gap 11.
 - Prefijo `VUE_APP_*` lo requiere Vue CLI (Vite usaría `VITE_*`).
 - `VUE_APP_IPAPI_URL` es la URL de **ipapi.co** (third-party) para detectar país por IP.
 
@@ -127,14 +130,14 @@ Detalle del flujo cookie en [[catalog-service-architecture]] sección "Auth en e
 ### Mapa (cuando se implemente)
 Hoy `MapUser.vue` existe pero su integración es limitada — no hay endpoints backend de listings con coordenadas todavía.
 
-## CORS — abierto temporal
+## CORS
 
-Backends hoy tienen `allow_origins=["*"]` (ver, ej., [main.py:18-23](backend/catalog-service/src/app/main.py#L18-L23) de catalog). Eso es **temporal mientras se prueba todo**. Pre-producción se cerrará a la lista de orígenes reales.
+Con `withCredentials: true` el navegador no acepta `Access-Control-Allow-Origin: *`: exige el origen exacto y `Access-Control-Allow-Credentials: true`. Por eso catalog (desde 2026-10-04) y properties declaran `allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"]` con `allow_credentials=True` ([catalog main.py:18-24](backend/catalog-service/src/app/main.py#L18-L24)). Los orígenes están fijos en código; para staging/prod tienen que venir de configuración.
 
-Si CORS empieza a bloquear:
-- Verificar que el backend tiene `allow_origins=["*"]` (puede haberse cambiado).
-- Verificar que axios envía `withCredentials: true` (todas las calls del front lo hacen).
-- Si el frontend cambia de puerto/host, el CORS no es relevante hoy (wildcard) pero lo será cuando se cierre.
+Si CORS bloquea (`The value of the 'Access-Control-Allow-Credentials' header … must be 'true'`):
+- El front está llamando directo al backend en vez de pasar por el proxy (ver known gap 11).
+- El backend no tiene `allow_credentials=True` o no lista el origen del front.
+- Si el front cambia de puerto/host, hay que sumarlo a la lista de orígenes.
 
 ## Build para producción
 
@@ -143,9 +146,11 @@ cd /workspace/frontend
 npm run build
 ```
 
-Salida: `dist/` con assets estáticos. Deploy planeado en bucket público (ver [[adr-hash-history-static-hosting]]).
+Salida: `dist/` con assets estáticos. Deploy planeado en bucket público (ver [[adr-hash-history-static-hosting]]). **Update 2026-09-28:** el destino no está definido. La alternativa en exploración es servir `dist/` desde el clúster de `infra/k8s`, con `/api/*` en el Gateway; si se elige, ese ADR queda superseded.
 
-**Sin pipeline de CI/CD configurado al 2026-05-21** — el build se hace a mano cuando toque deployar.
+⚠️ **Hoy `npm run build` falla**: `vue-cli-service build` corre ESLint y aborta ([[open-items]]).
+
+**Sin pipeline de CI/CD al 2026-09-28**: no existe `.github/workflows`, así que ni lint, ni typecheck, ni build corren solos.
 
 ## Linting
 
@@ -157,25 +162,28 @@ Configurado con ESLint + `@vue/eslint-config-typescript` + Prettier. Hay un `.es
 
 ## Tests
 
-**Sin tooling de tests configurado al 2026-05-21**:
+**Sin tooling de tests ni de typecheck al 2026-09-28**:
 - No `vitest` ni `@vue/test-utils` en `devDependencies`.
+- No `vue-tsc`: nada chequea tipos fuera del editor.
 - No directorio `tests/` ni `__tests__/`.
 - No script `test` en `package.json`.
 
-Worth flag para cuando se priorice testing — gap conocido.
+El camino propuesto (Vite antes que Vitest, tests en composables y utils, CI por PR) está en [[open-items]], en "Camino del front a production grade".
 
-## Known gaps (actualizado 2026-06-28)
+## Known gaps (actualizado 2026-10-04)
 
 1. **`auth.ts` (store Pinia) hardcodea URLs** — usa `usersApi` pero el store de Keycloak puede quedar desincronizado si cambia el host. Menor riesgo ahora que las instancias están centralizadas.
 2. ~~**Sin axios instance central**~~ — **resuelto** (2026-06-28): instancias dedicadas por servicio + interceptor de silent refresh. Ver [[frontend-architecture]] sección "API consumption pattern".
 3. **Sin tests** — ningún framework configurado.
-4. ~~**CORS abierto**~~ — **resuelto** parcialmente: el proxy webpack hace las requests same-origin en dev. En prod los backends deben tener `allow_origins` cerrado a los dominios reales.
+4. ~~**CORS abierto**~~ — **resuelto** parcialmente: catalog y properties declaran orígenes explícitos con credenciales (fijos en código). En prod tienen que venir de configuración. El proxy webpack haría las requests same-origin en dev, pero hoy no se usa (gap 11).
 5. **Backends a mano** — no hay docker-compose service que arranque users/catalog/analytics automáticamente (se corren manualmente desde el devcontainer).
 6. **Firebase residual** — `firebase` aún en deps y usado en `LoginView.loginWithGoogle`. Ver [[adr-firebase-removal]].
 7. **`leaflet` y `@vue-leaflet/vue-leaflet` en devDependencies** — debería ser `dependencies` si se usa en runtime.
 8. **Onboarding completo en frontend, pausado en backend** — ver [[frontend-onboarding-flow]] "El refactor pendiente".
 9. **Cursor de paginación del feed no vive en `route.query`** — paginación in-memory, no compartible por URL.
 10. **VS Code port-forwarding puede hijackear un puerto de backend individual** (distinto del gotcha de Chrome+proxy de arriba, que ya está resuelto). Síntoma: un endpoint devuelve 400 con body vacío y el log de ese microservicio muestra `WARNING uvicorn.error: Invalid HTTP request received.` sin ninguna línea de acceso normal para esa request — la request nunca llega a FastAPI, se corta a nivel de transporte. Diagnóstico: `lsof -iTCP:<puerto>` — si el proceso que escucha es `code` (VS Code) y no el `fastapi dev`/`uvicorn` esperado, el auto-port-forwarding del devcontainer tomó el puerto y actúa de proxy intermedio que no maneja bien todas las requests (particularmente con cookies/credentials). Fix: panel "Ports" de VS Code → quitar el forward de ese puerto → reiniciar el proceso backend si hace falta para que lo recupere.
+11. **`.env.development` saltea el proxy** (2026-10-04) — define `VUE_APP_*_URL=http://localhost:800x` y `config/index.ts` las prefiere sobre `/api/*`. El front llama directo a cada backend y CORS aplica. La intención es el proxy: quitar esas variables del `.env.development`. Ver [[open-items]].
+12. **La VM de Docker se queda sin memoria** (2026-10-04) — en macOS Docker Desktop corre en una VM con tope fijo (aquí ~7,7 GB de 16 GB). Con ORS (`-Xmx6g`), MLflow, Keycloak, Kafka y un build de webpack, el kernel de la VM mata procesos (ORS, Kafka, Keycloak, el propio build; `docker inspect` muestra `OOMKilled=true`). Mitigación: build del front en el host o con `NODE_OPTIONS=--max-old-space-size=1536`; subir la memoria de Docker Desktop (Settings → Resources); no levantar ORS/MLflow/Kafka si no se usan.
 
 ## Comandos útiles
 

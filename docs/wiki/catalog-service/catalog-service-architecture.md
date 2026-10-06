@@ -11,7 +11,7 @@ related:
   - "[[adr-poi-cache-aside]]"
   - "[[adr-isochrone-ors-h3]]"
   - "[[adr-geospatial-feature-engineering]]"
-sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md]
+sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md, ../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md]
 ---
 
 ## TL;DR
@@ -61,7 +61,7 @@ src/app/
 │   ├── geo_catalog/            # reads frontend
 │   ├── geo_resolution/         # reverse + POI population
 │   └── shared/                 # CachePort + RedisCacheAdapter + helpers
-└── main.py                     # FastAPI factory (incluye CORS allow_origins=*)
+└── main.py                     # FastAPI factory (CORS: orígenes localhost:8080 explícitos + allow_credentials)
 ```
 
 Reglas comunes ya documentadas en [[architecture]] — hex pattern, ports como `typing.Protocol`, adapters wire DI vía `api/deps/`.
@@ -222,6 +222,6 @@ Familias en `core/exceptions/`:
 - El POI fetch appendea el `h3_index` al array `h3_cells` del neighborhood después de persistir POIs — esa es la mecánica lazy-fill ([resolve_poi.py:150-156](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_poi.py#L150-L156)).
 - El tag set Overpass vive en `integrations/georef/pois/category_map.py` (~207 tags entre 5 keys OSM: amenity, shop, public_transport, leisure, healthcare), no inline en `overpass.py` ([category_map.py](backend/catalog-service/src/app/integrations/georef/pois/category_map.py)).
 - `ResolveIsochroneUseCase` es el 4to UC de `geo_resolution`, expuesto en `POST /geo-resolution/reachable-pois` ([use_cases/resolve_isochrone.py](backend/catalog-service/src/app/services/geo_resolution/use_cases/resolve_isochrone.py)).
-- `CORSMiddleware` está configurado con `allow_origins=["*"]` ([main.py:18-23](backend/catalog-service/src/app/main.py#L18-L23)).
+- `CORSMiddleware` permite `http://localhost:8080` y `http://127.0.0.1:8080` con `allow_credentials=True`; con credenciales el navegador no acepta `*` ([main.py:18-24](backend/catalog-service/src/app/main.py#L18-L24)).
 - Las llamadas a Redis en `geo_resolution` están envueltas en `try/except` para no romper el flujo si Redis está caído (cache best-effort).
 - 2 migraciones Alembic aplicadas al 2026-05-21 ([migrations/versions/](backend/catalog-service/src/app/migrations/versions)).

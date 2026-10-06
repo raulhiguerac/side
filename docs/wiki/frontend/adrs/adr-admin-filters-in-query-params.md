@@ -1,7 +1,7 @@
 ---
 title: "ADR-0012 — Los filtros del panel admin viven en la URL, no en el composable"
 status: stable
-last-verified: 2026-08-24
+last-verified: 2026-10-04
 owners: [frontend]
 related:
   - "[[frontend-admin-panel]]"
@@ -9,7 +9,7 @@ related:
   - "[[adr-admin-offset-pagination]]"
   - "[[properties-service-admin]]"
   - "[[open-items]]"
-sources: [../../../sources/frontend/2026-08-24-admin-url-filters-and-imports-tab.md]
+sources: [../../../sources/frontend/2026-08-24-admin-url-filters-and-imports-tab.md, ../../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md]
 decision-date: 2026-08-24
 decision-status: accepted
 ---
@@ -48,6 +48,7 @@ El componente de filtros no decide nada: mantiene un borrador local que solo sal
 - ❌ Aplicar el mismo filtro que ya está activo no refetchea: `push` a la misma URL es una navegación duplicada y el `watch` no se entera. Se aceptó — pedir lo que ya se está viendo no es un caso que valga código.
 - ⚠️ La página **no** viaja en la URL: `usePagination` acumula páginas en memoria y entrar directo en `?page=3` obligaría a cargar 1-3 o migrar a offset puro. Bookmarkear filtros cubre el caso real; la selección del panel (`selectedId`) sigue igualmente fuera de la URL.
 - ⚠️ `AdminFilterBar` solo renderiza `<select>`. Filtros que no sean de opciones cerradas —fechas, texto libre— necesitan extender el componente antes de poder exponerse.
+  - **Update 2026-10-04:** resuelto en parte. `AdminFilterBar` suma `async-select` (opciones cargadas por la vista, con cascada vía `dependsOn`) y `search` (texto libre, aplica con Enter). `sanitizeFilterQuery` solo valida contra el enum los selects estáticos; los otros dos los valida el backend. Las fechas siguen sin input. Ver [[frontend-admin-panel]].
 
 ## Claims
 

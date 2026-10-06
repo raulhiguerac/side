@@ -8,7 +8,8 @@ related:
   - "[[catalog-service-architecture]]"
   - "[[catalog-service-geo-catalog]]"
   - "[[catalog-service-poi-lifecycle]]"
-sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md, ../../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md, ../../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md]
+  - "[[frontend-admin-panel]]"
+sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md, ../../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md, ../../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md, ../../../sources/frontend/2026-09-28-admin-catalog-geometry-design.md]
 ---
 
 ## TL;DR
@@ -206,3 +207,4 @@ Llamadas a `cache_client.*` siempre wrapeadas en `try/except pass` — cache bes
 - Las llamadas a `cache_client` están envueltas en `try/except pass` — cache es best-effort, su caída no rompe writes ([country/update.py:42-48](backend/catalog-service/src/app/services/catalog_admin/use_cases/country/update.py#L42-L48)).
 - El parser de archivos acepta `.csv`, `.json`, `.txt`; cualquier otra extensión lanza `ValueError` ([file_parser.py:8-14](backend/catalog-service/src/app/services/catalog_admin/helpers/file_parser.py#L8-L14)).
 - La normalización NFKD+lowercase+strip de `search_name` está copiada en `neighborhood/bulk_create.py`, `neighborhood/bulk_enrich_geometries.py`, `neighborhood/create.py`, `neighborhood/update.py`, `locality/create.py`, `locality/update.py`, `sql_neighborhood_repository.py` y `geo_resolution/adapters/poi/overpass.py`.
+- `NeighborhoodAdminResponse` devuelve el centroide (`latitude`/`longitude`) pero no `geom`; la geometría solo sale en `NeighborhoodAdminDetail` ([neighborhood.py:31-39](backend/catalog-service/src/app/services/catalog_admin/schemas/neighborhood.py#L31-L39)).

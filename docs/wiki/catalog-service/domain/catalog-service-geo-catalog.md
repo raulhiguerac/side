@@ -1,13 +1,14 @@
 ---
 title: Dominio geo_catalog (catalog-service)
 status: draft
-last-verified: 2026-07-15
+last-verified: 2026-09-28
 owners: [catalog-service]
 related:
   - "[[catalog-service]]"
   - "[[catalog-service-architecture]]"
   - "[[catalog-service-catalog-admin]]"
-sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md]
+  - "[[frontend-admin-panel]]"
+sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/frontend/2026-09-28-admin-catalog-geometry-design.md]
 ---
 
 ## TL;DR
@@ -78,7 +79,7 @@ Las schemas de geo_catalog son **distintas** a las de catalog_admin: solo los fi
 Ejemplos:
 - `CountryListItem`: `id`, `iso_alpha2`, `name`, `phone_code`, `currency_code`.
 - `LocalityListItem`: `id`, `name`, `latitude`, `longitude`, `locality_type`.
-- `NeighborhoodListItem`: `id`, `code`, `name`, `latitude`, `longitude`.
+- `NeighborhoodListItem`: `id`, `locality_id`, `name`, `search_name`, `latitude`, `longitude`.
 - `NeighborhoodsByLocalityResponse`: `neighborhoods: dict[str, list[NeighborhoodListItem]]` — un dict por locality.
 
 ## Boundaries
@@ -87,6 +88,7 @@ Ejemplos:
 - **No hace point-in-polygon** — eso vive en `geo_resolution` (ver [[catalog-service-poi-lifecycle]]).
 - **No valida tokens** — endpoints son públicos.
 - **No expone `geom` ni `h3_cells`** — solo metadata legible para el frontend. Si un consumer necesita el polígono, deberá usar una API específica (no existe hoy).
+- **Solo devuelve entidades activas.** Los repositorios filtran `is_active == True`, así que no sirven como listado admin: lo desactivado no se ve ni se puede reactivar desde ahí. La sección de catálogo del panel admin necesita un read path propio ([[frontend-admin-panel]], [[open-items]]).
 
 ## Open items
 
@@ -102,3 +104,5 @@ Ejemplos:
 - Endpoints de geo_catalog son **públicos** (sin `require_admin` ni auth) ([countries.py:7](backend/catalog-service/src/app/api/routes/countries.py#L7), [localities.py:10](backend/catalog-service/src/app/api/routes/localities.py#L10), [neighborhoods.py:17](backend/catalog-service/src/app/api/routes/neighborhoods.py#L17)).
 - `GetLocalitiesUseCase` se reusa para 2 endpoints distintos (`by-country`, `by-admin-division`) inyectando filtros diferentes desde la ruta ([localities.py:13-26](backend/catalog-service/src/app/api/routes/localities.py#L13-L26)).
 - `/localities/by-admin-division` sí tiene cache-aside, igual patrón que `by-country`, con `cache_key_localities_by_admin_division(admin_division_id)` ([get_locality.py:13,42](backend/catalog-service/src/app/services/geo_catalog/use_cases/get_locality.py#L13)).
+- Los repositorios SQL de geo_catalog filtran `is_active == True` en países, localidades y barrios ([sql_countries_repository.py:19](backend/catalog-service/src/app/services/geo_catalog/adapters/sql_countries_repository.py#L19), [sql_locality_repository.py:25](backend/catalog-service/src/app/services/geo_catalog/adapters/sql_locality_repository.py#L25), [sql_neighborhood_repository.py:25](backend/catalog-service/src/app/services/geo_catalog/adapters/sql_neighborhood_repository.py#L25)).
+- `NeighborhoodListItem` no incluye la geometría: trae `id`, `locality_id`, `name`, `search_name` y el centroide ([neighborhood.py:6-12](backend/catalog-service/src/app/services/geo_catalog/schemas/neighborhood.py#L6-L12)).

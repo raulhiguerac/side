@@ -1,7 +1,7 @@
 ---
 title: Panel admin (frontend)
 status: draft
-last-verified: 2026-08-24
+last-verified: 2026-10-04
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -19,6 +19,10 @@ related:
   - "[[adr-transitions-served-by-backend]]"
   - "[[adr-promotions-own-subtab]]"
   - "[[adr-admin-filters-in-query-params]]"
+  - "[[adr-mapbox-geocoding-leaflet-rendering]]"
+  - "[[frontend-map-component]]"
+  - "[[catalog-service-catalog-admin]]"
+  - "[[catalog-service-geo-catalog]]"
   - "[[open-items]]"
 sources:
   - ../../../sources/frontend/2026-07-16-admin-panel-nav-and-hub.md
@@ -31,6 +35,10 @@ sources:
   - ../../../sources/frontend/2026-08-09-moderation-wiring-and-promotions-shell.md
   - ../../../sources/frontend/2026-08-09-promotions-tab-wired.md
   - ../../../sources/frontend/2026-08-24-admin-url-filters-and-imports-tab.md
+  - ../../../sources/frontend/2026-09-28-admin-catalog-geometry-design.md
+  - ../../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md
+  - ../../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md
+  - ../../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md
 ---
 
 ## TL;DR
@@ -64,7 +72,11 @@ Se eligió primer nivel sobre el dropdown porque la moderación se espera que se
 | `/admin/properties/promotions` (`path: ""`) | `admin-properties-promotions` | `promotions/AdminPromotionsActiveView.vue` |
 | `/admin/properties/promotions/new` | `admin-properties-promotions-new` | `promotions/AdminPromotionsCreateView.vue` |
 | `/admin/properties/imports` | `admin-properties-imports` | `imports/AdminImportsView.vue` |
-| `/admin/catalog` | `admin-catalog` | `views/admin/catalog/AdminCatalogView.vue` |
+| `/admin/catalog` | — | `views/admin/catalog/AdminCatalogView.vue` (padre con tabs) |
+| `/admin/catalog` (`path: ""`) | `admin-catalog` | `neighborhoods/AdminNeighborhoodsView.vue` |
+| `/admin/catalog/localities` | `admin-catalog-localities` | `localities/AdminLocalitiesView.vue` |
+| `/admin/catalog/admin-divisions` | `admin-catalog-admin-divisions` | `divisions/AdminDivisionsView.vue` |
+| `/admin/catalog/countries` | `admin-catalog-countries` | `countries/AdminCountriesView.vue` |
 
 `home.ts`/`properties.ts`/`catalog.ts` se combinan en un barrel `index.ts` (`adminRoutes`) importado en `router/index.ts`.
 
@@ -208,7 +220,7 @@ El composable de ejecución pertenece a `AdminModerationView`, la única que tie
 
 Las dos props llevan default `[]`. Front y backend se despliegan por separado, y contra un backend viejo esos campos llegan `undefined`: sin default el `.map` reventaba el panel entero. Con default, el select muestra solo el estado actual —no se puede mover nada— y el panel sigue en pie.
 
-`ModerationPayload` vive en `types/admin.ts` y no exportado del SFC: el shim de `*.vue` solo declara el default export, así que un import de tipo con nombre desde un componente rompería bajo `vue-tsc`.
+`ModerationPayload` vive en `types/admin/moderation.ts` y no exportado del SFC: el shim de `*.vue` solo declara el default export, así que un import de tipo con nombre desde un componente rompería bajo `vue-tsc`.
 
 ## El guardado, cableado punta a punta (2026-08-09)
 
@@ -278,6 +290,16 @@ Lo que hay que saber al usarlo:
 - **El borrador se siembra con todas las keys, incluso vacías.** Sobre una key ausente el `<option value="">` no tiene qué marcar como seleccionada, y el select aparecería en blanco tras un reload con filtro puesto.
 - **`has_errors` viaja como `"true"`/`"false"`** y lo parsea Pydantic del lado del backend; los filtros de fecha no se exponen porque el componente todavía no tiene inputs de fecha.
 
+**Update 2026-10-04 — tres tipos de filtro.** `AdminFilterDefinition` es una unión por `type` ([types/admin/filters.ts](frontend/src/types/admin/filters.ts)):
+
+- `select` estático: el de siempre, con `type` opcional para que los filtros existentes no cambien.
+- `async-select`: carga sus opciones con `loadOptions(parents)`, una función que pasa la vista. El componente no conoce el cliente HTTP ni la forma de cada respuesta. Con `dependsOn`, queda deshabilitado mientras el padre esté vacío.
+- `search`: input de texto que aplica con Enter, igual que el botón; por eso no lleva debounce.
+
+La cascada se resuelve en el `@change`: al cambiar un padre se vacían y recargan sus hijos y nietos. No va en un `watch` porque sembrar el borrador desde la URL no debe vaciar nada. Un contador por key descarta las respuestas viejas si el padre cambia dos veces rápido. `sanitizeFilterQuery` solo valida contra el enum los selects estáticos; `async-select` y `search` los valida el backend.
+
+La prop `filtersWidth` elige el reparto: `two-thirds` (default: filtros 2/3, botón 1/3) o `full` (el botón ocupa solo su ancho). Las clases van literales en el template para que Tailwind no las purgue.
+
 ## La tab de importaciones, cableada (2026-08-24)
 
 Antes de cablearla se montó como **mock estático** —datos ficticios, banner de aviso, botones inertes— para revisar el layout mientras el endpoint no existía. Eso permitió discutir columnas y panel sin backend, y el reemplazo por datos reales fue un cambio acotado.
@@ -294,10 +316,52 @@ El total volvió a 23 con el `GET /admin/properties/bulk` nuevo ([[properties-se
 
 Tampoco hay módulo de API admin. Se evaluó crear `src/api/adminApi.ts` y **se descartó**: las instancias de axios del proyecto son una por servicio, y "admin" no es un servicio — los endpoints admin viven en properties y en catalog. En su lugar la ruta se agregó a `constants/propertiesEndpoints.ts` y el fetch vive en el composable, que es el patrón que ya usan `useFeed` y `useProfileListings`.
 
+## Sección de catálogo — diseño (2026-09-28)
+
+**Update 2026-09-28 — tabs montadas.** `AdminCatalogView.vue` ya funciona como layout: título, `AdminTabsNav` y `RouterView`. Tiene cuatro rutas hijas, con los mismos nombres de recurso que el backend. `admin-catalog` pasó al hijo por defecto (Barrios), así que la card del hub no cambió. Cada tab es un `EmptyState` hasta que exista el read path admin. El archivo conserva su nombre aunque sea un layout; alinearlo a `AdminCatalogLayout.vue` es opcional.
+
+Con lo pendiente de propiedades bloqueado por backend (precios estimados, relanzar job, CSV de errores), catálogo es lo siguiente. El boceto reusa `AdminSplitView`:
+
+- **Tabs** Barrios · Localidades · Divisiones · Países.
+- **Filtros en cascada** país → división → localidad, más estado, "tiene geometría" y búsqueda.
+- **Tabla de barrios**: silueta del polígono (o un placeholder "sin geometría"), nombre, código y estado, con una barra de cobertura encima ("38 de 42 con geometría").
+- **Panel**: el polígono sobre el mapa base con los vecinos atenuados, área, número de vértices, centroide, aviso de superposición y las acciones editar / reemplazar geometría / desactivar.
+- **Acciones bulk** (CSV de barrios, GeoJSON de geometrías) visibles solo con una localidad elegida. Resuelve la UX que quedó pendiente porque el bulk de catálogo necesita `locality_id` (ver "Acciones rápidas").
+
+**Visualización.** El admin valida polígonos (forma, ubicación, superposiciones, huecos), y eso pide 2D con mapa base:
+
+- la silueta de la fila con **d3-geo** (`geoPath` + `fitSize`), que sirve también para la miniatura que le falta a la tabla de propiedades;
+- el panel con **Leaflet**, que ya está instalado.
+
+d3 no está en el repo ([[adr-mapbox-geocoding-leaflet-rendering]]), así que habría que agregar solo `d3-geo`. **El 3D queda descartado para el admin** porque la perspectiva deforma justo los bordes que se comparan. Queda para un dashboard analítico (extrusión por precio/m² o cantidad de listings) con MapLibre `fill-extrusion` o deck.gl.
+
+**Bloqueo de backend.** Catalog no tiene read path admin. Sus endpoints admin son todos de escritura, los `GET` públicos esconden lo inactivo y ninguno devuelve la geometría ([[catalog-service-catalog-admin]], [[catalog-service-geo-catalog]]). Falta un `GET` admin paginado que incluya inactivos, con un FeatureCollection GeoJSON simplificado por localidad ([[open-items]]).
+
+**Catálogo sería la quinta copia del esqueleto admin**, y su jerarquía no se parece a la tabla con preview de moderación: la forma de la sección se decide antes de copiar (ver [[open-items]]).
+
+Preguntas abiertas: navegar por filtros en cascada o entrar desde un mapa de la ciudad, y si el aviso de superposición entra en la primera iteración.
+
+**Update 2026-10-04.** El read path admin de barrios existe ([[catalog-service-catalog-admin]]) y la silueta se dibuja con el `svg_path` que arma PostGIS (`ST_AsSVG`), no con d3-geo: `d3-geo` no se agregó. El número de vértices quedó fuera del panel.
+
+## La tab de barrios, cableada (2026-10-04)
+
+La barra de filtros va **arriba de `AdminSplitView`**, a todo el ancho y con `filtersWidth="full"`: la cascada filtra la tabla y también el mapa del panel. En properties sigue en el slot `#filters`. Los filtros son País → Localidad (con los `GET` públicos, que solo traen activos; División entra cuando exista su `GET` admin), Estado, Geometría y Buscar.
+
+El flujo es el de [[adr-admin-filters-in-query-params]]: "Aplicar" → `router.push({ query })` → `urlFilters` (computed sobre `route.query`) → `watch(urlFilters, load)` → `GET /v1/admin/neighborhoods`. La petición sale siempre de la URL.
+
+- **`useAdminNeighborhoods`** pide página por página con el `current_page`/`total_pages` del backend, sin el cache incremental de `useAdminProperties`. No manda `country_id`: solo acota el select de localidad.
+- **Tabla** (`AdminNeighborhoodsTable`, sobre `BaseTable`): silueta, nombre, código y estado. `NeighborhoodSilhouette` arma `<svg viewBox="min_lon -max_lat ancho alto">` con el `svg_path` y `vector-effect="non-scaling-stroke"`; la Y va negada porque `ST_AsSVG` la invierte.
+- **Barra de cobertura** en el slot `#filters` del split, o sea arriba de la tabla.
+- **Panel** (`AdminNeighborhoodPanel`): detalle por `useNeighborhoodDetail`, mapa con el barrio y sus vecinos ([[frontend-map-component]]), área, centroide, código postal y cantidad de vecinos. Los vecinos los pide `useNeighborhoodNeighbors` con el bbox que emite el mapa; si fallan (p. ej. bbox mayor al tope de ~15 km) el mapa queda sin ellos.
+- axios necesita `paramsSerializer: { indexes: null }` para mandar `bbox` repetido; por defecto arma `bbox[]=`, que FastAPI no entiende.
+- `catalogApi` pasó a `withCredentials` + interceptor de auth: los endpoints `/admin` leen la cookie. Eso obligó a cerrar el CORS de catalog ([[frontend-local-dev]]).
+
+Pendiente: las acciones del panel (editar, reemplazar geometría, desactivar) y probar la tab en el navegador.
+
 ## Decisiones diferidas
 
 - **Roles admin granulares** (super-admin / catalog-admin / properties-admin): descartado por prematuro — sin evidencia de necesitarlo, y el diseño de roles de Keycloak (lista de strings) lo hace barato de agregar después. Importante: no sería un cambio solo de `users-service` — `catalog-service` y `properties-service` cada uno valida su propio `require_admin` contra su propio JWT.
-- **KPIs reales, gráficos**: bloqueado en tener endpoints de conteo reales. D3 (ya usado en el mapa) probablemente sea excesivo para indicadores simples de tendencia — se reservaría para analítica real con series/multi-dimensión.
+- **KPIs reales, gráficos**: bloqueado en tener endpoints de conteo reales. D3 —que no está instalado, ver [[adr-mapbox-geocoding-leaflet-rendering]]— probablemente sea excesivo para indicadores simples de tendencia — se reservaría para analítica real con series/multi-dimensión.
 
 ## Claims
 
@@ -333,7 +397,7 @@ Tampoco hay módulo de API admin. Se evaluó crear `src/api/adminApi.ts` y **se 
 - No existe ninguna tabla de transiciones en el frontend: `constants/moderationTransitions.ts` fue eliminado ([constants/](frontend/src/constants)).
 - `AdminModerationForm.vue` no importa `propertiesApi`: emite `save` con los campos que cambiaron y nada más ([AdminModerationForm.vue](frontend/src/components/admin/properties/moderation/AdminModerationForm.vue)).
 - El textarea del motivo solo se renderiza cuando el target de verificación elegido es `rejected`, y bloquea "Guardar" si está vacío ([AdminModerationForm.vue](frontend/src/components/admin/properties/moderation/AdminModerationForm.vue)).
-- `AdminPropertyPreviewPanel.vue` tipa la respuesta como `AdminPropertyDetail` y le pasa al formulario los `allowed_*` que trae el detalle ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue), [types/admin.ts](frontend/src/types/admin.ts)).
+- `AdminPropertyPreviewPanel.vue` tipa la respuesta como `AdminPropertyDetail` y le pasa al formulario los `allowed_*` que trae el detalle ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue), [types/admin/properties.ts](frontend/src/types/admin/properties.ts)).
 - `AdminPropertyPreviewPanel.vue` monta el formulario detrás de `v-if="property"` y reenvía su `save` con el `propertyId` ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue)).
 - `useAdminProperties` expone `load`, `reload`, `next` y `prev`; `reload` refetchea la página actual con los filtros vigentes y `load` resetea a la 1 ([useAdminProperties.ts](frontend/src/composables/admin/useAdminProperties.ts)).
 - `usePagination.replaceCurrentPage` reemplaza la página visible y trunca las siguientes, y retrocede una página si la nueva viene vacía ([usePagination.ts](frontend/src/composables/shared/usePagination.ts)).
@@ -353,6 +417,19 @@ Tampoco hay módulo de API admin. Se evaluó crear `src/api/adminApi.ts` y **se 
 - `AdminModerationView` filtra por `verification_status` y `status`, y `AdminImportsView` por `status` y `has_errors`, en ambos casos desde `route.query` ([AdminModerationView.vue](frontend/src/views/admin/properties/moderation/AdminModerationView.vue), [AdminImportsView.vue](frontend/src/views/admin/properties/imports/AdminImportsView.vue)).
 - `useBulkJobs` pide siempre la página al servidor y no usa `usePagination` ([useBulkJobs.ts](frontend/src/composables/admin/useBulkJobs.ts)).
 - `AdminBulkJobPanel` recibe la fila como prop y solo llama a `adminBulkJobStatus` cuando `error_count` es distinto de cero ([AdminBulkJobPanel.vue](frontend/src/components/admin/properties/imports/AdminBulkJobPanel.vue)).
-- `BulkJobRow` declara `error_count` y no un array de errores ([types/admin.ts](frontend/src/types/admin.ts)).
+- `BulkJobRow` declara `error_count` y no un array de errores ([types/admin/bulk.ts](frontend/src/types/admin/bulk.ts)).
 - El botón de relanzar de `AdminBulkJobPanel` no tiene handler: se deshabilita si el job está `pending` o si `expires_at` ya pasó ([AdminBulkJobPanel.vue](frontend/src/components/admin/properties/imports/AdminBulkJobPanel.vue)).
 - `AdminImportsView` ya no monta el empty state fijo: renderiza `AdminSplitView` con la tabla de corridas ([AdminImportsView.vue](frontend/src/views/admin/properties/imports/AdminImportsView.vue)).
+- `BulkUploadPropertiesModal.vue` escribe a mano los paths `/v1/admin/properties/bulk/upload-url` y `/v1/admin/properties/bulk` en vez de tomarlos de `PROPERTIES_ENDPOINTS` ([BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/imports/BulkUploadPropertiesModal.vue), [propertiesEndpoints.ts](frontend/src/constants/propertiesEndpoints.ts)).
+- `/admin/catalog` es una ruta padre sin `name` con cuatro hijos (`""`, `localities`, `admin-divisions`, `countries`), el `name` `admin-catalog` vive en el hijo por defecto, y solo el padre declara `meta: { requiresAuth: true, requiresAdmin: true }` ([router/routes/admin/catalog.ts](frontend/src/router/routes/admin/catalog.ts)).
+- `AdminCatalogView.vue` monta `AdminTabsNav` con las tabs Barrios, Localidades, Divisiones y Países, y un `RouterView` ([AdminCatalogView.vue](frontend/src/views/admin/catalog/AdminCatalogView.vue)).
+- Localidades, Divisiones y Países solo renderizan `EmptyState`; Barrios es la única tab de catálogo que llama a la API ([views/admin/catalog/](frontend/src/views/admin/catalog)).
+- `AdminNeighborhoodsView` monta `AdminFilterBar` fuera de `AdminSplitView`, con `filters-width="full"`, y recarga con `watch(urlFilters, load)` ([AdminNeighborhoodsView.vue:5](frontend/src/views/admin/catalog/neighborhoods/AdminNeighborhoodsView.vue#L5), [:147](frontend/src/views/admin/catalog/neighborhoods/AdminNeighborhoodsView.vue#L147)).
+- `AdminFilterDefinition` es la unión de `AdminStaticSelectFilter`, `AdminAsyncSelectFilter` y `AdminSearchFilter`, y el select estático lleva `type` opcional ([filters.ts:13](frontend/src/types/admin/filters.ts#L13), [:29](frontend/src/types/admin/filters.ts#L29)).
+- `AdminFilterBar` vacía y recarga los `async-select` dependientes desde `resetDependents`, llamado en el `@change` del select ([AdminFilterBar.vue:146](frontend/src/components/admin/shared/AdminFilterBar.vue#L146)).
+- `AdminFilterBar` acepta `filtersWidth` (`two-thirds` por defecto, o `full`) ([AdminFilterBar.vue:87-92](frontend/src/components/admin/shared/AdminFilterBar.vue#L87-L92)).
+- `sanitizeFilterQuery` deja pasar sin validar los valores de `async-select` y `search` ([adminFilters.ts:18](frontend/src/utils/adminFilters.ts#L18)).
+- `useAdminNeighborhoods` solo manda al backend `locality_id`, `is_active`, `has_geometry` y `search_term` ([useAdminNeighborhoods.ts:10-21](frontend/src/composables/admin/useAdminNeighborhoods.ts#L10-L21)).
+- `useNeighborhoodNeighbors` serializa el bbox con `paramsSerializer: { indexes: null }` ([useNeighborhoodNeighbors.ts:21](frontend/src/composables/admin/useNeighborhoodNeighbors.ts#L21)).
+- Los tipos admin viven en `types/admin/{properties,moderation,promotions,bulk,filters,catalog}.ts`, sin `index.ts` que los reexporte ([types/admin/](frontend/src/types/admin)).
+- `package.json` del frontend no declara `d3` ni `d3-geo` ([package.json](frontend/package.json)).
