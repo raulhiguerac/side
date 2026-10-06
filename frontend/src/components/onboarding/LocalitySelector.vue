@@ -75,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted } from "vue";
 import Multiselect from "@vueform/multiselect";
 import { useOnboarding } from "@/composables/onboarding/useOnboarding";
 import { load, cities } from "@/composables/catalog/useCities";

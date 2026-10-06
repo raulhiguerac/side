@@ -80,7 +80,6 @@ import type {
 import type { MarkerData, SelectedPlace } from "@/types/maps";
 import avmApi from "@/api/avmApi";
 import { logger } from "@/utils/logger";
-import { API } from "@/config";
 
 const showResult = ref(false);
 const price = ref(0);
