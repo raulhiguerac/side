@@ -23,7 +23,10 @@
     </template>
 
     <template #panel>
-      <AdminNeighborhoodPanel :neighborhood-id="selectedId" />
+      <AdminNeighborhoodPanel
+        :neighborhood-id="selectedId"
+        @action="activeAction = $event"
+      />
     </template>
 
     <template #footer>
@@ -44,10 +47,27 @@
       </div>
     </template>
   </AdminSplitView>
+
+  <BaseModal
+    :model-value="activeAction !== null"
+    @update:model-value="activeAction = null"
+  >
+    <h3 class="text-brand-text mb-2 text-lg font-bold">
+      {{ activeAction && MOCK_MODALS[activeAction] }}
+    </h3>
+    <p class="text-brand-muted mb-6 text-sm">Mock: contenido pendiente.</p>
+    <button
+      type="button"
+      class="text-brand-text hover:bg-brand-bg w-full rounded-xl py-3 text-sm font-semibold transition-colors"
+      @click="activeAction = null"
+    >
+      Cerrar
+    </button>
+  </BaseModal>
 </template>
 
 <script lang="ts" setup>
-import { computed, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import catalogApi from "@/api/catalogApi";
 import AdminNeighborhoodPanel from "@/components/admin/catalog/neighborhoods/AdminNeighborhoodPanel.vue";
@@ -55,10 +75,12 @@ import AdminNeighborhoodsTable from "@/components/admin/catalog/neighborhoods/Ad
 import NeighborhoodCoverageBar from "@/components/admin/catalog/neighborhoods/NeighborhoodCoverageBar.vue";
 import AdminFilterBar from "@/components/admin/shared/AdminFilterBar.vue";
 import AdminSplitView from "@/components/admin/shared/AdminSplitView.vue";
+import BaseModal from "@/components/shared/BaseModal.vue";
 import PaginationArrows from "@/components/shared/PaginationArrows.vue";
 import { useAdminNeighborhoods } from "@/composables/admin/useAdminNeighborhoods";
 import { useRowSelection } from "@/composables/admin/useRowSelection";
 import { CATALOG_ENDPOINTS } from "@/constants/catalogEndpoints";
+import type { NeighborhoodAction } from "@/types/admin/catalog";
 import type {
   AdminFilterDefinition,
   AdminFilterOptions,
@@ -143,6 +165,15 @@ const {
 } = useAdminNeighborhoods();
 
 const { selectedId } = useRowSelection(rows);
+
+// Mock: título por acción hasta tener los modales reales.
+const MOCK_MODALS: Record<NeighborhoodAction, string> = {
+  edit: "Editar barrio",
+  geometry: "Actualizar geometría",
+  deactivate: "Desactivar barrio",
+};
+
+const activeAction = ref<NeighborhoodAction | null>(null);
 
 watch(urlFilters, load, { immediate: true });
 </script>

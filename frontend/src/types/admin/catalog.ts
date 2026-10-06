@@ -55,3 +55,5 @@ export interface NeighborhoodGeometryItem {
   name: string;
   geometry: Geometry;
 }
+
+export type NeighborhoodAction = "edit" | "geometry" | "deactivate";
