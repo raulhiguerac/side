@@ -1,4 +1,6 @@
-const shortDateFormatter = new Intl.DateTimeFormat("es-CO", {
+import { LOCALE } from "@/config";
+
+const shortDateFormatter = new Intl.DateTimeFormat(LOCALE, {
   day: "2-digit",
   month: "short",
   year: "numeric",
@@ -12,7 +14,7 @@ export function formatShortDate(value: string | Date | null): string {
   return shortDateFormatter.format(date);
 }
 
-const shortDateTimeFormatter = new Intl.DateTimeFormat("es-CO", {
+const shortDateTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
   day: "2-digit",
   month: "2-digit",
   hour: "2-digit",
@@ -25,4 +27,13 @@ export function formatShortDateTime(value: string | Date | null): string {
   const date = typeof value === "string" ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) return "";
   return shortDateTimeFormatter.format(date);
+}
+
+const longDateTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
+  dateStyle: "long",
+  timeStyle: "short",
+});
+
+export function formatLongDateTime(value: string): string {
+  return longDateTimeFormatter.format(new Date(value));
 }
