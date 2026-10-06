@@ -1,7 +1,7 @@
 ---
 title: Onboarding flow (frontend)
 status: stable
-last-verified: 2026-07-16
+last-verified: 2026-10-05
 owners: [frontend, users-service]
 related:
   - "[[frontend]]"
@@ -11,6 +11,7 @@ sources:
   - docs/sources/frontend/2026-05-21-foundational-qa.md
   - docs/sources/frontend/2026-05-26-onboarding-wiring.md
   - docs/sources/frontend/2026-07-16-auth-user-store-consolidation.md
+  - docs/sources/frontend/2026-10-05-admin-actions-and-front-smell-audit.md
 ---
 
 ## TL;DR
@@ -35,7 +36,7 @@ watch(
       await userStore.checkInterests();
       startFlow();
     } catch (e) {
-      console.error("Error al inicializar la sesión", e);
+      logger.error("Error al inicializar la sesión", e);
     }
   },
   { immediate: true }
@@ -173,7 +174,7 @@ PropertyTypeSelector → savePropertyTypes(selections)
 ## Failure modes
 
 - **catalog-service down** al abrir el modal: `LocalitySelector` no carga opciones → user no puede avanzar. Sin retry visible al user hoy.
-- **users-service down** al guardar: las funciones `save*` solo loggean `console.error` y dejan el modal abierto. No hay toast/error UI hoy — gap.
+- **users-service down** al guardar: las funciones `save*` solo loggean con `logger.error` y dejan el modal abierto. No hay toast/error UI hoy — gap ([[open-items]]).
 - **401 en cualquier endpoint**: ya no lo maneja cada store manualmente — el interceptor centralizado de `usersApi` (ver [[frontend-architecture]]) intenta un refresh silencioso y, si falla, hace logout real + redirect. El modal queda huérfano hasta el próximo login.
 - **Doble apertura del modal**: si dos tabs se abren simultáneos, ambos disparan el flujo — `sessionStorage` es per-tab (una pestaña nueva, no duplicada, arranca sin el dismissal aunque el browser siga abierto).
 

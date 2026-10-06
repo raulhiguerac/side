@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-10-04
+last-verified: 2026-10-05
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -43,6 +43,7 @@ sources:
   - ../../sources/frontend/2026-08-01-admin-panel-tabs-moderation-preview.md
   - ../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md
   - ../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md
+  - ../../sources/frontend/2026-10-05-admin-actions-and-front-smell-audit.md
 ---
 
 ## TL;DR
@@ -60,7 +61,9 @@ frontend/
 │   ├── shims-vue.d.ts            # types para imports .vue
 │   ├── assets/                   # tailwind.css, logo, etc.
 │   ├── config/
-│   │   └── index.ts              # API.USERS_BASE_URL, CATALOG_BASE_URL, AVM_BASE_URL (port 8003), STORAGE_KEYS
+│   │   └── index.ts              # API.USERS_BASE_URL, CATALOG_BASE_URL, AVM_BASE_URL (port 8003), LOCALE, STORAGE_KEYS
+│   ├── theme/
+│   │   └── brandColors.json      # paleta brand-*: la lee tailwind.config.js y, vía constants/brandColors, el JS (Leaflet, SVG)
 │   ├── router/
 │   │   ├── index.ts              # instancia router + beforeEach guard; importa 6 módulos
 │   │   └── routes/
@@ -95,25 +98,41 @@ frontend/
 │   │   │   ├── useModerateProperty.ts # traduce el payload del form a uno o dos PATCH
 │   │   │   ├── usePromoteProperty.ts  # POST de promoción; distingue los dos 409 por `code`
 │   │   │   ├── useRowSelection.ts     # selección de fila válida frente a cambios de la lista, con extractor de clave
+│   │   │   ├── useUrlFilters.ts       # filtros admin ↔ query: urlFilters saneados, pushFilters y carga con immediate
 │   │   │   ├── useAdminNeighborhoods.ts  # listado admin de barrios: página por servidor, sin cache incremental
 │   │   │   ├── useNeighborhoodDetail.ts  # detalle de la fila elegida; descarta respuestas viejas
 │   │   │   └── useNeighborhoodNeighbors.ts  # vecinos por bbox (bbox repetido en la query)
 │   │   └── users/
 │   │       └── useProfileListings.ts  # fetchUserListings(id, offset) — función pura, sin estado (la paginación vive en usePagination)
+│   ├── api/                       # instancias axios por servicio + catalogOptions (opciones de país/localidad para filtros)
 │   ├── utils/
 │   │   ├── money.ts               # formatMoney/parseMoney (inputs) + formatCurrency (display)
-│   │   └── date.ts                # formatShortDate — Intl construido una vez a nivel módulo
+│   │   ├── number.ts              # formatNumber, formatArea (m² / km²)
+│   │   ├── date.ts                # formatShortDate, formatShortDateTime, formatLongDateTime — Intl construido una vez a nivel módulo
+│   │   ├── pagination.ts          # pageRange(page, pageSize, shown) → { from, to }
+│   │   ├── property.ts            # propertyTitle(type, listing) → "Apartamento en venta"
+│   │   ├── placeAutocomplete.ts   # monta el autocompletado de Google Places (AVM y alta de propiedades)
+│   │   ├── adminFilters.ts        # sanitizeFilterQuery, toFilterOptions
+│   │   └── logger.ts              # punto único de logs de error
 │   ├── constants/
 │   │   ├── propertyStatus.ts      # LISTING_STATUS_* y VERIFICATION_STATUS_* (labels + badges)
+│   │   ├── propertyLabels.ts      # PROPERTY_TYPE_LABELS, LISTING_TYPE_LABELS
+│   │   ├── propertiesFilters.ts   # MODERATION_FILTERS, BULK_JOB_FILTERS
+│   │   ├── catalogFilters.ts      # NEIGHBORHOOD_FILTERS (loaders en api/catalogOptions)
+│   │   ├── brandColors.ts         # BRAND_COLORS (reexporta theme/brandColors.json)
 │   │   ├── catalogEndpoints.ts    # paths de catalog-service (countries, localitiesByCountry, adminNeighborhoods, adminNeighborhood, adminNeighborhoodGeometries)
 │   │   ├── pagination.ts          # PAGE_SIZE por vista (MY_PROPERTIES, PUBLIC_PROFILE, ADMIN_PROPERTIES, ADMIN_PROMOTIONS, ADMIN_BULK_JOBS, ADMIN_NEIGHBORHOODS)
 │   │   └── propertiesEndpoints.ts # paths de properties-service (me, byId, byUser, visibility, images, adminList, adminDetail, adminVerification, adminStatus, adminPromotions, adminPropertyPromotions)
 │   ├── types/
 │   │   ├── user.ts
-│   │   ├── feed.ts               # PropertyCard (API shape), PropertyCardUI (UI shape), PropertyImageCard, ListingStatus
+│   │   ├── feed.ts               # PropertyCard (API shape), PropertyCardUI (UI shape), PropertyImageCard, ListingStatus, PropertyType, ListingType
+│   │   ├── catalog.ts            # CatalogItem, Locality (GET públicos de catálogo)
+│   │   ├── maps.ts               # MarkerData, SelectedPlace
+│   │   ├── pagination.ts         # PageRange
+│   │   ├── ui.ts                 # ButtonSize
 │   │   ├── properties.ts         # PropertyDetail, PropertyLocationDetail, CreatePropertyForm, PropertyEditForm
 │   │   ├── pois.ts               # OrsProfile, GeoJsonPolygon, ReachablePoiItem, RangeGroup, CATEGORY_META, CATEGORY_PRIORITY
-│   │   └── admin/                # un módulo por tema, sin index.ts: properties, moderation, promotions, bulk, filters (AdminFilterDefinition), catalog (barrios)
+│   │   └── admin/                # un módulo por tema, sin index.ts: properties, moderation, promotions, bulk, filters (AdminFilterDefinition), catalog (barrios), actions (AdminAction)
 │   ├── views/                    # páginas-ruta
 │   │   ├── public/{HomeView, AboutView, PublicProfileView}  # /users/:userId
 │   │   ├── auth/{LoginView, RegisterView, ResetPasswordView}
@@ -130,7 +149,7 @@ frontend/
 │       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState, PrimaryButton, BaseTable}
 │       ├── onboarding/{IntentSelector, LocalitySelector, NeighborhoodSelector, PropertyTypeSelector}
 │       ├── properties/
-│       │   ├── cards/{PropertyCard, HouseCard}      # HouseCard sin uso actual
+│       │   ├── cards/PropertyCard
 │       │   ├── photos/{PropertyPhotoGrid, PhotoGalleryPopup}
 │       │   ├── detail/{PropertyOverview, NearbyPlaces}
 │       │   ├── dashboard/DeletePropertyModal        # envuelve BaseModal, autocontenido (DELETE + loading)
@@ -139,7 +158,7 @@ frontend/
 │       ├── settings/SettingsSidebar
 │       ├── map/MapUser
 │       └── admin/                                  # ver [[frontend-admin-panel]]
-│           ├── shared/{AdminSplitView, AdminTabsNav}    # layout 60/40 y nav de tabs, sin dominio
+│           ├── shared/{AdminSplitView, AdminTabsNav, AdminFilterBar, AdminActionBar, AdminPaginationFooter}    # piezas sin dominio
 │           └── properties/
 │               ├── {AdminPropertiesTable, AdminPropertyPreviewPanel}   # compartidos entre tabs
 │               ├── moderation/AdminModerationForm
@@ -416,18 +435,20 @@ Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. `ONBOARDING_DISMISSE
 
 | Carpeta | Propósito |
 |---|---|
-| `shared/` | NavBar, NavGuest (no-logged), NavUser (logged), BaseModal, PrimaryButton (botón gradiente verde reusable, presentacional puro), PaginationArrows, EmptyState, BaseSpinner y **BaseTable** (tabla dumb genérica sobre TanStack, un slot por columna, con selección de fila opcional vía `rowKey`/`selectedKey` + emit `rowClick` — ver [[adr-tanstack-table]]) — reusables transversales. Gotcha de la selección: la clase de fila activa y el `hover:` se aplican de forma **excluyente**, porque Tailwind emite la variante `hover:` con más especificidad y si conviven despinta la fila seleccionada al pasarle el mouse. |
+| `shared/` | NavBar, NavGuest (no-logged), NavUser (logged), BaseModal, PrimaryButton (botón primario único, verde liso, con `size` sm|md|lg y `loading` que muestra spinner y deshabilita), PaginationArrows, EmptyState, BaseSpinner y **BaseTable** (tabla dumb genérica sobre TanStack, un slot por columna, con selección de fila opcional vía `rowKey`/`selectedKey` + emit `rowClick` — ver [[adr-tanstack-table]]) — reusables transversales. Gotcha de la selección: la clase de fila activa y el `hover:` se aplican de forma **excluyente**, porque Tailwind emite la variante `hover:` con más especificidad y si conviven despinta la fila seleccionada al pasarle el mouse. |
 | `onboarding/` | 4 selectors (Intent, Locality, Neighborhood, PropertyType) — usados desde el modal. |
-| `properties/` | Organizado en subcarpetas por dominio desde 2026-06-21. `cards/{PropertyCard, HouseCard}` — cards para feed (`HouseCard` sin uso actual). `photos/{PropertyPhotoGrid, PhotoGalleryPopup}`. `detail/{PropertyOverview, NearbyPlaces}`. `feed/FeedFilters` — sidebar de filtros con secciones Preferencias (ciudad, barrio, tipo) y Filtros (precio, área, habitaciones, baños); se pre-pobla con ciudades de `useCities`, barrios cargados dinámicamente al seleccionar ciudad vía `watch`. Mantiene estado local (`selected`, `selectedNeighborhoods`, `selectedTypes`, `filters: ref<FeedFilters>({})` con `v-model.number`); `property_types` se togglea con `toggleType(type)` (push/filter sobre el array). **Emite un solo `submit` con `{preferences, filters}` al click en "Aplicar"** — no reactivo con `watch`, decisión para evitar una petición por cada cambio de campo. El objeto `preferences` se arma en `onSubmit` leyendo los refs (`selected.value`, etc.), sin ref `preferences` duplicado. |
+| `properties/` | Organizado en subcarpetas por dominio desde 2026-06-21. `cards/PropertyCard` — card del feed (`HouseCard` se borró el 2026-10-05: no lo usaba nadie). `photos/{PropertyPhotoGrid, PhotoGalleryPopup}`. `detail/{PropertyOverview, NearbyPlaces}`. `feed/FeedFilters` — sidebar de filtros con secciones Preferencias (ciudad, barrio, tipo) y Filtros (precio, área, habitaciones, baños); se pre-pobla con ciudades de `useCities`, barrios cargados dinámicamente al seleccionar ciudad vía `watch`. Mantiene estado local (`selected`, `selectedNeighborhoods`, `selectedTypes`, `filters: ref<FeedFilters>({})` con `v-model.number`); `property_types` se togglea con `toggleType(type)` (push/filter sobre el array). **Emite un solo `submit` con `{preferences, filters}` al click en "Aplicar"** — no reactivo con `watch`, decisión para evitar una petición por cada cambio de campo. El objeto `preferences` se arma en `onSubmit` leyendo los refs (`selected.value`, etc.), sin ref `preferences` duplicado. |
 | `settings/` | SettingsSidebar — navegación lateral del SettingsLayout. |
 | `admin/` | `properties/{BulkUploadPropertiesModal, AdminPropertiesTable, AdminPropertyPreviewPanel}` — el modal de import por presigned PUT, la tabla de moderación (columnas + badges sobre `BaseTable`) y el panel de vista previa, que reusa `PropertyOverview` y `PhotoGalleryPopup` del detalle público. Ver [[frontend-admin-panel]]. |
 | `map/` | MapUser — componente de mapa dumb/reusable (vue-leaflet declarativo, markers-prop + slot). Ver [[frontend-map-component]]. |
-| `avm/` | AvmForm / AvmResult — form del avalúo multi-step. `AvmForm` consume `composables/useAvmForm` (expone `AvmFormPayload`, `AvmPredictRequest`, `SelectedPlace`). Emite `place-selected` (marker en tiempo real) y `submit` (payload + place + neighborhood resuelto). `DevPlaygroundView` orquesta: recibe `place-selected` → actualiza `center` y `marker` reactivos → pasa al mapa. |
+| `avm/` | AvmForm / AvmResult — form del avalúo multi-step. `AvmForm` consume `composables/useAvmForm` (expone `AvmFormPayload`, `AvmPredictRequest`; `SelectedPlace` vive en `types/maps.ts`). Emite `place-selected` (marker en tiempo real) y `submit` (payload + place + neighborhood resuelto). `DevPlaygroundView` orquesta: recibe `place-selected` → actualiza `center` y `marker` reactivos → pasa al mapa. |
 
 ## Estilos: Tailwind + diseño tokens
 
 - Tailwind 3 con clases utility directas en templates.
 - Custom utilities/colors en `tailwind.config.js` — usa nombres tipo `brand-primary`, `brand-text`, `brand-bg`, `brand-muted`, `brand-divider`, `brand-placeholder`, `brand-border` (vistos en `LoginView`).
+- **Paleta en un solo archivo (2026-10-05).** `src/theme/brandColors.json` es la fuente: `tailwind.config.js` la carga con `require`, y el JS que no acepta clases (estilos de Leaflet, `fill` de SVG) la lee como `BRAND_COLORS` desde `constants/brandColors.ts`. Por eso `tsconfig.json` activa `resolveJsonModule`. Se sumaron `primary-dark`, `navy` y `accent`. El tema del multiselect, que estaba duplicado en `LocalitySelector` y `NeighborhoodSelector`, vive en `main.css` como `.brand-multiselect`, con colores vía `theme()`.
+- Queda en `App.vue` CSS de la plantilla de Vue CLI (`#app { font-family: Avenir… }`) que probablemente pisa Plus Jakarta Sans. No se tocó porque cambia la tipografía global. Ver [[open-items]].
 - `assets/tailwind.css` y `main.css` cargados en `main.ts`.
 - Sin component library tipo Element Plus — todos los componentes son custom, por decisión: ver [[adr-no-component-library]].
 
@@ -452,6 +473,7 @@ Consolidado el 2026-07-29. Antes el dinero tenía **cuatro** implementaciones co
 
 - **`formatCurrency(value, currency = "COP")`** en `utils/money.ts` es el único camino hoy. Acepta `string` además de `number` porque los `Decimal` del backend se serializan como string.
 - **`formatMoney`/`parseMoney` quedan aparte a propósito**: no son formateo de display, son el par que usan los inputs de `StepDetalles` y `PropertyEditForm` en `@blur`. Meterles símbolo rompería el `parseMoney` de vuelta.
+- **Update 2026-10-05:** `utils/number.ts` suma `formatNumber` (reemplaza los `toLocaleString("es-CO")` sueltos del admin) y `formatArea`, `utils/date.ts` suma `formatLongDateTime`, y el locale vive en `LOCALE` de `config/index.ts`: `"es-CO"` no aparece en ningún otro archivo.
 - **`utils/date.ts`** (`formatShortDate`) es nuevo — no existía **ningún** formateo de fechas en el proyecto. Su `Intl.DateTimeFormat` se construye una vez a nivel de módulo: instanciarlo por celda es de lo más caro que puede hacer una tabla.
 
 Efecto colateral visible: `PropertyCard` tenía el `$` hardcodeado en el template, así que los precios pasaron de `$450.000.000` a `$ 450.000.000` — la salida real del locale `es-CO`, que `AvmResult` ya usaba.
@@ -487,6 +509,14 @@ Corriéndolo con `--ignoreDeprecations 6.0` aparecen **2 errores reales**, ambos
 
 Ninguno rompe el build porque **`vue-cli-service build` no corre `vue-tsc`, solo ESLint**. Arreglar el `tsconfig` es el prerequisito para que el typecheck vuelva a ser una red de seguridad. Ver [[open-items]].
 
+**Update 2026-10-05.** El `TS5101` depende de la versión de TypeScript que baje `npx`: el proyecto fija TS 5.0 y `npx vue-tsc` a secas trae uno incompatible, que aborta. Con versiones fijadas corre sin tocar el `tsconfig`:
+
+```bash
+npx -p vue-tsc@2 -p typescript@5.6 vue-tsc --noEmit -p tsconfig.json
+```
+
+`HouseCard.vue` se borró. Quedan `ResetPasswordView.vue:51` y dos errores nuevos en `AdminModerationForm.vue:52` y `:81` (`null` como índice). Al tipar los `any` del proyecto apareció además un bug real: `useCities` hacía `.map` sobre el `undefined` que devuelve `getCitiesByCountry` cuando falla.
+
 ### Reglas de ESLint desactivadas
 
 `no-undef` está apagado a nivel proyecto desde el 2026-07-29. `eslint-plugin-vue` está en v8 (2022) y no entiende `<script setup generic="T">` ni `defineSlots`, así que marcaba los parámetros de tipo como identificadores no definidos. La regla además es redundante con `vue-tsc` —que sí ve el type-space de TS— y es lo que recomienda typescript-eslint para proyectos TS. Sin esto, cada componente genérico nuevo daría falsos positivos.
@@ -501,6 +531,19 @@ Ninguno rompe el build porque **`vue-cli-service build` no corre `vue-tsc`, solo
 La migración sigue diferida ([[adr-vue-cli-deferred-vite-migration]]), pero al evaluar Nuxt UI se midió el costo en vez de estimarlo: **116 archivos**, solo **5** usos de `process.env` (todos en `config/index.ts`), **una** API específica de webpack (`require("leaflet.markercluster")` en `MapUser.vue`), ningún `require.context`, y un proxy de 4 entradas que traduce directo. Es más barato de lo que suponía el ADR.
 
 **Tailwind v4 es el lado riesgoso y no depende de nosotros**: `tailwind.config.js` carga `@vueform/vueform/tailwind` y Vueform 1.13 apunta a v3. Además dos hojas cargan directivas `@tailwind` (`main.css` y `assets/tailwind.css`), la segunda con ~40 líneas de `@layer` que tematizan el web component de autocomplete de Google, cuya semántica cambió en v4.
+
+## Convenciones de código (2026-10-05)
+
+Acordadas al auditar los smells del front:
+
+- **Comentarios de una línea**, preferiblemente inline al final de la línea que explican. Nada de bloques `/** */` multilínea; la razón larga va a la wiki o al commit.
+- **Tipos en `types/`** como `interface` exportada (o unión con `type`). No se declaran tipos ni shapes complejos dentro de componentes, vistas o composables. Las claves de acciones van como uniones tipadas (`NeighborhoodAction`), no como `string`.
+- **Constantes en `constants/`, separadas por dominio** (`propertiesFilters.ts`, `catalogFilters.ts`), como ya lo están los `*Endpoints.ts`.
+- **HTTP en `api/` o en composables**, nunca dentro de una constante ni de una definición de filtro: `NEIGHBORHOOD_FILTERS` solo referencia `loadCountryOptions` / `loadLocalityOptions`.
+- **Logs con `logger.error`** de `utils/logger.ts`, no con `console`.
+- **Textos de la interfaz en tuteo**: la app es es-CO.
+
+Lo que la auditoría dejó abierto (errores tragados, `alert()`, HTTP en vistas, rutas `/v1` a mano, tipos fuera de `types/`, `useLocation`) está en [[open-items]].
 
 ## Tipos — separación UI vs API
 
@@ -587,7 +630,10 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 - Las 4 views (`MyPropertiesView`, `FeedView`, `MapView`, `PublicProfileView`) comparten el componente visual `PaginationArrows.vue`, independiente del composable de estado que use cada una ([components/shared/PaginationArrows.vue](frontend/src/components/shared/PaginationArrows.vue)).
 - `FeedView`, `MapView`, `MyPropertiesView` y `PublicProfileView` tienen `@click="router.push('/listing/${card.id}')"` en el `v-for` de cards ([views/properties/feed/FeedView.vue](frontend/src/views/properties/feed/FeedView.vue), [views/public/PublicProfileView.vue](frontend/src/views/public/PublicProfileView.vue)).
 - `types/properties.ts` contiene `CreatePropertyForm` — shape del body `POST /v1/properties`, incluye `location: { neighborhood_id, city_id, country_id, latitude, longitude }` ([types/properties.ts](frontend/src/types/properties.ts)).
-- `PrimaryButton.vue` (`components/shared/`) encapsula el gradiente verde reusado en botones de acción principal (Guardar cambios, Subir fotos, Agregar fotos) — recibe `disabled` + slot; `class` y `@click` se reenvían al `<button>` interno vía attrs fallthrough de Vue, sin declararlos como props explícitos ([components/shared/PrimaryButton.vue](frontend/src/components/shared/PrimaryButton.vue)).
+- `PrimaryButton.vue` recibe `disabled`, `loading` y `size` (`sm`|`md`|`lg`); `loading` muestra un `BaseSpinner` y deshabilita, y `class`, `type` y `@click` llegan al `<button>` por attrs fallthrough ([components/shared/PrimaryButton.vue](frontend/src/components/shared/PrimaryButton.vue)).
+- `tailwind.config.js` toma la paleta `brand` de `src/theme/brandColors.json`, que `constants/brandColors.ts` reexporta como `BRAND_COLORS` ([tailwind.config.js](frontend/tailwind.config.js), [constants/brandColors.ts](frontend/src/constants/brandColors.ts)).
+- Ningún archivo de `src/` llama a `console` salvo `utils/logger.ts` ([utils/logger.ts](frontend/src/utils/logger.ts)).
+- `LOCALE` de `config/index.ts` es el único lugar donde aparece `"es-CO"` ([config/index.ts](frontend/src/config/index.ts)).
 - `PROPERTIES_ENDPOINTS` incluye `images(id)` para el batch delete de fotos — los endpoints de presigned-urls/confirm siguen inline como string literals en `useImageUpload.ts`, no centralizados en este archivo de constants ([constants/propertiesEndpoints.ts](frontend/src/constants/propertiesEndpoints.ts)).
 - `GET /v1/search/feed` retorna `FeedPage { items: PropertyCard[], next_cursor: string | null }` — el composable desempaqueta `.items` ([types/feed.ts](frontend/src/types/feed.ts)).
 - `PropertiesView` es la vista padre en `/feed` con el header y toggle Lista/Mapa; el estado activo del toggle se deriva de `route.name` (computed), no de un ref local ([views/properties/PropertiesView.vue](frontend/src/views/properties/PropertiesView.vue)).
@@ -602,9 +648,9 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 - `firebase` no está en `package.json` ni hay imports de `firebase/*` en `src/` — removido el 2026-07-28 ([package.json](frontend/package.json)).
 - `process.env` aparece 5 veces en `src/`, todas en `config/index.ts`; el único uso de una API específica de webpack es `require("leaflet.markercluster")` en `MapUser.vue` ([config/index.ts](frontend/src/config/index.ts), [components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - `tailwind.config.js` carga `require("@vueform/vueform/tailwind")` como plugin y escanea los temas de Vueform en `content`, lo que ata la versión de Tailwind a la que soporte Vueform ([tailwind.config.js:6-8,30](frontend/tailwind.config.js#L30)).
-- `tsconfig.json` declara `baseUrl`, lo que hace que `vue-tsc --noEmit` aborte con `TS5101` antes de typecheckear ([tsconfig.json](frontend/tsconfig.json)).
+- `tsconfig.json` declara `baseUrl` y `resolveJsonModule` ([tsconfig.json](frontend/tsconfig.json)).
 - `vue.config.js` no invoca `vue-tsc`; el `build` de `vue-cli-service` valida con ESLint, no con el compilador de tipos ([vue.config.js](frontend/vue.config.js), [package.json](frontend/package.json)).
 - `.eslintrc.js` desactiva `no-undef` en `rules` ([.eslintrc.js](frontend/.eslintrc.js)).
-- `formatCurrency` es la única función de formateo de moneda con símbolo; no queda ningún `Intl.NumberFormat` ni `toLocaleString("es-CO")` fuera de `utils/money.ts` ([utils/money.ts](frontend/src/utils/money.ts)).
+- `formatCurrency` es la única función de formateo de moneda con símbolo, y no queda ningún `Intl.NumberFormat` ni `toLocaleString` fuera de `utils/` ([utils/money.ts](frontend/src/utils/money.ts), [utils/number.ts](frontend/src/utils/number.ts)).
 - `utils/date.ts` construye su `Intl.DateTimeFormat` a nivel de módulo, no por llamada ([utils/date.ts](frontend/src/utils/date.ts)).
 - `StepImagenes.vue` genera las previews con un `watch` sobre `files` (no un `computed`) y las revoca en `onUnmounted` ([StepImagenes.vue](frontend/src/components/properties/create/StepImagenes.vue)).
