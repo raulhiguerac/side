@@ -3,7 +3,6 @@
   <div
     class="min-h-screen bg-brand-bg flex items-center justify-center p-4 sm:p-8 lg:p-12"
   >
-    <!-- <div class="min-h-screen py-40 bg-[#F5F7FA]"> -->
     <!-- <div class="container mx-auto"> -->
     <div
       class="flex flex-col lg:flex-row w-full max-w-5xl bg-white rounded-2xl lg:rounded-3xl shadow-[0_20px_60px_-12px_rgba(0,0,0,0.08)] overflow-hidden"
