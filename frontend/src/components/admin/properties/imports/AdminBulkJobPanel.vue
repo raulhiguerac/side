@@ -30,7 +30,7 @@
           <div class="flex justify-between">
             <dt class="text-brand-muted">Cargadas</dt>
             <dd class="text-brand-text font-semibold tabular-nums">
-              {{ job.inserted.toLocaleString("es-CO") }}
+              {{ formatNumber(job.inserted) }}
             </dd>
           </div>
           <div class="flex justify-between">
@@ -41,14 +41,14 @@
                 job.error_count ? 'text-red-600' : 'text-brand-text',
               ]"
             >
-              {{ job.error_count.toLocaleString("es-CO") }}
+              {{ formatNumber(job.error_count) }}
             </dd>
           </div>
           <!-- Derivada, no guardada: cada fila del CSV o entra o falla. -->
           <div class="flex justify-between">
             <dt class="text-brand-muted">Leídas</dt>
             <dd class="text-brand-text tabular-nums">
-              {{ rowsRead.toLocaleString("es-CO") }}
+              {{ formatNumber(rowsRead) }}
             </dd>
           </div>
         </dl>
@@ -134,6 +134,8 @@ import type {
   BulkJobRowError,
   BulkJobStatusDetail,
 } from "@/types/admin/bulk";
+import { formatLongDateTime } from "@/utils/date";
+import { formatNumber } from "@/utils/number";
 
 /** El detalle de una corrida: la fila llega entera desde el listado y acá solo
  * se piden los errores, que ese listado cuenta pero no trae. */
@@ -142,15 +144,6 @@ const props = defineProps<{ job: BulkJobRow | null }>();
 const errors = ref<BulkJobRowError[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
-
-const longDateTimeFormatter = new Intl.DateTimeFormat("es-CO", {
-  dateStyle: "long",
-  timeStyle: "short",
-});
-
-function formatLongDateTime(value: string): string {
-  return longDateTimeFormatter.format(new Date(value));
-}
 
 const rowsRead = computed(() =>
   props.job ? props.job.inserted + props.job.error_count : 0

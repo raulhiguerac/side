@@ -90,6 +90,7 @@ import { useNeighborhoodDetail } from "@/composables/admin/useNeighborhoodDetail
 import { useNeighborhoodNeighbors } from "@/composables/admin/useNeighborhoodNeighbors";
 import type { AdminAction } from "@/types/admin/actions";
 import type { NeighborhoodAction } from "@/types/admin/catalog";
+import { formatArea } from "@/utils/number";
 
 const props = defineProps<{ neighborhoodId: string | null }>();
 
@@ -112,12 +113,4 @@ const center = computed<[number, number]>(() =>
 
 /** Los vecinos del barrio anterior no deben quedar pintados mientras llega el nuevo. */
 watch(() => props.neighborhoodId, clear);
-
-function formatArea(m2: number | null): string {
-  if (m2 == null) return "—";
-  if (m2 < 1_000_000) return `${Math.round(m2).toLocaleString("es-CO")} m²`;
-  return `${(m2 / 1_000_000).toLocaleString("es-CO", {
-    maximumFractionDigits: 2,
-  })} km²`;
-}
 </script>
