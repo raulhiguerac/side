@@ -28,11 +28,9 @@
       </div>
 
       <div class="flex gap-2 shrink-0">
-        <button
-          class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-primary text-white text-sm font-medium hover:bg-green-600 transition"
-        >
+        <PrimaryButton>
           <MessageCircle class="w-4 h-4" /> WhatsApp
-        </button>
+        </PrimaryButton>
         <button
           class="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-brand-border text-brand-text text-sm font-medium hover:bg-brand-primary-light transition"
         >
@@ -89,6 +87,8 @@ import { usePagination } from "@/composables/shared/usePagination";
 import { PAGE_SIZE } from "@/constants/pagination";
 import type { CurrentUserProfileOut } from "@/types/user";
 import type { PropertyCard as PropertyCardData } from "@/types/feed";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
+import { logger } from "@/utils/logger";
 
 const route = useRoute();
 const router = useRouter();
@@ -111,7 +111,7 @@ onMounted(async () => {
     );
     profile.value = data;
   } catch (error) {
-    console.error("Error al obtener el perfil:", error);
+    logger.error("Error al obtener el perfil:", error);
   }
 
   const first = await fetchUserListings(userId, 0);

@@ -96,9 +96,8 @@ import { MapPin, Navigation, Coffee } from "@lucide/vue";
 import NearbyPlaces from "@/components/properties/detail/NearbyPlaces.vue";
 import { getNeighborhood } from "@/composables/catalog/useLocation";
 import type { CreatePropertyForm } from "@/types/properties";
-import type { SelectedPlace } from "@/composables/avm/useAvmForm";
-
-declare const google: any;
+import type { SelectedPlace } from "@/types/maps";
+import { mountPlaceAutocomplete } from "@/utils/placeAutocomplete";
 
 const props = defineProps<{
   form: CreatePropertyForm;
@@ -122,26 +121,9 @@ const previewId = crypto.randomUUID();
 
 onMounted(async () => {
   await nextTick();
-  const { PlaceAutocompleteElement } = await google.maps.importLibrary(
-    "places"
-  );
-  const el = new PlaceAutocompleteElement({});
-  autocompleteContainer.value?.appendChild(el);
-
-  el.addEventListener("gmp-select", async (e: any) => {
-    const p = e.placePrediction.toPlace();
-    await p.fetchFields({
-      fields: ["displayName", "formattedAddress", "location"],
-    });
-
-    const lat = p.location?.lat();
-    const lon = p.location?.lng();
-
-    const place: SelectedPlace = {
-      latitude: lat,
-      longitude: lon,
-      address: p.formattedAddress ?? "",
-    };
+  if (!autocompleteContainer.value) return;
+  await mountPlaceAutocomplete(autocompleteContainer.value, async (place) => {
+    const { latitude: lat, longitude: lon } = place;
     localSelectedPlace.value = place;
     emit("update:selectedPlace", place);
 

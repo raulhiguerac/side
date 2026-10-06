@@ -67,20 +67,16 @@
             <!-- Botones -->
             <div class="flex flex-col gap-3 mt-6">
               <!-- Botón iniciar sesión -->
-              <button
+              <PrimaryButton
                 @click="resetPasswordUser"
                 type="submit"
-                :disabled="!user.email || isLoading"
-                class="w-full h-12 rounded-xl font-semibold transition-all flex items-center justify-center"
-                :class="
-                  user.email && !isLoading
-                    ? 'bg-brand-primary hover:bg-green-600 text-white cursor-pointer'
-                    : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
-                "
+                size="lg"
+                :disabled="!user.email"
+                :loading="isLoading"
+                class="w-full"
               >
-                <BaseSpinner v-if="isLoading" class="h-5 w-5 text-white" />
-                <span v-else>Recupera las llaves</span>
-              </button>
+                Recupera las llaves
+              </PrimaryButton>
             </div>
           </form>
         </div>
@@ -99,9 +95,10 @@
 <script lang="ts" setup>
 /** Pantalla de recuperación de contraseña. */
 import { ref } from "vue";
+import axios from "axios";
 import usersApi from "@/api/usersApi";
 import router from "@/router";
-import BaseSpinner from "@/components/shared/BaseSpinner.vue";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 // 📝 Datos del formulario (locales, no van al store)
 const user = ref({
@@ -124,10 +121,11 @@ const resetPasswordUser = async () => {
 
     // Éxito: el reset no loguea, solo avisa que revises el correo.
     router.push("/login");
-  } catch (error: any) {
-    // Fallo (400, 500, etc.)
+  } catch (error) {
     errorMessage.value =
-      error.response?.data?.message || "Error al solicitar el cambio";
+      (axios.isAxiosError<{ message?: string }>(error) &&
+        error.response?.data?.message) ||
+      "Error al solicitar el cambio";
   } finally {
     // 4. Pase lo que pase, quitamos el cargando
     isLoading.value = false;

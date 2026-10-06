@@ -3,8 +3,8 @@
     <div class="mb-2 flex items-baseline justify-between text-sm">
       <span class="text-brand-text font-semibold">Cobertura de geometrías</span>
       <span class="text-brand-muted tabular-nums">
-        {{ coverage.with_geometry.toLocaleString("es-CO") }} de
-        {{ coverage.total.toLocaleString("es-CO") }} · {{ percent }} %
+        {{ formatNumber(coverage.with_geometry) }} de
+        {{ formatNumber(coverage.total) }} · {{ percent }} %
       </span>
     </div>
     <div class="h-2 overflow-hidden rounded-full bg-brand-divider">
@@ -19,6 +19,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { NeighborhoodCoverage } from "@/types/admin/catalog";
+import { formatNumber } from "@/utils/number";
 
 const props = defineProps<{ coverage: NeighborhoodCoverage }>();
 

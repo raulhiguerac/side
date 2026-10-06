@@ -66,6 +66,7 @@ import IntentSelector, {
   type Intent,
 } from "@/components/onboarding/IntentSelector.vue";
 import { computed } from "vue";
+import { logger } from "@/utils/logger";
 
 const authStore = useAuthStore();
 const userStore = useUserStore();
@@ -92,7 +93,7 @@ watch(
       await userStore.checkInterests();
       startFlow();
     } catch (e) {
-      console.error("Error al inicializar la sesión", e);
+      logger.error("Error al inicializar la sesión", e);
     }
   },
   { immediate: true }

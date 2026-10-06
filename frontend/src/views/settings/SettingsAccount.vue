@@ -250,6 +250,7 @@ import { ref } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import usersApi from "@/api/usersApi";
 import router from "@/router";
+import { logger } from "@/utils/logger";
 
 const authStore = useAuthStore();
 const isLoading = ref(false);
@@ -268,7 +269,7 @@ const deactivateAccount = async () => {
     // Logout después de desactivar
     await authStore.logout();
   } catch (error) {
-    console.error("Error al desactivar cuenta:", error);
+    logger.error("Error al desactivar cuenta:", error);
     alert("Error al desactivar la cuenta");
   } finally {
     isLoading.value = false;
@@ -287,7 +288,7 @@ const deleteAccount = async () => {
     authStore._authChecked = false;
     router.push("/");
   } catch (error) {
-    console.error("Error al eliminar cuenta:", error);
+    logger.error("Error al eliminar cuenta:", error);
     alert("Error al eliminar la cuenta");
   } finally {
     isLoading.value = false;

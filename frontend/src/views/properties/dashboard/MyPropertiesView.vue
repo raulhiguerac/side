@@ -11,13 +11,10 @@
             Gestiona tus propiedades publicadas
           </p>
         </div>
-        <button
-          @click="router.push('/properties/create')"
-          class="inline-flex items-center gap-2 px-5 py-3 bg-brand-primary text-white text-sm font-semibold rounded-xl hover:bg-green-600 transition-colors"
-        >
+        <PrimaryButton size="lg" @click="router.push('/properties/create')">
           <Plus class="w-5 h-5" />
           Nueva propiedad
-        </button>
+        </PrimaryButton>
       </div>
 
       <FilterTabs
@@ -55,14 +52,14 @@
             />
           </svg>
         </template>
-        <button
+        <PrimaryButton
           v-if="activeTab === 'all'"
+          size="lg"
           @click="router.push('/properties/create')"
-          class="inline-flex items-center gap-2 px-5 py-3 bg-brand-primary text-white text-sm font-semibold rounded-xl hover:bg-green-600 transition-colors"
         >
           <Plus class="w-5 h-5" />
           Publicar mi primera propiedad
-        </button>
+        </PrimaryButton>
       </EmptyState>
 
       <!-- Grid -->
@@ -120,6 +117,7 @@ import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import { usePropertyVisibility } from "@/composables/properties/usePropertyVisibility";
 import { useMyProperties } from "@/composables/properties/useMyProperties";
 import { PAGE_SIZE } from "@/constants/pagination";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 type TabValue = "all" | ListingStatus;
 

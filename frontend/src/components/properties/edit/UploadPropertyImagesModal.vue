@@ -19,8 +19,10 @@
       </button>
       <PrimaryButton
         @click="handleUpload"
-        :disabled="loading || selectedFiles.length === 0"
-        class="flex-1 py-3"
+        size="lg"
+        :disabled="selectedFiles.length === 0"
+        :loading="loading"
+        class="flex-1"
       >
         {{ loading ? "Subiendo..." : "Subir fotos" }}
       </PrimaryButton>

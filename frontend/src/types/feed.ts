@@ -1,4 +1,6 @@
 export type ListingStatus = "draft" | "active" | "inactive" | "sold" | "rented";
+export type PropertyType = "house" | "apartment";
+export type ListingType = "sale" | "rent";
 
 export interface PropertyCardUI {
   id: string;
@@ -6,7 +8,7 @@ export interface PropertyCardUI {
   price: number;
   location: string;
   image?: string;
-  type: "sale" | "rent";
+  type: ListingType;
   status?: ListingStatus;
   bedrooms: number;
   bathrooms: number;
@@ -50,8 +52,8 @@ export interface FeedPage {
 
 export interface PropertyCard {
   id: string;
-  property_type: "house" | "apartment";
-  listing_type: "sale" | "rent";
+  property_type: PropertyType;
+  listing_type: ListingType;
   status: ListingStatus;
   price: number;
   currency: "COP" | "USD" | "EUR" | "MXN" | "PEN" | "CLP" | "ARS";

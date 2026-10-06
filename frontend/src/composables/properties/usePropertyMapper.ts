@@ -2,6 +2,7 @@ import { ref, computed, watch } from "vue";
 import type { Ref } from "vue";
 import type { PropertyCard as FeedCard, PropertyCardUI } from "@/types/feed";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
+import { propertyTitle } from "@/utils/property";
 
 export function usePropertyMapper(items: Ref<FeedCard[]>) {
   const neighborhoodLookup = ref<Record<string, string>>({});
@@ -18,11 +19,9 @@ export function usePropertyMapper(items: Ref<FeedCard[]>) {
   });
 
   function toCard(p: FeedCard): PropertyCardUI {
-    const typeLabel = p.property_type === "house" ? "Casa" : "Apartamento";
-    const listingLabel = p.listing_type === "sale" ? "en venta" : "en arriendo";
     return {
       id: p.id,
-      title: `${typeLabel} ${listingLabel}`,
+      title: propertyTitle(p.property_type, p.listing_type),
       price: Number(p.price),
       location:
         neighborhoodLookup.value[p.location?.neighborhood_id ?? ""] ?? "",

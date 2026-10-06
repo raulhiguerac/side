@@ -34,7 +34,7 @@
         <PrimaryButton
           @click="emit('add-photos')"
           :disabled="imagesAllowed === 0"
-          class="w-full px-5 py-2.5"
+          class="w-full"
         >
           Agregar fotos
         </PrimaryButton>

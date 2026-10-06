@@ -6,6 +6,8 @@ import type {
   NeighborhoodAdminFilters,
   NeighborhoodAdminPage,
 } from "@/types/admin/catalog";
+import { pageRange } from "@/utils/pagination";
+import { logger } from "@/utils/logger";
 
 const FILTER_KEYS: (keyof NeighborhoodAdminFilters)[] = [
   "locality_id",
@@ -45,7 +47,7 @@ export function useAdminNeighborhoods() {
       page.value = data;
     } catch (e) {
       error.value = "No se pudieron cargar los barrios";
-      console.error("admin neighborhoods load failed", e);
+      logger.error("admin neighborhoods load failed", e);
       page.value = null;
     } finally {
       loading.value = false;
@@ -64,11 +66,15 @@ export function useAdminNeighborhoods() {
   );
 
   /** Rango visible, 1-indexado, para el "Mostrando X-Y de Z". */
-  const range = computed(() => {
-    if (!page.value?.total_items) return { from: 0, to: 0 };
-    const from = (currentPage.value - 1) * page.value.items_per_page + 1;
-    return { from, to: from + page.value.items.length - 1 };
-  });
+  const range = computed(() =>
+    page.value
+      ? pageRange(
+          currentPage.value,
+          page.value.items_per_page,
+          page.value.items.length
+        )
+      : pageRange(1, 0, 0)
+  );
 
   return {
     rows: computed(() => page.value?.items ?? []),

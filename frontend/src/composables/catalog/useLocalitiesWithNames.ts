@@ -25,7 +25,7 @@ export function useLocalitiesWithNames() {
       ? (await getCitiesByCountry(countryUser)) ?? []
       : [];
     const cityMap = new Map<string, string>(
-      allCities.map((c: any) => [c.id, c.name])
+      allCities.map((c) => [c.id, c.name])
     );
 
     return localityIds.map((id) => ({ id, name: cityMap.get(id) ?? id }));

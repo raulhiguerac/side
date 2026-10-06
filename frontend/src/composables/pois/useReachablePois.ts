@@ -10,6 +10,7 @@ import type {
   ReachablePoiItem,
 } from "@/types/pois";
 import { CATEGORY_META, CATEGORY_PRIORITY } from "@/types/pois";
+import { logger } from "@/utils/logger";
 
 interface CategoryGroup {
   label: string;
@@ -20,12 +21,6 @@ interface CategoryGroup {
 export interface RangeWithGroups extends RangeGroup {
   groups: CategoryGroup[];
 }
-
-export const ISOCHRONE_COLORS: Record<number, string> = {
-  15: "#6366f1",
-  10: "#22c55e",
-  5: "#ef4444",
-};
 
 const DOT_BY_SECONDS: Record<number, string> = {
   300: "bg-red-500",
@@ -51,7 +46,7 @@ async function fetchPois(
     );
     return data as Array<ReachablePoisResult>;
   } catch (error) {
-    console.error("Error al obtener pois:", error);
+    logger.error("Error al obtener pois:", error);
     return [];
   }
 }

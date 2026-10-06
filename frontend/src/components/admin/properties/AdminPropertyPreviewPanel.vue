@@ -11,7 +11,7 @@
       v-if="!propertyId"
       class="text-brand-muted px-5 py-12 text-center text-sm"
     >
-      Seleccioná una propiedad de la tabla.
+      Selecciona una propiedad de la tabla.
     </p>
 
     <div v-else-if="loading" class="flex justify-center px-5 py-12">
@@ -94,14 +94,11 @@ import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import PropertyOverview from "@/components/properties/detail/PropertyOverview.vue";
 import PhotoGalleryPopup from "@/components/properties/photos/PhotoGalleryPopup.vue";
 import type { AdminPropertyDetail } from "@/types/admin/properties";
+import { logger } from "@/utils/logger";
 
 const props = defineProps<{ propertyId: string | null }>();
 
-/**
- * El panel muestra la property; qué se hace con ella es de cada tab. El pie va
- * como slot —moderación pone su formulario, promociones el suyo— y recibe el
- * detalle ya cargado para no volver a pedirlo.
- */
+// Qué se hace con la property es de cada tab: el pie es un slot con el detalle.
 defineSlots<{
   footer?: (props: { property: AdminPropertyDetail }) => unknown;
 }>();
@@ -170,7 +167,7 @@ async function load(id: string | null) {
   } catch (e) {
     if (token !== requestToken) return;
     error.value = "No se pudo cargar la vista previa";
-    console.error("admin property preview failed", e);
+    logger.error("admin property preview failed", e);
   } finally {
     if (token === requestToken) loading.value = false;
   }
