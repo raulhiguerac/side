@@ -263,18 +263,14 @@
                 </button>
               </div>
               <!-- Botón continuar -->
-              <button
+              <PrimaryButton
                 @click="nextStep"
+                size="lg"
                 :disabled="!user.accountType"
-                class="w-full h-12 rounded-xl font-semibold transition-all"
-                :class="
-                  user.accountType
-                    ? 'bg-brand-primary hover:bg-green-600 text-white cursor-pointer'
-                    : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
-                "
+                class="w-full"
               >
                 Continuar registro
-              </button>
+              </PrimaryButton>
               <!-- Paragraph abajo -->
               <p class="text-brand-placeholder text-xs text-center">
                 Sin tarjeta de crédito · Puedes cambiar esto más adelante
@@ -340,18 +336,14 @@
                 >
                   ← Volver
                 </button>
-                <button
+                <PrimaryButton
                   @click="nextStep"
+                  size="lg"
                   :disabled="!user.name || !user.lastName || !user.phone"
-                  class="w-full h-12 rounded-xl font-semibold transition-all"
-                  :class="
-                    user.name && user.lastName && user.phone
-                      ? 'bg-brand-primary hover:bg-green-600 text-white cursor-pointer'
-                      : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
-                  "
+                  class="w-full"
                 >
                   Siguiente
-                </button>
+                </PrimaryButton>
               </div>
             </div>
             <div v-if="step === 3" class="flex flex-col flex-1">
@@ -467,27 +459,17 @@
                   ← Volver
                 </button>
                 <!-- Botón finalizar -->
-                <button
+                <PrimaryButton
                   @click="registerUser"
+                  size="lg"
                   :disabled="
-                    !user.email ||
-                    !user.password ||
-                    user.password.length < 8 ||
-                    isLoading
+                    !user.email || !user.password || user.password.length < 8
                   "
-                  class="w-full h-10 rounded-xl font-semibold transition-all text-sm flex items-center justify-center"
-                  :class="
-                    user.email &&
-                    user.password &&
-                    user.password.length >= 8 &&
-                    !isLoading
-                      ? 'bg-brand-primary hover:bg-green-600 text-white cursor-pointer'
-                      : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
-                  "
+                  :loading="isLoading"
+                  class="w-full"
                 >
-                  <BaseSpinner v-if="isLoading" class="h-5 w-5 text-white" />
-                  <span v-else>Finalizar registro</span>
-                </button>
+                  Finalizar registro
+                </PrimaryButton>
 
                 <!--
                   Registro con Google, comentado con la baja de firebase: era decorativo. Vuelve con Keycloak (ADR-0004).
@@ -528,7 +510,7 @@
 import { ref } from "vue";
 import router from "@/router";
 import { useAuthStore } from "@/stores/auth";
-import BaseSpinner from "@/components/shared/BaseSpinner.vue";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 // 🔌 Conectamos con el store de autenticación
 const authStore = useAuthStore();

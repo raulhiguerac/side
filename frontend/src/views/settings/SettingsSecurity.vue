@@ -229,19 +229,15 @@
           </p>
 
           <!-- Submit -->
-          <button
+          <PrimaryButton
             type="submit"
-            :disabled="!canSubmit || isLoading"
-            class="w-full h-12 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
-            :class="
-              canSubmit && !isLoading
-                ? 'bg-brand-primary hover:bg-green-600 text-white'
-                : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
-            "
+            size="lg"
+            :disabled="!canSubmit"
+            :loading="isLoading"
+            class="w-full"
           >
-            <BaseSpinner v-if="isLoading" class="h-4 w-4" />
             {{ isLoading ? "Actualizando..." : "Actualizar contraseña" }}
-          </button>
+          </PrimaryButton>
         </form>
       </div>
       <!-- Panel derecho - solo en pantallas grandes -->
@@ -277,7 +273,7 @@
 <script lang="ts" setup>
 import { ref, computed } from "vue";
 import usersApi from "@/api/usersApi";
-import BaseSpinner from "@/components/shared/BaseSpinner.vue";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 const isLoading = ref(false);
 const errorMessage = ref("");

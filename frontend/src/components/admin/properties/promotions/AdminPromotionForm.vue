@@ -91,24 +91,23 @@
     </div>
 
     <div class="mt-4 flex items-center justify-end">
-      <button
+      <PrimaryButton
         type="button"
         :disabled="!canSubmit"
-        class="bg-brand-primary flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-green-600 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+        :loading="saving"
         @click="onSubmit"
       >
-        <BaseSpinner v-if="saving" class="h-4 w-4 text-white" />
         {{ saving ? "Promocionando…" : "Promocionar" }}
-      </button>
+      </PrimaryButton>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
-import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import { formatShortDate } from "@/utils/date";
 import type { PromotionPayload } from "@/types/admin/promotions";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 /**
  * Formulario de promoción. No llama a la API: emite duración y prioridad, y

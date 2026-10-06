@@ -207,12 +207,9 @@
         </div>
 
         <!-- apply button -->
-        <button
-          @click="onSubmit"
-          class="w-full mt-2 py-2.5 rounded-xl bg-brand-primary text-white text-sm font-semibold hover:bg-green-600 transition-colors"
-        >
+        <PrimaryButton @click="onSubmit" class="mt-2 w-full">
           Aplicar filtros
-        </button>
+        </PrimaryButton>
       </div>
     </div>
   </div>
@@ -227,6 +224,7 @@ import {
   useNeighborhoodMultiselect,
 } from "@/composables/shared/useMultiselect";
 import { FeedPreferences, FeedFilters } from "@/types/feed";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 const { selected, removeCity } = useCityMultiselect();
 const { allNeighborhoodOptions, load: loadNeighborhoods } =

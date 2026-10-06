@@ -51,19 +51,14 @@
     </div>
 
     <!-- Botón guardar -->
-    <button
+    <PrimaryButton
       @click="saveIntent"
-      :disabled="isLoading || !hasChanges"
-      class="w-full mt-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2"
-      :class="
-        hasChanges && !isLoading
-          ? 'bg-brand-primary hover:bg-green-600 text-white'
-          : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
-      "
+      :disabled="!hasChanges"
+      :loading="isLoading"
+      class="mt-3 w-full"
     >
-      <BaseSpinner v-if="isLoading" class="h-4 w-4" />
       {{ isLoading ? "Guardando..." : "Guardar" }}
-    </button>
+    </PrimaryButton>
   </div>
 </template>
 
@@ -72,7 +67,7 @@ import { ref, computed, h, watch } from "vue";
 import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
 import { API } from "@/config";
-import BaseSpinner from "@/components/shared/BaseSpinner.vue";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 export type Intent = "buyer" | "seller" | "renter" | "explorer";
 

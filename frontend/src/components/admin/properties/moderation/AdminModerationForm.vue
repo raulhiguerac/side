@@ -118,22 +118,20 @@
       >
         Descartar
       </button>
-      <button
+      <PrimaryButton
         type="button"
         :disabled="!canSave"
-        class="bg-brand-primary flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-green-600 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+        :loading="saving"
         @click="onSave"
       >
-        <BaseSpinner v-if="saving" class="h-4 w-4 text-white" />
         {{ saving ? "Guardando…" : "Guardar" }}
-      </button>
+      </PrimaryButton>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
-import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import {
   LISTING_STATUS_LABELS,
   VERIFICATION_STATUS_LABELS,
@@ -141,6 +139,7 @@ import {
 import type { ModerationPayload } from "@/types/admin/moderation";
 import type { ListingStatus } from "@/types/feed";
 import type { VerificationStatus } from "@/types/properties";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 /** Acumula los cambios y los emite juntos: cambiar la verificación saca la fila del filtro. */
 const props = withDefaults(

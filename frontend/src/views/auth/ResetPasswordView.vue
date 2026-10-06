@@ -67,20 +67,16 @@
             <!-- Botones -->
             <div class="flex flex-col gap-3 mt-6">
               <!-- Botón iniciar sesión -->
-              <button
+              <PrimaryButton
                 @click="resetPasswordUser"
                 type="submit"
-                :disabled="!user.email || isLoading"
-                class="w-full h-12 rounded-xl font-semibold transition-all flex items-center justify-center"
-                :class="
-                  user.email && !isLoading
-                    ? 'bg-brand-primary hover:bg-green-600 text-white cursor-pointer'
-                    : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
-                "
+                size="lg"
+                :disabled="!user.email"
+                :loading="isLoading"
+                class="w-full"
               >
-                <BaseSpinner v-if="isLoading" class="h-5 w-5 text-white" />
-                <span v-else>Recupera las llaves</span>
-              </button>
+                Recupera las llaves
+              </PrimaryButton>
             </div>
           </form>
         </div>
@@ -101,7 +97,7 @@
 import { ref } from "vue";
 import usersApi from "@/api/usersApi";
 import router from "@/router";
-import BaseSpinner from "@/components/shared/BaseSpinner.vue";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 // 📝 Datos del formulario (locales, no van al store)
 const user = ref({
