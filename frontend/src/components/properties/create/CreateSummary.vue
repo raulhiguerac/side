@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="w-72 p-6 bg-[#fafafa] border-l border-brand-divider flex flex-col"
-  >
+  <div class="w-72 p-6 bg-brand-bg border-l border-brand-divider flex flex-col">
     <h3 class="text-brand-text text-sm font-bold mb-4">Resumen</h3>
 
     <!-- Property type card preview -->

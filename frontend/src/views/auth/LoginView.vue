@@ -23,7 +23,7 @@
             class="text-center text-white text-base sm:text-lg lg:text-xl font-bold"
           >
             Todo el proceso inmobiliario,
-            <span class="block text-[#f3c849]">en minutos</span>
+            <span class="block text-brand-accent">en minutos</span>
           </h2>
           <p class="text-white/80 text-xs sm:text-sm">
             Sin trámites innecesarios ni llamadas eternas.

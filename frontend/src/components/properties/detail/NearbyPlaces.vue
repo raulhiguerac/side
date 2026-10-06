@@ -141,10 +141,8 @@ import { LPolygon } from "@vue-leaflet/vue-leaflet";
 import { ChevronDown } from "@lucide/vue";
 import type { MarkerData } from "@/types/maps";
 import { CATEGORY_META } from "@/types/pois";
-import {
-  useReachablePois,
-  ISOCHRONE_COLORS,
-} from "@/composables/pois/useReachablePois";
+import { useReachablePois } from "@/composables/pois/useReachablePois";
+import { ISOCHRONE_COLORS } from "@/constants/poiColors";
 import MapUser from "@/components/map/MapUser.vue";
 import MapLegend from "@/components/map/MapLegend.vue";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";

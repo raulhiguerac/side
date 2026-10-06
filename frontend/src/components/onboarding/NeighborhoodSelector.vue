@@ -37,7 +37,7 @@
         v-for="city in cities"
         :key="city.id"
         v-show="activeTab === city.id"
-        class="relative custom-wrapper"
+        class="relative brand-multiselect"
       >
         <div
           class="absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none text-brand-placeholder"
@@ -145,31 +145,3 @@ async function handleNext() {
   isSaving.value = false;
 }
 </script>
-
-<style>
-.custom-wrapper {
-  --ms-radius: 0.75rem;
-  --ms-border-color: #d1d5db;
-  --ms-border-color-active: #22c55e;
-  --ms-ring-color: #dcfce7;
-  --ms-ring-width: 3px;
-  --ms-font-size: 0.875rem;
-  --ms-placeholder-color: #9ca3af;
-  --ms-option-bg-pointed: #dcfce7;
-  --ms-option-color-pointed: #22c55e;
-  --ms-option-bg-selected: #22c55e;
-  --ms-option-bg-selected-pointed: #16a34a;
-  --ms-dropdown-radius: 0.75rem;
-  --ms-max-height: 12rem;
-}
-
-.custom-wrapper .multiselect-search,
-.custom-wrapper .multiselect-placeholder {
-  padding-left: 2.25rem;
-}
-
-.custom-wrapper .multiselect-tags,
-.custom-wrapper .multiselect-tag {
-  display: none !important;
-}
-</style>
