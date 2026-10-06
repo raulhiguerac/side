@@ -5,6 +5,7 @@ import pytest
 
 from app.core.exceptions.listing import CreatePropertyError, PropertyForbiddenError, PropertyNotFoundError
 from app.models.image import ImageStatus
+from app.models.listing import VerificationStatus
 from app.schemas.principal import Principal
 from app.services.listing.use_cases.images.delete_property_images import DeletePropertyImagesUseCase
 
@@ -19,6 +20,14 @@ def _make_mock_image(image_id: uuid.UUID):
     m = MagicMock()
     m.id = image_id
     m.status = ImageStatus.active
+    return m
+
+
+def _make_prop(verification_status=VerificationStatus.verified):
+    m = MagicMock()
+    m.id = PROP_ID
+    m.owner_id = OWNER_ID
+    m.verification_status = verification_status
     return m
 
 
@@ -78,6 +87,53 @@ async def test_marks_images_pending_delete_and_invalidates_cache(mock_get_prop, 
 
     mock_uow.commit.assert_awaited_once()
     mock_cache.delete.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# Verification degradation — borrar fotos también invalida el sello
+# ---------------------------------------------------------------------------
+
+@patch("app.services.listing.use_cases.images.delete_property_images.run_in_threadpool")
+@patch("app.services.listing.use_cases.images.delete_property_images.get_owned_property_for_update", new_callable=AsyncMock)
+async def test_degrades_verification_when_property_was_verified(mock_get_prop, mock_run, uc, mock_uow):
+    prop = _make_prop(verification_status=VerificationStatus.verified)
+    mock_get_prop.return_value = prop
+    mock_run.return_value = [_make_mock_image(IMAGE_ID_1)]
+
+    await uc.execute(principal=PRINCIPAL, property_id=PROP_ID, image_ids=[IMAGE_ID_1])
+
+    assert prop.verification_status == VerificationStatus.pending
+    mock_uow.commit.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    "initial",
+    [VerificationStatus.unverified, VerificationStatus.pending, VerificationStatus.rejected],
+)
+@patch("app.services.listing.use_cases.images.delete_property_images.run_in_threadpool")
+@patch("app.services.listing.use_cases.images.delete_property_images.get_owned_property_for_update", new_callable=AsyncMock)
+async def test_leaves_verification_untouched_when_not_verified(mock_get_prop, mock_run, uc, initial):
+    prop = _make_prop(verification_status=initial)
+    mock_get_prop.return_value = prop
+    mock_run.return_value = [_make_mock_image(IMAGE_ID_1)]
+
+    await uc.execute(principal=PRINCIPAL, property_id=PROP_ID, image_ids=[IMAGE_ID_1])
+
+    assert prop.verification_status == initial
+
+
+@patch("app.services.listing.use_cases.images.delete_property_images.run_in_threadpool")
+@patch("app.services.listing.use_cases.images.delete_property_images.get_owned_property_for_update", new_callable=AsyncMock)
+async def test_does_not_degrade_when_no_images_matched(mock_get_prop, mock_run, uc):
+    """El early return corta antes de degradar: pedir el borrado de ids que no
+    existen no debe costarle la verificación al dueño."""
+    prop = _make_prop(verification_status=VerificationStatus.verified)
+    mock_get_prop.return_value = prop
+    mock_run.return_value = []
+
+    await uc.execute(principal=PRINCIPAL, property_id=PROP_ID, image_ids=[IMAGE_ID_1])
+
+    assert prop.verification_status == VerificationStatus.verified
 
 
 # ---------------------------------------------------------------------------

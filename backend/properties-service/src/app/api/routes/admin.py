@@ -11,10 +11,10 @@ from app.api.deps.admin import (
     get_bulk_create_properties_runner,
     get_bulk_create_properties_uc,
     get_bulk_job_status_uc,
+    get_bulk_jobs_uc,
     get_create_promotion_uc,
     get_delete_promotion_uc,
     get_list_all_promotions_uc,
-    get_list_promotions_by_property_uc,
     get_request_bulk_upload_url_uc,
     get_set_estimated_price_uc,
     get_set_status_uc,
@@ -23,13 +23,18 @@ from app.api.deps.admin import (
 from app.api.deps.auth import require_admin
 from app.schemas.principal import Principal
 from app.services.admin.schemas.admin_schemas import (
+    AdminBulkJobsPage,
+    AdminPromotionsPage,
     AdminPropertiesPage,
+    AdminPropertyDetailSchema,
     BulkCreatePropertiesRequest,
     BulkJobAccepted,
     BulkJobStatusResponse,
     BulkUploadUrlRequest,
     BulkUploadUrlResponse,
     CreatePromotionRequest,
+    GetBulkJobsAdminRequest,
+    GetPromotionsAdminRequest,
     GetPropertiesAdminRequest,
     SetEstimatedPriceRequest,
     SetStatusRequest,
@@ -38,6 +43,7 @@ from app.services.admin.schemas.admin_schemas import (
 from app.services.admin.use_cases.bulk_create_properties import BulkCreatePropertiesUseCase
 from app.services.admin.use_cases.estimated_price.set_estimated_price import SetEstimatedPriceUseCase
 from app.services.admin.use_cases.get_bulk_job_status import GetBulkJobStatusUseCase
+from app.services.admin.use_cases.get_bulk_jobs import GetBulkJobsAdminUseCase
 from app.services.admin.use_cases.request_bulk_upload_url import RequestBulkUploadUrlUseCase
 from app.services.admin.use_cases.get_properties import GetPropertiesAdminUseCase
 from app.services.admin.use_cases.get_property_detail import GetPropertyDetailAdminUseCase
@@ -46,9 +52,6 @@ from app.services.admin.use_cases.moderation.verify import VerifyPropertyUseCase
 from app.services.admin.use_cases.promotions.create import CreatePromotionUseCase
 from app.services.admin.use_cases.promotions.delete import DeletePromotionUseCase
 from app.services.admin.use_cases.promotions.list_all import ListAllPromotionsUseCase
-from app.services.admin.use_cases.promotions.list_by_property import ListPromotionsByPropertyUseCase
-from app.services.shared.schemas.property_card import PropertyCardSchema
-from app.services.shared.schemas.property_detail import PropertyDetailSchema
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +121,20 @@ async def bulk_create_properties(
 
 
 @router.get(
+    "/properties/bulk",
+    response_model=AdminBulkJobsPage,
+    status_code=status.HTTP_200_OK,
+)
+async def get_bulk_jobs(
+    filters: Annotated[GetBulkJobsAdminRequest, Depends()],
+    uc: Annotated[GetBulkJobsAdminUseCase, Depends(get_bulk_jobs_uc)],
+) -> AdminBulkJobsPage:
+    """Declarada antes de `/properties/{property_id}`: al revés esa gana el match
+    y `bulk` se intenta parsear como UUID, que es un 422."""
+    return await uc.execute(request=filters)
+
+
+@router.get(
     "/properties/bulk/{job_id}/status",
     response_model=BulkJobStatusResponse,
     status_code=status.HTTP_200_OK,
@@ -143,13 +160,13 @@ async def get_properties(
 
 @router.get(
     "/properties/{property_id}",
-    response_model=PropertyDetailSchema,
+    response_model=AdminPropertyDetailSchema,
     status_code=status.HTTP_200_OK,
 )
 async def get_property_detail(
     property_id: uuid.UUID,
     uc: Annotated[GetPropertyDetailAdminUseCase, Depends(get_admin_property_detail_uc)],
-) -> PropertyDetailSchema:
+) -> AdminPropertyDetailSchema:
     return await uc.execute(property_id=property_id)
 
 
@@ -160,9 +177,14 @@ async def get_property_detail(
 async def set_property_status(
     property_id: uuid.UUID,
     req: SetStatusRequest,
+    principal: Annotated[Principal, Depends(require_admin)],
     uc: Annotated[SetPropertyStatusUseCase, Depends(get_set_status_uc)],
 ) -> None:
-    await uc.execute(property_id=property_id, target_status=req.status)
+    await uc.execute(
+        principal = principal,
+        property_id = property_id,
+        target_status = req.status,
+    )
 
 
 @router.patch(
@@ -172,9 +194,14 @@ async def set_property_status(
 async def verify_property(
     property_id: uuid.UUID,
     req: VerifyPropertyRequest,
+    principal: Annotated[Principal, Depends(require_admin)],
     uc: Annotated[VerifyPropertyUseCase, Depends(get_verify_property_uc)],
 ) -> None:
-    await uc.execute(property_id=property_id, request=req)
+    await uc.execute(
+        principal = principal,
+        property_id = property_id,
+        request = req,
+    )
 
 
 @router.post(
@@ -196,25 +223,14 @@ async def set_estimated_price(
 
 @router.get(
     "/promotions",
-    response_model=list[PropertyCardSchema],
+    response_model=AdminPromotionsPage,
     status_code=status.HTTP_200_OK,
 )
 async def list_all_promotions(
+    filters: Annotated[GetPromotionsAdminRequest, Depends()],
     uc: Annotated[ListAllPromotionsUseCase, Depends(get_list_all_promotions_uc)],
-) -> list[PropertyCardSchema]:
-    return await uc.execute()
-
-
-@router.get(
-    "/properties/{property_id}/promotions",
-    response_model=list[PropertyCardSchema],
-    status_code=status.HTTP_200_OK,
-)
-async def list_promotions_by_property(
-    property_id: uuid.UUID,
-    uc: Annotated[ListPromotionsByPropertyUseCase, Depends(get_list_promotions_by_property_uc)],
-) -> list[PropertyCardSchema]:
-    return await uc.execute(property_id=property_id)
+) -> AdminPromotionsPage:
+    return await uc.execute(request=filters)
 
 
 @router.post(

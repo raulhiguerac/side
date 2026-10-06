@@ -16,6 +16,7 @@ from app.models.image import BatchStatus, PropertyImage
 from app.schemas.principal import Principal
 from app.services.listing.helpers.db_error_translator import translate_db_error
 from app.services.listing.helpers.property_guard import get_owned_property_for_update
+from app.services.listing.helpers.verification_guard import degrade_verification
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork
 from app.services.shared.helpers.cache_keys import (
     cache_property,
@@ -47,7 +48,7 @@ class ConfirmImageUploadsUseCase:
         batch_id: uuid.UUID,
         confirmed_keys: list[str],
     ) -> None:
-        await get_owned_property_for_update(uow=self.uow, property_id=property_id, principal=principal)
+        model = await get_owned_property_for_update(uow=self.uow, property_id=property_id, principal=principal)
 
         batch = await run_in_threadpool(
             partial(self.uow.property_images.get_batch, batch_id=batch_id)
@@ -97,6 +98,8 @@ class ConfirmImageUploadsUseCase:
 
         batch.status = BatchStatus.confirmed
         batch.confirmed_at = datetime.now(timezone.utc)
+
+        degrade_verification(prop=model)
 
         try:
             for image in new_images:

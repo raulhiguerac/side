@@ -4,17 +4,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.exceptions.listing import CreatePropertyError, InconsistentLocationError, PropertyForbiddenError, PropertyNotFoundError
+from app.core.exceptions.listing import CreatePropertyError, PropertyForbiddenError, PropertyNotFoundError
 from app.models.listing import Currency, ListingStatus, ListingType, PropertyCondition, PropertyType, VerificationStatus
 from app.schemas.principal import Principal
-from app.services.listing.schemas.listing_schemas import LocationField, UpdatePropertyRequest
+from app.services.listing.schemas.listing_schemas import UpdatePropertyRequest
 from app.services.listing.use_cases.property_core.update_property import UpdatePropertyUseCase
 
 PROP_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 OWNER_ID = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
-NEIGHBORHOOD_ID = uuid.UUID("cccccccc-cccc-cccc-cccc-cccccccccccc")
-CITY_ID = uuid.UUID("dddddddd-dddd-dddd-dddd-dddddddddddd")
-COUNTRY_ID = uuid.UUID("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee")
 
 PRINCIPAL = Principal(sub=OWNER_ID)
 
@@ -43,19 +40,15 @@ def mock_cache():
 
 
 @pytest.fixture
-def mock_catalog():
-    catalog = AsyncMock()
-    catalog.get_neighborhood.return_value = MagicMock(locality_id=CITY_ID)
-    return catalog
-
-
-@pytest.fixture
-def uc(mock_uow, mock_cache, mock_catalog):
-    return UpdatePropertyUseCase(uow=mock_uow, cache_client=mock_cache, catalog=mock_catalog)
+def uc(mock_uow, mock_cache):
+    return UpdatePropertyUseCase(
+        uow = mock_uow,
+        cache_client = mock_cache,
+    )
 
 
 # ---------------------------------------------------------------------------
-# Happy path — no location update
+# Happy path
 # ---------------------------------------------------------------------------
 
 @patch("app.services.listing.use_cases.property_core.update_property.get_owned_property", new_callable=AsyncMock)
@@ -71,57 +64,6 @@ async def test_updates_fields_and_commits(mock_get_prop, uc, mock_uow, mock_cach
     mock_uow.commit.assert_awaited_once()
     mock_uow.refresh.assert_awaited_once_with(prop)
     mock_cache.delete.assert_awaited_once()
-
-
-# ---------------------------------------------------------------------------
-# With location update — consistent
-# ---------------------------------------------------------------------------
-
-@patch("app.services.listing.use_cases.property_core.update_property.from_shape", return_value=MagicMock())
-@patch("app.services.listing.use_cases.property_core.update_property.compute_h3", return_value=("r9", "r7"))
-@patch("app.services.listing.use_cases.property_core.update_property.get_owned_property", new_callable=AsyncMock)
-async def test_updates_location_when_included(mock_get_prop, _mock_h3, _mock_shape, uc, mock_uow, mock_catalog):
-    prop = _make_mock_prop()
-    prop.location = MagicMock()  # truthy — triggers location update branch
-    mock_get_prop.return_value = prop
-    request = UpdatePropertyRequest(
-        location=LocationField(
-            neighborhood_id=NEIGHBORHOOD_ID,
-            city_id=CITY_ID,
-            country_id=COUNTRY_ID,
-            latitude=4.6097,
-            longitude=-74.0817,
-        )
-    )
-
-    await uc.execute(principal=PRINCIPAL, property_id=PROP_ID, request=request)
-
-    mock_catalog.get_neighborhood.assert_awaited_once_with(neighborhood_id=NEIGHBORHOOD_ID)
-    assert prop.h3_r9 == "r9"
-    assert prop.h3_r7 == "r7"
-    mock_uow.commit.assert_awaited_once()
-
-
-# ---------------------------------------------------------------------------
-# Inconsistent location
-# ---------------------------------------------------------------------------
-
-@patch("app.services.listing.use_cases.property_core.update_property.get_owned_property", new_callable=AsyncMock)
-async def test_raises_inconsistent_location(mock_get_prop, uc, mock_catalog):
-    mock_get_prop.return_value = _make_mock_prop()
-    mock_catalog.get_neighborhood.return_value = MagicMock(locality_id=uuid.uuid4())  # different city
-    request = UpdatePropertyRequest(
-        location=LocationField(
-            neighborhood_id=NEIGHBORHOOD_ID,
-            city_id=CITY_ID,
-            country_id=COUNTRY_ID,
-            latitude=4.6097,
-            longitude=-74.0817,
-        )
-    )
-
-    with pytest.raises(InconsistentLocationError):
-        await uc.execute(principal=PRINCIPAL, property_id=PROP_ID, request=request)
 
 
 # ---------------------------------------------------------------------------

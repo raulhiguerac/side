@@ -3,21 +3,44 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, model_validator
 
-from app.models.bulk_job import JobStatus
+from app.models.bulk_job import JobStatus, JobType
 from app.models.listing import Currency, ListingStatus, ListingType, PropertyType, VerificationStatus
 from app.schemas.base import StrictBase
+from app.services.shared.schemas.property_card import PropertyCardSchema
+from app.services.shared.schemas.property_detail import PropertyDetailSchema
 
 class VerifyPropertyRequest(StrictBase):
     verification_status: VerificationStatus
     rejection_reason: Optional[str] = Field(default=None, max_length=500)
 
+    @model_validator(mode="after")
+    def validate_rejection_reason(self) -> "VerifyPropertyRequest":
+        """El motivo solo tiene sentido al rechazar.
+
+        Sin esta regla el UC persiste el campo tal cual llegue: aprobar mandando
+        motivo deja una fila que se contradice, y rechazar sin motivo deja al
+        dueño sin saber qué corregir.
+        """
+        is_rejection = self.verification_status == VerificationStatus.rejected
+
+        if is_rejection and not self.rejection_reason:
+            raise ValueError("rejection_reason is required when rejecting a property")
+
+        if not is_rejection and self.rejection_reason is not None:
+            raise ValueError(
+                f"rejection_reason is only allowed when rejecting, not for '{self.verification_status.value}'"
+            )
+
+        return self
+
 
 
 class CreatePromotionRequest(StrictBase):
     property_id: uuid.UUID
-    promoted_days: int = Field(ge=1)
+    # Tope de 60 días: una promoción es una campaña, no un estado permanente.
+    promoted_days: int = Field(ge=1, le=60)
     priority: int = Field(default=0, ge=0)
 
 
@@ -25,6 +48,9 @@ class GetPropertiesAdminRequest(StrictBase):
     status: Optional[ListingStatus] = None
     verification_status: Optional[VerificationStatus] = None
     owner_id: Optional[uuid.UUID] = None
+    # Filtra por promoción activa, que es la condición del
+    # DuplicateActivePromotionError: `false` da las promocionables.
+    is_promoted: Optional[bool] = None
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=20, ge=1, le=100)
 
@@ -52,6 +78,49 @@ class AdminPropertyCardSchema(StrictBase):
     bedrooms: int
     bathrooms: Decimal
     created_at: datetime
+
+
+class AdminPropertyDetailSchema(PropertyDetailSchema):
+    """Detail plus the legal moderation targets for the state it is in.
+
+    They are derived from status/verification_status, so they are computed on
+    the way out — nothing to store, nothing to cache. Shipping them is what
+    keeps the panel from offering a transition the use cases would reject.
+    """
+
+    allowed_verification_targets: list[VerificationStatus]
+    allowed_status_targets: list[ListingStatus]
+
+
+class GetPromotionsAdminRequest(StrictBase):
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=100)
+
+
+class AdminPromotionSchema(StrictBase):
+    """A promotion, with the property it promotes nested inside.
+
+    Deliberately not a bare PropertyCardSchema: that one answers "is it
+    promoted?" and nothing else, so a panel listing promotions could not show
+    priority or when they expire — the only two things a promotion decides.
+    """
+
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    id: uuid.UUID
+    property_id: uuid.UUID
+    priority: int
+    starts_at: datetime
+    ends_at: datetime
+    is_active: bool
+    property: Optional[PropertyCardSchema] = None
+
+
+class AdminPromotionsPage(StrictBase):
+    items: list[AdminPromotionSchema]
+    total: int
+    page: int
+    page_size: int
 
 
 class AdminPropertiesPage(StrictBase):
@@ -113,3 +182,42 @@ class BulkJobStatusResponse(StrictBase):
     # is the total the run read.
     inserted: int = 0
     errors: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class GetBulkJobsAdminRequest(StrictBase):
+    """Filters for the import history. No sort field: a history is always read
+    newest first, and a second order would only ever be a curiosity."""
+
+    status: Optional[JobStatus] = None
+    # Runs that dropped rows, which is the only reason to go looking.
+    has_errors: Optional[bool] = None
+    created_from: Optional[datetime] = None
+    created_to: Optional[datetime] = None
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=20, ge=1, le=100)
+
+
+class AdminBulkJobSchema(StrictBase):
+    """Row of the import history. Carries error_count and not the errors: a run
+    can drop thousands, and the status endpoint already serves the full list."""
+
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
+
+    id: uuid.UUID
+    job_type: JobType
+    status: JobStatus
+    inserted: int
+    error_count: int
+    retry_of_job_id: Optional[uuid.UUID] = None
+    storage_key: str
+    # Past this the CSV is gone from storage, so the run can no longer be replayed.
+    expires_at: datetime
+    created_at: datetime
+    created_by: Optional[uuid.UUID] = None
+
+
+class AdminBulkJobsPage(StrictBase):
+    items: list[AdminBulkJobSchema]
+    total: int
+    page: int
+    page_size: int

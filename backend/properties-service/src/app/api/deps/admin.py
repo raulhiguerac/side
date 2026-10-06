@@ -19,6 +19,7 @@ from app.services.admin.ports.unit_of_work import AdminUnitOfWork
 from app.services.admin.use_cases.bulk_create_properties import BulkCreatePropertiesUseCase
 from app.services.admin.use_cases.estimated_price.set_estimated_price import SetEstimatedPriceUseCase
 from app.services.admin.use_cases.get_bulk_job_status import GetBulkJobStatusUseCase
+from app.services.admin.use_cases.get_bulk_jobs import GetBulkJobsAdminUseCase
 from app.services.admin.use_cases.request_bulk_upload_url import RequestBulkUploadUrlUseCase
 from app.services.admin.use_cases.get_properties import GetPropertiesAdminUseCase
 from app.services.admin.use_cases.get_property_detail import GetPropertyDetailAdminUseCase
@@ -27,7 +28,6 @@ from app.services.admin.use_cases.moderation.verify import VerifyPropertyUseCase
 from app.services.admin.use_cases.promotions.create import CreatePromotionUseCase
 from app.services.admin.use_cases.promotions.delete import DeletePromotionUseCase
 from app.services.admin.use_cases.promotions.list_all import ListAllPromotionsUseCase
-from app.services.admin.use_cases.promotions.list_by_property import ListPromotionsByPropertyUseCase
 from app.services.shared.ports.cache import CachePort
 from app.services.shared.ports.storage import StoragePort
 from app.workers.bulk_create_properties_worker import BulkCreatePropertiesWorker
@@ -82,16 +82,8 @@ def get_set_estimated_price_uc(
 
 def get_list_all_promotions_uc(
     uow: AdminUnitOfWork = Depends(get_admin_uow),
-    cache: CachePort = Depends(get_cache_port),
 ) -> ListAllPromotionsUseCase:
-    return ListAllPromotionsUseCase(uow=uow, cache=cache)
-
-
-def get_list_promotions_by_property_uc(
-    uow: AdminUnitOfWork = Depends(get_admin_uow),
-    cache: CachePort = Depends(get_cache_port),
-) -> ListPromotionsByPropertyUseCase:
-    return ListPromotionsByPropertyUseCase(uow=uow, cache=cache)
+    return ListAllPromotionsUseCase(uow=uow)
 
 
 def get_create_promotion_uc(
@@ -118,6 +110,12 @@ def get_bulk_job_status_uc(
     uow: AdminUnitOfWork = Depends(get_admin_uow),
 ) -> GetBulkJobStatusUseCase:
     return GetBulkJobStatusUseCase(uow=uow)
+
+
+def get_bulk_jobs_uc(
+    uow: AdminUnitOfWork = Depends(get_admin_uow),
+) -> GetBulkJobsAdminUseCase:
+    return GetBulkJobsAdminUseCase(uow=uow)
 
 
 def get_request_bulk_upload_url_uc(
