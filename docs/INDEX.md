@@ -93,7 +93,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [frontend-poi-reachable](wiki/frontend/flows/frontend-poi-reachable.md) — sección "Cerca del lugar": useReachablePois (1 POST × 9 resultados), acordeón por rango, isocronas + cluster markers, CATEGORY_META/PRIORITY; spinner v-show + resize fix para Leaflet
 - [frontend-property-create-form](wiki/frontend/flows/frontend-property-create-form.md) — form multi-step 4 pasos (Tipo/Detalles/Ubicación/Imágenes), patrón update:form, Google Places + NearbyPlaces en step 2, previewId UUID
 - [frontend-property-edit-form](wiki/frontend/flows/frontend-property-edit-form.md) — vista de edición en 2 columnas, split en 5 tarjetas presentacionales, campos fijos vs editables, gotcha de `Decimal` serializado como string
-- [frontend-admin-panel](wiki/frontend/flows/frontend-admin-panel.md) — panel admin embebido: nav gating, rutas `requiresAdmin`, fix de race en el guard, hub view, modal de bulk upload en 3 pasos (presigned PUT), forma de la tabla de moderación, 10 de 12 endpoints sin cablear
+- [frontend-admin-panel](wiki/frontend/flows/frontend-admin-panel.md) — panel admin embebido: nav gating, rutas `requiresAdmin`, fix de race en el guard, hub view, tabs como rutas hijas, modal de bulk upload en 3 pasos (presigned PUT), tabla de moderación + panel de vista previa, 4 de 23 endpoints cableados
 
 ### runbook/
 - [frontend-local-dev](wiki/frontend/runbook/frontend-local-dev.md) — `npm run serve` port 8080, env vars, levantar backends a mano, 10 known gaps
@@ -106,6 +106,11 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0005 — Google Maps Places API (New) para geocoding](wiki/frontend/adrs/adr-gmaps-places-geocoding.md)
 - [ADR-0006 — Campos fijos vs. editables al editar una propiedad](wiki/frontend/adrs/adr-property-edit-fixed-fields.md)
 - [ADR-0007 — Sin librería de componentes: la tabla admin se construye a mano](wiki/frontend/adrs/adr-no-component-library.md)
+- [ADR-0008 — TanStack Table (headless) para la tabla admin](wiki/frontend/adrs/adr-tanstack-table.md)
+- [ADR-0009 — Las tabs del panel admin son rutas hijas, no un switch de componentes](wiki/frontend/adrs/adr-admin-tabs-nested-routes.md)
+- [ADR-0010 — Moderar se hace en el panel de vista previa, con un formulario de guardado explícito](wiki/frontend/adrs/adr-moderation-panel-staged-form.md)
+- [ADR-0011 — Promocionar vive en su propia sub-tab, no en el panel de moderación](wiki/frontend/adrs/adr-promotions-own-subtab.md)
+- [ADR-0012 — Los filtros del panel admin viven en la URL, no en el composable](wiki/frontend/adrs/adr-admin-filters-in-query-params.md)
 
 ## properties-service
 
@@ -115,7 +120,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 ### domain/
 - [properties-service-listing](wiki/properties-service/domain/properties-service-listing.md) — CRUD del dueño + flujo de imágenes presigned/batch + visibilidad
 - [properties-service-search](wiki/properties-service/domain/properties-service-search.md) — feed orgánico+ads con fallback de preferencias + feed-mapa por H3
-- [properties-service-admin](wiki/properties-service/domain/properties-service-admin.md) — moderación (state machine), precios estimados dual, promociones, encolado del bulk import
+- [properties-service-admin](wiki/properties-service/domain/properties-service-admin.md) — moderación (state machine), precios estimados dual, promociones, encolado del bulk import + historial de imports
 - [properties-service-bulk-create-worker](wiki/properties-service/domain/properties-service-bulk-create-worker.md) — import async end-to-end: presigned PUT, BackgroundTasks con sesión propia, persistencia por chunk de 2500, cierre del BulkJob
 
 ### integrations/
@@ -135,6 +140,8 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0007 — Property es 1 fila = 1 listing_type, sin soporte para venta+arriendo simultáneo](wiki/properties-service/adrs/adr-single-listing-type-per-property.md)
 - [ADR-0008 — Idempotencia del bulk create vía external_id determinístico](wiki/properties-service/adrs/adr-bulk-idempotent-external-id.md)
 - [ADR-0009 — El listado admin pagina por offset, no con el cursor del feed](wiki/properties-service/adrs/adr-admin-offset-pagination.md)
+- [ADR-0010 — La verificación es reversible y el takedown es un cambio de status](wiki/properties-service/adrs/adr-verification-reversible-lifecycle.md)
+- [ADR-0011 — Las transiciones legales las sirve el backend, no las duplica el cliente](wiki/properties-service/adrs/adr-transitions-served-by-backend.md)
 
 ## users-service
 

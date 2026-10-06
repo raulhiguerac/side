@@ -1,7 +1,7 @@
 ---
 title: Bulk-create worker — streaming CSV desde MinIO (properties-service)
 status: stable
-last-verified: 2026-07-28
+last-verified: 2026-08-24
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -16,6 +16,9 @@ sources:
   - ../../../sources/properties-service/2026-07-22-bulk-create-properties-refactor.md
   - ../../../sources/properties-service/2026-07-27-bulk-async-import-worker.md
   - ../../../sources/properties-service/2026-07-28-bulk-import-smoke-test.md
+  - ../../../sources/properties-service/2026-07-29-moderation-state-machines-block-imports.md
+  - ../../../sources/properties-service/2026-08-01-bulk-import-pending-verification.md
+  - ../../../sources/properties-service/2026-08-24-bulk-jobs-listing-endpoint.md
   - ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md
 ---
 
@@ -152,6 +155,17 @@ Los 1.256 fallos de geo mezclan tres causas que **no se han separado**: basura d
 
 > **Lo que este ejercicio enseñó, más allá del import**: los tests unitarios mockean el UoW y nunca tocan Postgres, así que los errores de contrato, driver y configuración les son invisibles. Ejecutar una vez encontró el mismatch de body con catalog, el `get_object` sobre el wrapper equivocado, los `extra` de logging que se descartaban, el TLD `.test` inválido y la migración inexistente — ninguno detectable leyendo o con la suite en verde.
 
+## Con qué estado nacen las filas importadas
+
+`build_models` no deja que la fila herede defaults del modelo: fija explícitamente `status=ListingStatus.active` y `verification_status=VerificationStatus.pending` ([seed_mapper.py:236,243](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py#L236-L243)).
+
+Las dos mitades responden a decisiones distintas:
+
+- **`active`** significa que un import publica directo — y pisa el default `draft` del modelo. Las 18.744 propiedades del smoke test entraron al feed público en el momento del commit. Se mantiene a propósito: publicar y verificar son ejes independientes, y un listing puede estar visible mientras se revisa (ver [[properties-service-admin]]).
+- **`pending`** (desde el 2026-08-01, antes `unverified`) mete cada fila importada en la cola de moderación. El motivo: la transición `unverified → pending` está pensada para que el **dueño** pida verificación, y en un import no hay dueño — el admin que sube el CSV ya está pidiendo que se revise el lote. Nacer en un estado no es una transición, así que no pasa por `VerifyPropertyUseCase` ni por su `_ALLOWED_TRANSITIONS`.
+
+Quedan dos consecuencias abiertas, registradas en [[open-items]]: las filas importadas **antes** de ese cambio siguen en `unverified` y nada las va a mover, y una cola de 18.744 no es trabajable sin un criterio de priorización.
+
 ## Gaps conocidos
 
 - Los CSV de seed (`seed_bogota_500.csv`, `seed_bogota_5k.csv`) **no tienen las columnas `external_id` ni `email`**; con `StrictBase(extra="forbid")` y ambos campos requeridos, hoy fallarían el 100% de las filas.
@@ -159,11 +173,12 @@ Los 1.256 fallos de geo mezclan tres causas que **no se han separado**: basura d
 - El tamaño del upload **no es enforceable** en un presigned PUT plano: `max_size_bytes` viaja al cliente como hint. Un límite duro requeriría presigned POST con `content-length-range`.
 - El lookup de owner es **case-sensitive** de punta a punta.
 - `JobStatus` solo tiene `pending/completed/failed` — no hay `processing` (un job corriendo es indistinguible de uno encolado salvo por el chequeo de stale) ni `expired`.
+- **El worker no invalida ninguna cache tras escribir.** Persiste por chunks con el upsert de `bulk_insert` y no toca Redis, mientras que los writes admin equivalentes sí borran sus keys. En filas nuevas el daño es acotado (feed y mapa tienen TTL de 300s), pero el reimport —lo que la idempotencia del `external_id` habilita— hace UPDATE sobre filas cuyo `properties:detail:{id}` vive 6 horas y `properties:user:{owner}` 30 minutos: corregir un precio por CSV y no verlo cambiar en toda la tarde. Ver [[open-items]].
 - La construcción de objetos ORM sigue en el worker y no detrás del repo — deuda preexistente, ya marcada con un `# TODO: refactor` en `create_property.py`; se difiere para arreglar los flujos single y bulk juntos.
 
 ## Claims
 
-- El flujo bulk son tres endpoints: `POST /admin/properties/bulk/upload-url` (201, presigned PUT), `POST /admin/properties/bulk` (202 + `batch_id`) y `GET /admin/properties/bulk/{job_id}/status` (200) ([admin.py](backend/properties-service/src/app/api/routes/admin.py)).
+- El flujo bulk son cuatro endpoints: `POST /admin/properties/bulk/upload-url` (201, presigned PUT), `POST /admin/properties/bulk` (202 + `batch_id`), `GET /admin/properties/bulk` (200, historial paginado) y `GET /admin/properties/bulk/{job_id}/status` (200) ([admin.py](backend/properties-service/src/app/api/routes/admin.py)).
 - `POST /admin/properties/bulk` recibe `BulkCreatePropertiesRequest{storage_key, retry_of_job_id}` y agenda el worker con `background_tasks.add_task(...)`; no recibe `UploadFile` ([admin.py](backend/properties-service/src/app/api/routes/admin.py)).
 - `run_bulk_create_properties` abre su propia `Session(engine)` en vez de reusar la del request, porque las dependencias `yield` se cierran antes de que corra el `BackgroundTask` ([admin.py](backend/properties-service/src/app/api/deps/admin.py)).
 - `RequestBulkUploadUrlUseCase` valida la extensión contra `PROPERTIES_BULK_UPLOAD_POLICY`, genera la key como `{principal.sub}/{uuid4}{ext}` y no persiste ninguna fila ([request_bulk_upload_url.py](backend/properties-service/src/app/services/admin/use_cases/request_bulk_upload_url.py)).
@@ -188,3 +203,4 @@ Los 1.256 fallos de geo mezclan tres causas que **no se han separado**: basura d
 - `BulkPropertyCsvRow` hereda `StrictBase` (`extra="forbid"`, sin `strict=True`) y mantiene como `str` los campos con valores no numéricos del CSV real, para reusar los parsers tolerantes de `seed_mapper.py` ([bulk_schemas.py](backend/properties-service/src/app/workers/schemas/bulk_schemas.py)).
 - `BulkRowError(line, ref, issues)` usa `line` como contador monotónico sobre el generador (no el índice windowed del chunk) ([bulk_schemas.py](backend/properties-service/src/app/workers/schemas/bulk_schemas.py), [row_ref.py](backend/properties-service/src/app/workers/helpers/row_ref.py)).
 - El UC de encolado rechaza reintentar un job vencido con `BulkJobExpiredError` (409), comparando `datetime.now(timezone.utc)` contra `target_job.expires_at` ([bulk_create_properties.py](backend/properties-service/src/app/services/admin/use_cases/bulk_create_properties.py)).
+- `build_models` fija `status=ListingStatus.active` y `verification_status=VerificationStatus.pending` en cada `Property` construida, en vez de dejar que apliquen los defaults del modelo ([seed_mapper.py:236,243](backend/properties-service/src/app/workers/helpers/mapping/seed_mapper.py#L236-L243)).

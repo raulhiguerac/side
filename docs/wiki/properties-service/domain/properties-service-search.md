@@ -1,7 +1,7 @@
 ---
 title: Dominio search — properties-service
 status: stable
-last-verified: 2026-06-16
+last-verified: 2026-08-09
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -11,7 +11,9 @@ related:
   - "[[adr-h3-dual-resolution-map]]"
   - "[[frontend-architecture]]"
   - "[[open-items]]"
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../../sources/properties-service/2026-06-05-feed-cursor-pagination.md, ../../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md]
+  - "[[properties-service-admin]]"
+  - "[[properties-service-bulk-create-worker]]"
+sources: [../../../sources/properties-service/2026-08-09-promotions-schema-pagination-and-expiry-filter.md, ../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../../sources/frontend/2026-06-04-feed-filters-contract.md, ../../../sources/properties-service/2026-06-05-feed-cursor-pagination.md, ../../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md, ../../../sources/properties-service/2026-08-01-bulk-import-pending-verification.md]
 ---
 
 ## TL;DR
@@ -111,6 +113,8 @@ Resolución elegida por el cliente vía query `resolution` (7–9): r9 (~300m) p
 
 `get_organic` retorna `tuple[list[PropertyCardSchema], tuple[datetime, UUID] | None]`; el segundo elemento es `(last.created_at, last.id)` del último resultado ORM antes de validar, o `None` si no hay resultados.
 
+`PropertyCardSchema` **no lleva `verification_status`**, así que ni el feed ni el feed-mapa pueden mostrar si un listing está en revisión. El detalle público sí lo hace (`usePropertyDetail` mapea `pending → "En revisión"` y `PropertyOverview` lo renderiza), con lo cual el aviso existe recién después de clickear. Importa desde que el import masivo entra en `pending` con `status=active` (ver [[properties-service-admin]], [[properties-service-bulk-create-worker]]): la posición tomada es publicar avisando, y el aviso falta justo donde la gente navega. Registrado en [[open-items]].
+
 `FeedPreferences` y `FeedFilters` son ambos opcionales: los deps `parse_feed_preferences` / `parse_feed_filters` devuelven `None` si no llega nada. En el repo, `get_properties` aplica **cada filtro de forma independiente** con un `if x is not None` separado, así que filtros parciales funcionan — mandar solo `max_price` agrega solo `WHERE price <= max_price` sin tocar el resto. Sin preferencias ni filtros, el feed no aplica ningún `WHERE` adicional (más allá de `active` + no borrado).
 
 ## Evolución planeada del feed
@@ -124,6 +128,7 @@ El promoted targeting también evoluciona: hoy los ads son globales o por ciudad
 
 ## Claims
 
+- `PropertyCardSchema` no incluye `verification_status`, así que las respuestas de `/search/feed` y `/search/feed/map` no lo transportan ([property_card.py](backend/properties-service/src/app/services/shared/schemas/property_card.py)).
 - Cada página del feed son `FEED_PAGE_SIZE` resultados (default 20) con un ad cada `FEED_AD_INTERVAL` (default 5) ([settings.py:23-25](backend/properties-service/src/app/core/config/settings.py#L23-L25)).
 - El feed devuelve `FeedPage(items=[], next_cursor=None)` si `cursor.position >= FEED_MAX_RESULTS` (300) ([get_feed.py:29-30](backend/properties-service/src/app/services/search/use_cases/get_feed.py#L29-L30)).
 - El endpoint `/search/feed` devuelve `FeedPage` (`items` + `next_cursor: str | None`); ya no devuelve `list[PropertyCardSchema]` ([search.py:21](backend/properties-service/src/app/api/routes/search.py#L21)).
@@ -132,6 +137,7 @@ El promoted targeting también evoluciona: hoy los ads son globales o por ciudad
 - `get_organic` retorna `(cards, (last.created_at, last.id))` o `([], None)` si no hay resultados ([organic.py:40-45](backend/properties-service/src/app/services/search/helpers/feed/organic.py#L40-L45)).
 - `position` en el cursor cuenta solo orgánicos; los ads inyectados no se suman ([get_feed.py:58-60](backend/properties-service/src/app/services/search/use_cases/get_feed.py#L58-L60)).
 - El orgánico degrada preferencias en 3 fases y devuelve la primera no vacía ([organic.py:32-45](backend/properties-service/src/app/services/search/helpers/feed/organic.py#L32-L45)).
+- El join de ads filtra `active_promotion_clause()` (`is_active` y `ends_at > now()`), así que una promoción vencida deja de inyectarse aunque su fila siga activa ([sql_property_search_repository.py](backend/properties-service/src/app/services/search/adapters/sql_property_search_repository.py), [promotion.py](backend/properties-service/src/app/models/promotion.py)).
 - Los ads se cachean por ciudad (`feed:ads:<city_id>`) o globalmente (`feed:ads:global`) con TTL de 1h ([ads.py:12](backend/properties-service/src/app/services/search/helpers/feed/ads.py#L12), [cache_keys.py:12-17](backend/properties-service/src/app/services/shared/helpers/cache_keys.py#L12-L17)).
 - El feed-mapa traduce el bbox a celdas H3 y aplica cache-aside por celda con clave `map:h3:<index>` ([get_feed_map.py:28-47](backend/properties-service/src/app/services/search/use_cases/get_feed_map.py#L28-L47)).
 - La resolución del mapa está acotada a `[7, 9]` por el query param ([search.py:45](backend/properties-service/src/app/api/routes/search.py#L45)).

@@ -16,6 +16,12 @@ module.exports = {
   rules: {
     "no-console": process.env.NODE_ENV === "production" ? "warn" : "off",
     "no-debugger": process.env.NODE_ENV === "production" ? "warn" : "off",
+    // Redundante con vue-tsc, que ya reporta identificadores no definidos y sí
+    // entiende el type-space de TS. `no-undef` no lo ve, así que marca falsos
+    // positivos en los parámetros de tipo de `<script setup generic="T">` y en
+    // macros nuevos como `defineSlots`. Es la recomendación de typescript-eslint
+    // para proyectos TS.
+    "no-undef": "off",
   },
   globals: {
     google: "readonly",

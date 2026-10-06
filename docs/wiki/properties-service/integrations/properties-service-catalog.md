@@ -1,7 +1,7 @@
 ---
 title: Integración properties → catalog-service
 status: draft
-last-verified: 2026-07-28
+last-verified: 2026-08-02
 owners: [properties-service]
 related:
   - "[[properties-service]]"
@@ -15,6 +15,7 @@ sources:
   - ../../../sources/properties-service/2026-05-28-foundational-exploration.md
   - ../../../sources/frontend/2026-06-28-devcontainer-proxy-chrome-fix.md
   - ../../../sources/properties-service/2026-07-19-bulk-create-worker-streaming-csv.md
+  - ../../../sources/properties-service/2026-08-02-moderation-lifecycle-verified-not-terminal.md
 ---
 
 ## TL;DR
@@ -35,10 +36,18 @@ properties-service consume [[catalog-service]] **síncronamente en write time** 
 
 | Método del client | Endpoint de catalog | Quién lo usa |
 |---|---|---|
-| `get_neighborhood(neighborhood_id)` | `GET /v1/neighborhoods/by-id` | `CreateProperty` / `UpdateProperty` — validar barrio↔ciudad. |
+| `get_neighborhood(neighborhood_id)` | `GET /v1/neighborhoods/by-id` | `CreateProperty` — validar barrio↔ciudad. |
 | `get_locations_bulk(points)` | `POST /v1/geo-resolution/by-coordinates/bulk` | `process_location_batch` (worker) — resolver un batch de `(lat, lon)` en una sola llamada. |
 
 El port expone `get_neighborhood`, `get_location_by_point` (singular, legacy) y `get_locations_bulk` (batch); el adapter traduce los nombres y formas hacia/desde `CatalogClient`.
+
+### Cuándo se llama a catalog
+
+La regla, explicitada el 2026-08-02: **cuando una escritura estrena o cambia una referencia a un id externo.**
+
+El frontend ya resuelve los ids (selector de localidad → barrio) y los manda resueltos, pero eso no es en lo que consiste el guard. Como no hay FK entre microservicios, esa llamada **es** la FK: verifica que el `neighborhood_id` exista y que pertenezca a la ciudad declarada. Un cliente puede mandar el id de un barrio borrado o inventado — es un cliente, no una fuente de verdad.
+
+El corolario apareció al recortar `UpdatePropertyRequest`: desde que la edición no puede tocar `location` ([[properties-service-listing]]), `UpdatePropertyUseCase` **dejó de recibir `CatalogGateway`**. Si la escritura ya no puede cambiar la referencia, no hay nada que validar.
 
 ### `get_location_by_point`/`get_location_info` — roto desde el cambio a bulk (2026-07-19)
 
@@ -84,5 +93,6 @@ El barrio (`neighborhood_id`) es parte de la identidad del listing y feed de fea
 - El cliente falla en construcción si `CATALOG_URL` no está seteada ([catalog_client.py:12-14](backend/properties-service/src/app/integrations/catalog/catalog_client.py#L12-L14)).
 - Timeout y errores de conexión se mapean a `CatalogClientError` con mensajes distintos ([catalog_client.py:32-35](backend/properties-service/src/app/integrations/catalog/catalog_client.py#L32-L35)).
 - El port `CatalogGateway` expone `get_neighborhood` y `get_location_by_point` ([catalog_gateway.py:7-9](backend/properties-service/src/app/services/shared/ports/catalog_gateway.py#L7-L9)).
+- `UpdatePropertyUseCase` no recibe `CatalogGateway`; los únicos consumidores del port son `CreatePropertyUseCase` y el worker de bulk ([update_property.py](backend/properties-service/src/app/services/listing/use_cases/property_core/update_property.py), [listing.py](backend/properties-service/src/app/api/deps/listing.py), [admin.py](backend/properties-service/src/app/api/deps/admin.py)).
 - `NeighborhoodInfo` trae `id`, `locality_id`, `name` con `extra="ignore"` (`_ExternalSchema`) — catalog devuelve campos extra (`search_name`, `latitude`, `longitude`) que se descartan; la validación barrio↔ciudad compara `locality_id` con el `city_id` del request ([catalog_schemas.py](backend/properties-service/src/app/services/shared/schemas/catalog_schemas.py)).
 - `CatalogAdapter.get_neighborhood` tiene un `except Exception` genérico que convierte cualquier error inesperado (incluyendo `ValidationError` de Pydantic) en `CatalogServiceUnavailableError` → 503 — por eso los schemas externos deben nunca usar `extra="forbid"` ([catalog_adapter.py](backend/properties-service/src/app/services/shared/adapters/catalog_adapter.py)).

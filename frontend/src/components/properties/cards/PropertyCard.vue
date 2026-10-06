@@ -266,7 +266,5 @@ const statusBadgeClass = computed(
     ""
 );
 
-// `PropertyCardUI` no lleva `currency` (el mapper lo descarta), así que
-// `formatCurrency` cae a su default COP — el mismo supuesto que hacía el `$`
-// hardcodeado que estaba en el template.
+// `PropertyCardUI` no lleva `currency`, así que `formatCurrency` cae a COP: el supuesto que ya hacía el `$`.
 </script>
