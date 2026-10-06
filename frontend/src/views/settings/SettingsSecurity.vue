@@ -243,7 +243,7 @@
       <!-- Panel derecho - solo en pantallas grandes -->
       <div class="hidden xl:block xl:w-1/2">
         <div
-          class="bg-[linear-gradient(45deg,#F1FBF5,#D1F2E1)] h-full rounded-2xl flex flex-col p-8"
+          class="bg-gradient-to-tr from-brand-bg to-brand-primary-light h-full rounded-2xl flex flex-col p-8"
         >
           <div class="flex-1 flex items-center justify-center">
             <img

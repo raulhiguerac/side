@@ -22,12 +22,6 @@ export interface RangeWithGroups extends RangeGroup {
   groups: CategoryGroup[];
 }
 
-export const ISOCHRONE_COLORS: Record<number, string> = {
-  15: "#6366f1",
-  10: "#22c55e",
-  5: "#ef4444",
-};
-
 const DOT_BY_SECONDS: Record<number, string> = {
   300: "bg-red-500",
   600: "bg-green-500",

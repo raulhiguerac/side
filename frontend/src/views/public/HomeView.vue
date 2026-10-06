@@ -232,14 +232,13 @@
 
     <!-- CTA de cierre -->
     <div
-      class="mt-16 w-full rounded-3xl overflow-hidden relative px-10 py-16 flex flex-col items-center text-center gap-6"
+      class="bg-brand-dark mt-16 w-full rounded-3xl overflow-hidden relative px-10 py-16 flex flex-col items-center text-center gap-6"
       style="
-        background: radial-gradient(
-            circle at 50% 35%,
-            rgba(34, 197, 94, 0.14),
-            transparent 55%
-          ),
-          #0b2f2a;
+        background-image: radial-gradient(
+          circle at 50% 35%,
+          rgba(34, 197, 94, 0.14),
+          transparent 55%
+        );
       "
     >
       <span

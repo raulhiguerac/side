@@ -1,0 +1,14 @@
+{
+  "primary": "#22C55E",
+  "primary-dark": "#16A34A",
+  "primary-light": "#DCFCE7",
+  "dark": "#0B2F2A",
+  "navy": "#1E3A5F",
+  "accent": "#F3C849",
+  "text": "#2F3E3A",
+  "muted": "#6B7280",
+  "placeholder": "#9CA3AF",
+  "bg": "#F7F9F8",
+  "border": "#D1D5DB",
+  "divider": "#E5E7EB"
+}

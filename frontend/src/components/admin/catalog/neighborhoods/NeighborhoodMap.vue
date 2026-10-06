@@ -31,6 +31,7 @@ import { computed, watch } from "vue";
 import { LGeoJson, LMap, LTileLayer } from "@vue-leaflet/vue-leaflet";
 import * as L from "leaflet";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
+import { BRAND_COLORS } from "@/constants/brandColors";
 import type { Bbox } from "@/composables/admin/useNeighborhoodNeighbors";
 import type { NeighborhoodGeometryItem } from "@/types/admin/catalog";
 
@@ -57,16 +58,16 @@ const MAP_OPTIONS: L.MapOptions = {
 };
 
 const SELECTED_STYLE = () => ({
-  color: "#22C55E",
+  color: BRAND_COLORS.primary,
   weight: 2,
-  fillColor: "#22C55E",
+  fillColor: BRAND_COLORS.primary,
   fillOpacity: 0.25,
 });
 
 const NEIGHBOR_STYLE = () => ({
-  color: "#6B7280",
+  color: BRAND_COLORS.muted,
   weight: 1,
-  fillColor: "#9CA3AF",
+  fillColor: BRAND_COLORS.placeholder,
   fillOpacity: 0.12,
 });
 
