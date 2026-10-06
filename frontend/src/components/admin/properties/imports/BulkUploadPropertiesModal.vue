@@ -4,7 +4,7 @@
       Importar propiedades (CSV)
     </h2>
     <p class="text-brand-muted text-sm mb-4">
-      El archivo se procesa en segundo plano. Podés seguir trabajando y revisar
+      El archivo se procesa en segundo plano. Puedes seguir trabajando y revisar
       el resultado más tarde.
     </p>
 
@@ -108,7 +108,7 @@ async function upload() {
     close();
   } catch (e) {
     error.value =
-      "No se pudo iniciar la importación. Verificá el archivo e intentá de nuevo.";
+      "No se pudo iniciar la importación. Verifica el archivo e intenta de nuevo.";
     logger.error("bulk import failed", e);
   } finally {
     uploading.value = false;

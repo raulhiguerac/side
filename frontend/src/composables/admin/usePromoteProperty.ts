@@ -22,7 +22,7 @@ function messageForError(error: unknown): string {
     return "Solo se pueden promocionar propiedades activas.";
   if (error.response?.status === 404) return "La propiedad ya no existe";
   if (error.response?.status === 403)
-    return "No tenés permisos para promocionar";
+    return "No tienes permisos para promocionar";
 
   return "No se pudo promocionar";
 }

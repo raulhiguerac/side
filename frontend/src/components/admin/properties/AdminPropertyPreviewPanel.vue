@@ -11,7 +11,7 @@
       v-if="!propertyId"
       class="text-brand-muted px-5 py-12 text-center text-sm"
     >
-      Seleccioná una propiedad de la tabla.
+      Selecciona una propiedad de la tabla.
     </p>
 
     <div v-else-if="loading" class="flex justify-center px-5 py-12">
