@@ -40,26 +40,25 @@
       </select>
     </div>
 
-    <button
+    <PrimaryButton
       type="button"
-      :disabled="loading"
-      class="bg-brand-primary flex w-full items-center justify-center gap-2 self-end rounded-xl border border-transparent px-4 py-2 text-sm font-bold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-green-600 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+      :loading="loading"
+      class="w-full self-end border border-transparent"
       @click="apply"
     >
-      <BaseSpinner v-if="loading" class="h-4 w-4 text-white" />
       {{ loading ? "Buscando…" : "Aplicar" }}
-    </button>
+    </PrimaryButton>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
-import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import type {
   AdminAsyncSelectFilter,
   AdminFilterDefinition,
   AdminFilterOptions,
 } from "@/types/admin/filters";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 /** Barra de filtros de las vistas admin: recibe los filtros con sus opciones y
  * devuelve los valores elegidos, sin saber qué se está filtrando. */

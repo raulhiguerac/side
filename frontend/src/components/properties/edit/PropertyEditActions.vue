@@ -8,7 +8,7 @@
     >
       ← Volver
     </button>
-    <PrimaryButton @click="emit('save')" class="px-7 py-2.5">
+    <PrimaryButton @click="emit('save')">
       <Save class="w-4 h-4" />
       Guardar cambios
     </PrimaryButton>

@@ -103,14 +103,10 @@
           Reprocesa el mismo archivo. Las filas ya cargadas se actualizan, no se
           duplican.
         </p>
-        <button
-          type="button"
-          :disabled="!canRetry"
-          class="bg-brand-primary flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-white transition-all duration-200 hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-40"
-        >
+        <PrimaryButton type="button" :disabled="!canRetry" class="w-full">
           <RotateCcw class="h-4 w-4" />
           Relanzar job
-        </button>
+        </PrimaryButton>
         <p v-if="isExpired" class="text-brand-muted mt-2 text-center text-xs">
           El CSV ya venció en storage.
         </p>
@@ -136,6 +132,7 @@ import type {
 } from "@/types/admin/bulk";
 import { formatLongDateTime } from "@/utils/date";
 import { formatNumber } from "@/utils/number";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 /** El detalle de una corrida: la fila llega entera desde el listado y acá solo
  * se piden los errores, que ese listado cuenta pero no trae. */

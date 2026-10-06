@@ -164,19 +164,15 @@
             <!-- Botones -->
             <div class="flex flex-col gap-3 mt-6">
               <!-- Botón iniciar sesión -->
-              <button
+              <PrimaryButton
                 type="submit"
-                :disabled="!user.email || !user.password || isLoading"
-                class="w-full h-12 rounded-xl font-semibold transition-all flex items-center justify-center"
-                :class="
-                  user.email && user.password && !isLoading
-                    ? 'bg-brand-primary hover:bg-green-600 text-white cursor-pointer'
-                    : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
-                "
+                size="lg"
+                :disabled="!user.email || !user.password"
+                :loading="isLoading"
+                class="w-full"
               >
-                <BaseSpinner v-if="isLoading" class="h-5 w-5 text-white" />
-                <span v-else>Iniciar sesión</span>
-              </button>
+                Iniciar sesión
+              </PrimaryButton>
 
               <!--
                 Login con Google, comentado con la baja de firebase: nunca funcionó. Vuelve con Keycloak (ADR-0004).
@@ -224,7 +220,7 @@
 import { ref } from "vue";
 import router from "@/router";
 import { useAuthStore } from "@/stores/auth";
-import BaseSpinner from "@/components/shared/BaseSpinner.vue";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 // 🔌 Conectamos con el store de autenticación
 const authStore = useAuthStore();
