@@ -94,19 +94,14 @@
             >
               Cancelar
             </button>
-            <button
+            <PrimaryButton
               type="submit"
-              :disabled="isLoading || !hasChanges"
-              class="px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2"
-              :class="
-                hasChanges && !isLoading
-                  ? 'bg-brand-primary hover:bg-green-600 text-white'
-                  : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
-              "
+              size="sm"
+              :disabled="!hasChanges"
+              :loading="isLoading"
             >
-              <BaseSpinner v-if="isLoading" class="h-4 w-4" />
               Guardar
-            </button>
+            </PrimaryButton>
           </div>
         </form>
       </div>
@@ -126,7 +121,8 @@ import IntentSelector, {
   type Intent,
 } from "@/components/onboarding/IntentSelector.vue";
 import usersApi from "@/api/usersApi";
-import BaseSpinner from "@/components/shared/BaseSpinner.vue";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
+import { logger } from "@/utils/logger";
 
 const authStore = useAuthStore();
 const isLoading = ref(false);
@@ -197,7 +193,7 @@ const saveProfile = async () => {
     originalForm.value = { ...form.value };
     avatarFile.value = null;
   } catch (error) {
-    console.error("Error al guardar perfil:", error);
+    logger.error("Error al guardar perfil:", error);
   } finally {
     isLoading.value = false;
   }

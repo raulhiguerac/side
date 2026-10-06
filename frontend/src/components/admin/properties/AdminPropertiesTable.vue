@@ -58,6 +58,10 @@ import BaseTable from "@/components/shared/BaseTable.vue";
 import { formatCurrency } from "@/utils/money";
 import { formatShortDate } from "@/utils/date";
 import {
+  LISTING_TYPE_LABELS,
+  PROPERTY_TYPE_LABELS,
+} from "@/constants/propertyLabels";
+import {
   LISTING_STATUS_LABELS,
   LISTING_STATUS_BADGE_CLASSES,
   VERIFICATION_STATUS_LABELS,
@@ -78,17 +82,6 @@ defineSlots<{
 }>();
 
 const slots = useSlots();
-
-const PROPERTY_TYPE_LABELS: Record<AdminPropertyRow["property_type"], string> =
-  {
-    house: "Casa",
-    apartment: "Apartamento",
-  };
-
-const LISTING_TYPE_LABELS: Record<AdminPropertyRow["listing_type"], string> = {
-  sale: "Venta",
-  rent: "Arriendo",
-};
 
 /** Solo campos para escanear y sin orden: identificar la property es del panel, y el listado no ordena. */
 const columns = computed<ColumnDef<AdminPropertyRow>[]>(() => {

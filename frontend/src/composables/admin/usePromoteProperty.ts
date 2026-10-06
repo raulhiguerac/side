@@ -3,14 +3,11 @@ import axios from "axios";
 import propertiesApi from "@/api/propertiesApi";
 import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
 import type { PromotionPayload } from "@/types/admin/promotions";
+import { logger } from "@/utils/logger";
 
 /** Crea la promoción de una property; un solo POST, a diferencia de moderar. */
 
-/**
- * Los dos 409 posibles llegan distinguidos por `code` —a diferencia de las
- * transiciones, donde el handler descarta el contexto— así que el mensaje puede
- * decir qué pasó.
- */
+// Los dos 409 llegan distinguidos por `code`: el mensaje puede decir qué pasó.
 function messageForError(error: unknown): string {
   if (!axios.isAxiosError(error)) return "No se pudo promocionar";
 
@@ -21,7 +18,7 @@ function messageForError(error: unknown): string {
     return "Solo se pueden promocionar propiedades activas.";
   if (error.response?.status === 404) return "La propiedad ya no existe";
   if (error.response?.status === 403)
-    return "No tenés permisos para promocionar";
+    return "No tienes permisos para promocionar";
 
   return "No se pudo promocionar";
 }
@@ -48,7 +45,7 @@ export function usePromoteProperty() {
       success.value = "Promoción creada";
       return true;
     } catch (e) {
-      console.error("admin promotion failed", e);
+      logger.error("admin promotion failed", e);
       error.value = messageForError(e);
       return false;
     } finally {

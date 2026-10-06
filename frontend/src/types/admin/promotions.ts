@@ -1,10 +1,6 @@
 import type { PropertyCard } from "@/types/feed";
 
-/**
- * Fila de `GET /v1/admin/promotions`: la promoción, con la property adentro. No
- * es `PropertyCard` — esa solo sabe decir si está promocionada, no con qué
- * prioridad ni hasta cuándo.
- */
+/** Fila de `GET /admin/promotions`: la promoción con su property anidada. */
 export interface AdminPromotionRow {
   id: string;
   property_id: string;

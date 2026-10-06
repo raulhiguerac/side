@@ -4,7 +4,7 @@
       <div>
         <div class="flex items-center gap-2 text-brand-text text-lg font-bold">
           <component :is="typeIcon" class="w-5 h-5 text-brand-primary" />
-          {{ typeLabel }} en {{ listingLabel }}
+          {{ title }}
           <span
             v-if="property?.status"
             class="px-2 py-0.5 rounded-full text-xs font-semibold"
@@ -52,6 +52,7 @@ import {
   LISTING_STATUS_BADGE_CLASSES,
 } from "@/constants/propertyStatus";
 import type { PropertyDetail } from "@/types/properties";
+import { propertyTitle } from "@/utils/property";
 
 const props = defineProps<{
   property: PropertyDetail | null;
@@ -61,11 +62,10 @@ const props = defineProps<{
 const typeIcon = computed(() =>
   props.property?.property_type === "apartment" ? Building2 : Home
 );
-const typeLabel = computed(() =>
-  props.property?.property_type === "apartment" ? "Apartamento" : "Casa"
-);
-const listingLabel = computed(() =>
-  props.property?.listing_type === "rent" ? "arriendo" : "venta"
+const title = computed(() =>
+  props.property
+    ? propertyTitle(props.property.property_type, props.property.listing_type)
+    : ""
 );
 
 const statTiles = computed(() => {

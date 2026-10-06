@@ -12,7 +12,7 @@
     </div>
 
     <p v-if="!job" class="text-brand-muted px-5 py-12 text-center text-sm">
-      Elegí una importación de la tabla.
+      Elige una importación de la tabla.
     </p>
 
     <template v-else>
@@ -30,7 +30,7 @@
           <div class="flex justify-between">
             <dt class="text-brand-muted">Cargadas</dt>
             <dd class="text-brand-text font-semibold tabular-nums">
-              {{ job.inserted.toLocaleString("es-CO") }}
+              {{ formatNumber(job.inserted) }}
             </dd>
           </div>
           <div class="flex justify-between">
@@ -41,14 +41,14 @@
                 job.error_count ? 'text-red-600' : 'text-brand-text',
               ]"
             >
-              {{ job.error_count.toLocaleString("es-CO") }}
+              {{ formatNumber(job.error_count) }}
             </dd>
           </div>
           <!-- Derivada, no guardada: cada fila del CSV o entra o falla. -->
           <div class="flex justify-between">
             <dt class="text-brand-muted">Leídas</dt>
             <dd class="text-brand-text tabular-nums">
-              {{ rowsRead.toLocaleString("es-CO") }}
+              {{ formatNumber(rowsRead) }}
             </dd>
           </div>
         </dl>
@@ -103,14 +103,10 @@
           Reprocesa el mismo archivo. Las filas ya cargadas se actualizan, no se
           duplican.
         </p>
-        <button
-          type="button"
-          :disabled="!canRetry"
-          class="bg-brand-primary flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-white transition-all duration-200 hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-40"
-        >
+        <PrimaryButton type="button" :disabled="!canRetry" class="w-full">
           <RotateCcw class="h-4 w-4" />
           Relanzar job
-        </button>
+        </PrimaryButton>
         <p v-if="isExpired" class="text-brand-muted mt-2 text-center text-xs">
           El CSV ya venció en storage.
         </p>
@@ -134,23 +130,17 @@ import type {
   BulkJobRowError,
   BulkJobStatusDetail,
 } from "@/types/admin/bulk";
+import { formatLongDateTime } from "@/utils/date";
+import { formatNumber } from "@/utils/number";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
+import { logger } from "@/utils/logger";
 
-/** El detalle de una corrida: la fila llega entera desde el listado y acá solo
- * se piden los errores, que ese listado cuenta pero no trae. */
+// La fila llega del listado; acá solo se piden los errores.
 const props = defineProps<{ job: BulkJobRow | null }>();
 
 const errors = ref<BulkJobRowError[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
-
-const longDateTimeFormatter = new Intl.DateTimeFormat("es-CO", {
-  dateStyle: "long",
-  timeStyle: "short",
-});
-
-function formatLongDateTime(value: string): string {
-  return longDateTimeFormatter.format(new Date(value));
-}
 
 const rowsRead = computed(() =>
   props.job ? props.job.inserted + props.job.error_count : 0
@@ -191,7 +181,7 @@ async function loadErrors(job: BulkJobRow | null) {
   } catch (e) {
     if (token !== requestToken) return;
     error.value = "No se pudieron cargar los errores de la corrida";
-    console.error("admin bulk job errors failed", e);
+    logger.error("admin bulk job errors failed", e);
   } finally {
     if (token === requestToken) loading.value = false;
   }

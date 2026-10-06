@@ -31,7 +31,7 @@
 
     <template #inserted="{ row }">
       <span class="font-semibold tabular-nums">
-        {{ row.inserted.toLocaleString("es-CO") }}
+        {{ formatNumber(row.inserted) }}
       </span>
     </template>
 
@@ -43,7 +43,7 @@
           row.error_count ? 'font-semibold text-red-600' : 'text-brand-muted',
         ]"
       >
-        {{ row.error_count.toLocaleString("es-CO") }}
+        {{ formatNumber(row.error_count) }}
       </span>
     </template>
 
@@ -71,6 +71,7 @@ import {
   BULK_JOB_STATUS_BADGE_CLASSES,
 } from "@/constants/bulkJobStatus";
 import type { BulkJobRow } from "@/types/admin/bulk";
+import { formatNumber } from "@/utils/number";
 
 /** El historial de importaciones: qué corrió, cómo terminó y cuánto entró. */
 defineProps<{

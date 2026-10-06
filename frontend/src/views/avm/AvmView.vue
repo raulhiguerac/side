@@ -76,11 +76,10 @@ import PageContainer from "@/components/shared/PageContainer.vue";
 import type {
   AvmPredictRequest,
   AvmFormPayload,
-  SelectedPlace,
 } from "@/composables/avm/useAvmForm";
-import type { MarkerData } from "@/types/maps";
+import type { MarkerData, SelectedPlace } from "@/types/maps";
 import avmApi from "@/api/avmApi";
-import { API } from "@/config";
+import { logger } from "@/utils/logger";
 
 const showResult = ref(false);
 const price = ref(0);
@@ -124,7 +123,7 @@ async function onSubmit(data: {
     price.value = await fetchPredict(avmPayload);
     showResult.value = true;
   } catch (error) {
-    console.error("Error al predecir el precio:", error);
+    logger.error("Error al predecir el precio:", error);
   }
 }
 

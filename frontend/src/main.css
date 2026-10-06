@@ -1,3 +1,31 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .brand-multiselect {
+    --ms-radius: 0.75rem;
+    --ms-border-color: theme("colors.brand.border");
+    --ms-border-color-active: theme("colors.brand.primary");
+    --ms-ring-color: theme("colors.brand.primary-light");
+    --ms-ring-width: 3px;
+    --ms-font-size: 0.875rem;
+    --ms-placeholder-color: theme("colors.brand.placeholder");
+    --ms-option-bg-pointed: theme("colors.brand.primary-light");
+    --ms-option-color-pointed: theme("colors.brand.primary");
+    --ms-option-bg-selected: theme("colors.brand.primary");
+    --ms-option-bg-selected-pointed: theme("colors.brand.primary-dark");
+    --ms-dropdown-radius: 0.75rem;
+    --ms-max-height: 12rem;
+  }
+
+  .brand-multiselect .multiselect-search,
+  .brand-multiselect .multiselect-placeholder {
+    padding-left: 2.25rem;
+  }
+
+  .brand-multiselect .multiselect-tags,
+  .brand-multiselect .multiselect-tag {
+    display: none !important;
+  }
+}

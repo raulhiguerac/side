@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="w-72 p-6 bg-[#fafafa] border-l border-brand-divider flex flex-col"
-  >
+  <div class="w-72 p-6 bg-brand-bg border-l border-brand-divider flex flex-col">
     <h3 class="text-brand-text text-sm font-bold mb-4">Resumen</h3>
 
     <!-- Property type card preview -->
@@ -65,18 +63,22 @@ import {
   Bath,
   DollarSign,
 } from "@lucide/vue";
+import {
+  LISTING_TYPE_LABELS,
+  PROPERTY_TYPE_LABELS,
+} from "@/constants/propertyLabels";
 import type { CreatePropertyForm } from "@/types/properties";
 
 const props = defineProps<{ form: CreatePropertyForm }>();
 
 const propertyTypeLabel = computed(() =>
-  props.form.property_type === "house" ? "Casa" : "Apartamento"
+  props.form.property_type
+    ? PROPERTY_TYPE_LABELS[props.form.property_type]
+    : "—"
 );
 const listingTypeLabel = computed(() =>
-  props.form.listing_type === "sale"
-    ? "En venta"
-    : props.form.listing_type === "rent"
-    ? "En arriendo"
+  props.form.listing_type
+    ? `En ${LISTING_TYPE_LABELS[props.form.listing_type].toLowerCase()}`
     : "—"
 );
 

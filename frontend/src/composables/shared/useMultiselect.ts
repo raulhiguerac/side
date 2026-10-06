@@ -53,7 +53,7 @@ export function useNeighborhoodMultiselect() {
     const result = await getNeighborhoodsByLocalities(ids);
     cities.value = localities.map((loc) => ({
       ...loc,
-      neighborhoods: (result[loc.id] ?? []).map((n: any) => ({
+      neighborhoods: (result[loc.id] ?? []).map((n) => ({
         id: n.id,
         name: n.name,
       })),

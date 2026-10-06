@@ -6,6 +6,7 @@ import IntentSelector from "@/components/onboarding/IntentSelector.vue";
 import LocalitySelector from "@/components/onboarding/LocalitySelector.vue";
 import NeighborhoodSelector from "@/components/onboarding/NeighborhoodSelector.vue";
 import PropertyTypeSelector from "@/components/onboarding/PropertyTypeSelector.vue";
+import { logger } from "@/utils/logger";
 
 const STEP_MAP: Record<string, Component> = {
   intent: IntentSelector,
@@ -53,7 +54,7 @@ export function useOnboarding() {
       authStore.onboardingStep = "neighborhood";
       activeComponent.value = STEP_MAP["neighborhood"];
     } catch (e) {
-      console.error("Onboarding saveCity error", e);
+      logger.error("Onboarding saveCity error", e);
     }
   };
 
@@ -65,7 +66,7 @@ export function useOnboarding() {
       authStore.onboardingStep = "property_type";
       activeComponent.value = STEP_MAP["property_type"];
     } catch (e) {
-      console.error("Onboarding saveNeighborhoods error", e);
+      logger.error("Onboarding saveNeighborhoods error", e);
     }
   };
 
@@ -81,7 +82,7 @@ export function useOnboarding() {
       );
       closeFlow();
     } catch (e) {
-      console.error("Onboarding savePropertyTypes error", e);
+      logger.error("Onboarding savePropertyTypes error", e);
     }
   };
 

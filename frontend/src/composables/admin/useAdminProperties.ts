@@ -8,6 +8,8 @@ import type {
   AdminPropertiesPage,
   AdminPropertyRow,
 } from "@/types/admin/properties";
+import { pageRange } from "@/utils/pagination";
+import { logger } from "@/utils/logger";
 
 async function fetchAdminProperties(
   page: number,
@@ -43,17 +45,13 @@ export function useAdminProperties() {
   );
 
   /** Rango visible, 1-indexado, para el "Mostrando X-Y de Z". */
-  const range = computed(() => {
-    if (!serverTotal.value) return { from: 0, to: 0 };
-    const from = (pagination.page.value - 1) * PAGE_SIZE.ADMIN_PROPERTIES + 1;
-    return {
-      from,
-      to: Math.min(
-        from + pagination.pagedItems.value.length - 1,
-        serverTotal.value
-      ),
-    };
-  });
+  const range = computed(() =>
+    pageRange(
+      pagination.page.value,
+      PAGE_SIZE.ADMIN_PROPERTIES,
+      pagination.pagedItems.value.length
+    )
+  );
 
   function hasMoreAfter(loadedCount: number): boolean {
     return loadedCount < serverTotal.value;
@@ -70,7 +68,7 @@ export function useAdminProperties() {
       pagination.setItems(data.items, hasMoreAfter(data.items.length));
     } catch (e) {
       error.value = "No se pudieron cargar las propiedades";
-      console.error("admin properties load failed", e);
+      logger.error("admin properties load failed", e);
       serverTotal.value = 0;
       pagination.setItems([], false);
     } finally {
@@ -97,7 +95,7 @@ export function useAdminProperties() {
       );
     } catch (e) {
       error.value = "No se pudo actualizar la lista";
-      console.error("admin properties reload failed", e);
+      logger.error("admin properties reload failed", e);
     } finally {
       loading.value = false;
     }
@@ -122,7 +120,7 @@ export function useAdminProperties() {
       });
     } catch (e) {
       error.value = "No se pudo cargar la página siguiente";
-      console.error("admin properties next page failed", e);
+      logger.error("admin properties next page failed", e);
     } finally {
       loading.value = false;
     }

@@ -1,7 +1,7 @@
 ---
 title: Panel admin (frontend)
 status: draft
-last-verified: 2026-10-04
+last-verified: 2026-10-05
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -39,6 +39,7 @@ sources:
   - ../../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md
   - ../../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md
   - ../../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md
+  - ../../../sources/frontend/2026-10-05-admin-actions-and-front-smell-audit.md
 ---
 
 ## TL;DR
@@ -298,7 +299,7 @@ Lo que hay que saber al usarlo:
 
 La cascada se resuelve en el `@change`: al cambiar un padre se vacían y recargan sus hijos y nietos. No va en un `watch` porque sembrar el borrador desde la URL no debe vaciar nada. Un contador por key descarta las respuestas viejas si el padre cambia dos veces rápido. `sanitizeFilterQuery` solo valida contra el enum los selects estáticos; `async-select` y `search` los valida el backend.
 
-La prop `filtersWidth` elige el reparto: `two-thirds` (default: filtros 2/3, botón 1/3) o `full` (el botón ocupa solo su ancho). Las clases van literales en el template para que Tailwind no las purgue.
+**Update 2026-10-05.** El trío `urlFilters` / `onApplyFilters` / `watch` se extrajo a `useUrlFilters(filters, onChange)` en cuanto apareció la tercera vista con filtros (barrios), y las definiciones salieron de las vistas a `constants/propertiesFilters.ts` y `constants/catalogFilters.ts`. La prop `filtersWidth` desapareció: el layout se rehízo como grid (ver "Acciones del panel de barrios y layout de filtros").
 
 ## La tab de importaciones, cableada (2026-08-24)
 
@@ -345,9 +346,9 @@ Preguntas abiertas: navegar por filtros en cascada o entrar desde un mapa de la 
 
 ## La tab de barrios, cableada (2026-10-04)
 
-La barra de filtros va **arriba de `AdminSplitView`**, a todo el ancho y con `filtersWidth="full"`: la cascada filtra la tabla y también el mapa del panel. En properties sigue en el slot `#filters`. Los filtros son País → Localidad (con los `GET` públicos, que solo traen activos; División entra cuando exista su `GET` admin), Estado, Geometría y Buscar.
+La barra de filtros va **arriba de `AdminSplitView`**, a todo el ancho: la cascada filtra la tabla y también el mapa del panel. En properties sigue en el slot `#filters`. Los filtros son País → Localidad (con los `GET` públicos, que solo traen activos; División entra cuando exista su `GET` admin), Estado, Geometría y Buscar.
 
-El flujo es el de [[adr-admin-filters-in-query-params]]: "Aplicar" → `router.push({ query })` → `urlFilters` (computed sobre `route.query`) → `watch(urlFilters, load)` → `GET /v1/admin/neighborhoods`. La petición sale siempre de la URL.
+El flujo es el de [[adr-admin-filters-in-query-params]]: "Aplicar" → `router.push({ query })` → `urlFilters` (computed sobre `route.query`) → `load` → `GET /v1/admin/neighborhoods`; desde el 2026-10-05 lo encapsula `useUrlFilters`. La petición sale siempre de la URL.
 
 - **`useAdminNeighborhoods`** pide página por página con el `current_page`/`total_pages` del backend, sin el cache incremental de `useAdminProperties`. No manda `country_id`: solo acota el select de localidad.
 - **Tabla** (`AdminNeighborhoodsTable`, sobre `BaseTable`): silueta, nombre, código y estado. `NeighborhoodSilhouette` arma `<svg viewBox="min_lon -max_lat ancho alto">` con el `svg_path` y `vector-effect="non-scaling-stroke"`; la Y va negada porque `ST_AsSVG` la invierte.
@@ -356,7 +357,23 @@ El flujo es el de [[adr-admin-filters-in-query-params]]: "Aplicar" → `router.p
 - axios necesita `paramsSerializer: { indexes: null }` para mandar `bbox` repetido; por defecto arma `bbox[]=`, que FastAPI no entiende.
 - `catalogApi` pasó a `withCredentials` + interceptor de auth: los endpoints `/admin` leen la cookie. Eso obligó a cerrar el CORS de catalog ([[frontend-local-dev]]).
 
-Pendiente: las acciones del panel (editar, reemplazar geometría, desactivar) y probar la tab en el navegador.
+Pendiente: las acciones del panel (editar, reemplazar geometría, desactivar). **Update 2026-10-05:** la barra y un modal mock ya están montados y probados en el navegador; faltan los modales reales.
+
+## Acciones del panel de barrios y layout de filtros (2026-10-05)
+
+**Cobertura de catalog.** De los 14 endpoints `/v1/admin/*` de catalog-service, el front consume 3: las tres lecturas de barrios. Faltan las 11 escrituras (crear/editar países, divisiones, localidades y barrios, más los tres uploads de barrios). Localidades y países solo tienen los `GET` públicos, que traen activos; las divisiones no tienen ningún listado.
+
+**El mapa no edita.** `POST /admin/neighborhoods/{id}/geometry` recibe un **archivo** GeoJSON, no una geometría dibujada, así que "reemplazar geometría" es un modal de subida y `NeighborhoodMap` sigue siendo de solo lectura ([[frontend-map-component]]). Editar vértices sobre el mapa sería otro proyecto: leaflet-geoman y un endpoint que acepte JSON.
+
+**Barra de acciones tonta.** `AdminActionBar` recibe `AdminAction<K>[]` (`key`, `icon` de lucide, `label`, `variant` `default`|`primary`|`danger`), es genérica sobre `K` y emite `action(key)`. Es una grid de columnas de 1/3, como máximo 3 por fila y centradas; por eso los labels son cortos ("Geometría": "Actualizar geometría" no cabía).
+
+**La barra no recibe componentes.** Se descartó pasarle el modal como prop (`<component :is>` desde la barra): cada modal necesita props y eventos distintos y la barra terminaría sabiendo de modales. El panel reemite `action` y la vista monta un único `BaseModal`. El mapa de modales se indexa por `key`, que es estable, y no por `label`, que cambia entre Desactivar y Activar. Los modales reales van a compartir la interfaz `neighborhood` + `close` / `saved`, con un `AdminFormModal` como cascarón común. Hoy el modal es un mock con título por acción.
+
+**`AdminFilterBar` es una grid y "Aplicar" es una celda más.** Columnas = `n + 1` (filtros más botón) hasta 4 en una fila; desde 5 elementos, `ceil((n + 1) / 2)`. Con los 5 filtros de barrios queda 3 + 3, con el botón debajo de Estado; con los 2 de moderación e importaciones, una fila de 3. El botón se alinea abajo con los inputs; bajo `sm` todo se apila. Se probó y se descartó:
+
+- **mínimo 3 columnas**: con 2 filtros, en la caja angosta de moderación, quedaban flotando con huecos a los lados;
+- **reparto 80/20** filtros/botón: con 3 + 2 dejaba una "L" vacía a la derecha;
+- **botón centrado en vertical**: quedaba entre la etiqueta y el input, o entre las dos filas.
 
 ## Decisiones diferidas
 
@@ -414,7 +431,7 @@ Pendiente: las acciones del panel (editar, reemplazar geometría, desactivar) y 
 - `useRowSelection` acepta un extractor de clave y por defecto usa `row.id` ([useRowSelection.ts](frontend/src/composables/admin/useRowSelection.ts)).
 - `AdminPromotionsTable.vue` usa `row.property_id` como `rowKey` y muestra columnas de prioridad y vencimiento ([AdminPromotionsTable.vue](frontend/src/components/admin/properties/promotions/AdminPromotionsTable.vue)).
 - `AdminFilterBar` emite `apply` solo desde el click y omite los valores vacíos ([AdminFilterBar.vue](frontend/src/components/admin/shared/AdminFilterBar.vue)).
-- `AdminModerationView` filtra por `verification_status` y `status`, y `AdminImportsView` por `status` y `has_errors`, en ambos casos desde `route.query` ([AdminModerationView.vue](frontend/src/views/admin/properties/moderation/AdminModerationView.vue), [AdminImportsView.vue](frontend/src/views/admin/properties/imports/AdminImportsView.vue)).
+- `AdminModerationView` filtra por `verification_status` y `status`, y `AdminImportsView` por `status` y `has_errors`, en ambos casos desde `route.query` vía `useUrlFilters` ([AdminModerationView.vue](frontend/src/views/admin/properties/moderation/AdminModerationView.vue), [AdminImportsView.vue](frontend/src/views/admin/properties/imports/AdminImportsView.vue)).
 - `useBulkJobs` pide siempre la página al servidor y no usa `usePagination` ([useBulkJobs.ts](frontend/src/composables/admin/useBulkJobs.ts)).
 - `AdminBulkJobPanel` recibe la fila como prop y solo llama a `adminBulkJobStatus` cuando `error_count` es distinto de cero ([AdminBulkJobPanel.vue](frontend/src/components/admin/properties/imports/AdminBulkJobPanel.vue)).
 - `BulkJobRow` declara `error_count` y no un array de errores ([types/admin/bulk.ts](frontend/src/types/admin/bulk.ts)).
@@ -424,12 +441,17 @@ Pendiente: las acciones del panel (editar, reemplazar geometría, desactivar) y 
 - `/admin/catalog` es una ruta padre sin `name` con cuatro hijos (`""`, `localities`, `admin-divisions`, `countries`), el `name` `admin-catalog` vive en el hijo por defecto, y solo el padre declara `meta: { requiresAuth: true, requiresAdmin: true }` ([router/routes/admin/catalog.ts](frontend/src/router/routes/admin/catalog.ts)).
 - `AdminCatalogView.vue` monta `AdminTabsNav` con las tabs Barrios, Localidades, Divisiones y Países, y un `RouterView` ([AdminCatalogView.vue](frontend/src/views/admin/catalog/AdminCatalogView.vue)).
 - Localidades, Divisiones y Países solo renderizan `EmptyState`; Barrios es la única tab de catálogo que llama a la API ([views/admin/catalog/](frontend/src/views/admin/catalog)).
-- `AdminNeighborhoodsView` monta `AdminFilterBar` fuera de `AdminSplitView`, con `filters-width="full"`, y recarga con `watch(urlFilters, load)` ([AdminNeighborhoodsView.vue:5](frontend/src/views/admin/catalog/neighborhoods/AdminNeighborhoodsView.vue#L5), [:147](frontend/src/views/admin/catalog/neighborhoods/AdminNeighborhoodsView.vue#L147)).
-- `AdminFilterDefinition` es la unión de `AdminStaticSelectFilter`, `AdminAsyncSelectFilter` y `AdminSearchFilter`, y el select estático lleva `type` opcional ([filters.ts:13](frontend/src/types/admin/filters.ts#L13), [:29](frontend/src/types/admin/filters.ts#L29)).
-- `AdminFilterBar` vacía y recarga los `async-select` dependientes desde `resetDependents`, llamado en el `@change` del select ([AdminFilterBar.vue:146](frontend/src/components/admin/shared/AdminFilterBar.vue#L146)).
-- `AdminFilterBar` acepta `filtersWidth` (`two-thirds` por defecto, o `full`) ([AdminFilterBar.vue:87-92](frontend/src/components/admin/shared/AdminFilterBar.vue#L87-L92)).
-- `sanitizeFilterQuery` deja pasar sin validar los valores de `async-select` y `search` ([adminFilters.ts:18](frontend/src/utils/adminFilters.ts#L18)).
-- `useAdminNeighborhoods` solo manda al backend `locality_id`, `is_active`, `has_geometry` y `search_term` ([useAdminNeighborhoods.ts:10-21](frontend/src/composables/admin/useAdminNeighborhoods.ts#L10-L21)).
-- `useNeighborhoodNeighbors` serializa el bbox con `paramsSerializer: { indexes: null }` ([useNeighborhoodNeighbors.ts:21](frontend/src/composables/admin/useNeighborhoodNeighbors.ts#L21)).
+- `AdminNeighborhoodsView` monta `AdminFilterBar` fuera de `AdminSplitView` y recarga con `useUrlFilters(NEIGHBORHOOD_FILTERS, load)` ([AdminNeighborhoodsView.vue](frontend/src/views/admin/catalog/neighborhoods/AdminNeighborhoodsView.vue)).
+- `useUrlFilters` sanea `route.query` contra las definiciones, navega con `router.push` y llama `onChange` con `immediate: true` ([useUrlFilters.ts](frontend/src/composables/admin/useUrlFilters.ts)).
+- `NEIGHBORHOOD_FILTERS` vive en `constants/catalogFilters.ts` y sus `loadOptions` son `loadCountryOptions` / `loadLocalityOptions` de `api/catalogOptions.ts`; `MODERATION_FILTERS` y `BULK_JOB_FILTERS` viven en `constants/propertiesFilters.ts` ([catalogFilters.ts](frontend/src/constants/catalogFilters.ts), [propertiesFilters.ts](frontend/src/constants/propertiesFilters.ts)).
+- `AdminActionBar` es genérico sobre la key (`generic="K extends string"`), recibe `AdminAction<K>[]` y emite `action(key)` ([AdminActionBar.vue](frontend/src/components/admin/shared/AdminActionBar.vue), [types/admin/actions.ts](frontend/src/types/admin/actions.ts)).
+- `AdminNeighborhoodPanel` reemite `action` con un `NeighborhoodAction` (`edit`|`geometry`|`deactivate`) y `AdminNeighborhoodsView` abre un `BaseModal` mock con `activeAction` ([AdminNeighborhoodPanel.vue](frontend/src/components/admin/catalog/neighborhoods/AdminNeighborhoodPanel.vue), [AdminNeighborhoodsView.vue](frontend/src/views/admin/catalog/neighborhoods/AdminNeighborhoodsView.vue)).
+- `AdminFilterBar` calcula `--cols` contando el botón como una celda: `n + 1` hasta 4, `ceil((n + 1) / 2)` desde 5 ([AdminFilterBar.vue](frontend/src/components/admin/shared/AdminFilterBar.vue)).
+- Las cinco vistas admin con paginación usan `AdminPaginationFooter`, y los cuatro composables de listado calculan `range` con `pageRange` ([AdminPaginationFooter.vue](frontend/src/components/admin/shared/AdminPaginationFooter.vue), [utils/pagination.ts](frontend/src/utils/pagination.ts)).
+- `AdminFilterDefinition` es la unión de `AdminStaticSelectFilter`, `AdminAsyncSelectFilter` y `AdminSearchFilter`, y el select estático lleva `type` opcional ([filters.ts:12](frontend/src/types/admin/filters.ts#L12), [:29](frontend/src/types/admin/filters.ts#L29)).
+- `AdminFilterBar` vacía y recarga los `async-select` dependientes desde `resetDependents`, llamado en el `@change` del select ([AdminFilterBar.vue:131](frontend/src/components/admin/shared/AdminFilterBar.vue#L131)).
+- `sanitizeFilterQuery` deja pasar sin validar los valores de `async-select` y `search` ([adminFilters.ts:21](frontend/src/utils/adminFilters.ts#L21)).
+- `useAdminNeighborhoods` solo manda al backend `locality_id`, `is_active`, `has_geometry` y `search_term` ([useAdminNeighborhoods.ts:12-17](frontend/src/composables/admin/useAdminNeighborhoods.ts#L12-L17)).
+- `useNeighborhoodNeighbors` serializa el bbox con `paramsSerializer: { indexes: null }` ([useNeighborhoodNeighbors.ts:22](frontend/src/composables/admin/useNeighborhoodNeighbors.ts#L22)).
 - Los tipos admin viven en `types/admin/{properties,moderation,promotions,bulk,filters,catalog}.ts`, sin `index.ts` que los reexporte ([types/admin/](frontend/src/types/admin)).
 - `package.json` del frontend no declara `d3` ni `d3-geo` ([package.json](frontend/package.json)).

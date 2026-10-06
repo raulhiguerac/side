@@ -2,6 +2,7 @@ import { ref } from "vue";
 import catalogApi from "@/api/catalogApi";
 import { CATALOG_ENDPOINTS } from "@/constants/catalogEndpoints";
 import type { NeighborhoodGeometryItem } from "@/types/admin/catalog";
+import { logger } from "@/utils/logger";
 
 export type Bbox = [number, number, number, number];
 
@@ -24,7 +25,7 @@ export function useNeighborhoodNeighbors() {
       if (request === latestRequest) neighbors.value = data;
     } catch (e) {
       if (request === latestRequest) neighbors.value = [];
-      console.error("admin neighborhood neighbors failed", e);
+      logger.error("admin neighborhood neighbors failed", e);
     }
   }
 

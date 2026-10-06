@@ -5,7 +5,7 @@
         :filters="MODERATION_FILTERS"
         :initial="urlFilters"
         :loading="loading"
-        @apply="onApplyFilters"
+        @apply="pushFilters"
       />
     </template>
 
@@ -19,21 +19,14 @@
     </template>
 
     <template #footer>
-      <div
-        v-if="serverTotal"
-        class="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-between"
-      >
-        <p class="text-brand-muted text-sm">
-          Mostrando {{ range.from }}-{{ range.to }} de
-          {{ serverTotal.toLocaleString("es-CO") }}
-        </p>
-        <PaginationArrows
-          :has-prev="hasPrev"
-          :has-next="hasNext"
-          @prev="prev"
-          @next="next"
-        />
-      </div>
+      <AdminPaginationFooter
+        :range="range"
+        :total="serverTotal"
+        :has-prev="hasPrev"
+        :has-next="hasNext"
+        @prev="prev"
+        @next="next"
+      />
     </template>
 
     <template #panel>
@@ -58,9 +51,8 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, nextTick, useTemplateRef, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import PaginationArrows from "@/components/shared/PaginationArrows.vue";
+import { nextTick, useTemplateRef, watch } from "vue";
+import AdminPaginationFooter from "@/components/admin/shared/AdminPaginationFooter.vue";
 import AdminSplitView from "@/components/admin/shared/AdminSplitView.vue";
 import AdminFilterBar from "@/components/admin/shared/AdminFilterBar.vue";
 import AdminPropertiesTable from "@/components/admin/properties/AdminPropertiesTable.vue";
@@ -69,34 +61,10 @@ import AdminModerationForm from "@/components/admin/properties/moderation/AdminM
 import { useAdminProperties } from "@/composables/admin/useAdminProperties";
 import { useModerateProperty } from "@/composables/admin/useModerateProperty";
 import { useRowSelection } from "@/composables/admin/useRowSelection";
-import {
-  LISTING_STATUS_LABELS,
-  VERIFICATION_STATUS_LABELS,
-} from "@/constants/propertyStatus";
-import { sanitizeFilterQuery } from "@/utils/adminFilters";
-import type { AdminFilterDefinition } from "@/types/admin/filters";
+import { useUrlFilters } from "@/composables/admin/useUrlFilters";
+import { MODERATION_FILTERS } from "@/constants/propertiesFilters";
 import type { ModerationPayload } from "@/types/admin/moderation";
 import type { AdminPropertiesFilters } from "@/types/admin/properties";
-
-/** Los dos filtros del listado admin que son enums; `owner_id` e `is_promoted` no
- * entran en un select. */
-const MODERATION_FILTERS: readonly AdminFilterDefinition[] = [
-  {
-    key: "verification_status",
-    label: "Verificación",
-    options: VERIFICATION_STATUS_LABELS,
-    allLabel: "Todas",
-  },
-  {
-    key: "status",
-    label: "Estado",
-    options: LISTING_STATUS_LABELS,
-    allLabel: "Todos",
-  },
-];
-
-const route = useRoute();
-const router = useRouter();
 
 const {
   rows,
@@ -112,7 +80,7 @@ const {
   prev,
 } = useAdminProperties();
 
-/** Moderar vive acá: lo que hay que refrescar después incluye la lista, que es de esta vista. */
+// Acá y no en el panel: moderar también recarga la lista.
 const {
   saving,
   error: moderationError,
@@ -126,33 +94,21 @@ const previewPanel = useTemplateRef("previewPanel");
 const { selectedId } = useRowSelection(rows);
 
 async function onSave(payload: ModerationPayload, propertyId: string) {
-  // Un fallo parcial también deja lo mostrado viejo, así que refresca igual.
-  if (!(await moderate(propertyId, payload))) return;
+  if (!(await moderate(propertyId, payload))) return; // true aun con fallo parcial
 
   await reload();
 
-  /** Si la selección se movió, el panel ya está cargando solo; el `nextTick` espera ese watcher. */
+  // Si la selección cambió, el panel ya recarga solo.
   const previousId = selectedId.value;
   await nextTick();
   if (selectedId.value === previousId) previewPanel.value?.refresh();
 }
 
-/** Los mensajes son de la property moderada: cambiar de fila los invalida. */
-watch(selectedId, resetModeration);
+watch(selectedId, resetModeration); // los mensajes son de la fila anterior
 
-/** La URL manda: así el filtro se comparte, se bookmarkea y el back del navegador
- * lo deshace. `page` sigue en memoria, que la paginación es incremental. */
-const urlFilters = computed(() =>
-  sanitizeFilterQuery(route.query, MODERATION_FILTERS)
+// Cast seguro: sanitizeFilterQuery ya validó contra el enum.
+const { urlFilters, pushFilters } = useUrlFilters(
+  MODERATION_FILTERS,
+  (filters) => load(filters as AdminPropertiesFilters)
 );
-
-function onApplyFilters(values: Record<string, string>) {
-  // `push` y no `replace`: volver atrás devuelve el filtro anterior.
-  router.push({ query: values });
-}
-
-// Los valores ya salieron saneados contra el enum, que es el mismo del backend.
-watch(urlFilters, (filters) => load(filters as AdminPropertiesFilters), {
-  immediate: true,
-});
 </script>

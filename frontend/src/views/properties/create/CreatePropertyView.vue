@@ -114,31 +114,17 @@
         </button>
         <div v-else />
         <!-- Botón paso 3 sin error: Publicar con upload -->
-        <button
+        <PrimaryButton
           v-if="currentStep === 3 && !error"
           @click="upload()"
-          :disabled="uploadLoading || selectedFiles.length === 0"
-          class="px-7 py-2.5 rounded-xl text-white text-sm font-bold transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center gap-2"
-          style="
-            background: linear-gradient(90deg, #22c55e, #16a34a);
-            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
-          "
+          :disabled="selectedFiles.length === 0"
+          :loading="uploadLoading"
         >
-          <BaseSpinner v-if="uploadLoading" class="w-4 h-4" />
           {{ uploadLoading ? "Publicando..." : "Publicar" }}
-        </button>
+        </PrimaryButton>
 
         <!-- Botón resto de pasos -->
-        <button
-          v-else
-          @click="handleNext()"
-          :disabled="loading"
-          class="px-7 py-2.5 rounded-xl text-white text-sm font-bold transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-          style="
-            background: linear-gradient(90deg, #22c55e, #16a34a);
-            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
-          "
-        >
+        <PrimaryButton v-else @click="handleNext()" :disabled="loading">
           {{
             loading
               ? "Publicando..."
@@ -148,7 +134,7 @@
               ? "Publicar →"
               : "Siguiente →"
           }}
-        </button>
+        </PrimaryButton>
       </div>
     </div>
   </PageContainer>
@@ -158,8 +144,8 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { AlertTriangle } from "@lucide/vue";
-import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import PageContainer from "@/components/shared/PageContainer.vue";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import StepIndicator from "@/components/properties/create/StepIndicator.vue";
 import StepTipo from "@/components/properties/create/StepTipo.vue";
 import StepDetalles from "@/components/properties/create/StepDetalles.vue";

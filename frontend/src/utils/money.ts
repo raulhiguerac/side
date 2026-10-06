@@ -1,6 +1,9 @@
+import { LOCALE } from "@/config";
+import { formatNumber } from "@/utils/number";
+
 export function formatMoney(value: number | null): string {
   if (!value) return "";
-  return value.toLocaleString("es-CO");
+  return formatNumber(value);
 }
 
 export function parseMoney(raw: string): number | null {
@@ -17,7 +20,7 @@ export function formatCurrency(
   const amount = typeof value === "string" ? Number(value) : value;
   if (Number.isNaN(amount)) return "";
 
-  return new Intl.NumberFormat("es-CO", {
+  return new Intl.NumberFormat(LOCALE, {
     style: "currency",
     currency,
     maximumFractionDigits: 0,

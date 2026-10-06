@@ -52,6 +52,7 @@ import { ref, computed } from "vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
 import propertiesApi from "@/api/propertiesApi";
 import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
+import { logger } from "@/utils/logger";
 
 const props = defineProps<{
   propertyId: string | null;
@@ -73,7 +74,7 @@ async function handleDelete() {
     await propertiesApi.delete(PROPERTIES_ENDPOINTS.byId(props.propertyId));
     emit("deleted", props.propertyId);
   } catch (error) {
-    console.error("Error al eliminar propiedad:", error);
+    logger.error("Error al eliminar propiedad:", error);
     alert("Error al eliminar la propiedad");
   } finally {
     isDeleting.value = false;

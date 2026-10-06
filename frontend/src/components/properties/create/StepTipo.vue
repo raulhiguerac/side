@@ -207,7 +207,7 @@
             class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted"
           />
           <input
-            :value="(form as any)[field.key]"
+            :value="form[field.key]"
             @input="
               emit('update:form', {
                 ...form,
@@ -220,7 +220,7 @@
             :placeholder="field.placeholder"
             :class="[
               'w-full border-2 rounded-xl pl-9 pr-3 py-2.5 text-sm text-brand-text focus:outline-none focus:ring-4 transition-all',
-              attempted && !(form as any)[field.key]
+              attempted && !form[field.key]
                 ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
                 : 'border-brand-border focus:border-brand-primary focus:ring-brand-primary/10',
             ]"
@@ -244,23 +244,47 @@ import {
   Bath,
   Check,
 } from "@lucide/vue";
-import type { CreatePropertyForm } from "@/types/properties";
+import {
+  LISTING_TYPE_LABELS,
+  PROPERTY_TYPE_LABELS,
+} from "@/constants/propertyLabels";
+import type { ListingType, PropertyType } from "@/types/feed";
+import type {
+  ChoiceOption,
+  CreatePropertyForm,
+  NumericFieldOption,
+} from "@/types/properties";
 
 defineProps<{ form: CreatePropertyForm; attempted?: boolean }>();
 const emit = defineEmits<{ (e: "update:form", v: CreatePropertyForm): void }>();
 
-const propertyTypes = [
-  { value: "house", label: "Casa", desc: "Ideal para familias", icon: Home },
+const propertyTypes: ChoiceOption<PropertyType>[] = [
+  {
+    value: "house",
+    label: PROPERTY_TYPE_LABELS.house,
+    desc: "Ideal para familias",
+    icon: Home,
+  },
   {
     value: "apartment",
-    label: "Apartamento",
+    label: PROPERTY_TYPE_LABELS.apartment,
     desc: "Vida urbana y moderna",
     icon: Building2,
   },
 ];
-const listingTypes = [
-  { value: "sale", label: "Venta", desc: "Transfiere la propiedad", icon: Tag },
-  { value: "rent", label: "Arriendo", desc: "Ingreso mensual fijo", icon: Key },
+const listingTypes: ChoiceOption<ListingType>[] = [
+  {
+    value: "sale",
+    label: LISTING_TYPE_LABELS.sale,
+    desc: "Transfiere la propiedad",
+    icon: Tag,
+  },
+  {
+    value: "rent",
+    label: LISTING_TYPE_LABELS.rent,
+    desc: "Ingreso mensual fijo",
+    icon: Key,
+  },
 ];
 const conditions = [
   { value: "new", label: "Nueva", icon: Sparkles },
@@ -268,7 +292,7 @@ const conditions = [
 ];
 const currencies = ["COP", "USD", "EUR", "MXN", "PEN", "CLP"];
 
-const numericFields = [
+const numericFields: NumericFieldOption[] = [
   {
     key: "area_m2",
     label: "Área (m²)",

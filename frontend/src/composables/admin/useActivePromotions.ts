@@ -7,12 +7,10 @@ import type {
   AdminPromotionRow,
   AdminPromotionsPage,
 } from "@/types/admin/promotions";
+import { pageRange } from "@/utils/pagination";
+import { logger } from "@/utils/logger";
 
-/**
- * Las promociones activas, paginadas por offset como el listado admin. Cada fila
- * es la promoción con su property adentro, así que la tabla puede mostrar
- * prioridad y vencimiento — lo único que la promoción decide.
- */
+/** Promociones activas paginadas por offset, con su property anidada. */
 export function useActivePromotions() {
   const promotions = ref<AdminPromotionRow[]>([]);
   const page = ref(1);
@@ -27,16 +25,10 @@ export function useActivePromotions() {
     () => page.value * PAGE_SIZE.ADMIN_PROMOTIONS < total.value
   );
 
-  /**
-   * Se pide siempre al servidor, sin acumular páginas en memoria: quitar una
-   * promoción corre a todas las siguientes, así que una copia local quedaría
-   * desalineada al primer borrado.
-   */
-  const range = computed(() => {
-    if (!total.value) return { from: 0, to: 0 };
-    const from = (page.value - 1) * PAGE_SIZE.ADMIN_PROMOTIONS + 1;
-    return { from, to: from + promotions.value.length - 1 };
-  });
+  // Siempre al servidor: quitar una promoción corre las páginas siguientes.
+  const range = computed(() =>
+    pageRange(page.value, PAGE_SIZE.ADMIN_PROMOTIONS, promotions.value.length)
+  );
 
   async function load(next = page.value) {
     loading.value = true;
@@ -52,7 +44,7 @@ export function useActivePromotions() {
       page.value = data.page;
     } catch (e) {
       error.value = "No se pudieron cargar las promociones activas";
-      console.error("admin active promotions load failed", e);
+      logger.error("admin active promotions load failed", e);
       promotions.value = [];
       total.value = 0;
     } finally {
@@ -60,11 +52,7 @@ export function useActivePromotions() {
     }
   }
 
-  /**
-   * Baja la promoción activa de una property. Vive acá y no en un composable
-   * aparte porque el dueño de la lista y el de la acción son el mismo: después
-   * del DELETE hay que releerla igual.
-   */
+  // Acá y no aparte: tras el DELETE hay que releer esta misma lista.
   async function remove(propertyId: string): Promise<boolean> {
     removing.value = true;
     removeError.value = null;
@@ -75,7 +63,7 @@ export function useActivePromotions() {
       );
       return true;
     } catch (e) {
-      console.error("admin promotion removal failed", e);
+      logger.error("admin promotion removal failed", e);
       removeError.value =
         axios.isAxiosError(e) && e.response?.status === 404
           ? "Esta propiedad ya no tiene una promoción activa."

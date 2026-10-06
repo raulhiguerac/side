@@ -229,25 +229,21 @@
           </p>
 
           <!-- Submit -->
-          <button
+          <PrimaryButton
             type="submit"
-            :disabled="!canSubmit || isLoading"
-            class="w-full h-12 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
-            :class="
-              canSubmit && !isLoading
-                ? 'bg-brand-primary hover:bg-green-600 text-white'
-                : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
-            "
+            size="lg"
+            :disabled="!canSubmit"
+            :loading="isLoading"
+            class="w-full"
           >
-            <BaseSpinner v-if="isLoading" class="h-4 w-4" />
             {{ isLoading ? "Actualizando..." : "Actualizar contraseña" }}
-          </button>
+          </PrimaryButton>
         </form>
       </div>
       <!-- Panel derecho - solo en pantallas grandes -->
       <div class="hidden xl:block xl:w-1/2">
         <div
-          class="bg-[linear-gradient(45deg,#F1FBF5,#D1F2E1)] h-full rounded-2xl flex flex-col p-8"
+          class="bg-gradient-to-tr from-brand-bg to-brand-primary-light h-full rounded-2xl flex flex-col p-8"
         >
           <div class="flex-1 flex items-center justify-center">
             <img
@@ -276,8 +272,9 @@
 
 <script lang="ts" setup>
 import { ref, computed } from "vue";
+import axios from "axios";
 import usersApi from "@/api/usersApi";
-import BaseSpinner from "@/components/shared/BaseSpinner.vue";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 const isLoading = ref(false);
 const errorMessage = ref("");
@@ -317,8 +314,8 @@ const changePassword = async () => {
 
     successMessage.value = "Contraseña actualizada correctamente";
     form.value = { currentPassword: "", newPassword: "", confirmPassword: "" };
-  } catch (error: any) {
-    if (error.response?.status === 400) {
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 400) {
       errorMessage.value = "La contraseña actual es incorrecta";
     } else {
       errorMessage.value = "Error al actualizar la contraseña";

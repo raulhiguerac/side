@@ -7,6 +7,7 @@ import { propertiesRoutes } from "./routes/properties";
 import { analyticsRoutes } from "./routes/analytics";
 import { devRoutes } from "./routes/dev";
 import { adminRoutes } from "./routes/admin";
+import { logger } from "@/utils/logger";
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -37,7 +38,7 @@ router.beforeEach(async (to) => {
     try {
       await authStore.checkAuth();
     } catch (e) {
-      console.error("🚫 Error verificando identidad en navegación protegida");
+      logger.error("🚫 Error verificando identidad en navegación protegida");
     }
   }
 
@@ -50,7 +51,7 @@ router.beforeEach(async (to) => {
       try {
         await authStore.fillUserData();
       } catch (e) {
-        console.error("🚫 Error verificando rol de administrador");
+        logger.error("🚫 Error verificando rol de administrador");
       }
     }
 

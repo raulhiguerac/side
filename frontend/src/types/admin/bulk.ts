@@ -7,8 +7,7 @@ export interface BulkJobRowError {
   issues: string[];
 }
 
-/** Fila de `GET /v1/admin/properties/bulk`: lleva `error_count` y no el array —
- * una corrida puede tirar miles, y el detalle lo sirve el endpoint de status. */
+/** Fila de `GET /admin/properties/bulk`: trae `error_count`, no los errores. */
 export interface BulkJobRow {
   id: string;
   job_type: "bulk_create_properties";
@@ -30,8 +29,7 @@ export interface BulkJobsPage {
   page_size: number;
 }
 
-/** `GET /v1/admin/properties/bulk/{id}/status`: lo mismo que la fila, pero con
- * los errores adentro y sin lo que ya vino en el listado. */
+/** `GET /admin/properties/bulk/{id}/status`: la fila más sus errores. */
 export interface BulkJobStatusDetail {
   batch_id: string;
   status: BulkJobStatus;

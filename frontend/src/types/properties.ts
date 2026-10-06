@@ -1,8 +1,14 @@
-import type { ListingStatus, PropertyImageCard } from "@/types/feed";
+import type { Component } from "vue";
+import type {
+  ListingStatus,
+  ListingType,
+  PropertyImageCard,
+  PropertyType,
+} from "@/types/feed";
 
 export interface CreatePropertyForm {
-  property_type: string;
-  listing_type: string;
+  property_type: PropertyType | "";
+  listing_type: ListingType | "";
   condition: string;
   currency: string;
   area_m2: number | null;
@@ -52,8 +58,8 @@ export type VerificationStatus =
 
 export interface PropertyDetail {
   id: string;
-  property_type: "house" | "apartment";
-  listing_type: "sale" | "rent";
+  property_type: PropertyType;
+  listing_type: ListingType;
   condition: "new" | "used" | "remodeled";
   status: ListingStatus;
   verification_status: VerificationStatus;
@@ -85,4 +91,21 @@ export interface PropertyEditForm {
   price: number;
   admin_fee: number | null;
   description: string;
+}
+
+/** Opción de un selector de tarjetas del formulario de creación. */
+export interface ChoiceOption<V extends string> {
+  value: V;
+  label: string;
+  desc?: string;
+  icon: Component;
+}
+
+export interface NumericFieldOption {
+  key: "area_m2" | "bedrooms" | "bathrooms";
+  label: string;
+  icon: Component;
+  min: string;
+  step: string;
+  placeholder: string;
 }

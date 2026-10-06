@@ -23,7 +23,7 @@
             class="text-center text-white text-base sm:text-lg lg:text-xl font-bold"
           >
             Todo el proceso inmobiliario,
-            <span class="block text-[#f3c849]">en minutos</span>
+            <span class="block text-brand-accent">en minutos</span>
           </h2>
           <p class="text-white/80 text-xs sm:text-sm">
             Sin trámites innecesarios ni llamadas eternas.
@@ -164,42 +164,17 @@
             <!-- Botones -->
             <div class="flex flex-col gap-3 mt-6">
               <!-- Botón iniciar sesión -->
-              <button
+              <PrimaryButton
                 type="submit"
-                :disabled="!user.email || !user.password || isLoading"
-                class="w-full h-12 rounded-xl font-semibold transition-all flex items-center justify-center"
-                :class="
-                  user.email && user.password && !isLoading
-                    ? 'bg-brand-primary hover:bg-green-600 text-white cursor-pointer'
-                    : 'bg-brand-primary-light text-brand-placeholder cursor-not-allowed'
-                "
+                size="lg"
+                :disabled="!user.email || !user.password"
+                :loading="isLoading"
+                class="w-full"
               >
-                <BaseSpinner v-if="isLoading" class="h-5 w-5 text-white" />
-                <span v-else>Iniciar sesión</span>
-              </button>
+                Iniciar sesión
+              </PrimaryButton>
 
-              <!--
-                Login con Google, comentado con la baja de firebase: nunca funcionó. Vuelve con Keycloak (ADR-0004).
-
-                <div class="flex items-center gap-3">
-                  <div class="flex-1 h-px bg-brand-divider"></div>
-                  <span class="text-brand-muted text-xs">O continuar con</span>
-                  <div class="flex-1 h-px bg-brand-divider"></div>
-                </div>
-
-                <button
-                  @click="loginWithGoogle"
-                  type="button"
-                  class="w-full h-12 bg-white border-[1.5px] border-brand-border rounded-[10px] flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-colors"
-                >
-                  <img
-                    src="https://www.svgrepo.com/show/475656/google-color.svg"
-                    class="w-5 h-5"
-                    alt="Google"
-                  />
-                  <span class="text-brand-text text-sm font-medium">Google</span>
-                </button>
-              -->
+              <!-- Login con Google: vuelve con Keycloak (ADR-0004). -->
             </div>
 
             <!-- Link a registro -->
@@ -224,7 +199,7 @@
 import { ref } from "vue";
 import router from "@/router";
 import { useAuthStore } from "@/stores/auth";
-import BaseSpinner from "@/components/shared/BaseSpinner.vue";
+import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 // 🔌 Conectamos con el store de autenticación
 const authStore = useAuthStore();

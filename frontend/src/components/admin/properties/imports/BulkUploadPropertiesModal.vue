@@ -4,7 +4,7 @@
       Importar propiedades (CSV)
     </h2>
     <p class="text-brand-muted text-sm mb-4">
-      El archivo se procesa en segundo plano. Podés seguir trabajando y revisar
+      El archivo se procesa en segundo plano. Puedes seguir trabajando y revisar
       el resultado más tarde.
     </p>
 
@@ -41,6 +41,7 @@
 import { ref } from "vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
 import propertiesApi from "@/api/propertiesApi";
+import { logger } from "@/utils/logger";
 
 defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{
@@ -107,8 +108,8 @@ async function upload() {
     close();
   } catch (e) {
     error.value =
-      "No se pudo iniciar la importación. Verificá el archivo e intentá de nuevo.";
-    console.error("bulk import failed", e);
+      "No se pudo iniciar la importación. Verifica el archivo e intenta de nuevo.";
+    logger.error("bulk import failed", e);
   } finally {
     uploading.value = false;
   }

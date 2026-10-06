@@ -1,8 +1,12 @@
 import { STORAGE_KEYS } from "@/config";
 import catalogApi from "@/api/catalogApi";
 import { useUserStore } from "@/stores/user";
+import type { CatalogItem, Locality } from "@/types/catalog";
+import { logger } from "@/utils/logger";
 
-export async function getCitiesByCountry(id: string) {
+export async function getCitiesByCountry(
+  id: string
+): Promise<Locality[] | undefined> {
   try {
     const key = STORAGE_KEYS.CITIES_BY_COUNTRY(id);
     const raw = sessionStorage.getItem(key);
@@ -13,12 +17,14 @@ export async function getCitiesByCountry(id: string) {
     sessionStorage.setItem(key, JSON.stringify(data));
     return data;
   } catch (error) {
-    console.error("Error al obtener las ciudades soportadas:", error);
+    logger.error("Error al obtener las ciudades soportadas:", error);
   }
 }
 
-export async function getNeighborhoodsByLocalities(localityIds: string[]) {
-  const cached: Record<string, any[]> = {};
+export async function getNeighborhoodsByLocalities(
+  localityIds: string[]
+): Promise<Record<string, CatalogItem[]>> {
+  const cached: Record<string, CatalogItem[]> = {};
   const missing: string[] = [];
 
   for (const id of localityIds) {
@@ -40,7 +46,7 @@ export async function getNeighborhoodsByLocalities(localityIds: string[]) {
     });
 
     for (const [lid, neighborhoods] of Object.entries(
-      data.neighborhoods as Record<string, any[]>
+      data.neighborhoods as Record<string, CatalogItem[]>
     )) {
       cached[lid] = neighborhoods;
       sessionStorage.setItem(
@@ -49,7 +55,7 @@ export async function getNeighborhoodsByLocalities(localityIds: string[]) {
       );
     }
   } catch (error) {
-    console.error("Error al obtener los barrios:", error);
+    logger.error("Error al obtener los barrios:", error);
   }
 
   return cached;
@@ -59,7 +65,7 @@ export async function locations() {
   const userStore = useUserStore();
   const countryDetected = await userStore.detectLocation();
 
-  const countries = async () => {
+  const countries = async (): Promise<CatalogItem[] | undefined> => {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.COUNTRIES);
       if (raw) return JSON.parse(raw);
@@ -67,13 +73,13 @@ export async function locations() {
       localStorage.setItem(STORAGE_KEYS.COUNTRIES, JSON.stringify(data));
       return data;
     } catch (error) {
-      console.error("Error al obtener los paises soportados:", error);
+      logger.error("Error al obtener los paises soportados:", error);
     }
   };
 
   const data = await countries();
   const match = data?.find(
-    (country: any) => country.name === countryDetected.country_name
+    (country) => country.name === countryDetected.country_name
   );
   const countryUser: string | undefined = match?.id;
 
@@ -107,6 +113,6 @@ export async function getNeighborhood(
       country_id: coords.country_id,
     };
   } catch (error) {
-    console.error("Error al obtener los barrios:", error);
+    logger.error("Error al obtener los barrios:", error);
   }
 }

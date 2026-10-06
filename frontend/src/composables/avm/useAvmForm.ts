@@ -1,5 +1,6 @@
 import { ref, reactive, computed, watch, nextTick, type Ref } from "vue";
-declare const google: any;
+import type { SelectedPlace } from "@/types/maps";
+import { mountPlaceAutocomplete } from "@/utils/placeAutocomplete";
 
 export interface AvmFormPayload {
   property_type: "apartment" | "house";
@@ -25,12 +26,6 @@ interface AvmFormState {
   parking_spots: number;
   stratum: number;
   year_built: number | null;
-}
-
-export interface SelectedPlace {
-  latitude: number;
-  longitude: number;
-  address: string;
 }
 
 export function useAvmForm(autocompleteContainer: Ref<HTMLDivElement | null>) {
@@ -68,23 +63,10 @@ export function useAvmForm(autocompleteContainer: Ref<HTMLDivElement | null>) {
     if (val !== 3) return;
     await nextTick();
     await new Promise((r) => setTimeout(r, 260));
-    if (autocompleteContainer.value?.childElementCount) return;
-    const { PlaceAutocompleteElement } = await google.maps.importLibrary(
-      "places"
-    );
-    const el = new PlaceAutocompleteElement({});
-    autocompleteContainer.value?.appendChild(el);
-
-    el.addEventListener("gmp-select", async (e: any) => {
-      const p = e.placePrediction.toPlace();
-      await p.fetchFields({
-        fields: ["displayName", "formattedAddress", "location"],
-      });
-      place.value = {
-        latitude: p.location?.lat(),
-        longitude: p.location?.lng(),
-        address: p.formattedAddress ?? "",
-      };
+    const container = autocompleteContainer.value;
+    if (!container || container.childElementCount) return;
+    await mountPlaceAutocomplete(container, (selected) => {
+      place.value = selected;
     });
   });
 

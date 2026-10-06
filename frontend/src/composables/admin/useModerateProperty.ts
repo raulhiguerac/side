@@ -3,6 +3,7 @@ import axios from "axios";
 import propertiesApi from "@/api/propertiesApi";
 import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
 import type { ModerationPayload } from "@/types/admin/moderation";
+import { logger } from "@/utils/logger";
 
 /** Traduce el payload del formulario a uno o dos PATCH. */
 
@@ -18,11 +19,11 @@ function messageForError(error: unknown): string {
 
   switch (error.response?.status) {
     case 409:
-      return "El cambio ya no es válido — la propiedad cambió de estado. Recargá para ver el estado actual.";
+      return "El cambio ya no es válido — la propiedad cambió de estado. Recarga para ver el estado actual.";
     case 404:
       return "La propiedad ya no existe";
     case 403:
-      return "No tenés permisos para moderar";
+      return "No tienes permisos para moderar";
     case 422:
       return "El backend rechazó los datos del formulario";
     default:
@@ -72,7 +73,7 @@ export function useModerateProperty() {
       success.value = "Cambios guardados";
       return true;
     } catch (e) {
-      console.error("admin moderation failed", e);
+      logger.error("admin moderation failed", e);
 
       const reason = messageForError(e);
 
