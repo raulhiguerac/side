@@ -7,10 +7,7 @@
       custom
       v-slot="{ href, navigate, isActive, isExactActive }"
     >
-      <!--
-        `custom` + `<a>` para leer el estado activo; con `active-class` las dos
-        variantes conviven en el atributo y gana la que Tailwind emitió última.
-      -->
+      <!-- `custom` + `<a>`: con `active-class` gana la clase que Tailwind emitió última. -->
       <a
         :href="href"
         @click="navigate"
@@ -40,11 +37,7 @@ const props = withDefaults(
   { stretch: false }
 );
 
-/**
- * Una tab cuya ruta es prefijo de otra tiene que matchear exacto: si no, queda
- * encendida también estando parado en la de abajo. El resto matchea por prefijo,
- * que es lo que mantiene la tab viva dentro de sus propias sub-rutas.
- */
+// Una ruta prefijo de otra matchea exacto; si no, queda activa en la de abajo.
 function isPrefixOfAnother(to: string): boolean {
   return props.tabs.some((tab) => tab.to !== to && tab.to.startsWith(`${to}/`));
 }

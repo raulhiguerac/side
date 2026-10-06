@@ -46,10 +46,7 @@ import {
 } from "@/constants/propertyLabels";
 import type { AdminPromotionRow } from "@/types/admin/promotions";
 
-/**
- * Las filas son promociones, no properties: la que se promociona viene anidada.
- * Se selecciona por `property_id` porque es lo que el panel de vista previa pide.
- */
+// Filas de promociones: se selecciona por `property_id`, que es lo que pide el panel.
 defineProps<{
   rows: AdminPromotionRow[];
   loading?: boolean;

@@ -80,8 +80,7 @@ const {
 
 const { selectedId } = useRowSelection(jobs);
 
-/** El panel necesita la fila entera, no solo el id: de ahí salen `expires_at` y
- * el estado que deciden si se puede relanzar. */
+// Fila entera: `expires_at` y el estado deciden si se puede relanzar.
 const selectedJob = computed(
   () => jobs.value.find((job) => job.id === selectedId.value) ?? null
 );

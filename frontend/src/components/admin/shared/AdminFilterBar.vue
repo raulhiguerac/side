@@ -60,13 +60,11 @@ import type {
 } from "@/types/admin/filters";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
-/** Barra de filtros de las vistas admin: recibe los filtros con sus opciones y
- * devuelve los valores elegidos, sin saber qué se está filtrando. */
+// Filtros genéricos: devuelve los valores elegidos sin saber qué filtran.
 const props = withDefaults(
   defineProps<{
     filters: readonly AdminFilterDefinition[];
-    /** Valores de arranque —hoy los de la URL—: sin esto un reload deja la lista
-     * filtrada y los selects en blanco. */
+    /** Valores de arranque (la URL): sin esto un reload deja los selects en blanco. */
     initial?: Record<string, string>;
     loading?: boolean;
   }>(),
@@ -88,8 +86,7 @@ const gridVars = computed(() => {
 const draft = ref<Record<string, string>>({});
 
 function syncFromInitial() {
-  // Se siembran todas las keys, incluso las vacías: sobre una key ausente el
-  // `<option value="">` no tiene nada que marcar como seleccionado.
+  // Todas las keys, también vacías: si no, `<option value="">` no queda marcado.
   draft.value = Object.fromEntries(
     props.filters.map((filter) => [filter.key, props.initial[filter.key] ?? ""])
   );
@@ -130,8 +127,7 @@ async function loadOptions(filter: AdminAsyncSelectFilter) {
     asyncOptions.value[filter.key] = options;
 }
 
-/** Al cambiar un padre se vacían sus hijos (y los hijos de esos) y se recargan.
- * Va en el `@change` y no en un watch: sembrar desde la URL no debe vaciar nada. */
+// En @change y no en watch: sembrar desde la URL no debe vaciar los hijos.
 function resetDependents(key: string) {
   for (const filter of props.filters) {
     if (filter.type !== "async-select" || filter.dependsOn !== key) continue;
@@ -149,8 +145,7 @@ function apply() {
   );
 }
 
-/** Manda el padre: tras aplicar cambia la URL y el borrador se resiembra desde ahí.
- * No hay bucle porque solo el click emite. */
+// Manda el padre: al aplicar cambia la URL y el borrador se resiembra.
 watch(
   () => [props.filters, props.initial],
   () => {

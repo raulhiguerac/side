@@ -10,8 +10,7 @@ import type {
 import { pageRange } from "@/utils/pagination";
 import { logger } from "@/utils/logger";
 
-/** El historial paginado por offset. Se pide siempre al servidor: relanzar
- * agrega una corrida arriba y una copia local quedaría corrida. */
+// Siempre al servidor: relanzar agrega una corrida arriba y corre las páginas.
 export function useBulkJobs() {
   const jobs = ref<BulkJobRow[]>([]);
   const page = ref(1);

@@ -80,7 +80,7 @@ const {
   prev,
 } = useAdminProperties();
 
-/** Moderar vive acá: lo que hay que refrescar después incluye la lista, que es de esta vista. */
+// Acá y no en el panel: moderar también recarga la lista.
 const {
   saving,
   error: moderationError,
@@ -94,19 +94,17 @@ const previewPanel = useTemplateRef("previewPanel");
 const { selectedId } = useRowSelection(rows);
 
 async function onSave(payload: ModerationPayload, propertyId: string) {
-  // Un fallo parcial también deja lo mostrado viejo, así que refresca igual.
-  if (!(await moderate(propertyId, payload))) return;
+  if (!(await moderate(propertyId, payload))) return; // true aun con fallo parcial
 
   await reload();
 
-  /** Si la selección se movió, el panel ya está cargando solo; el `nextTick` espera ese watcher. */
+  // Si la selección cambió, el panel ya recarga solo.
   const previousId = selectedId.value;
   await nextTick();
   if (selectedId.value === previousId) previewPanel.value?.refresh();
 }
 
-/** Los mensajes son de la property moderada: cambiar de fila los invalida. */
-watch(selectedId, resetModeration);
+watch(selectedId, resetModeration); // los mensajes son de la fila anterior
 
 // Cast seguro: sanitizeFilterQuery ya validó contra el enum.
 const { urlFilters, pushFilters } = useUrlFilters(

@@ -98,11 +98,7 @@ import { logger } from "@/utils/logger";
 
 const props = defineProps<{ propertyId: string | null }>();
 
-/**
- * El panel muestra la property; qué se hace con ella es de cada tab. El pie va
- * como slot —moderación pone su formulario, promociones el suyo— y recibe el
- * detalle ya cargado para no volver a pedirlo.
- */
+// Qué se hace con la property es de cada tab: el pie es un slot con el detalle.
 defineSlots<{
   footer?: (props: { property: AdminPropertyDetail }) => unknown;
 }>();

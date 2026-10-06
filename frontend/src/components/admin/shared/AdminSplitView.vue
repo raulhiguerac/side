@@ -29,10 +29,7 @@
 </template>
 
 <script lang="ts" setup>
-/**
- * El reparto 60/40 de las vistas admin: la tabla es el índice y el panel de la
- * derecha muestra la fila elegida. No sabe qué se lista ni qué se hace con eso.
- */
+// Reparto 60/40: la tabla es el índice y el panel muestra la fila elegida.
 defineProps<{ error?: string | null }>();
 
 defineSlots<{
