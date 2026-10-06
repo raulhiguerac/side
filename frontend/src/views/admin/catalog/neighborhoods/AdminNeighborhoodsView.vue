@@ -2,7 +2,6 @@
   <!-- Arriba del split y no en su slot: la cascada filtra la tabla y también el mapa. -->
   <AdminFilterBar
     class="mb-4"
-    filters-width="full"
     :filters="NEIGHBORHOOD_FILTERS"
     :initial="urlFilters"
     @apply="onApplyFilters"
