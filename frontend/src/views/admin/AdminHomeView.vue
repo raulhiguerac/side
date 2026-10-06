@@ -37,8 +37,12 @@
         Gestión
       </h2>
       <div class="grid sm:grid-cols-2 gap-4">
-        <div class="bg-white rounded-2xl border border-brand-divider p-6 md:p-8">
-          <h3 class="text-brand-text text-lg font-semibold flex items-center gap-2">
+        <div
+          class="bg-white rounded-2xl border border-brand-divider p-6 md:p-8"
+        >
+          <h3
+            class="text-brand-text text-lg font-semibold flex items-center gap-2"
+          >
             <Home class="w-5 h-5 text-brand-primary" />
             Propiedades
           </h3>
@@ -53,8 +57,12 @@
           </router-link>
         </div>
 
-        <div class="bg-white rounded-2xl border border-brand-divider p-6 md:p-8">
-          <h3 class="text-brand-text text-lg font-semibold flex items-center gap-2">
+        <div
+          class="bg-white rounded-2xl border border-brand-divider p-6 md:p-8"
+        >
+          <h3
+            class="text-brand-text text-lg font-semibold flex items-center gap-2"
+          >
             <Globe class="w-5 h-5 text-brand-primary" />
             Catálogo
           </h3>

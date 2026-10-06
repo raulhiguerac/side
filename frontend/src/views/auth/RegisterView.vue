@@ -489,29 +489,33 @@
                   <span v-else>Finalizar registro</span>
                 </button>
 
-                <!-- Divider -->
-                <div class="flex items-center gap-3">
-                  <div class="flex-1 h-px bg-brand-divider"></div>
-                  <span class="text-brand-muted text-xs"
-                    >O registrarse con</span
-                  >
-                  <div class="flex-1 h-px bg-brand-divider"></div>
-                </div>
+                <!--
+                  Registro con Google, comentado junto con la baja de firebase.
+                  Este botón nunca tuvo handler — era decorativo. Vuelve cuando
+                  esté el Identity Brokering de Keycloak (ADR-0004).
 
-                <!-- Botón Google -->
-                <button
-                  type="button"
-                  class="w-full h-10 bg-white border-[1.5px] border-brand-border rounded-[10px] flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-colors"
-                >
-                  <img
-                    src="https://www.svgrepo.com/show/475656/google-color.svg"
-                    class="w-5 h-5"
-                    alt="Google"
-                  />
-                  <span class="text-brand-text text-sm font-medium"
-                    >Google</span
+                  <div class="flex items-center gap-3">
+                    <div class="flex-1 h-px bg-brand-divider"></div>
+                    <span class="text-brand-muted text-xs"
+                      >O registrarse con</span
+                    >
+                    <div class="flex-1 h-px bg-brand-divider"></div>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="w-full h-10 bg-white border-[1.5px] border-brand-border rounded-[10px] flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-colors"
                   >
-                </button>
+                    <img
+                      src="https://www.svgrepo.com/show/475656/google-color.svg"
+                      class="w-5 h-5"
+                      alt="Google"
+                    />
+                    <span class="text-brand-text text-sm font-medium"
+                      >Google</span
+                    >
+                  </button>
+                -->
               </div>
             </div>
           </form>

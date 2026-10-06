@@ -34,6 +34,7 @@
 <script setup lang="ts">
 import { reactive, onMounted } from "vue";
 import gsap from "gsap";
+import { formatCurrency } from "@/utils/money";
 
 const props = defineProps<{
   price: number;
@@ -48,8 +49,10 @@ onMounted(() => {
   gsap.to(tweened, { duration: 1.5, value: props.price, ease: "power2.out" });
 });
 
+// `formatCurrency` ya redondea vía `maximumFractionDigits: 0`, así que el
+// `Math.round` que había acá era redundante.
 function formatCOP(value: number): string {
-  return "$ " + Math.round(value).toLocaleString("es-CO");
+  return formatCurrency(value, "COP");
 }
 </script>
 

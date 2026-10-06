@@ -20,12 +20,12 @@ module.exports = defineConfig({
         pathRewrite: { "^/api/catalog": "" },
       },
       "/api/avm": {
-        target: "http://localhost:8002",
+        target: "http://localhost:8003",
         changeOrigin: true,
         pathRewrite: { "^/api/avm": "" },
       },
       "/api/properties": {
-        target: "http://localhost:8003",
+        target: "http://localhost:8002",
         changeOrigin: true,
         pathRewrite: { "^/api/properties": "" },
       },
