@@ -8,6 +8,7 @@ import type {
   AdminPropertiesPage,
   AdminPropertyRow,
 } from "@/types/admin/properties";
+import { pageRange } from "@/utils/pagination";
 
 async function fetchAdminProperties(
   page: number,
@@ -43,17 +44,13 @@ export function useAdminProperties() {
   );
 
   /** Rango visible, 1-indexado, para el "Mostrando X-Y de Z". */
-  const range = computed(() => {
-    if (!serverTotal.value) return { from: 0, to: 0 };
-    const from = (pagination.page.value - 1) * PAGE_SIZE.ADMIN_PROPERTIES + 1;
-    return {
-      from,
-      to: Math.min(
-        from + pagination.pagedItems.value.length - 1,
-        serverTotal.value
-      ),
-    };
-  });
+  const range = computed(() =>
+    pageRange(
+      pagination.page.value,
+      PAGE_SIZE.ADMIN_PROPERTIES,
+      pagination.pagedItems.value.length
+    )
+  );
 
   function hasMoreAfter(loadedCount: number): boolean {
     return loadedCount < serverTotal.value;

@@ -7,6 +7,7 @@ import type {
   AdminPromotionRow,
   AdminPromotionsPage,
 } from "@/types/admin/promotions";
+import { pageRange } from "@/utils/pagination";
 
 /**
  * Las promociones activas, paginadas por offset como el listado admin. Cada fila
@@ -32,11 +33,9 @@ export function useActivePromotions() {
    * promoción corre a todas las siguientes, así que una copia local quedaría
    * desalineada al primer borrado.
    */
-  const range = computed(() => {
-    if (!total.value) return { from: 0, to: 0 };
-    const from = (page.value - 1) * PAGE_SIZE.ADMIN_PROMOTIONS + 1;
-    return { from, to: from + promotions.value.length - 1 };
-  });
+  const range = computed(() =>
+    pageRange(page.value, PAGE_SIZE.ADMIN_PROMOTIONS, promotions.value.length)
+  );
 
   async function load(next = page.value) {
     loading.value = true;

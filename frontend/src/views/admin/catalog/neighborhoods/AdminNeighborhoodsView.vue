@@ -29,21 +29,14 @@
     </template>
 
     <template #footer>
-      <div
-        v-if="totalItems"
-        class="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-between"
-      >
-        <p class="text-brand-muted text-sm">
-          Mostrando {{ range.from }}-{{ range.to }} de
-          {{ totalItems.toLocaleString("es-CO") }}
-        </p>
-        <PaginationArrows
-          :has-prev="hasPrev"
-          :has-next="hasNext"
-          @prev="prev"
-          @next="next"
-        />
-      </div>
+      <AdminPaginationFooter
+        :range="range"
+        :total="totalItems"
+        :has-prev="hasPrev"
+        :has-next="hasNext"
+        @prev="prev"
+        @next="next"
+      />
     </template>
   </AdminSplitView>
 
@@ -71,9 +64,9 @@ import AdminNeighborhoodPanel from "@/components/admin/catalog/neighborhoods/Adm
 import AdminNeighborhoodsTable from "@/components/admin/catalog/neighborhoods/AdminNeighborhoodsTable.vue";
 import NeighborhoodCoverageBar from "@/components/admin/catalog/neighborhoods/NeighborhoodCoverageBar.vue";
 import AdminFilterBar from "@/components/admin/shared/AdminFilterBar.vue";
+import AdminPaginationFooter from "@/components/admin/shared/AdminPaginationFooter.vue";
 import AdminSplitView from "@/components/admin/shared/AdminSplitView.vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
-import PaginationArrows from "@/components/shared/PaginationArrows.vue";
 import { useAdminNeighborhoods } from "@/composables/admin/useAdminNeighborhoods";
 import { useRowSelection } from "@/composables/admin/useRowSelection";
 import { useUrlFilters } from "@/composables/admin/useUrlFilters";
