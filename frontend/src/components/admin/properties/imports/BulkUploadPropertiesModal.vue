@@ -41,6 +41,7 @@
 import { ref } from "vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
 import propertiesApi from "@/api/propertiesApi";
+import { logger } from "@/utils/logger";
 
 defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{
@@ -108,7 +109,7 @@ async function upload() {
   } catch (e) {
     error.value =
       "No se pudo iniciar la importación. Verificá el archivo e intentá de nuevo.";
-    console.error("bulk import failed", e);
+    logger.error("bulk import failed", e);
   } finally {
     uploading.value = false;
   }

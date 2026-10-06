@@ -88,6 +88,7 @@ import { PAGE_SIZE } from "@/constants/pagination";
 import type { CurrentUserProfileOut } from "@/types/user";
 import type { PropertyCard as PropertyCardData } from "@/types/feed";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
+import { logger } from "@/utils/logger";
 
 const route = useRoute();
 const router = useRouter();
@@ -110,7 +111,7 @@ onMounted(async () => {
     );
     profile.value = data;
   } catch (error) {
-    console.error("Error al obtener el perfil:", error);
+    logger.error("Error al obtener el perfil:", error);
   }
 
   const first = await fetchUserListings(userId, 0);

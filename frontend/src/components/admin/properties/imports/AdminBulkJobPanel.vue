@@ -133,6 +133,7 @@ import type {
 import { formatLongDateTime } from "@/utils/date";
 import { formatNumber } from "@/utils/number";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
+import { logger } from "@/utils/logger";
 
 /** El detalle de una corrida: la fila llega entera desde el listado y acá solo
  * se piden los errores, que ese listado cuenta pero no trae. */
@@ -181,7 +182,7 @@ async function loadErrors(job: BulkJobRow | null) {
   } catch (e) {
     if (token !== requestToken) return;
     error.value = "No se pudieron cargar los errores de la corrida";
-    console.error("admin bulk job errors failed", e);
+    logger.error("admin bulk job errors failed", e);
   } finally {
     if (token === requestToken) loading.value = false;
   }

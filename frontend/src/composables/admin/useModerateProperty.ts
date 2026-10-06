@@ -3,6 +3,7 @@ import axios from "axios";
 import propertiesApi from "@/api/propertiesApi";
 import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
 import type { ModerationPayload } from "@/types/admin/moderation";
+import { logger } from "@/utils/logger";
 
 /** Traduce el payload del formulario a uno o dos PATCH. */
 
@@ -72,7 +73,7 @@ export function useModerateProperty() {
       success.value = "Cambios guardados";
       return true;
     } catch (e) {
-      console.error("admin moderation failed", e);
+      logger.error("admin moderation failed", e);
 
       const reason = messageForError(e);
 

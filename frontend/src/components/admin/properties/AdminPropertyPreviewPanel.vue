@@ -94,6 +94,7 @@ import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import PropertyOverview from "@/components/properties/detail/PropertyOverview.vue";
 import PhotoGalleryPopup from "@/components/properties/photos/PhotoGalleryPopup.vue";
 import type { AdminPropertyDetail } from "@/types/admin/properties";
+import { logger } from "@/utils/logger";
 
 const props = defineProps<{ propertyId: string | null }>();
 
@@ -170,7 +171,7 @@ async function load(id: string | null) {
   } catch (e) {
     if (token !== requestToken) return;
     error.value = "No se pudo cargar la vista previa";
-    console.error("admin property preview failed", e);
+    logger.error("admin property preview failed", e);
   } finally {
     if (token === requestToken) loading.value = false;
   }

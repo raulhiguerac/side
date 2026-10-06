@@ -5,6 +5,7 @@ import { API } from "@/config";
 import usersApi from "@/api/usersApi";
 import { useUserStore } from "./user";
 import type { AuthProfile, AuthUser, User as AccountUser } from "@/types/user";
+import { logger } from "@/utils/logger";
 
 interface ProfileResponse {
   profile: AuthProfile;
@@ -116,7 +117,7 @@ export const useAuthStore = defineStore("auth", {
           { withCredentials: true }
         );
       } catch (error) {
-        console.error("Error en logout:", error);
+        logger.error("Error en logout:", error);
       } finally {
         // Limpiamos datos locales
         useUserStore().resetInterests();

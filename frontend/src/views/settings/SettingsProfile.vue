@@ -122,6 +122,7 @@ import IntentSelector, {
 } from "@/components/onboarding/IntentSelector.vue";
 import usersApi from "@/api/usersApi";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
+import { logger } from "@/utils/logger";
 
 const authStore = useAuthStore();
 const isLoading = ref(false);
@@ -192,7 +193,7 @@ const saveProfile = async () => {
     originalForm.value = { ...form.value };
     avatarFile.value = null;
   } catch (error) {
-    console.error("Error al guardar perfil:", error);
+    logger.error("Error al guardar perfil:", error);
   } finally {
     isLoading.value = false;
   }

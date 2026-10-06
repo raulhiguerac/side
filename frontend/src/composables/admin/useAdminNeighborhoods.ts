@@ -7,6 +7,7 @@ import type {
   NeighborhoodAdminPage,
 } from "@/types/admin/catalog";
 import { pageRange } from "@/utils/pagination";
+import { logger } from "@/utils/logger";
 
 const FILTER_KEYS: (keyof NeighborhoodAdminFilters)[] = [
   "locality_id",
@@ -46,7 +47,7 @@ export function useAdminNeighborhoods() {
       page.value = data;
     } catch (e) {
       error.value = "No se pudieron cargar los barrios";
-      console.error("admin neighborhoods load failed", e);
+      logger.error("admin neighborhoods load failed", e);
       page.value = null;
     } finally {
       loading.value = false;

@@ -8,6 +8,7 @@ import type {
   BulkJobsPage,
 } from "@/types/admin/bulk";
 import { pageRange } from "@/utils/pagination";
+import { logger } from "@/utils/logger";
 
 /** El historial paginado por offset. Se pide siempre al servidor: relanzar
  * agrega una corrida arriba y una copia local quedaría corrida. */
@@ -49,7 +50,7 @@ export function useBulkJobs() {
       page.value = data.page;
     } catch (e) {
       error.value = "No se pudieron cargar las importaciones";
-      console.error("admin bulk jobs load failed", e);
+      logger.error("admin bulk jobs load failed", e);
       jobs.value = [];
       total.value = 0;
     } finally {

@@ -3,6 +3,7 @@ import axios from "axios";
 import propertiesApi from "@/api/propertiesApi";
 import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
 import type { PromotionPayload } from "@/types/admin/promotions";
+import { logger } from "@/utils/logger";
 
 /** Crea la promoción de una property; un solo POST, a diferencia de moderar. */
 
@@ -48,7 +49,7 @@ export function usePromoteProperty() {
       success.value = "Promoción creada";
       return true;
     } catch (e) {
-      console.error("admin promotion failed", e);
+      logger.error("admin promotion failed", e);
       error.value = messageForError(e);
       return false;
     } finally {
