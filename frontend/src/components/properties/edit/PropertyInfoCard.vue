@@ -29,6 +29,10 @@
 <script lang="ts" setup>
 import { computed } from "vue";
 import { Home, Building2, Tag, Key, Layers, Calendar, Star } from "@lucide/vue";
+import {
+  LISTING_TYPE_LABELS,
+  PROPERTY_TYPE_LABELS,
+} from "@/constants/propertyLabels";
 import type { PropertyDetail } from "@/types/properties";
 
 const props = defineProps<{
@@ -47,12 +51,12 @@ const infoChips = computed(() => {
   return [
     {
       label: "Tipo",
-      value: p.property_type === "apartment" ? "Apartamento" : "Casa",
+      value: PROPERTY_TYPE_LABELS[p.property_type],
       icon: p.property_type === "apartment" ? Building2 : Home,
     },
     {
       label: "Negocio",
-      value: p.listing_type === "rent" ? "Arriendo" : "Venta",
+      value: LISTING_TYPE_LABELS[p.listing_type],
       icon: p.listing_type === "rent" ? Key : Tag,
     },
     floorChip,

@@ -1,16 +1,14 @@
 import { Ref, computed } from "vue";
 import type { PropertyDetail } from "@/types/properties";
 import { formatCurrency } from "@/utils/money";
+import { propertyTitle } from "@/utils/property";
 
 export function usePropertyDetail(property: Ref<PropertyDetail | null>) {
-  const title = computed(() => {
-    if (!property.value) return "";
-    const type =
-      property.value.property_type === "apartment" ? "Apartamento" : "Casa";
-    const mode =
-      property.value.listing_type === "sale" ? "en venta" : "en arriendo";
-    return `${type} ${mode}`;
-  });
+  const title = computed(() =>
+    property.value
+      ? propertyTitle(property.value.property_type, property.value.listing_type)
+      : ""
+  );
 
   const formattedPrice = computed(() =>
     property.value

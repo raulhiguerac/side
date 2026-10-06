@@ -216,6 +216,7 @@ import {
   LISTING_STATUS_BADGE_CLASSES,
 } from "@/constants/propertyStatus";
 import { formatCurrency } from "@/utils/money";
+import { LISTING_TYPE_LABELS } from "@/constants/propertyLabels";
 
 const props = withDefaults(
   defineProps<{
@@ -243,9 +244,7 @@ defineEmits<{
 const defaultImage =
   "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop";
 
-const typeLabel = computed(() =>
-  props.property.type === "sale" ? "Venta" : "Arriendo"
-);
+const typeLabel = computed(() => LISTING_TYPE_LABELS[props.property.type]);
 
 const typeBadgeClass = computed(() =>
   props.property.type === "sale"

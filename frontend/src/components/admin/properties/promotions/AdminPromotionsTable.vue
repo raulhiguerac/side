@@ -40,8 +40,11 @@ import type { ColumnDef } from "@tanstack/vue-table";
 import BaseTable from "@/components/shared/BaseTable.vue";
 import { formatCurrency } from "@/utils/money";
 import { formatShortDate } from "@/utils/date";
+import {
+  LISTING_TYPE_LABELS,
+  PROPERTY_TYPE_LABELS,
+} from "@/constants/propertyLabels";
 import type { AdminPromotionRow } from "@/types/admin/promotions";
-import type { PropertyCard } from "@/types/feed";
 
 /**
  * Las filas son promociones, no properties: la que se promociona viene anidada.
@@ -54,16 +57,6 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{ rowClick: [row: AdminPromotionRow] }>();
-
-const PROPERTY_TYPE_LABELS: Record<PropertyCard["property_type"], string> = {
-  house: "Casa",
-  apartment: "Apartamento",
-};
-
-const LISTING_TYPE_LABELS: Record<PropertyCard["listing_type"], string> = {
-  sale: "Venta",
-  rent: "Arriendo",
-};
 
 /** El vencimiento en días es lo accionable; la fecha sola obliga a hacer la cuenta. */
 function daysLeftLabel(endsAt: string): string {
