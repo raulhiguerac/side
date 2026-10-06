@@ -109,10 +109,7 @@ import { formatShortDate } from "@/utils/date";
 import type { PromotionPayload } from "@/types/admin/promotions";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
-/**
- * Formulario de promoción. No llama a la API: emite duración y prioridad, y
- * quien lo recibe le pone la property que está seleccionada.
- */
+// No llama a la API: emite duración y prioridad.
 const props = withDefaults(
   defineProps<{
     /** Reinicia el borrador al cambiar de property. */

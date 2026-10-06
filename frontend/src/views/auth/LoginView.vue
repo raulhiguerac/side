@@ -174,28 +174,7 @@
                 Iniciar sesión
               </PrimaryButton>
 
-              <!--
-                Login con Google, comentado con la baja de firebase: nunca funcionó. Vuelve con Keycloak (ADR-0004).
-
-                <div class="flex items-center gap-3">
-                  <div class="flex-1 h-px bg-brand-divider"></div>
-                  <span class="text-brand-muted text-xs">O continuar con</span>
-                  <div class="flex-1 h-px bg-brand-divider"></div>
-                </div>
-
-                <button
-                  @click="loginWithGoogle"
-                  type="button"
-                  class="w-full h-12 bg-white border-[1.5px] border-brand-border rounded-[10px] flex items-center justify-center gap-2.5 hover:bg-gray-50 transition-colors"
-                >
-                  <img
-                    src="https://www.svgrepo.com/show/475656/google-color.svg"
-                    class="w-5 h-5"
-                    alt="Google"
-                  />
-                  <span class="text-brand-text text-sm font-medium">Google</span>
-                </button>
-              -->
+              <!-- Login con Google: vuelve con Keycloak (ADR-0004). -->
             </div>
 
             <!-- Link a registro -->

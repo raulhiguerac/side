@@ -48,10 +48,7 @@ import { usePromoteProperty } from "@/composables/admin/usePromoteProperty";
 import { useRowSelection } from "@/composables/admin/useRowSelection";
 import type { PromotionPayload } from "@/types/admin/promotions";
 
-/**
- * Las elegibles son el mismo listado admin de moderación, así que reusa su
- * composable y su tabla: lo único propio es el filtro.
- */
+// Las elegibles son el listado de moderación: reusa composable y tabla.
 const {
   rows,
   hasPrev,
@@ -76,11 +73,7 @@ const {
 
 const { selectedId } = useRowSelection(rows);
 
-/**
- * Promocionar no cambia nada del detalle —`PropertyDetailSchema` no lleva
- * `is_promoted`— así que no hay panel que refrescar: solo la lista, de donde la
- * fila sale sola por dejar de cumplir `is_promoted: false`.
- */
+// Promocionar no cambia el detalle: solo se recarga la lista.
 async function onPromote(payload: PromotionPayload, propertyId: string) {
   if (await promote(propertyId, payload)) await reload();
 }
@@ -88,11 +81,6 @@ async function onPromote(payload: PromotionPayload, propertyId: string) {
 /** Los mensajes son de la property promocionada: cambiar de fila los invalida. */
 watch(selectedId, resetPromotion);
 
-/**
- * Los dos filtros son las dos reglas que aplica `CreatePromotionUseCase`:
- * rechaza lo que no está `active` (`PropertyNotReadyForPromotionError`) y lo que
- * ya tiene promoción activa (`DuplicateActivePromotionError`). La lista muestra
- * exactamente lo que el backend va a aceptar, en vez de ofrecer y fallar.
- */
+// Mismas reglas que CreatePromotionUseCase: solo activas y sin promoción.
 onMounted(() => load({ status: "active", is_promoted: false }));
 </script>

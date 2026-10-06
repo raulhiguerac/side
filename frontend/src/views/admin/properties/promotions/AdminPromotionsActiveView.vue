@@ -96,11 +96,7 @@ const { selectedId } = useRowSelection(promotions, (row) => row.property_id);
 /** El modal se abre con el id a borrar, no con un booleano: sin id no hay nada que confirmar. */
 const pendingRemovalId = ref<string | null>(null);
 
-/**
- * El modal se cierra pase lo que pase y el error se muestra en el pie del panel,
- * que es donde el admin queda mirando. Al recargar, la property que dejó de
- * estar promocionada ya no vuelve en el listado.
- */
+// El modal se cierra siempre; el error se ve en el pie del panel.
 async function onRemove() {
   if (!pendingRemovalId.value) return;
 

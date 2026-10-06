@@ -1,10 +1,7 @@
 import type { ListingStatus, ListingType, PropertyType } from "@/types/feed";
 import type { PropertyDetail, VerificationStatus } from "@/types/properties";
 
-/**
- * `GET /v1/admin/properties/{id}`: el detalle más los destinos legales desde el
- * estado en que está, que el backend calcula con la misma tabla que después aplica.
- */
+/** Detalle admin: el de la property más los destinos legales del backend. */
 export interface AdminPropertyDetail extends PropertyDetail {
   allowed_verification_targets: VerificationStatus[];
   allowed_status_targets: ListingStatus[];

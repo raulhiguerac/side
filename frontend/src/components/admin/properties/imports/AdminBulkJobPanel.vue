@@ -135,8 +135,7 @@ import { formatNumber } from "@/utils/number";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { logger } from "@/utils/logger";
 
-/** El detalle de una corrida: la fila llega entera desde el listado y acá solo
- * se piden los errores, que ese listado cuenta pero no trae. */
+// La fila llega del listado; acá solo se piden los errores.
 const props = defineProps<{ job: BulkJobRow | null }>();
 
 const errors = ref<BulkJobRowError[]>([]);

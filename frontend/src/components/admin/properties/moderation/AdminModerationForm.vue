@@ -146,12 +146,7 @@ const props = withDefaults(
   defineProps<{
     status: ListingStatus | null;
     verificationStatus: VerificationStatus | null;
-    /**
-     * Los destinos legales los calcula el backend con la misma tabla que después
-     * aplica. Default vacío porque front y backend se despliegan por separado: si
-     * la respuesta todavía no los trae, el select se queda sin destinos —no se
-     * puede mover nada— en vez de romper el panel entero.
-     */
+    /** Destinos legales del backend; vacío si la respuesta aún no los trae. */
     allowedVerificationTargets?: VerificationStatus[];
     allowedStatusTargets?: ListingStatus[];
     saving?: boolean;

@@ -40,11 +40,7 @@ import { computed } from "vue";
 import { Megaphone } from "@lucide/vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
 
-/**
- * Solo confirma: el DELETE lo hace quien tiene la lista, que es el que después
- * la recarga. A diferencia de `DeletePropertyModal`, que se autogestiona y
- * reporta el fallo con un `alert()`.
- */
+// Solo confirma: el DELETE lo hace quien tiene la lista.
 const props = defineProps<{
   propertyId: string | null;
   removing?: boolean;

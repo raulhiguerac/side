@@ -5,8 +5,7 @@ import type {
   AdminFilterOptions,
 } from "@/types/admin/filters";
 
-/** Deja solo las keys definidas y, en los selects fijos, solo valores del enum: la
- * query la escribe cualquiera, y `?status=banana` es un 422 del backend. */
+// Solo keys definidas y valores del enum: `?status=banana` sería un 422.
 export function sanitizeFilterQuery(
   query: LocationQuery,
   filters: readonly AdminFilterDefinition[]

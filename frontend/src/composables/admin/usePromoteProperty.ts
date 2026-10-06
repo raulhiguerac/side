@@ -7,11 +7,7 @@ import { logger } from "@/utils/logger";
 
 /** Crea la promoción de una property; un solo POST, a diferencia de moderar. */
 
-/**
- * Los dos 409 posibles llegan distinguidos por `code` —a diferencia de las
- * transiciones, donde el handler descarta el contexto— así que el mensaje puede
- * decir qué pasó.
- */
+// Los dos 409 llegan distinguidos por `code`: el mensaje puede decir qué pasó.
 function messageForError(error: unknown): string {
   if (!axios.isAxiosError(error)) return "No se pudo promocionar";
 
