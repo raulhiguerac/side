@@ -69,19 +69,37 @@
           </dd>
         </div>
       </dl>
+
+      <AdminActionBar
+        class="mt-5"
+        :actions="ACTIONS"
+        @action="$emit('action', $event)"
+      />
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, toRef, watch } from "vue";
+import { Ban, Pencil, Upload } from "@lucide/vue";
 import NeighborhoodMap from "@/components/admin/catalog/neighborhoods/NeighborhoodMap.vue";
+import AdminActionBar from "@/components/admin/shared/AdminActionBar.vue";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import EmptyState from "@/components/shared/EmptyState.vue";
 import { useNeighborhoodDetail } from "@/composables/admin/useNeighborhoodDetail";
 import { useNeighborhoodNeighbors } from "@/composables/admin/useNeighborhoodNeighbors";
+import type { AdminAction } from "@/types/admin/actions";
+import type { NeighborhoodAction } from "@/types/admin/catalog";
 
 const props = defineProps<{ neighborhoodId: string | null }>();
+
+defineEmits<{ action: [key: NeighborhoodAction] }>();
+
+const ACTIONS: readonly AdminAction<NeighborhoodAction>[] = [
+  { key: "edit", icon: Pencil, label: "Editar" },
+  { key: "geometry", icon: Upload, label: "Geometría" },
+  { key: "deactivate", icon: Ban, label: "Desactivar", variant: "danger" },
+];
 
 const { detail, loading, error } = useNeighborhoodDetail(
   toRef(props, "neighborhoodId")
