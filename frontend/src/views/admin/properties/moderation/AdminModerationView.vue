@@ -69,31 +69,10 @@ import AdminModerationForm from "@/components/admin/properties/moderation/AdminM
 import { useAdminProperties } from "@/composables/admin/useAdminProperties";
 import { useModerateProperty } from "@/composables/admin/useModerateProperty";
 import { useRowSelection } from "@/composables/admin/useRowSelection";
-import {
-  LISTING_STATUS_LABELS,
-  VERIFICATION_STATUS_LABELS,
-} from "@/constants/propertyStatus";
+import { MODERATION_FILTERS } from "@/constants/propertiesFilters";
 import { sanitizeFilterQuery } from "@/utils/adminFilters";
-import type { AdminFilterDefinition } from "@/types/admin/filters";
 import type { ModerationPayload } from "@/types/admin/moderation";
 import type { AdminPropertiesFilters } from "@/types/admin/properties";
-
-/** Los dos filtros del listado admin que son enums; `owner_id` e `is_promoted` no
- * entran en un select. */
-const MODERATION_FILTERS: readonly AdminFilterDefinition[] = [
-  {
-    key: "verification_status",
-    label: "Verificación",
-    options: VERIFICATION_STATUS_LABELS,
-    allLabel: "Todas",
-  },
-  {
-    key: "status",
-    label: "Estado",
-    options: LISTING_STATUS_LABELS,
-    allLabel: "Todos",
-  },
-];
 
 const route = useRoute();
 const router = useRouter();

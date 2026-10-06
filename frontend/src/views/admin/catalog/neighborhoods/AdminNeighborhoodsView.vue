@@ -68,7 +68,6 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import catalogApi from "@/api/catalogApi";
 import AdminNeighborhoodPanel from "@/components/admin/catalog/neighborhoods/AdminNeighborhoodPanel.vue";
 import AdminNeighborhoodsTable from "@/components/admin/catalog/neighborhoods/AdminNeighborhoodsTable.vue";
 import NeighborhoodCoverageBar from "@/components/admin/catalog/neighborhoods/NeighborhoodCoverageBar.vue";
@@ -78,65 +77,9 @@ import BaseModal from "@/components/shared/BaseModal.vue";
 import PaginationArrows from "@/components/shared/PaginationArrows.vue";
 import { useAdminNeighborhoods } from "@/composables/admin/useAdminNeighborhoods";
 import { useRowSelection } from "@/composables/admin/useRowSelection";
-import { CATALOG_ENDPOINTS } from "@/constants/catalogEndpoints";
+import { NEIGHBORHOOD_FILTERS } from "@/constants/catalogFilters";
 import type { NeighborhoodAction } from "@/types/admin/catalog";
-import type {
-  AdminFilterDefinition,
-  AdminFilterOptions,
-} from "@/types/admin/filters";
 import { sanitizeFilterQuery } from "@/utils/adminFilters";
-
-type CatalogItem = { id: string; name: string };
-
-const toOptions = (items: CatalogItem[]): AdminFilterOptions =>
-  Object.fromEntries(items.map((item) => [item.id, item.name]));
-
-/** País y localidad salen de los GET públicos, que solo traen activos: falta el
- * GET admin de la cascada, y con él la división. */
-const NEIGHBORHOOD_FILTERS: readonly AdminFilterDefinition[] = [
-  {
-    type: "async-select",
-    key: "country_id",
-    label: "País",
-    allLabel: "Todos",
-    loadOptions: async () => {
-      const { data } = await catalogApi.get<CatalogItem[]>(
-        CATALOG_ENDPOINTS.countries
-      );
-      return toOptions(data);
-    },
-  },
-  {
-    type: "async-select",
-    key: "locality_id",
-    label: "Localidad",
-    dependsOn: "country_id",
-    loadOptions: async ({ country_id }) => {
-      const { data } = await catalogApi.get<CatalogItem[]>(
-        CATALOG_ENDPOINTS.localitiesByCountry,
-        { params: { country_id } }
-      );
-      return toOptions(data);
-    },
-  },
-  {
-    key: "is_active",
-    label: "Estado",
-    options: { true: "Activo", false: "Inactivo" },
-    allLabel: "Todos",
-  },
-  {
-    key: "has_geometry",
-    label: "Geometría",
-    options: { true: "Con geometría", false: "Sin geometría" },
-  },
-  {
-    type: "search",
-    key: "search_term",
-    label: "Buscar",
-    placeholder: "Nombre del barrio",
-  },
-];
 
 const route = useRoute();
 const router = useRouter();

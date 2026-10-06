@@ -68,26 +68,8 @@ import AdminBulkJobPanel from "@/components/admin/properties/imports/AdminBulkJo
 import BulkUploadPropertiesModal from "@/components/admin/properties/imports/BulkUploadPropertiesModal.vue";
 import { useBulkJobs } from "@/composables/admin/useBulkJobs";
 import { useRowSelection } from "@/composables/admin/useRowSelection";
-import { BULK_JOB_STATUS_LABELS } from "@/constants/bulkJobStatus";
+import { BULK_JOB_FILTERS } from "@/constants/propertiesFilters";
 import { sanitizeFilterQuery } from "@/utils/adminFilters";
-import type { AdminFilterDefinition } from "@/types/admin/filters";
-
-/** `has_errors` va como select de dos opciones: el backend lo recibe como bool y
- * Pydantic parsea el `"true"`/`"false"` de la query. Las fechas todavía no. */
-const BULK_JOB_FILTERS: readonly AdminFilterDefinition[] = [
-  {
-    key: "status",
-    label: "Estado",
-    options: BULK_JOB_STATUS_LABELS,
-    allLabel: "Todos",
-  },
-  {
-    key: "has_errors",
-    label: "Errores",
-    options: { true: "Con errores", false: "Sin errores" },
-    allLabel: "Todas",
-  },
-];
 
 const route = useRoute();
 const router = useRouter();
