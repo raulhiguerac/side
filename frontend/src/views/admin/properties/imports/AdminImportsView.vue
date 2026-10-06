@@ -16,7 +16,7 @@
           :filters="BULK_JOB_FILTERS"
           :initial="urlFilters"
           :loading="loading"
-          @apply="onApplyFilters"
+          @apply="pushFilters"
         />
       </template>
 
@@ -57,8 +57,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { computed, ref } from "vue";
 import { Upload } from "@lucide/vue";
 import PaginationArrows from "@/components/shared/PaginationArrows.vue";
 import AdminSplitView from "@/components/admin/shared/AdminSplitView.vue";
@@ -68,11 +67,8 @@ import AdminBulkJobPanel from "@/components/admin/properties/imports/AdminBulkJo
 import BulkUploadPropertiesModal from "@/components/admin/properties/imports/BulkUploadPropertiesModal.vue";
 import { useBulkJobs } from "@/composables/admin/useBulkJobs";
 import { useRowSelection } from "@/composables/admin/useRowSelection";
+import { useUrlFilters } from "@/composables/admin/useUrlFilters";
 import { BULK_JOB_FILTERS } from "@/constants/propertiesFilters";
-import { sanitizeFilterQuery } from "@/utils/adminFilters";
-
-const route = useRoute();
-const router = useRouter();
 
 const isBulkModalOpen = ref(false);
 
@@ -97,15 +93,8 @@ const selectedJob = computed(
   () => jobs.value.find((job) => job.id === selectedId.value) ?? null
 );
 
-/** La URL manda, igual que en moderación: el filtro se comparte y el back del
- * navegador lo deshace. La página sigue en memoria. */
-const urlFilters = computed(() =>
-  sanitizeFilterQuery(route.query, BULK_JOB_FILTERS)
+const { urlFilters, pushFilters } = useUrlFilters(
+  BULK_JOB_FILTERS,
+  applyFilters
 );
-
-function onApplyFilters(values: Record<string, string>) {
-  router.push({ query: values });
-}
-
-watch(urlFilters, (filters) => applyFilters(filters), { immediate: true });
 </script>

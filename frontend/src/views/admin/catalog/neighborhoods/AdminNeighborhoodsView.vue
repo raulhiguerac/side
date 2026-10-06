@@ -4,7 +4,7 @@
     class="mb-4"
     :filters="NEIGHBORHOOD_FILTERS"
     :initial="urlFilters"
-    @apply="onApplyFilters"
+    @apply="pushFilters"
   />
 
   <AdminSplitView :error="error">
@@ -66,8 +66,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { ref } from "vue";
 import AdminNeighborhoodPanel from "@/components/admin/catalog/neighborhoods/AdminNeighborhoodPanel.vue";
 import AdminNeighborhoodsTable from "@/components/admin/catalog/neighborhoods/AdminNeighborhoodsTable.vue";
 import NeighborhoodCoverageBar from "@/components/admin/catalog/neighborhoods/NeighborhoodCoverageBar.vue";
@@ -77,20 +76,9 @@ import BaseModal from "@/components/shared/BaseModal.vue";
 import PaginationArrows from "@/components/shared/PaginationArrows.vue";
 import { useAdminNeighborhoods } from "@/composables/admin/useAdminNeighborhoods";
 import { useRowSelection } from "@/composables/admin/useRowSelection";
+import { useUrlFilters } from "@/composables/admin/useUrlFilters";
 import { NEIGHBORHOOD_FILTERS } from "@/constants/catalogFilters";
 import type { NeighborhoodAction } from "@/types/admin/catalog";
-import { sanitizeFilterQuery } from "@/utils/adminFilters";
-
-const route = useRoute();
-const router = useRouter();
-
-const urlFilters = computed(() =>
-  sanitizeFilterQuery(route.query, NEIGHBORHOOD_FILTERS)
-);
-
-function onApplyFilters(values: Record<string, string>) {
-  router.push({ query: values });
-}
 
 const {
   rows,
@@ -117,5 +105,5 @@ const MOCK_MODALS: Record<NeighborhoodAction, string> = {
 
 const activeAction = ref<NeighborhoodAction | null>(null);
 
-watch(urlFilters, load, { immediate: true });
+const { urlFilters, pushFilters } = useUrlFilters(NEIGHBORHOOD_FILTERS, load);
 </script>

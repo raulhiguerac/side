@@ -5,7 +5,7 @@
         :filters="MODERATION_FILTERS"
         :initial="urlFilters"
         :loading="loading"
-        @apply="onApplyFilters"
+        @apply="pushFilters"
       />
     </template>
 
@@ -58,8 +58,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, nextTick, useTemplateRef, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { nextTick, useTemplateRef, watch } from "vue";
 import PaginationArrows from "@/components/shared/PaginationArrows.vue";
 import AdminSplitView from "@/components/admin/shared/AdminSplitView.vue";
 import AdminFilterBar from "@/components/admin/shared/AdminFilterBar.vue";
@@ -69,13 +68,10 @@ import AdminModerationForm from "@/components/admin/properties/moderation/AdminM
 import { useAdminProperties } from "@/composables/admin/useAdminProperties";
 import { useModerateProperty } from "@/composables/admin/useModerateProperty";
 import { useRowSelection } from "@/composables/admin/useRowSelection";
+import { useUrlFilters } from "@/composables/admin/useUrlFilters";
 import { MODERATION_FILTERS } from "@/constants/propertiesFilters";
-import { sanitizeFilterQuery } from "@/utils/adminFilters";
 import type { ModerationPayload } from "@/types/admin/moderation";
 import type { AdminPropertiesFilters } from "@/types/admin/properties";
-
-const route = useRoute();
-const router = useRouter();
 
 const {
   rows,
@@ -119,19 +115,9 @@ async function onSave(payload: ModerationPayload, propertyId: string) {
 /** Los mensajes son de la property moderada: cambiar de fila los invalida. */
 watch(selectedId, resetModeration);
 
-/** La URL manda: así el filtro se comparte, se bookmarkea y el back del navegador
- * lo deshace. `page` sigue en memoria, que la paginación es incremental. */
-const urlFilters = computed(() =>
-  sanitizeFilterQuery(route.query, MODERATION_FILTERS)
+// Cast seguro: sanitizeFilterQuery ya validó contra el enum.
+const { urlFilters, pushFilters } = useUrlFilters(
+  MODERATION_FILTERS,
+  (filters) => load(filters as AdminPropertiesFilters)
 );
-
-function onApplyFilters(values: Record<string, string>) {
-  // `push` y no `replace`: volver atrás devuelve el filtro anterior.
-  router.push({ query: values });
-}
-
-// Los valores ya salieron saneados contra el enum, que es el mismo del backend.
-watch(urlFilters, (filters) => load(filters as AdminPropertiesFilters), {
-  immediate: true,
-});
 </script>
