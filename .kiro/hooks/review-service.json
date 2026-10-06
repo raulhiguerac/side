@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Revisar servicio o repo",
+      "trigger": "UserPromptSubmit",
+      "description": "Revisión de solo lectura (bugs, mejoras y convenciones) con los specs de .kiro/specs/review-*: un servicio, el front, los contratos entre servicios o todos.",
+      "action": {
+        "type": "agent",
+        "prompt": "Pregunta qué revisar si no está claro: un spec de .kiro/specs/review-* (catalog-service, users-service, properties-service, analytics-service, frontend, cross-service) o \"todos\". Sigue las instrucciones de .kiro/steering/review.md (#review) y ejecuta las tareas del spec sin editar código. Si son todos, hazlos de a uno y en ese orden, con un reporte por spec. Guarda cada reporte en docs/sources/<carpeta>/<YYYY-MM-DD>-review-<spec>.md (<carpeta> es el servicio, frontend, o _shared para cross-service) con el front-matter de fuente que indica .kiro/steering/review.md; son los únicos archivos que puedes crear."
+      }
+    }
+  ]
+}
