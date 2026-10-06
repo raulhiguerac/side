@@ -272,6 +272,7 @@
 
 <script lang="ts" setup>
 import { ref, computed } from "vue";
+import axios from "axios";
 import usersApi from "@/api/usersApi";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
@@ -313,8 +314,8 @@ const changePassword = async () => {
 
     successMessage.value = "Contraseña actualizada correctamente";
     form.value = { currentPassword: "", newPassword: "", confirmPassword: "" };
-  } catch (error: any) {
-    if (error.response?.status === 400) {
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 400) {
       errorMessage.value = "La contraseña actual es incorrecta";
     } else {
       errorMessage.value = "Error al actualizar la contraseña";

@@ -207,7 +207,7 @@
             class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted"
           />
           <input
-            :value="(form as any)[field.key]"
+            :value="form[field.key]"
             @input="
               emit('update:form', {
                 ...form,
@@ -220,7 +220,7 @@
             :placeholder="field.placeholder"
             :class="[
               'w-full border-2 rounded-xl pl-9 pr-3 py-2.5 text-sm text-brand-text focus:outline-none focus:ring-4 transition-all',
-              attempted && !(form as any)[field.key]
+              attempted && !form[field.key]
                 ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
                 : 'border-brand-border focus:border-brand-primary focus:ring-brand-primary/10',
             ]"
@@ -249,7 +249,11 @@ import {
   PROPERTY_TYPE_LABELS,
 } from "@/constants/propertyLabels";
 import type { ListingType, PropertyType } from "@/types/feed";
-import type { ChoiceOption, CreatePropertyForm } from "@/types/properties";
+import type {
+  ChoiceOption,
+  CreatePropertyForm,
+  NumericFieldOption,
+} from "@/types/properties";
 
 defineProps<{ form: CreatePropertyForm; attempted?: boolean }>();
 const emit = defineEmits<{ (e: "update:form", v: CreatePropertyForm): void }>();
@@ -288,7 +292,7 @@ const conditions = [
 ];
 const currencies = ["COP", "USD", "EUR", "MXN", "PEN", "CLP"];
 
-const numericFields = [
+const numericFields: NumericFieldOption[] = [
   {
     key: "area_m2",
     label: "Área (m²)",

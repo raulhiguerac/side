@@ -76,9 +76,8 @@ import PageContainer from "@/components/shared/PageContainer.vue";
 import type {
   AvmPredictRequest,
   AvmFormPayload,
-  SelectedPlace,
 } from "@/composables/avm/useAvmForm";
-import type { MarkerData } from "@/types/maps";
+import type { MarkerData, SelectedPlace } from "@/types/maps";
 import avmApi from "@/api/avmApi";
 import { logger } from "@/utils/logger";
 import { API } from "@/config";

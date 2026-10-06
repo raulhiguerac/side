@@ -3,3 +3,7 @@ export interface CatalogItem {
   id: string;
   name: string;
 }
+
+export interface Locality extends CatalogItem {
+  admin_division: CatalogItem;
+}

@@ -24,3 +24,9 @@ export interface MarkerData {
   phone?: string;
   website?: string;
 }
+
+export interface SelectedPlace {
+  latitude: number;
+  longitude: number;
+  address: string;
+}
