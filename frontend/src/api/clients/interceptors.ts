@@ -3,6 +3,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from "axios";
 import { API } from "@/config";
+import { USERS_ENDPOINTS } from "@/constants/usersEndpoints";
 
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -19,13 +20,17 @@ function processQueue(error: unknown) {
 }
 
 async function refreshTokens() {
-  await axios.post(`${API.USERS_BASE_URL}/v1/auth/refresh`, null, {
+  await axios.post(`${API.USERS_BASE_URL}${USERS_ENDPOINTS.refresh}`, null, {
     withCredentials: true,
     timeout: 3000,
   });
 }
 
-const AUTH_ENTRYPOINTS = ["/auth/login", "/auth/register", "/auth/logout"];
+const AUTH_ENTRYPOINTS = [
+  USERS_ENDPOINTS.login,
+  USERS_ENDPOINTS.register,
+  USERS_ENDPOINTS.logout,
+];
 
 async function forceLogout() {
   const { useAuthStore } = await import("@/stores/auth");

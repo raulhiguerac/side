@@ -37,3 +37,13 @@ export interface RegisterPayload {
   phone: string;
   account_type: "person" | "organization";
 }
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+}

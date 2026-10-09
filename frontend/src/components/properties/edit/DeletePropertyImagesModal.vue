@@ -49,8 +49,7 @@
 import { ref, watch } from "vue";
 import { Trash2 } from "@lucide/vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
-import propertiesApi from "@/api/propertiesApi";
-import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
+import * as propertiesApi from "@/api/properties";
 import type { PropertyImageCard } from "@/types/properties/images";
 
 const props = defineProps<{
@@ -93,9 +92,7 @@ async function handleDelete() {
   loading.value = true;
   error.value = null;
   try {
-    await propertiesApi.delete(PROPERTIES_ENDPOINTS.images(props.propertyId), {
-      data: { image_ids: selectedIds.value },
-    });
+    await propertiesApi.deleteImages(props.propertyId, selectedIds.value);
     emit("success");
     close();
   } catch {

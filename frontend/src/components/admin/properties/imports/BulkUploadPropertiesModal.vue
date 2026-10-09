@@ -40,9 +40,8 @@
 <script lang="ts" setup>
 import { ref } from "vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
-import propertiesApi from "@/api/propertiesApi";
+import * as adminPropertiesApi from "@/api/admin/properties";
 import { logger } from "@/utils/logger";
-import type { BulkJobAccepted, BulkUploadUrl } from "@/types/admin/bulk";
 
 defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{
@@ -68,9 +67,8 @@ async function upload() {
   error.value = "";
 
   try {
-    const { data: presigned } = await propertiesApi.post<BulkUploadUrl>(
-      "/v1/admin/properties/bulk/upload-url",
-      { filename: file.value.name }
+    const presigned = await adminPropertiesApi.requestBulkUploadUrl(
+      file.value.name
     );
 
     if (file.value.size > presigned.max_size_bytes) {
@@ -89,10 +87,7 @@ async function upload() {
       throw new Error(`storage responded ${stored.status}`);
     }
 
-    const { data: job } = await propertiesApi.post<BulkJobAccepted>(
-      "/v1/admin/properties/bulk",
-      { storage_key: presigned.storage_key }
-    );
+    const job = await adminPropertiesApi.startBulkJob(presigned.storage_key);
 
     emit("queued", job.batch_id);
     close();

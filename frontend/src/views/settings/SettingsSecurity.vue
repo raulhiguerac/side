@@ -273,7 +273,7 @@
 <script lang="ts" setup>
 import { ref, computed } from "vue";
 import axios from "axios";
-import usersApi from "@/api/usersApi";
+import * as usersApi from "@/api/users";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 const isLoading = ref(false);
@@ -307,7 +307,7 @@ const changePassword = async () => {
   isLoading.value = true;
 
   try {
-    await usersApi.post("/v1/auth/change-password", {
+    await usersApi.changePassword({
       current_password: form.value.currentPassword,
       new_password: form.value.newPassword,
     });

@@ -1,6 +1,5 @@
 import { computed, ref } from "vue";
-import catalogApi from "@/api/catalogApi";
-import { CATALOG_ENDPOINTS } from "@/constants/catalogEndpoints";
+import * as adminCatalogApi from "@/api/admin/catalog";
 import { PAGE_SIZE } from "@/constants/pagination";
 import type {
   NeighborhoodAdminFilters,
@@ -34,17 +33,11 @@ export function useAdminNeighborhoods() {
     loading.value = true;
     error.value = null;
     try {
-      const { data } = await catalogApi.get<NeighborhoodAdminPage>(
-        CATALOG_ENDPOINTS.adminNeighborhoods,
-        {
-          params: {
-            ...filters.value,
-            page: pageNumber,
-            page_size: PAGE_SIZE.ADMIN_NEIGHBORHOODS,
-          },
-        }
-      );
-      page.value = data;
+      page.value = await adminCatalogApi.getNeighborhoods({
+        ...filters.value,
+        page: pageNumber,
+        page_size: PAGE_SIZE.ADMIN_NEIGHBORHOODS,
+      });
     } catch (e) {
       error.value = "No se pudieron cargar los barrios";
       logger.error("admin neighborhoods load failed", e);

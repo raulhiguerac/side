@@ -1,7 +1,6 @@
 import { ref } from "vue";
 import axios from "axios";
-import propertiesApi from "@/api/propertiesApi";
-import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
+import * as adminPropertiesApi from "@/api/admin/properties";
 import type { PromotionPayload } from "@/types/admin/promotions";
 import { logger } from "@/utils/logger";
 
@@ -37,11 +36,7 @@ export function usePromoteProperty() {
     success.value = null;
 
     try {
-      await propertiesApi.post(PROPERTIES_ENDPOINTS.adminPromotions, {
-        property_id: propertyId,
-        promoted_days: payload.promotedDays,
-        priority: payload.priority,
-      });
+      await adminPropertiesApi.createPromotion(propertyId, payload);
       success.value = "Promoción creada";
       return true;
     } catch (e) {

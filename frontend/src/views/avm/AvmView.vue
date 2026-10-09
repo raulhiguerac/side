@@ -76,7 +76,7 @@ import PageContainer from "@/components/shared/PageContainer.vue";
 import type { AvmSubmitEvent } from "@/types/avm/form";
 import type { AvmPredictRequest } from "@/types/avm/predict";
 import type { MarkerData, SelectedPlace } from "@/types/maps/base";
-import avmApi from "@/api/avmApi";
+import * as avmApi from "@/api/avm";
 import { logger } from "@/utils/logger";
 
 const showResult = ref(false);
@@ -122,8 +122,8 @@ async function onSubmit(data: AvmSubmitEvent) {
 }
 
 async function fetchPredict(payload: AvmPredictRequest): Promise<number> {
-  const response = await avmApi.post("/v1/predict", payload);
-  return response.data.predicted_price;
+  const { predicted_price } = await avmApi.predict(payload);
+  return predicted_price;
 }
 
 function reset() {

@@ -1,9 +1,14 @@
 export const PROPERTIES_ENDPOINTS = {
   me: "/v1/properties/me",
+  create: "/v1/properties/create",
   byId: (id: string) => `/v1/properties/${id}`,
   byUser: (userId: string) => `/v1/properties/users/${userId}`,
   visibility: (id: string) => `/v1/properties/${id}/visibility`,
   images: (id: string) => `/v1/properties/${id}/images`,
+  imagesPresignedUrls: "/v1/properties/images/presigned-urls",
+  imagesConfirm: (id: string) => `/v1/properties/${id}/images/confirm`,
+  feed: "/v1/search/feed",
+  feedMap: "/v1/search/feed/map",
   adminList: "/v1/admin/properties",
   /** El detalle público tira 404 en borradores e inactivos, o sea justo lo que hay que moderar. */
   adminDetail: (id: string) => `/v1/admin/properties/${id}`,
@@ -16,6 +21,7 @@ export const PROPERTIES_ENDPOINTS = {
   adminPropertyPromotions: (id: string) =>
     `/v1/admin/properties/${id}/promotions`,
   adminBulkJobs: "/v1/admin/properties/bulk",
+  adminBulkUploadUrl: "/v1/admin/properties/bulk/upload-url",
   /** El único que trae los errores de la corrida; el listado solo cuenta cuántos. */
   adminBulkJobStatus: (id: string) => `/v1/admin/properties/bulk/${id}/status`,
 };

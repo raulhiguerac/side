@@ -1,12 +1,8 @@
 import { computed, ref } from "vue";
 import axios from "axios";
-import propertiesApi from "@/api/propertiesApi";
-import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
+import * as adminPropertiesApi from "@/api/admin/properties";
 import { PAGE_SIZE } from "@/constants/pagination";
-import type {
-  AdminPromotionRow,
-  AdminPromotionsPage,
-} from "@/types/admin/promotions";
+import type { AdminPromotionRow } from "@/types/admin/promotions";
 import { pageRange } from "@/utils/pagination";
 import { logger } from "@/utils/logger";
 
@@ -35,10 +31,10 @@ export function useActivePromotions() {
     error.value = null;
 
     try {
-      const { data } = await propertiesApi.get<AdminPromotionsPage>(
-        PROPERTIES_ENDPOINTS.adminPromotions,
-        { params: { page: next, page_size: PAGE_SIZE.ADMIN_PROMOTIONS } }
-      );
+      const data = await adminPropertiesApi.getPromotions({
+        page: next,
+        page_size: PAGE_SIZE.ADMIN_PROMOTIONS,
+      });
       promotions.value = data.items;
       total.value = data.total;
       page.value = data.page;
@@ -58,9 +54,7 @@ export function useActivePromotions() {
     removeError.value = null;
 
     try {
-      await propertiesApi.delete(
-        PROPERTIES_ENDPOINTS.adminPropertyPromotions(propertyId)
-      );
+      await adminPropertiesApi.removePromotion(propertyId);
       return true;
     } catch (e) {
       logger.error("admin promotion removal failed", e);

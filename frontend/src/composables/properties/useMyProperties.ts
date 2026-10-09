@@ -1,6 +1,5 @@
 import { ref } from "vue";
-import propertiesApi from "@/api/propertiesApi";
-import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
+import * as propertiesApi from "@/api/properties";
 import type { PropertyCard } from "@/types/feed/cards";
 import { logger } from "@/utils/logger";
 
@@ -11,10 +10,7 @@ export function useMyProperties() {
   async function fetchProperties() {
     isLoading.value = true;
     try {
-      const { data } = await propertiesApi.get<PropertyCard[]>(
-        PROPERTIES_ENDPOINTS.me
-      );
-      properties.value = data;
+      properties.value = await propertiesApi.getMyProperties();
     } catch (error) {
       logger.error("Error al cargar propiedades:", error);
       properties.value = [];

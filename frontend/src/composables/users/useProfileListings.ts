@@ -1,14 +1,6 @@
-import propertiesApi from "@/api/propertiesApi";
-import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
-import type { PublicUserPropertiesResponse } from "@/types/users/profile";
+import * as propertiesApi from "@/api/properties";
 
 export async function fetchUserListings(account_id: string, offset: number) {
-  const { data } = await propertiesApi.get<PublicUserPropertiesResponse>(
-    PROPERTIES_ENDPOINTS.byUser(account_id),
-    {
-      params: { offset },
-      paramsSerializer: { indexes: null },
-    }
-  );
+  const data = await propertiesApi.getUserListings(account_id, offset);
   return { items: data.items, hasMore: data.has_more };
 }

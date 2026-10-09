@@ -2,7 +2,7 @@ import { ref } from "vue";
 import axios from "axios";
 import type { CreatePropertyForm } from "@/types/properties/forms";
 import type { SelectedPlace } from "@/types/maps/base";
-import propertiesApi from "@/api/propertiesApi";
+import * as propertiesApi from "@/api/properties";
 
 export function useCreatePropertyForm() {
   const loading = ref<boolean>(false);
@@ -42,11 +42,7 @@ export function useCreatePropertyForm() {
       loading.value = true;
       error.value = null;
       errorCode.value = null;
-      const { data } = await propertiesApi.post<string>(
-        "/v1/properties/create",
-        form
-      );
-      return data;
+      return await propertiesApi.createProperty(form);
     } catch (e) {
       error.value = "No se pudo crear la propiedad";
       if (axios.isAxiosError(e)) {

@@ -5,3 +5,7 @@ export interface AvmPredictRequest extends AvmFormPayload {
   lon: number;
   barrio_ideca: string;
 }
+
+export interface AvmPredictResponse {
+  predicted_price: number;
+}

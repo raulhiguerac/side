@@ -1,12 +1,7 @@
 import { computed, ref } from "vue";
-import propertiesApi from "@/api/propertiesApi";
-import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
+import * as adminPropertiesApi from "@/api/admin/properties";
 import { PAGE_SIZE } from "@/constants/pagination";
-import type {
-  BulkJobRow,
-  BulkJobsFilters,
-  BulkJobsPage,
-} from "@/types/admin/bulk";
+import type { BulkJobRow, BulkJobsFilters } from "@/types/admin/bulk";
 import { pageRange } from "@/utils/pagination";
 import { logger } from "@/utils/logger";
 
@@ -34,16 +29,11 @@ export function useBulkJobs() {
     filters.value = nextFilters;
 
     try {
-      const { data } = await propertiesApi.get<BulkJobsPage>(
-        PROPERTIES_ENDPOINTS.adminBulkJobs,
-        {
-          params: {
-            page: next,
-            page_size: PAGE_SIZE.ADMIN_BULK_JOBS,
-            ...nextFilters,
-          },
-        }
-      );
+      const data = await adminPropertiesApi.getBulkJobs({
+        page: next,
+        page_size: PAGE_SIZE.ADMIN_BULK_JOBS,
+        ...nextFilters,
+      });
       jobs.value = data.items;
       total.value = data.total;
       page.value = data.page;

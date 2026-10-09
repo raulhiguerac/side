@@ -50,8 +50,7 @@
 <script lang="ts" setup>
 import { ref, computed } from "vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
-import propertiesApi from "@/api/propertiesApi";
-import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
+import * as propertiesApi from "@/api/properties";
 import { logger } from "@/utils/logger";
 
 const props = defineProps<{
@@ -71,7 +70,7 @@ async function handleDelete() {
 
   isDeleting.value = true;
   try {
-    await propertiesApi.delete(PROPERTIES_ENDPOINTS.byId(props.propertyId));
+    await propertiesApi.deleteProperty(props.propertyId);
     emit("deleted", props.propertyId);
   } catch (error) {
     logger.error("Error al eliminar propiedad:", error);

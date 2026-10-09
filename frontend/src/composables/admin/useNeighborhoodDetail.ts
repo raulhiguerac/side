@@ -1,6 +1,5 @@
 import { ref, watch, type Ref } from "vue";
-import catalogApi from "@/api/catalogApi";
-import { CATALOG_ENDPOINTS } from "@/constants/catalogEndpoints";
+import * as adminCatalogApi from "@/api/admin/catalog";
 import type { NeighborhoodAdminDetail } from "@/types/admin/catalog";
 import { logger } from "@/utils/logger";
 
@@ -21,9 +20,7 @@ export function useNeighborhoodDetail(neighborhoodId: Ref<string | null>) {
 
     loading.value = true;
     try {
-      const { data } = await catalogApi.get<NeighborhoodAdminDetail>(
-        CATALOG_ENDPOINTS.adminNeighborhood(id)
-      );
+      const data = await adminCatalogApi.getNeighborhood(id);
       if (request === latestRequest) detail.value = data;
     } catch (e) {
       if (request !== latestRequest) return;

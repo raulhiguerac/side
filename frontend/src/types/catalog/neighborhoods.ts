@@ -10,3 +10,13 @@ export interface ResolvedNeighborhood {
   city_id: string;
   country_id: string;
 }
+
+export interface NeighborhoodsByLocalitiesResponse {
+  neighborhoods: Record<string, CatalogItem[]>;
+}
+
+export interface CoordinatesResolution {
+  neighborhood_id: string;
+  locality_id: string;
+  country_id: string;
+}

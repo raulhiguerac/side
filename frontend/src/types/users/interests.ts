@@ -13,3 +13,8 @@ export interface UserInterests {
 export interface UserState {
   userInterests: UserInterests;
 }
+
+export interface NeighborhoodSelection {
+  locality_id: string;
+  neighborhoods: Record<number, string>;
+}

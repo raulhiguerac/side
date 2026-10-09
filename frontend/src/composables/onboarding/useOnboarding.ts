@@ -1,5 +1,5 @@
 import { ref, shallowRef, type Component } from "vue";
-import usersApi from "@/api/usersApi";
+import * as usersApi from "@/api/users";
 import { useUserStore } from "@/stores/user";
 import { useAuthStore } from "@/stores/auth";
 import IntentSelector from "@/components/onboarding/IntentSelector.vue";
@@ -7,6 +7,8 @@ import LocalitySelector from "@/components/onboarding/LocalitySelector.vue";
 import NeighborhoodSelector from "@/components/onboarding/NeighborhoodSelector.vue";
 import PropertyTypeSelector from "@/components/onboarding/PropertyTypeSelector.vue";
 import { logger } from "@/utils/logger";
+import type { CatalogItem } from "@/types/catalog/base";
+import type { NeighborhoodSelection } from "@/types/users/interests";
 
 const STEP_MAP: Record<string, Component> = {
   intent: IntentSelector,
@@ -45,11 +47,9 @@ export function useOnboarding() {
     activeComponent.value = STEP_MAP["city"];
   };
 
-  const saveCity = async (localities: { id: string; name: string }[]) => {
+  const saveCity = async (localities: CatalogItem[]) => {
     try {
-      await usersApi.post("/v1/onboarding/city", {
-        locality_ids: localities.map((l) => l.id),
-      });
+      await usersApi.saveCities(localities.map((l) => l.id));
       userStore.userInterests.localities = localities.map((l) => l.id);
       authStore.onboardingStep = "neighborhood";
       activeComponent.value = STEP_MAP["neighborhood"];
@@ -58,11 +58,9 @@ export function useOnboarding() {
     }
   };
 
-  const saveNeighborhoods = async (
-    localities: { locality_id: string; neighborhoods: Record<number, string> }[]
-  ) => {
+  const saveNeighborhoods = async (localities: NeighborhoodSelection[]) => {
     try {
-      await usersApi.post("/v1/onboarding/neighborhood", { localities });
+      await usersApi.saveNeighborhoods(localities);
       authStore.onboardingStep = "property_type";
       activeComponent.value = STEP_MAP["property_type"];
     } catch (e) {
@@ -74,10 +72,7 @@ export function useOnboarding() {
     try {
       await Promise.all(
         Object.entries(selections).map(([locality_id, property_type]) =>
-          usersApi.post("/v1/onboarding/property-type", {
-            locality_id,
-            property_type,
-          })
+          usersApi.savePropertyTypes(locality_id, property_type)
         )
       );
       closeFlow();

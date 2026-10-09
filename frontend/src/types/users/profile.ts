@@ -30,3 +30,10 @@ export interface PublicUserPropertiesResponse {
   items: PropertyCard[];
   has_more: boolean;
 }
+
+export interface ProfileUpdatePayload {
+  first_name: string;
+  last_name: string;
+  phone: string;
+  description: string;
+}

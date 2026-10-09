@@ -1,7 +1,6 @@
 import { ref } from "vue";
 import axios from "axios";
-import propertiesApi from "@/api/propertiesApi";
-import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
+import * as adminPropertiesApi from "@/api/admin/properties";
 import type { ModerationPayload } from "@/types/admin/moderation";
 import { logger } from "@/utils/logger";
 
@@ -49,24 +48,16 @@ export function useModerateProperty() {
 
     try {
       if (payload.verificationStatus) {
-        await propertiesApi.patch(
-          PROPERTIES_ENDPOINTS.adminVerification(propertyId),
-          {
-            verification_status: payload.verificationStatus,
-            // Omitido y no `null`: el backend lo prohíbe si no se está rechazando.
-            ...(payload.rejectionReason
-              ? { rejection_reason: payload.rejectionReason }
-              : {}),
-          }
+        await adminPropertiesApi.setVerification(
+          propertyId,
+          payload.verificationStatus,
+          payload.rejectionReason
         );
         applied = "verification";
       }
 
       if (payload.status) {
-        await propertiesApi.patch(
-          PROPERTIES_ENDPOINTS.adminStatus(propertyId),
-          { status: payload.status }
-        );
+        await adminPropertiesApi.setStatus(propertyId, payload.status);
         applied = "status";
       }
 

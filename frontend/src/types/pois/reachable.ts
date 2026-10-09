@@ -43,3 +43,11 @@ export interface CategoryGroup {
 export interface RangeWithGroups extends RangeGroup {
   groups: CategoryGroup[];
 }
+
+export interface ReachablePoisRequest {
+  lat: number;
+  lon: number;
+  range_seconds: number[];
+  profile: OrsProfile[];
+  property_id: string;
+}

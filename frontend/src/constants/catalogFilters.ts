@@ -1,4 +1,4 @@
-import { loadCountryOptions, loadLocalityOptions } from "@/api/catalogOptions";
+import { loadCountryOptions, loadLocalityOptions } from "@/api/admin/catalog";
 import type { AdminFilterDefinition } from "@/types/admin/filters";
 
 // País y localidad usan los GET públicos (solo activos) hasta tener los admin.

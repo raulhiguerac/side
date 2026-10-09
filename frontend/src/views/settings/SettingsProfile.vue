@@ -119,7 +119,7 @@ import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import IntentSelector from "@/components/onboarding/IntentSelector.vue";
 import type { AccountIntent } from "@/types/users/base";
-import usersApi from "@/api/usersApi";
+import * as usersApi from "@/api/users";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { logger } from "@/utils/logger";
 
@@ -182,7 +182,7 @@ const resetForm = () => {
 const saveProfile = async () => {
   isLoading.value = true;
   try {
-    await usersApi.patch("/v1/users/me/profile", {
+    await usersApi.updateProfile({
       first_name: form.value.first_name,
       last_name: form.value.last_name,
       phone: form.value.phone,

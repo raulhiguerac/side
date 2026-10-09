@@ -65,7 +65,7 @@
 <script lang="ts" setup>
 import { ref, computed, h, watch } from "vue";
 import { useAuthStore } from "@/stores/auth";
-import usersApi from "@/api/usersApi";
+import * as usersApi from "@/api/users";
 import type { AccountIntent } from "@/types/users/base";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { logger } from "@/utils/logger";
@@ -215,7 +215,7 @@ const saveIntent = async () => {
 
   isLoading.value = true;
   try {
-    await usersApi.post("/v1/onboarding/intent", { intent: props.modelValue });
+    await usersApi.saveIntent(props.modelValue);
     authStore.updateUser({ intent: props.modelValue });
     originalValue.value = props.modelValue;
     emit("saved", props.modelValue);

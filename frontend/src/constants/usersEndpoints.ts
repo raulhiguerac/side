@@ -1,0 +1,17 @@
+export const USERS_ENDPOINTS = {
+  login: "/v1/auth/login",
+  register: "/v1/auth/register",
+  logout: "/v1/auth/logout",
+  refresh: "/v1/auth/refresh",
+  changePassword: "/v1/auth/change-password",
+  resetPasswordRequest: "/v1/auth/reset-password/request",
+  me: "/v1/users/me",
+  interests: "/v1/users/me/interests",
+  profile: "/v1/users/me/profile",
+  deactivate: "/v1/users/me/deactivate",
+  publicProfile: (accountId: string) => `/v1/users/profiles/${accountId}`,
+  onboardingIntent: "/v1/onboarding/intent",
+  onboardingCity: "/v1/onboarding/city",
+  onboardingNeighborhood: "/v1/onboarding/neighborhood",
+  onboardingPropertyType: "/v1/onboarding/property-type",
+};

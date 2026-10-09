@@ -86,8 +86,7 @@
 
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
-import propertiesApi from "@/api/propertiesApi";
-import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
+import * as adminPropertiesApi from "@/api/admin/properties";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
 import { usePropertyDetail } from "@/composables/properties/usePropertyDetail";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
@@ -150,9 +149,7 @@ async function load(id: string | null) {
   loading.value = true;
 
   try {
-    const { data } = await propertiesApi.get<AdminPropertyDetail>(
-      PROPERTIES_ENDPOINTS.adminDetail(id)
-    );
+    const data = await adminPropertiesApi.getProperty(id);
     if (token !== requestToken) return;
     property.value = data;
 

@@ -1,5 +1,5 @@
 import { ref, computed } from "vue";
-import catalogApi from "@/api/catalogApi";
+import * as catalogApi from "@/api/catalog";
 import { Footprints, Bike, Car } from "@lucide/vue";
 import type { OrsProfile, ProfileOption } from "@/types/pois/base";
 import type {
@@ -24,17 +24,13 @@ async function fetchPois(
   propertyId: string
 ): Promise<ReachablePoisResult[]> {
   try {
-    const { data } = await catalogApi.post(
-      "/v1/geo-resolution/reachable-pois",
-      {
-        lat: lat,
-        lon: lon,
-        range_seconds: [300, 600, 900],
-        profile: ["foot-walking", "cycling-regular", "driving-car"],
-        property_id: propertyId,
-      }
-    );
-    return data as Array<ReachablePoisResult>;
+    return await catalogApi.getReachablePois({
+      lat,
+      lon,
+      range_seconds: [300, 600, 900],
+      profile: ["foot-walking", "cycling-regular", "driving-car"],
+      property_id: propertyId,
+    });
   } catch (error) {
     logger.error("Error al obtener pois:", error);
     return [];

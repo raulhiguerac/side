@@ -75,7 +75,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import usersApi from "@/api/usersApi";
+import * as usersApi from "@/api/users";
 import { BadgeCheck, MessageCircle, MessageSquare, Phone } from "@lucide/vue";
 
 import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
@@ -106,10 +106,7 @@ function fetchNextPage() {
 
 onMounted(async () => {
   try {
-    const { data } = await usersApi.get<CurrentUserProfileOut>(
-      `/v1/users/profiles/${userId}`
-    );
-    profile.value = data;
+    profile.value = await usersApi.getPublicProfile(userId);
   } catch (error) {
     logger.error("Error al obtener el perfil:", error);
   }
