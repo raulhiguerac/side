@@ -44,6 +44,7 @@ export async function getAccount(): Promise<User> {
   return data;
 }
 
+// Sin uso: el backend aún no tiene DELETE /v1/users/me.
 export async function deleteAccount(): Promise<void> {
   await usersClient.delete(USERS_ENDPOINTS.me);
 }
