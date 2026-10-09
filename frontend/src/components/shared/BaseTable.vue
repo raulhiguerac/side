@@ -87,6 +87,7 @@ import {
 } from "@tanstack/vue-table";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import EmptyState from "@/components/shared/EmptyState.vue";
+import type { ColumnAlign, ColumnMeta } from "@/types/shared/ui";
 
 const props = withDefaults(
   defineProps<{
@@ -128,10 +129,8 @@ const table = useVueTable({
   getCoreRowModel: getCoreRowModel(),
 });
 
-type ColumnAlign = "left" | "right";
-
 function alignOf(columnDef: { meta?: unknown }): ColumnAlign {
-  const meta = columnDef.meta as { align?: ColumnAlign } | undefined;
+  const meta = columnDef.meta as ColumnMeta | undefined;
   return meta?.align ?? "left";
 }
 </script>

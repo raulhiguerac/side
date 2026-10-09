@@ -73,11 +73,9 @@ import AvmForm from "@/components/avm/AvmForm.vue";
 import AvmResult from "@/components/avm/AvmResult.vue";
 import MapUser from "@/components/map/MapUser.vue";
 import PageContainer from "@/components/shared/PageContainer.vue";
-import type {
-  AvmPredictRequest,
-  AvmFormPayload,
-} from "@/composables/avm/useAvmForm";
-import type { MarkerData, SelectedPlace } from "@/types/maps";
+import type { AvmSubmitEvent } from "@/types/avm/form";
+import type { AvmPredictRequest } from "@/types/avm/predict";
+import type { MarkerData, SelectedPlace } from "@/types/maps/base";
 import avmApi from "@/api/avmApi";
 import { logger } from "@/utils/logger";
 
@@ -99,11 +97,7 @@ function onPlaceSelected(data: { place: SelectedPlace }) {
   };
 }
 
-async function onSubmit(data: {
-  payload: AvmFormPayload;
-  place: SelectedPlace;
-  neighborhood: string;
-}) {
+async function onSubmit(data: AvmSubmitEvent) {
   const avmPayload: AvmPredictRequest = {
     area_m2: data.payload.area_m2,
     bedrooms: data.payload.bedrooms,

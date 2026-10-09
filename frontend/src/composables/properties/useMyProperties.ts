@@ -1,7 +1,7 @@
 import { ref } from "vue";
 import propertiesApi from "@/api/propertiesApi";
 import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
-import type { PropertyCard } from "@/types/feed";
+import type { PropertyCard } from "@/types/feed/cards";
 import { logger } from "@/utils/logger";
 
 export function useMyProperties() {

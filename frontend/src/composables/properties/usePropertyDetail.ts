@@ -1,5 +1,5 @@
 import { Ref, computed } from "vue";
-import type { PropertyDetail } from "@/types/properties";
+import type { PropertyDetail } from "@/types/properties/detail";
 import { formatCurrency } from "@/utils/money";
 import { propertyTitle } from "@/utils/property";
 

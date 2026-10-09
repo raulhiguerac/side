@@ -42,23 +42,13 @@ import { ref } from "vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
 import propertiesApi from "@/api/propertiesApi";
 import { logger } from "@/utils/logger";
+import type { BulkJobAccepted, BulkUploadUrl } from "@/types/admin/bulk";
 
 defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{
   "update:modelValue": [value: boolean];
   queued: [batchId: string];
 }>();
-
-interface BulkUploadUrl {
-  storage_key: string;
-  upload_url: string;
-  max_size_bytes: number;
-  expires_in: number;
-}
-
-interface BulkJobAccepted {
-  batch_id: string;
-}
 
 const file = ref<File | null>(null);
 const uploading = ref(false);

@@ -25,11 +25,13 @@ async function refreshTokens() {
   });
 }
 
-const AUTH_ENTRYPOINTS = ["/auth/login", "/auth/register"];
+const AUTH_ENTRYPOINTS = ["/auth/login", "/auth/register", "/auth/logout"];
 
 async function forceLogout() {
   const { useAuthStore } = await import("@/stores/auth");
-  await useAuthStore().logout();
+  const authStore = useAuthStore();
+  // Anónimo: no hay sesión que cerrar ni a dónde redirigir
+  if (authStore.isAuthenticated) await authStore.logout();
 }
 
 export function applyAuthInterceptor(instance: AxiosInstance) {

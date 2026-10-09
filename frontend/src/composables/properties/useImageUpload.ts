@@ -1,6 +1,6 @@
 import { ref } from "vue";
 import propertiesApi from "@/api/propertiesApi";
-import type { PresignedUrlsResponse } from "@/types/properties";
+import type { PresignedUrlsResponse } from "@/types/properties/images";
 
 export function useImageUpload() {
   const loading = ref(false);

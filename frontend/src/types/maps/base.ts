@@ -30,3 +30,6 @@ export interface SelectedPlace {
   longitude: number;
   address: string;
 }
+
+/** `[min_lon, min_lat, max_lon, max_lat]`. */
+export type Bbox = [number, number, number, number];

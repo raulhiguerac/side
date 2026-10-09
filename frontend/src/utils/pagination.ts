@@ -1,4 +1,4 @@
-import type { PageRange } from "@/types/pagination";
+import type { PageRange } from "@/types/shared/pagination";
 
 // Posición 1-based de los ítems visibles; {0, 0} si la página viene vacía.
 export function pageRange(

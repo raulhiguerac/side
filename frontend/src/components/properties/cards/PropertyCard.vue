@@ -210,7 +210,7 @@
 
 <script lang="ts" setup>
 import { computed } from "vue";
-import type { PropertyCardUI } from "@/types/feed";
+import type { PropertyCardUI } from "@/types/feed/cards";
 import {
   LISTING_STATUS_LABELS,
   LISTING_STATUS_BADGE_CLASSES,

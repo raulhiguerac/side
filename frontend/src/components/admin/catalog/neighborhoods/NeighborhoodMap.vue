@@ -32,7 +32,7 @@ import { LGeoJson, LMap, LTileLayer } from "@vue-leaflet/vue-leaflet";
 import * as L from "leaflet";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
 import { BRAND_COLORS } from "@/constants/brandColors";
-import type { Bbox } from "@/composables/admin/useNeighborhoodNeighbors";
+import type { Bbox } from "@/types/maps/base";
 import type { NeighborhoodGeometryItem } from "@/types/admin/catalog";
 
 const props = defineProps<{

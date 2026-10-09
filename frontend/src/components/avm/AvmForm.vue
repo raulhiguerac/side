@@ -332,18 +332,12 @@
 
 <script setup lang="ts">
 import { ref, useTemplateRef, watch } from "vue";
-import { useAvmForm, type AvmFormPayload } from "@/composables/avm/useAvmForm";
-import type { SelectedPlace } from "@/types/maps";
+import { useAvmForm } from "@/composables/avm/useAvmForm";
+import type { AvmSubmitEvent } from "@/types/avm/form";
 import { getNeighborhood } from "@/composables/catalog/useLocation";
 
 const emit = defineEmits<{
-  submit: [
-    data: {
-      payload: AvmFormPayload;
-      place: SelectedPlace;
-      neighborhood: string;
-    }
-  ];
+  submit: [data: AvmSubmitEvent];
   "place-selected": [data: { place: SelectedPlace }];
 }>();
 

@@ -65,7 +65,7 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { MarkerClusterGroup } = require("leaflet.markercluster");
-import type { MarkerData, MarkerImageType } from "@/types/maps";
+import type { MarkerData, MarkerImageType } from "@/types/maps/base";
 import { markerIconMap } from "@/constants/markerIcons";
 import { BRAND_COLORS } from "@/constants/brandColors";
 import { POI_COLORS } from "@/constants/poiColors";

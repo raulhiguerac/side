@@ -125,7 +125,7 @@
 import { ref, watch } from "vue";
 import { DollarSign } from "@lucide/vue";
 import { formatMoney, parseMoney } from "@/utils/money";
-import type { PropertyEditForm as EditForm } from "@/types/properties";
+import type { PropertyEditForm as EditForm } from "@/types/properties/forms";
 
 const props = defineProps<{ form: EditForm }>();
 const emit = defineEmits<{ (e: "update:form", v: EditForm): void }>();

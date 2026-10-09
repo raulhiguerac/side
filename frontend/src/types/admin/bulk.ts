@@ -42,3 +42,14 @@ export interface BulkJobsFilters {
   status?: string;
   has_errors?: string;
 }
+
+export interface BulkUploadUrl {
+  storage_key: string;
+  upload_url: string;
+  max_size_bytes: number;
+  expires_in: number;
+}
+
+export interface BulkJobAccepted {
+  batch_id: string;
+}

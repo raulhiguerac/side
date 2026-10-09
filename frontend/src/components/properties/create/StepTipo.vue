@@ -248,12 +248,12 @@ import {
   LISTING_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
 } from "@/constants/propertyLabels";
-import type { ListingType, PropertyType } from "@/types/feed";
+import type { ListingType, PropertyType } from "@/types/properties/base";
 import type {
   ChoiceOption,
   CreatePropertyForm,
   NumericFieldOption,
-} from "@/types/properties";
+} from "@/types/properties/forms";
 
 defineProps<{ form: CreatePropertyForm; attempted?: boolean }>();
 const emit = defineEmits<{ (e: "update:form", v: CreatePropertyForm): void }>();

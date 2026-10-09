@@ -1,6 +1,6 @@
 import catalogApi from "@/api/catalogApi";
 import { CATALOG_ENDPOINTS } from "@/constants/catalogEndpoints";
-import type { CatalogItem } from "@/types/catalog";
+import type { CatalogItem } from "@/types/catalog/base";
 import type { AdminFilterOptions } from "@/types/admin/filters";
 import { toFilterOptions } from "@/utils/adminFilters";
 

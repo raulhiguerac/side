@@ -1,5 +1,5 @@
 import type { Component } from "vue";
-import type { MarkerImageType } from "@/types/maps";
+import type { MarkerImageType } from "@/types/maps/base";
 import {
   MapPinHouse,
   Building,

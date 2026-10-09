@@ -117,9 +117,8 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
-import IntentSelector, {
-  type Intent,
-} from "@/components/onboarding/IntentSelector.vue";
+import IntentSelector from "@/components/onboarding/IntentSelector.vue";
+import type { AccountIntent } from "@/types/users/base";
 import usersApi from "@/api/usersApi";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { logger } from "@/utils/logger";
@@ -128,7 +127,7 @@ const authStore = useAuthStore();
 const isLoading = ref(false);
 const avatarPreview = ref<string | null>(null);
 const avatarFile = ref<File | null>(null);
-const intent = ref<Intent | null>(null);
+const intent = ref<AccountIntent | null>(null);
 
 const form = ref({
   first_name: "",
@@ -157,7 +156,7 @@ onMounted(() => {
       account_type: authStore.user.account_type || "person",
     };
     originalForm.value = { ...form.value };
-    intent.value = (authStore.user.intent as Intent) || null;
+    intent.value = (authStore.user.intent as AccountIntent) || null;
   }
 });
 

@@ -5,7 +5,11 @@ import axios from "axios";
 import { API, STORAGE_KEYS } from "@/config";
 import usersApi from "@/api/usersApi";
 import { useAuthStore } from "./auth";
-import type { UserLocation, UserInterests, UserState } from "@/types/user";
+import type {
+  UserLocation,
+  UserInterests,
+  UserState,
+} from "@/types/users/interests";
 
 export const useUserStore = defineStore("user", {
   state: (): UserState => ({

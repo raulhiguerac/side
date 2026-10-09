@@ -1,4 +1,5 @@
 import type { Geometry } from "geojson";
+import type { Bbox } from "@/types/maps/base";
 
 /** Fila de `GET /v1/admin/neighborhoods`: `svg_path` y `bbox` vienen nulos si el barrio no tiene geometría. */
 export interface NeighborhoodAdminRow {
@@ -9,8 +10,7 @@ export interface NeighborhoodAdminRow {
   is_active: boolean;
   has_geometry: boolean;
   svg_path: string | null;
-  /** `[min_lon, min_lat, max_lon, max_lat]`. */
-  bbox: [number, number, number, number] | null;
+  bbox: Bbox | null;
 }
 
 export interface NeighborhoodCoverage {

@@ -95,8 +95,8 @@ import { ref, onMounted, nextTick } from "vue";
 import { MapPin, Navigation, Coffee } from "@lucide/vue";
 import NearbyPlaces from "@/components/properties/detail/NearbyPlaces.vue";
 import { getNeighborhood } from "@/composables/catalog/useLocation";
-import type { CreatePropertyForm } from "@/types/properties";
-import type { SelectedPlace } from "@/types/maps";
+import type { CreatePropertyForm } from "@/types/properties/forms";
+import type { SelectedPlace } from "@/types/maps/base";
 import { mountPlaceAutocomplete } from "@/utils/placeAutocomplete";
 
 const props = defineProps<{

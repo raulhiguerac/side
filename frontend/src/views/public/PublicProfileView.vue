@@ -85,8 +85,8 @@ import { fetchUserListings } from "@/composables/users/useProfileListings";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import { usePagination } from "@/composables/shared/usePagination";
 import { PAGE_SIZE } from "@/constants/pagination";
-import type { CurrentUserProfileOut } from "@/types/user";
-import type { PropertyCard as PropertyCardData } from "@/types/feed";
+import type { CurrentUserProfileOut } from "@/types/users/profile";
+import type { PropertyCard as PropertyCardData } from "@/types/feed/cards";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { logger } from "@/utils/logger";
 

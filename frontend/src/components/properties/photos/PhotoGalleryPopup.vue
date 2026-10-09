@@ -44,7 +44,7 @@ import { Carousel, Slide } from "vue3-carousel";
 import "vue3-carousel/dist/carousel.css";
 import { ChevronLeft, ChevronRight } from "@lucide/vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
-import type { PropertyImageCard } from "@/types/feed";
+import type { PropertyImageCard } from "@/types/properties/images";
 
 const props = defineProps<{
   isOpen: boolean;

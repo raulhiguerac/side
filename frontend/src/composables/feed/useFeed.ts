@@ -1,13 +1,9 @@
 import { ref, computed } from "vue";
 import { useUserStore } from "@/stores/user";
 import propertiesApi from "@/api/propertiesApi";
-import type {
-  FeedPreferences,
-  FeedFilters,
-  FeedPage,
-  PropertyCard,
-  PageCache,
-} from "@/types/feed";
+import type { FeedPreferences, FeedFilters } from "@/types/feed/filters";
+import type { FeedPage, PageCache } from "@/types/feed/search";
+import type { PropertyCard } from "@/types/feed/cards";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
 import { logger } from "@/utils/logger";
 

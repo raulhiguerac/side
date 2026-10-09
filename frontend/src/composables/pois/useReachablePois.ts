@@ -1,26 +1,16 @@
 import { ref, computed } from "vue";
-import type { Component } from "vue";
 import catalogApi from "@/api/catalogApi";
 import { Footprints, Bike, Car } from "@lucide/vue";
+import type { OrsProfile, ProfileOption } from "@/types/pois/base";
 import type {
+  CategoryGroup,
   RangeGroup,
+  RangeWithGroups,
   ReachablePoisResult,
-  OrsProfile,
-  ProfileOption,
   ReachablePoiItem,
-} from "@/types/pois";
-import { CATEGORY_META, CATEGORY_PRIORITY } from "@/types/pois";
+} from "@/types/pois/reachable";
+import { CATEGORY_META, CATEGORY_PRIORITY } from "@/constants/poiCategories";
 import { logger } from "@/utils/logger";
-
-interface CategoryGroup {
-  label: string;
-  icon: Component;
-  pois: ReachablePoiItem[];
-}
-
-export interface RangeWithGroups extends RangeGroup {
-  groups: CategoryGroup[];
-}
 
 const DOT_BY_SECONDS: Record<number, string> = {
   300: "bg-red-500",

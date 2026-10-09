@@ -1,11 +1,6 @@
 import propertiesApi from "@/api/propertiesApi";
 import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
-import type { PropertyCard } from "@/types/feed";
-
-interface PublicUserPropertiesResponse {
-  items: PropertyCard[];
-  has_more: boolean;
-}
+import type { PublicUserPropertiesResponse } from "@/types/users/profile";
 
 export async function fetchUserListings(account_id: string, offset: number) {
   const { data } = await propertiesApi.get<PublicUserPropertiesResponse>(

@@ -51,7 +51,7 @@ import { Trash2 } from "@lucide/vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
 import propertiesApi from "@/api/propertiesApi";
 import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
-import type { PropertyImageCard } from "@/types/feed";
+import type { PropertyImageCard } from "@/types/properties/images";
 
 const props = defineProps<{
   modelValue: boolean;

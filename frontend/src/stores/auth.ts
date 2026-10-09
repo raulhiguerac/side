@@ -1,30 +1,15 @@
 import { defineStore } from "pinia";
-import axios from "axios";
 import router from "@/router";
-import { API } from "@/config";
 import usersApi from "@/api/usersApi";
 import { useUserStore } from "./user";
 import type {
-  AuthProfile,
+  AuthProfileResponse,
+  AuthState,
   AuthUser,
   RegisterPayload,
-  User as AccountUser,
-} from "@/types/user";
+} from "@/types/users/auth";
+import type { User as AccountUser } from "@/types/users/base";
 import { logger } from "@/utils/logger";
-
-interface ProfileResponse {
-  profile: AuthProfile;
-}
-
-interface AuthState {
-  user: AuthUser | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  _authChecked: boolean;
-  onboardingStep: string;
-  isAdmin: boolean;
-  accountId: string | null;
-}
 
 export const useAuthStore = defineStore("auth", {
   state: (): AuthState => ({
@@ -65,9 +50,8 @@ export const useAuthStore = defineStore("auth", {
       this.isLoading = true;
 
       try {
-        const response = await axios.get<ProfileResponse>(
-          `${API.USERS_BASE_URL}/v1/users/me/profile`,
-          { withCredentials: true }
+        const response = await usersApi.get<AuthProfileResponse>(
+          "/v1/users/me/profile"
         );
 
         this.user = response.data.profile;
@@ -116,11 +100,7 @@ export const useAuthStore = defineStore("auth", {
     /** Logout optimizado: no bloquea la transición out-in. */
     async logout(): Promise<void> {
       try {
-        await axios.post(
-          `${API.USERS_BASE_URL}/v1/auth/logout`,
-          {},
-          { withCredentials: true }
-        );
+        await usersApi.post("/v1/auth/logout", {});
       } catch (error) {
         logger.error("Error en logout:", error);
       } finally {

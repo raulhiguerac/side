@@ -1,7 +1,8 @@
 import { STORAGE_KEYS } from "@/config";
 import catalogApi from "@/api/catalogApi";
 import { useUserStore } from "@/stores/user";
-import type { CatalogItem, Locality } from "@/types/catalog";
+import type { CatalogItem, Locality } from "@/types/catalog/base";
+import type { ResolvedNeighborhood } from "@/types/catalog/neighborhoods";
 import { logger } from "@/utils/logger";
 
 export async function getCitiesByCountry(
@@ -84,13 +85,6 @@ export async function locations() {
   const countryUser: string | undefined = match?.id;
 
   return { countryDetected, countryUser };
-}
-
-export interface ResolvedNeighborhood {
-  name: string;
-  neighborhood_id: string;
-  city_id: string;
-  country_id: string;
 }
 
 export async function getNeighborhood(

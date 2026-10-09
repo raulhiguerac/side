@@ -1,4 +1,4 @@
-import type { MarkerImageType } from "@/types/maps";
+import type { MarkerImageType } from "@/types/maps/base";
 
 export const POI_COLORS: Partial<Record<MarkerImageType, string>> = {
   food: "#f97316",

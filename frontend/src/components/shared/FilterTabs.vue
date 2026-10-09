@@ -28,8 +28,9 @@
 </template>
 
 <script lang="ts" setup>
+import type { TabOption } from "@/types/shared/ui";
 defineProps<{
-  tabs: { label: string; value: string }[];
+  tabs: TabOption[];
   modelValue: string;
   getCount?: (value: string) => number;
 }>();

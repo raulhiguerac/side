@@ -72,10 +72,8 @@ import propertiesApi from "@/api/propertiesApi";
 import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
 import { LIMITS } from "@/config";
-import type {
-  PropertyDetail,
-  PropertyEditForm as EditForm,
-} from "@/types/properties";
+import type { PropertyDetail } from "@/types/properties/detail";
+import type { PropertyEditForm as EditForm } from "@/types/properties/forms";
 import { logger } from "@/utils/logger";
 
 const route = useRoute();

@@ -46,7 +46,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
-import type { PropertyDetail } from "@/types/properties";
+import type { PropertyDetail } from "@/types/properties/detail";
 import { usePropertyDetail } from "@/composables/properties/usePropertyDetail";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
 import propertiesApi from "@/api/propertiesApi";

@@ -1,7 +1,7 @@
 import { ref } from "vue";
 import axios from "axios";
-import type { CreatePropertyForm } from "@/types/properties";
-import type { SelectedPlace } from "@/types/maps";
+import type { CreatePropertyForm } from "@/types/properties/forms";
+import type { SelectedPlace } from "@/types/maps/base";
 import propertiesApi from "@/api/propertiesApi";
 
 export function useCreatePropertyForm() {

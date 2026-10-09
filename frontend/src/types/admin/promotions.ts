@@ -1,4 +1,4 @@
-import type { PropertyCard } from "@/types/feed";
+import type { PropertyCard } from "@/types/feed/cards";
 
 /** Fila de `GET /admin/promotions`: la promoción con su property anidada. */
 export interface AdminPromotionRow {

@@ -1,6 +1,7 @@
 import { ref, computed } from "vue";
 import propertiesApi from "@/api/propertiesApi";
-import type { PropertyCard, BboxPayload } from "@/types/feed";
+import type { PropertyCard } from "@/types/feed/cards";
+import type { BboxPayload } from "@/types/feed/search";
 
 export function useFeedMap() {
   const loading = ref(false);

@@ -85,11 +85,7 @@ import apartmentIcon from "@/assets/apartment.svg";
 import { useOnboarding } from "@/composables/onboarding/useOnboarding";
 import { useLocalitiesWithNames } from "@/composables/catalog/useLocalitiesWithNames";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
-
-interface City {
-  id: string;
-  name: string;
-}
+import type { CatalogItem } from "@/types/catalog/base";
 
 const { savePropertyTypes } = useOnboarding();
 const { load: loadLocalities } = useLocalitiesWithNames();
@@ -99,7 +95,7 @@ const propertyTypes = [
   { value: "house", label: "Casa", icon: houseIcon },
 ];
 
-const cities = ref<City[]>([]);
+const cities = ref<CatalogItem[]>([]);
 const selections = ref<Record<string, string[]>>({});
 const activeTab = ref("");
 const isLoading = ref(true);

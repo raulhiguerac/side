@@ -67,7 +67,7 @@ import {
   LISTING_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
 } from "@/constants/propertyLabels";
-import type { CreatePropertyForm } from "@/types/properties";
+import type { CreatePropertyForm } from "@/types/properties/forms";
 
 const props = defineProps<{ form: CreatePropertyForm }>();
 

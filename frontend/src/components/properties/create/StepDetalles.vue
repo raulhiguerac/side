@@ -270,7 +270,7 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { DollarSign, Car, Layers, Calendar } from "@lucide/vue";
-import type { CreatePropertyForm } from "@/types/properties";
+import type { CreatePropertyForm } from "@/types/properties/forms";
 import { formatMoney, parseMoney } from "@/utils/money";
 
 const props = defineProps<{ form: CreatePropertyForm; attempted?: boolean }>();

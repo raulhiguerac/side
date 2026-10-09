@@ -1,32 +1,11 @@
 import { ref, reactive, computed, watch, nextTick, type Ref } from "vue";
-import type { SelectedPlace } from "@/types/maps";
+import type { SelectedPlace } from "@/types/maps/base";
+import type {
+  AvmFormPayload,
+  AvmFormState,
+  AvmStepperKey,
+} from "@/types/avm/form";
 import { mountPlaceAutocomplete } from "@/utils/placeAutocomplete";
-
-export interface AvmFormPayload {
-  property_type: "apartment" | "house";
-  area_m2: number;
-  bedrooms: number;
-  bathrooms: number;
-  parking_spots: number;
-  stratum: number;
-  year_built: number | null;
-}
-
-export interface AvmPredictRequest extends AvmFormPayload {
-  lat: number;
-  lon: number;
-  barrio_ideca: string;
-}
-
-interface AvmFormState {
-  property_type: "apartment" | "house";
-  area_m2: number | null;
-  bedrooms: number;
-  bathrooms: number;
-  parking_spots: number;
-  stratum: number;
-  year_built: number | null;
-}
 
 export function useAvmForm(autocompleteContainer: Ref<HTMLDivElement | null>) {
   const step = ref(1);
@@ -80,13 +59,11 @@ export function useAvmForm(autocompleteContainer: Ref<HTMLDivElement | null>) {
     if (canAdvance.value) step.value++;
   }
 
-  type StepperKey = "bedrooms" | "bathrooms" | "parking_spots";
-
-  function increment(key: StepperKey, inc: number, max: number) {
+  function increment(key: AvmStepperKey, inc: number, max: number) {
     if (form[key] < max) form[key] = Math.round((form[key] + inc) * 10) / 10;
   }
 
-  function decrement(key: StepperKey, inc: number, min: number) {
+  function decrement(key: AvmStepperKey, inc: number, min: number) {
     if (form[key] > min) form[key] = Math.round((form[key] - inc) * 10) / 10;
   }
 

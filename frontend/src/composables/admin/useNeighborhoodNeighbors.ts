@@ -2,9 +2,8 @@ import { ref } from "vue";
 import catalogApi from "@/api/catalogApi";
 import { CATALOG_ENDPOINTS } from "@/constants/catalogEndpoints";
 import type { NeighborhoodGeometryItem } from "@/types/admin/catalog";
+import type { Bbox } from "@/types/maps/base";
 import { logger } from "@/utils/logger";
-
-export type Bbox = [number, number, number, number];
 
 /** Los vecinos son contexto: si fallan (p. ej. bbox mayor al tope del backend) el mapa queda sin ellos. */
 export function useNeighborhoodNeighbors() {
