@@ -10,3 +10,5 @@ export type ColumnAlign = "left" | "right";
 export interface ColumnMeta {
   align?: ColumnAlign;
 }
+
+export type MessageVariant = "error" | "success";

@@ -37,3 +37,11 @@ export interface ProfileUpdatePayload {
   phone: string;
   description: string;
 }
+
+export interface ProfileForm extends ProfileUpdatePayload {
+  account_type: "person" | "organization";
+}
+
+export interface PhotoUploadOut {
+  photo_url: string;
+}

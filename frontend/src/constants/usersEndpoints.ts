@@ -8,6 +8,7 @@ export const USERS_ENDPOINTS = {
   me: "/v1/users/me",
   interests: "/v1/users/me/interests",
   profile: "/v1/users/me/profile",
+  profilePhoto: "/v1/users/me/profile/photo",
   deactivate: "/v1/users/me/deactivate",
   publicProfile: (accountId: string) => `/v1/users/profiles/${accountId}`,
   onboardingIntent: "/v1/onboarding/intent",

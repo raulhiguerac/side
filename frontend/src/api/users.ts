@@ -13,6 +13,7 @@ import type {
 } from "@/types/users/interests";
 import type {
   CurrentUserProfileOut,
+  PhotoUploadOut,
   ProfileUpdatePayload,
 } from "@/types/users/profile";
 
@@ -62,6 +63,16 @@ export async function updateProfile(
   payload: ProfileUpdatePayload
 ): Promise<void> {
   await usersClient.patch(USERS_ENDPOINTS.profile, payload);
+}
+
+export async function uploadProfilePhoto(file: File): Promise<PhotoUploadOut> {
+  const body = new FormData();
+  body.append("file", file);
+  const { data } = await usersClient.post<PhotoUploadOut>(
+    USERS_ENDPOINTS.profilePhoto,
+    body
+  );
+  return data;
 }
 
 export async function getPublicProfile(

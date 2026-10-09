@@ -10,6 +10,8 @@ export const LOCALE = "es-CO";
 
 export const LIMITS = {
   MAX_IMAGES_PER_PROPERTY: 20,
+  MAX_PROFILE_PHOTO_BYTES: 5 * 1024 * 1024,
+  PROFILE_PHOTO_TYPES: ["image/jpeg", "image/png", "image/webp"],
 };
 
 export const STORAGE_KEYS = {
