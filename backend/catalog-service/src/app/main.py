@@ -13,6 +13,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Catalog ms",
         version="0.1.0",
+        generate_unique_id_function=lambda route: route.name,
     )
 
     app.add_middleware(
