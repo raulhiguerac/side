@@ -1,13 +1,13 @@
 ---
 title: ADR-0001 — Vue CLI hoy, migración a Vite diferida
 status: stable
-last-verified: 2026-07-28
+last-verified: 2026-10-05
 owners: [frontend]
 related:
   - "[[frontend]]"
   - "[[frontend-architecture]]"
   - "[[adr-no-component-library]]"
-sources: [../../../sources/frontend/2026-05-21-foundational-qa.md, ../../../sources/frontend/2026-07-28-admin-panel-groundwork.md]
+sources: [../../../sources/frontend/2026-05-21-foundational-qa.md, ../../../sources/frontend/2026-07-28-admin-panel-groundwork.md, ../../../sources/_shared/2026-10-05-stacked-prs-and-roadmap.md]
 decision-date: 2026-05-21
 decision-status: accepted
 ---
@@ -68,6 +68,7 @@ Aceptamos la deuda técnica explícitamente — no es "olvidado", es "diferido".
 - ❌ Dev experience degradado vs Vite — HMR más lento, builds más largos.
 - ❌ Algunas libs nuevas asumen Vite (ej. ciertos Vue plugins recientes); puede haber roces al instalar.
 - ❌ El comment en `vue.config.js` ya menciona un PR sin merge — riesgo de quedar sin maintenance upstream antes de migrar.
+- ➖ **Nota 2026-10-05:** diferir no bloquea los tests. Vitest corre con su propio `vitest.config.ts` (plugin de Vue y alias `@`), aparte del build de Vue CLI, así que testear composables no espera a esta migración.
 
 ## Migration outline (futuro)
 

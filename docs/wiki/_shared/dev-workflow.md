@@ -10,6 +10,7 @@ related:
   - "[[adr-seaweedfs-dev-object-storage]]"
 sources:
   - ../../sources/_shared/2026-05-23-repo-tooling-claude-md-precommit.md
+  - ../../sources/_shared/2026-10-05-stacked-prs-and-roadmap.md
   - ../../sources/_shared/2026-09-07-entorno-dev-migrable.md
   - ../../sources/_shared/2026-09-27-minio-a-seaweedfs-y-rclone.md
 ---
@@ -93,6 +94,20 @@ El devcontainer lo hace automático vía `postCreateCommand`. En el host hay que
 ### Por qué pipx y no pip
 
 `pipx` instala herramientas CLI en virtualenvs aislados con el binario disponible en PATH. Evita conflictos con el Python del sistema (que en Debian/Ubuntu está marcado como "externally managed").
+
+## Ramas y PRs (2026-10-05)
+
+`feat/front-admin-panel` llegó a 50 commits por delante de `main`, mezclando backend, panel admin, catálogo y refactors, y no había forma de revisarla como un solo PR. Las reglas que salieron:
+
+- **Una rama por tema, con los refactors aparte de las features.** Una rama de feature no acumula trabajo de otros servicios.
+- **Merge commit en GitHub**, no squash, para conservar los commits atómicos.
+- **Partir una rama ya hecha:** cherry-pick a **ramas apiladas** que salen de `main`, cada PR con base en la rama anterior. El orden lo fijan las dependencias: en ese caso, build verde del front → backend de properties → panel de properties → catálogo → refactors.
+  - Los ingest de docs viajan con la rama donde ya existe el código que describen.
+  - **Un commit que mezcla backend y front se parte en dos.** En la rama de backend: `git cherry-pick -n <sha>`, `git rm` de lo del front y `git commit -C <sha>`. En la rama del front: cherry-pick normal, resolviendo con `--ours` los archivos de backend, que ya están.
+  - **Prueba de que no se perdió nada:** el `git diff` entre la última rama (más las independientes) y la original tiene que dar vacío.
+  - Conviene hacerlo en un `git worktree` aparte, para no tocar los cambios sin commitear. Dentro del devcontainer, git necesita `safe.directory` para ese worktree.
+- **Al mergear un PR de la pila, GitHub reapunta solo el siguiente a `main`**, aunque `deleteBranchOnMerge` esté apagado.
+- **No mergear un PR contra una base que ya entró a `main`:** sus commits quedan fuera. Pasó con #20, y se resolvió abriendo un PR nuevo de la misma rama contra `main` (#21), sin revertir nada.
 
 ## Harness — checks automáticos (2026-10-09)
 
