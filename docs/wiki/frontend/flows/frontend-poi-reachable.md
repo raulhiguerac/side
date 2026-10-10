@@ -1,7 +1,7 @@
 ---
 title: Flujo POIs alcanzables — NearbyPlaces
 status: stable
-last-verified: 2026-06-25
+last-verified: 2026-10-09
 owners: [frontend]
 related:
   - "[[frontend-map-component]]"
@@ -13,6 +13,7 @@ sources:
   - ../../sources/frontend/2026-06-15-poi-detail-view-mapuser-cluster.md
   - ../../sources/frontend/2026-06-20-property-detail-view-refactor.md
   - ../../sources/frontend/2026-06-25-property-create-form-and-nearby-fixes.md
+  - ../../sources/frontend/2026-10-09-api-layer-map-cluster-and-typecheck.md
 ---
 
 ## TL;DR
@@ -23,7 +24,9 @@ sources:
 
 A diferencia de otros datos de la propiedad (que `PropertyDetailView` resuelve via `usePropertyDetail` y pasa hacia abajo ya computados), `useReachablePois` depende de un fetch async que solo puede arrancar cuando la propiedad ya cargó (necesita `lat`/`lon`/`propertyId`). En vez de que la view orqueste ese timing, `NearbyPlaces` es dueño del composable y llama `loadPois(lat, lon, propertyId)` en su propio `onMounted` — queda autocontenido, la view solo lo monta con 3 props cuando `property.location` existe.
 
-## Tipos — `types/pois.ts`
+## Tipos — `types/pois/` y constantes en `constants/poiCategories.ts`
+
+Desde el 2026-10-09 los tipos están repartidos: `types/pois/base.ts` (`OrsProfile`, `ProfileOption`, `CategoryMeta`) y `types/pois/reachable.ts` (la respuesta, `RangeGroup`, `CategoryGroup`, `RangeWithGroups` y el body `ReachablePoisRequest`). Las constantes `CATEGORY_PRIORITY`, `PRIORITY_CATEGORIES` y `CATEGORY_META` —que importan iconos de lucide— salieron de `types/` a `constants/poiCategories.ts`.
 
 ```ts
 export type OrsProfile = "foot-walking" | "cycling-regular" | "driving-car";
@@ -63,7 +66,7 @@ export interface CategoryMeta {
 
 ## Composable `useReachablePois` (`composables/pois/useReachablePois.ts`)
 
-Un solo POST con todos los rangos y perfiles:
+Un solo POST con todos los rangos y perfiles, vía `catalogApi.getReachablePois(payload)` (`api/catalog.ts`):
 
 ```ts
 POST /v1/geo-resolution/reachable-pois
@@ -110,7 +113,7 @@ Componente reusable (`components/map/MapLegend.vue`) en la misma fila que los ch
 - `MapUser` con `:min-zoom="12"` y `v-model:center="mapCenterCoords"`.
 - `mapCenterCoords: Ref<[number, number] | undefined>` — ref local en `NearbyPlaces`, inicializado en el propio `script setup` desde los props `lat`/`lon` (no un computed del composable, para evitar cast inválido en `v-model`).
 - **Isocronas** en slot: `[...groupedByRange].reverse()` para que el polígono de 15 min (más grande) quede debajo, 5 min (más pequeño) encima. `fill-opacity=0.3`, sin borde (`opacity=0`, `weight=0`).
-- **POI markers**: `poiMarkers` computed — itera todos los grupos del perfil activo, deduplica por `${lat},${lon}`, asigna `imageType` via `CATEGORY_META[poi.category ?? ""]?.bucket ?? "poi"`, y arma `label`/`categoryLabel`/`address`/`phone`/`website` para el popup del marker (ver [[frontend-map-component]]).
+- **POI markers**: `poiMarkers` computed — itera todos los grupos del perfil activo, deduplica por `${lat},${lon}`, asigna `imageType` via `CATEGORY_META[poi.category ?? ""]?.bucket ?? "poi"`, y arma `label`/`categoryLabel`/`address`/`phone`/`website` para el popup (`PoiPopup`, ver [[frontend-map-component]]). Desde el 2026-10-09 cada POI se dibuja como un círculo del color de su categoría con su icono de lucide, ya no como un punto.
 
 ### Subject marker
 `mapCenterCoords` genera un marker tipo `"subject"` (el pin de la propiedad misma) que siempre aparece en el mapa independientemente del perfil activo.
@@ -134,12 +137,12 @@ Tanto la fila de chips+leyenda como la fila de POIs+mapa son `flex-col` por defa
 
 - `NearbyPlaces.vue` recibe `lat`, `lon`, `propertyId` como props y llama `loadPois` en su propio `onMounted` — no depende de que la view padre orqueste el timing del fetch ([NearbyPlaces.vue](frontend/src/components/properties/detail/NearbyPlaces.vue)).
 - El spinner usa `v-show` (no `v-if`) para que el contenedor Leaflet exista en DOM desde el `onMounted`; al terminar la carga, un `watch` dispara `window.dispatchEvent(new Event("resize"))` para forzar `invalidateSize` ([NearbyPlaces.vue](frontend/src/components/properties/detail/NearbyPlaces.vue)).
-- `useReachablePois` hace un único `POST /v1/geo-resolution/reachable-pois` con `range_seconds: [300, 600, 900]` y los 3 perfiles — 9 resultados en una sola llamada ([composables/pois/useReachablePois.ts](frontend/src/composables/pois/useReachablePois.ts)).
+- `useReachablePois` hace un único `POST /v1/geo-resolution/reachable-pois` vía `catalogApi.getReachablePois`, con `range_seconds: [300, 600, 900]` y los 3 perfiles — 9 resultados en una sola llamada ([composables/pois/useReachablePois.ts:27](frontend/src/composables/pois/useReachablePois.ts#L27)).
 - `groupedByRange` filtra por `activeProfile` y agrupa por `CATEGORY_META[category].label` — máx 8 grupos × 2 POIs; ordena por `CATEGORY_PRIORITY` ([composables/pois/useReachablePois.ts](frontend/src/composables/pois/useReachablePois.ts)).
 - POIs donde `name === category` se filtran — son nodos OSM sin nombre real ([composables/pois/useReachablePois.ts](frontend/src/composables/pois/useReachablePois.ts)).
-- `CategoryMeta` tiene un campo `bucket: MarkerImageType` — única fuente de verdad categoría OSM → color de marker, reemplaza al objeto `CATEGORY_TO_MARKER` que existía duplicado en el componente ([types/pois.ts](frontend/src/types/pois.ts)).
-- `mapCenterCoords` es un `ref<[number, number] | undefined>()` local en `NearbyPlaces`, no un computed del composable — evita cast `as [number, number]` inválido en `v-model` ([components/properties/NearbyPlaces.vue](frontend/src/components/properties/NearbyPlaces.vue)).
-- Las isocronas en el slot de `MapUser` se renderizan con `[...groupedByRange].reverse()` para que el polígono mayor (15 min) quede debajo del menor (5 min) ([components/properties/NearbyPlaces.vue](frontend/src/components/properties/NearbyPlaces.vue)).
-- `poiMarkers` deduplica por `\`${lat},${lon}\`` — evita markers solapados cuando el mismo POI aparece en varios rangos ([components/properties/NearbyPlaces.vue](frontend/src/components/properties/NearbyPlaces.vue)).
-- `types/pois.ts` contiene `OrsProfile`, `GeoJsonPolygon`, `ReachablePoiItem`, `ReachablePoisResult`, `RangeGroup`, `CATEGORY_PRIORITY`, `CATEGORY_META`, `PRIORITY_CATEGORIES` ([types/pois.ts](frontend/src/types/pois.ts)).
+- `CategoryMeta` tiene un campo `bucket: MarkerImageType` — única fuente de verdad categoría OSM → color de marker ([types/pois/base.ts:13](frontend/src/types/pois/base.ts#L13)).
+- `mapCenterCoords` es un `ref<[number, number] | undefined>()` local en `NearbyPlaces`, no un computed del composable — evita cast `as [number, number]` inválido en `v-model` ([components/properties/detail/NearbyPlaces.vue](frontend/src/components/properties/detail/NearbyPlaces.vue)).
+- Las isocronas en el slot de `MapUser` se renderizan con `[...groupedByRange].reverse()` para que el polígono mayor (15 min) quede debajo del menor (5 min) ([components/properties/detail/NearbyPlaces.vue](frontend/src/components/properties/detail/NearbyPlaces.vue)).
+- `poiMarkers` deduplica por `` `${lat},${lon}` `` — evita markers solapados cuando el mismo POI aparece en varios rangos ([components/properties/detail/NearbyPlaces.vue](frontend/src/components/properties/detail/NearbyPlaces.vue)).
+- `CATEGORY_PRIORITY`, `PRIORITY_CATEGORIES` y `CATEGORY_META` viven en `constants/poiCategories.ts`; los tipos de POIs en `types/pois/base.ts` y `types/pois/reachable.ts` ([constants/poiCategories.ts](frontend/src/constants/poiCategories.ts), [types/pois/](frontend/src/types/pois)).
 - `MapLegend.vue` (`components/map/`) itera `POI_COLORS`/`POI_BUCKET_LABELS` de `constants/poiColors.ts` — reusable, sin estado propio ([components/map/MapLegend.vue](frontend/src/components/map/MapLegend.vue)).

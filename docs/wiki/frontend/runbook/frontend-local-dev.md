@@ -1,7 +1,7 @@
 ---
 title: Runbook — frontend local dev
 status: draft
-last-verified: 2026-10-04
+last-verified: 2026-10-09
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -14,6 +14,7 @@ sources:
   - ../../../sources/frontend/2026-07-13-vscode-port-forwarding-breaks-requests.md
   - ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md
   - ../../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md
+  - ../../../sources/frontend/2026-10-09-api-layer-map-cluster-and-typecheck.md
   - ../../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md
 ---
 
@@ -148,7 +149,7 @@ npm run build
 
 Salida: `dist/` con assets estáticos. Deploy planeado en bucket público (ver [[adr-hash-history-static-hosting]]). **Update 2026-09-28:** el destino no está definido. La alternativa en exploración es servir `dist/` desde el clúster de `infra/k8s`, con `/api/*` en el Gateway; si se elige, ese ADR queda superseded.
 
-⚠️ **Hoy `npm run build` falla**: `vue-cli-service build` corre ESLint y aborta ([[open-items]]).
+`npm run build` está verde (re-verificado el 2026-10-09). Ojo: **solo corre ESLint**, no typecheckea los `.vue` — ver "Typecheck" abajo.
 
 **Sin pipeline de CI/CD al 2026-09-28**: no existe `.github/workflows`, así que ni lint, ni typecheck, ni build corren solos.
 
@@ -160,11 +161,27 @@ npm run lint
 
 Configurado con ESLint + `@vue/eslint-config-typescript` + Prettier. Hay un `.eslintrc.js` en el root del frontend.
 
+Si se corre ESLint a mano, hay que pasar las extensiones: `eslint src` a secas **no revisa los `.vue`**.
+
+```bash
+node_modules/.bin/eslint --ext .ts,.vue src
+```
+
+## Typecheck
+
+`vue-tsc` no está en `devDependencies` y **ni el build ni `tsc --noEmit` typecheckean los `.vue`** (`tsc` no los lee; el build solo corre ESLint). La única verificación real, con versiones fijadas para no chocar con el TS 5.0 del proyecto:
+
+```bash
+npx -p vue-tsc@2 -p typescript@5.6 vue-tsc --noEmit -p tsconfig.json
+```
+
+`npx vue-tsc` sin fijar versiones baja un TypeScript incompatible y aborta (`ERR_PACKAGE_PATH_NOT_EXPORTED` o `TS5101`). Desde el 2026-10-09 da 0 errores y es el script `npm run typecheck` (lo usan el hook `Stop` y `make audit`, ver [[dev-workflow]] "Harness"). Sin correrlo se habían colado dos errores de tipos en #22 y #23.
+
 ## Tests
 
 **Sin tooling de tests ni de typecheck al 2026-09-28**:
 - No `vitest` ni `@vue/test-utils` en `devDependencies`.
-- No `vue-tsc`: nada chequea tipos fuera del editor.
+- No `vue-tsc` en `devDependencies`: corre con el `npx` fijado del script `typecheck` (sección "Typecheck").
 - No directorio `tests/` ni `__tests__/`.
 - No script `test` en `package.json`.
 
@@ -206,11 +223,12 @@ npm run build -- --report   # genera dist/report.html (webpack-bundle-analyzer)
 
 - Script `npm run serve` invoca `vue-cli-service serve`, port default 8080 ([package.json:6](frontend/package.json#L6)).
 - Script `npm run build` invoca `vue-cli-service build` y produce `dist/` ([package.json:7](frontend/package.json#L7)).
-- Env vars del frontend usan prefijo `VUE_APP_*` (requerido por Vue CLI 5) ([.env.example](frontend/.env.example)).
+- Env vars del frontend usan prefijo `VUE_APP_*` (requerido por Vue CLI 5) ([.env.development](frontend/.env.development)).
 - En dev, si no se setean `VUE_APP_*_URL`, `config/index.ts` usa paths de proxy (`/api/users`, etc.) — el proxy de `vue.config.js` los reenvía al backend correspondiente ([config/index.ts](frontend/src/config/index.ts), [vue.config.js](frontend/vue.config.js)).
 - El proxy webpack es obligatorio en Chrome con devcontainer: subresource requests cross-port a localhost quedan stalled indefinidamente por la interacción de VS Code port forwarding con el keep-alive de Chrome ([vue.config.js](frontend/vue.config.js)).
 - El devcontainer ([.devcontainer/Dockerfile](.devcontainer/Dockerfile)) incluye Node 24 + uv + pnpm preinstalados.
 - `forwardPorts` del devcontainer reenvía 8000-8003, 8080, 8180, 8888, 5050 y 5540 — el 8080 es justo el que usa Vue CLI por default ([devcontainer.json](.devcontainer/devcontainer.json)).
 - Backends NO están como service en el compose — se corren manualmente desde dentro del devcontainer (mismo patrón que [[analytics-service-local-dev]] y [[catalog-service-local-dev]]).
 - No hay tests configurados (ningún framework de test en `devDependencies`).
+- `vue-tsc` no está en `devDependencies`: el script `typecheck` lo baja con `npx` y versiones fijadas, y `vue-cli-service build` no lo invoca ([package.json](frontend/package.json)).
 - Un `WARNING uvicorn.error: Invalid HTTP request received.` en el log de un backend, junto con un 400 de body vacío en el frontend, indica un problema de transporte (proxy/port-forwarding) antes de descartar el código de la app — verificar con `lsof -iTCP:<puerto>` quién escucha realmente ese puerto.

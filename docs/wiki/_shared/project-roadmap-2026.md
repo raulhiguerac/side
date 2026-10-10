@@ -1,7 +1,7 @@
 ---
 title: Project roadmap 2026
 status: stable
-last-verified: 2026-07-13
+last-verified: 2026-10-05
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -10,7 +10,7 @@ related:
   - "[[properties-service]]"
   - "[[frontend]]"
   - "[[avm-training]]"
-sources: [../../sources/_shared/2026-05-29-project-roadmap.md, ../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md]
+sources: [../../sources/_shared/2026-05-29-project-roadmap.md, ../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md, ../../sources/_shared/2026-10-05-stacked-prs-and-roadmap.md, ../../sources/_shared/2026-10-05-public-demo-deploy-gke-cloudflare.md, ../../sources/_shared/2026-10-05-stateless-cluster-external-data.md]
 ---
 
 ## TL;DR
@@ -70,6 +70,41 @@ Prioridad: forms básicos de Fase 2 primero, luego infra, luego diferenciadores.
 - Pipeline: lint → test → build → push → deploy.
 - GitHub Actions. Backup etcd para disaster recovery.
 
+### Update 2026-10-05 — demo pública y plan de 6 semanas
+
+**Destino de la demo:** GKE pagado con el crédito de GCP. Cloudflare va delante:
+- **Tunnel:** `cloudflared` como Deployment, sin Load Balancer ni IP pública.
+- **R2** como object storage en cloud; SeaweedFS sigue en local.
+- **El front** en Pages o R2 detrás del CDN.
+
+El control plane entra en el crédito mensual de GKE para un cluster zonal o Autopilot. El crédito dura 90 días, así que el Helm + Argo ApplicationSet se arman con values por entorno para mudarse a un VPS (Hetzner, Oracle) o a local sin cambiar manifiestos. Los pendientes concretos están en [[open-items]], sección "Demo pública (GKE + Cloudflare)".
+
+El cluster no guarda estado que importe: Postgres va en Neon, con un proyecto por servicio más Keycloak, y los objetos en R2. Redis, Kafka y ORS corren dentro, como piezas reemplazables ([[adr-stateless-cluster-external-data]]):
+
+```
+INTERNET → CLOUDFLARE (DNS · CDN · WAF · DDoS · rate limit)
+  ├─ app.<dominio> → Pages / R2   (SPA estática)
+  ├─ cdn.<dominio> → R2 público   (fotos)
+  └─ api.<dominio> → Tunnel → GKE (sin IP pública)
+                              ├─ 4 servicios + Keycloak (stateless)
+                              ├─ Redis efímero · Kafka con PVC · ORS (grafo desde R2)
+                              ├─→ Neon (Postgres + PostGIS, misma región)
+                              └─→ R2 privado (CSV, modelo) vía S3
+```
+
+**Plan a 2–3 h/día, 5 días por semana** (unas 6,5 semanas, ~65–95 h):
+
+| Semana | Bloque | Horas estimadas |
+|---|---|---|
+| 1 | Vitest + CI (lint, typecheck, tests de composables) y bug del reimport | 10–16 |
+| 2 | Modales reales del panel de barrios | 8–12 |
+| 3 | Loop del AVM: consumer de `price-predicted`, arranque del worker, precio expuesto y visible | 12–20 |
+| 4 | Infra: Argo + Helm + ApplicationSet, primer deploy | según el autor, 3–5 días |
+| 5 | Netpols, deploy estable, empezar el catálogo mínimo | — |
+| 6 | Catálogo mínimo (listar y activar/desactivar localidades, divisiones y países), margen y demo de punta a punta | 20–30 con los `GET` admin |
+
+El AVM va antes que la infra a propósito: es lo que más puede sorprender. Si la infra lleva 3–5 días completos y no sesiones, el catálogo mínimo queda como stretch. Vitest no espera a la migración a Vite (ver [[adr-vue-cli-deferred-vite-migration]]).
+
 ## Fase 5 — Diferenciadores ⏳
 
 ### Score de oportunidad de inversión (alta prioridad)
@@ -118,7 +153,7 @@ Prioridad: forms básicos de Fase 2 primero, luego infra, luego diferenciadores.
 - [ ] DWH para heatmap: ¿BigQuery managed o DuckDB self-hosted sobre MinIO?
 - [ ] notifications-ms: ¿mismo Keycloak o token propio para push?
 - [ ] payments-ms: ¿Stripe o Wompi/PSE como PSP primario?
-- [ ] Infra: ¿GKE/EKS managed en prod o VPS con k3s?
+- [ ] Infra: ¿GKE/EKS managed en prod o VPS con k3s? **Para la demo, resuelto 2026-10-05:** GKE con crédito y portable a VPS. Para producción sigue abierta.
 - [ ] Supply inicial: ¿listings de venta, arriendo, o ambos?
 
 ## Claims

@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-10-05
+last-verified: 2026-10-09
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -13,6 +13,8 @@ related:
   - "[[frontend-onboarding-flow]]"
   - "[[frontend-admin-panel]]"
   - "[[frontend-map-component]]"
+  - "[[adr-api-layer-by-domain]]"
+  - "[[adr-feed-map-whole-bbox-cluster]]"
   - "[[frontend-poi-reachable]]"
   - "[[frontend-property-create-form]]"
   - "[[frontend-property-edit-form]]"
@@ -44,11 +46,12 @@ sources:
   - ../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md
   - ../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md
   - ../../sources/frontend/2026-10-05-admin-actions-and-front-smell-audit.md
+  - ../../sources/frontend/2026-10-09-api-layer-map-cluster-and-typecheck.md
 ---
 
 ## TL;DR
 
-SPA Vue 3 + TypeScript organizada en `views/` (páginas-ruta), `components/` (presentación reusable), `stores/` (Pinia, estado global), `composables/` (lógica reusable async), `types/` (DTOs) y `config/` (env). Sin "service layer" formal — los stores y composables hacen HTTP directo con axios. Caching local manual en `localStorage`/`sessionStorage`. Auth cookie-based con `withCredentials: true`. Router con guard global de auth.
+SPA Vue 3 + TypeScript organizada en `views/` (páginas-ruta), `components/` (presentación reusable), `stores/` (Pinia, estado global), `composables/` (lógica con estado), `api/` (HTTP), `types/<dominio>/` (shapes) y `config/` (env). Desde el 2026-10-09 todo el HTTP pasa por funciones tipadas de `api/` sobre clientes axios con interceptor ([[adr-api-layer-by-domain]]). Caching local manual en `localStorage`/`sessionStorage`. Auth cookie-based con `withCredentials: true`. Router con guard global de auth.
 
 ## Layout
 
@@ -80,59 +83,52 @@ frontend/
 │   ├── stores/                   # Pinia
 │   │   ├── auth.ts
 │   │   └── user.ts
-│   ├── composables/
-│   │   ├── useOnboarding.ts
-│   │   ├── Location.ts
-│   │   ├── pois/
-│   │   │   └── useReachablePois.ts    # POIs alcanzables desde una propiedad (3 perfiles × 3 rangos)
-│   │   ├── shared/
-│   │   │   └── usePagination.ts       # slice client-side genérico; pagina por red vía fetchMore; replaceCurrentPage para refrescar in situ
-│   │   ├── properties/
-│   │   │   ├── usePropertyDetail.ts   # computed logic de PropertyDetailView
-│   │   │   ├── usePropertyMapper.ts   # PropertyCard → PropertyCardUI con lookup de barrio
-│   │   │   ├── usePropertyVisibility.ts  # toggleVisibility(id): Promise<boolean>, sin estado
-│   │   │   └── useMyProperties.ts     # { properties, isLoading, fetchProperties } — mismo molde que useFeed
-│   │   ├── admin/
-│   │   │   ├── useAdminProperties.ts  # listado admin: usePagination + serverTotal aparte + reload() de la página actual
-│   │   │   ├── useActivePromotions.ts # promociones vigentes: pagina por servidor + remove()
-│   │   │   ├── useModerateProperty.ts # traduce el payload del form a uno o dos PATCH
-│   │   │   ├── usePromoteProperty.ts  # POST de promoción; distingue los dos 409 por `code`
-│   │   │   ├── useRowSelection.ts     # selección de fila válida frente a cambios de la lista, con extractor de clave
-│   │   │   ├── useUrlFilters.ts       # filtros admin ↔ query: urlFilters saneados, pushFilters y carga con immediate
-│   │   │   ├── useAdminNeighborhoods.ts  # listado admin de barrios: página por servidor, sin cache incremental
-│   │   │   ├── useNeighborhoodDetail.ts  # detalle de la fila elegida; descarta respuestas viejas
-│   │   │   └── useNeighborhoodNeighbors.ts  # vecinos por bbox (bbox repetido en la query)
-│   │   └── users/
-│   │       └── useProfileListings.ts  # fetchUserListings(id, offset) — función pura, sin estado (la paginación vive en usePagination)
-│   ├── api/                       # instancias axios por servicio + catalogOptions (opciones de país/localidad para filtros)
+│   ├── composables/               # lógica con estado; un subdirectorio por dominio
+│   │   ├── admin/                 # listados, moderación, promociones, filtros en URL, barrios — ver [[frontend-admin-panel]]
+│   │   ├── avm/useAvmForm.ts
+│   │   ├── catalog/               # useCities, useLocalitiesWithNames, useLocation, useNeighborhoodLookup (funciones con caché, no composables)
+│   │   ├── feed/{useFeed, useFeedMap}.ts
+│   │   ├── map/useMarkerCluster.ts      # cluster maker genérico — ver [[frontend-map-component]]
+│   │   ├── onboarding/useOnboarding.ts  # guarda pasos; el modal lo controla el padre — ver [[frontend-onboarding-flow]]
+│   │   ├── pois/useReachablePois.ts
+│   │   ├── properties/            # useCreatePropertyForm, useImageUpload, useMyProperties, usePropertyDetail, usePropertyMapper, usePropertyVisibility
+│   │   ├── shared/                # usePagination, useMultiselect, useInfiniteScroll (centinela + IntersectionObserver)
+│   │   └── users/                 # useProfileSettings, useAccountSettings, useProfileListings
+│   ├── api/                       # todo el HTTP — ver [[adr-api-layer-by-domain]]
+│   │   ├── clients/{users, catalog, properties, avm, interceptors}.ts   # instancias axios + interceptor de refresh
+│   │   ├── {users, catalog, properties, avm}.ts                         # una función tipada por endpoint, devuelve `data`
+│   │   └── admin/{properties, catalog}.ts                              # endpoints admin + loaders de opciones de filtros
 │   ├── utils/
 │   │   ├── money.ts               # formatMoney/parseMoney (inputs) + formatCurrency (display)
 │   │   ├── number.ts              # formatNumber, formatArea (m² / km²)
 │   │   ├── date.ts                # formatShortDate, formatShortDateTime, formatLongDateTime — Intl construido una vez a nivel módulo
 │   │   ├── pagination.ts          # pageRange(page, pageSize, shown) → { from, to }
-│   │   ├── property.ts            # propertyTitle(type, listing) → "Apartamento en venta"
+│   │   ├── property.ts            # propertyTitle(type, listing), cityIdsOf(cards)
+│   │   ├── feedMap.ts             # sortForMap: promocionadas, luego distancia al centro del bbox
+│   │   ├── markerIcon.ts          # markerIcon / clusterIcon (lucide renderizado y cacheado)
+│   │   ├── renderToElement.ts     # renderiza un componente Vue a HTMLElement para APIs fuera de Vue (Leaflet)
 │   │   ├── placeAutocomplete.ts   # monta el autocompletado de Google Places (AVM y alta de propiedades)
 │   │   ├── adminFilters.ts        # sanitizeFilterQuery, toFilterOptions
 │   │   └── logger.ts              # punto único de logs de error
 │   ├── constants/
+│   │   ├── {users, catalog, properties, avm}Endpoints.ts   # todas las rutas `/v1/...` del front viven acá
 │   │   ├── propertyStatus.ts      # LISTING_STATUS_* y VERIFICATION_STATUS_* (labels + badges)
 │   │   ├── propertyLabels.ts      # PROPERTY_TYPE_LABELS, LISTING_TYPE_LABELS
 │   │   ├── propertiesFilters.ts   # MODERATION_FILTERS, BULK_JOB_FILTERS
-│   │   ├── catalogFilters.ts      # NEIGHBORHOOD_FILTERS (loaders en api/catalogOptions)
-│   │   ├── brandColors.ts         # BRAND_COLORS (reexporta theme/brandColors.json)
-│   │   ├── catalogEndpoints.ts    # paths de catalog-service (countries, localitiesByCountry, adminNeighborhoods, adminNeighborhood, adminNeighborhoodGeometries)
-│   │   ├── pagination.ts          # PAGE_SIZE por vista (MY_PROPERTIES, PUBLIC_PROFILE, ADMIN_PROPERTIES, ADMIN_PROMOTIONS, ADMIN_BULK_JOBS, ADMIN_NEIGHBORHOODS)
-│   │   └── propertiesEndpoints.ts # paths de properties-service (me, byId, byUser, visibility, images, adminList, adminDetail, adminVerification, adminStatus, adminPromotions, adminPropertyPromotions)
-│   ├── types/
-│   │   ├── user.ts
-│   │   ├── feed.ts               # PropertyCard (API shape), PropertyCardUI (UI shape), PropertyImageCard, ListingStatus, PropertyType, ListingType
-│   │   ├── catalog.ts            # CatalogItem, Locality (GET públicos de catálogo)
-│   │   ├── maps.ts               # MarkerData, SelectedPlace
-│   │   ├── pagination.ts         # PageRange
-│   │   ├── ui.ts                 # ButtonSize
-│   │   ├── properties.ts         # PropertyDetail, PropertyLocationDetail, CreatePropertyForm, PropertyEditForm
-│   │   ├── pois.ts               # OrsProfile, GeoJsonPolygon, ReachablePoiItem, RangeGroup, CATEGORY_META, CATEGORY_PRIORITY
-│   │   └── admin/                # un módulo por tema, sin index.ts: properties, moderation, promotions, bulk, filters (AdminFilterDefinition), catalog (barrios), actions (AdminAction)
+│   │   ├── catalogFilters.ts      # NEIGHBORHOOD_FILTERS (loaders en api/admin/catalog)
+│   │   ├── poiCategories.ts       # CATEGORY_PRIORITY, CATEGORY_META
+│   │   ├── markerIcons.ts, poiColors.ts, brandColors.ts, bulkJobStatus.ts
+│   │   └── pagination.ts          # PAGE_SIZE por vista, incluido FEED_MAP_CHUNK (tanda del scroll infinito)
+│   ├── types/                     # un directorio por dominio; `base.ts` cuando son 1-2 tipos
+│   │   ├── users/{base, auth, profile, interests}.ts
+│   │   ├── feed/{cards, filters, search}.ts
+│   │   ├── properties/{base, detail, forms, images}.ts   # base: ListingStatus, PropertyType, ListingType, VerificationStatus
+│   │   ├── catalog/{base, neighborhoods}.ts
+│   │   ├── maps/{base, cluster}.ts
+│   │   ├── pois/{base, reachable}.ts
+│   │   ├── avm/{form, predict}.ts
+│   │   ├── shared/{ui, pagination, table}.ts             # table: aumento de ColumnMeta de TanStack
+│   │   └── admin/                # un módulo por tema: properties, moderation, promotions, bulk, filters, catalog, actions
 │   ├── views/                    # páginas-ruta
 │   │   ├── public/{HomeView, AboutView, PublicProfileView}  # /users/:userId
 │   │   ├── auth/{LoginView, RegisterView, ResetPasswordView}
@@ -146,8 +142,8 @@ frontend/
 │   │   ├── dev/{DevPlaygroundView, CreatePropertyDevView}  # sin auth, dev only
 │   │   └── admin/{AdminHomeView, properties/{AdminPropertiesLayout, moderation/AdminModerationView, promotions/{AdminPromotionsLayout, AdminPromotionsActiveView, AdminPromotionsCreateView}, imports/AdminImportsView}, catalog/{AdminCatalogView, neighborhoods/AdminNeighborhoodsView, localities/AdminLocalitiesView, divisions/AdminDivisionsView, countries/AdminCountriesView}}  # requiresAdmin — ver [[frontend-admin-panel]]
 │   └── components/
-│       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState, PrimaryButton, BaseTable}
-│       ├── onboarding/{IntentSelector, LocalitySelector, NeighborhoodSelector, PropertyTypeSelector}
+│       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState, PrimaryButton, BaseTable, FormMessage}
+│       ├── onboarding/{OnboardingModal, IntentSelector, LocalitySelector, NeighborhoodSelector, PropertyTypeSelector}
 │       ├── properties/
 │       │   ├── cards/PropertyCard
 │       │   ├── photos/{PropertyPhotoGrid, PhotoGalleryPopup}
@@ -156,7 +152,7 @@ frontend/
 │       │   ├── edit/{PropertyHeaderCard, PropertyPhotosCard, PropertyInfoCard, PropertyEditForm, PropertyEditActions, UploadPropertyImagesModal, DeletePropertyImagesModal}
 │       │   └── feed/FeedFilters
 │       ├── settings/SettingsSidebar
-│       ├── map/MapUser
+│       ├── map/{MapUser, PoiPopup, MapLegend}
 │       └── admin/                                  # ver [[frontend-admin-panel]]
 │           ├── shared/{AdminSplitView, AdminTabsNav, AdminFilterBar, AdminActionBar, AdminPaginationFooter}    # piezas sin dominio
 │           └── properties/
@@ -187,7 +183,7 @@ createApp(App)
 Notas:
 - **Firebase ya no está** — removido el 2026-07-28 ejecutando [[adr-firebase-removal]]. No se inicializaba en ningún lado, así que el login con Google nunca funcionó; los botones quedaron comentados en `LoginView`/`RegisterView` esperando el Identity Brokering de Keycloak.
 - **Vueform** se registra global, pero **ningún template usa sus componentes** — corregido 2026-07-28, ver §Forms. Lo que sí se usa es `@vueform/multiselect`.
-- Sin axios instance global — cada store/composable crea/usa el axios default.
+- Sin axios instance global: hay una instancia por servicio en `api/clients/` y nadie fuera de `api/` las importa.
 
 ## Stores Pinia
 
@@ -201,16 +197,17 @@ user: AuthUser | null
 isAuthenticated: boolean
 isLoading: boolean
 _authChecked: boolean    // guard contra checkAuth duplicado en navegación
-onboardingStep: string   // "intent" | "city" | "neighborhood" | "property_type" | "done"
+onboardingStep: OnboardingStep   // "intent" | "city" | "neighborhood" | "property_type" | "done" (types/users/base.ts)
 isAdmin: boolean
 accountId: string | null
 ```
 
 Actions:
-- `checkAuth(force=false)`: GET `/v1/users/me/profile` con `axios` puro (no `usersApi`) — **a propósito**: un 401 acá es "no autenticado", resultado normal para cualquier visitante anónimo en cualquier página; si pasara por el interceptor de `usersApi`, intentaría refresh y en caso de fallo dispararía `forceLogout()` (ver interceptor), redirigiendo a Home a cualquier anónimo que cargue la app. Setea `_authChecked` para no re-llamar en cada navegación.
-- `fillUserData()`: GET `/v1/users/me/` (vía `usersApi`, sí pasa por el interceptor) → setea `onboardingStep`, `isAdmin`, `accountId` desde el `CurrentUserOut` del back. Se llama solo **después** de que `checkAuth` confirmó sesión — nunca en el boot anónimo.
-- `login(email, password)` / `register(userData)`: POST vía `usersApi` (excluidos del retry-refresh del interceptor, ver abajo) → `checkAuth(force=true)`.
-- `logout()`: POST `/v1/auth/logout` con `axios` puro (evita que el interceptor intente un refresh solo para destruir la sesión) → resetea `onboardingStep`/`isAdmin`/`accountId`/`user`/`isAuthenticated`, llama `userStore.resetInterests()`, `router.push("/")`.
+- `checkAuth(force=false)`: `usersApi.getAuthProfile()` (`GET /v1/users/me/profile`). **Desde el 2026-10-09 pasa por el interceptor**: recargar con el access token vencido y el refresh vigente ya no desloguea. Antes iba con `axios` puro para no redirigir anónimos; eso lo resuelve ahora `forceLogout`, que solo actúa si `isAuthenticated` (ver interceptor). Setea `_authChecked` para no re-llamar en cada navegación.
+- `fillUserData()`: `usersApi.getAccount()` (`GET /v1/users/me`, sin la barra final que tenía antes) → setea `onboardingStep`, `isAdmin`, `accountId`. Se llama solo **después** de que `checkAuth` confirmó sesión.
+- `login(email, password)` / `register(userData)`: vía `usersApi` (excluidos del retry-refresh del interceptor) → `checkAuth(force=true)`.
+- `logout()`: `usersApi.logout()` (`/auth/logout` también está excluido del retry-refresh) → resetea `onboardingStep`/`isAdmin`/`accountId`/`user`/`isAuthenticated`, llama `userStore.resetInterests()`, `router.push("/")`.
+- `setOnboardingStep(step)`: único camino para avanzar el paso del onboarding desde fuera del store.
 
 Getters: `fullName`, `isOrganization`, `userAvatar` (default a `ui-avatars.com`).
 
@@ -228,6 +225,7 @@ Actions clave:
 - `detectLocation()`: usa **ipapi.co** (third-party) para inferir país por IP. Cachea en `localStorage`.
 - `isOnboardingDismissed()`: lee `sessionStorage` con key `STORAGE_KEYS.ONBOARDING_DISMISSED(authStore.accountId)` — scoped por cuenta, no global al browser.
 - `dismissModal()`: escribe esa misma key con `"true"`.
+- `setLocalities(ids)`: escribe las localidades elegidas en el onboarding (antes se mutaba el state desde el composable).
 - `resetInterests()`: limpia `userInterests` — llamado desde `authStore.logout()` para que una cuenta distinta en el mismo tab no herede intereses de la anterior.
 
 > El dismissal del onboarding **ya no se borra en logout** (antes sí) — es intencional: "no me vuelvas a preguntar hoy" debe sobrevivir un logout/login en el mismo browser, y solo resetearse si el browser se cierra de verdad (`sessionStorage` nativo). Ver [[frontend-onboarding-flow]].
@@ -265,15 +263,13 @@ Gestiona el feed de propiedades con paginación por cursor:
 
 ### `useFeedMap` ([composables/feed/useFeedMap.ts](frontend/src/composables/feed/useFeedMap.ts))
 
-Gestiona el feed del mapa con fetch por bbox y paginación local:
+Gestiona el feed del mapa (rehecho el 2026-10-09, ver [[adr-feed-map-whole-bbox-cluster]]):
 
-- `fetchByBbox(payload: BboxPayload)` — `GET /v1/search/feed/map` con `{ min_lat, max_lat, min_lon, max_lon, resolution }`. `resolution`: zoom≥15 → H3 r9 (~300m), zoom<15 → H3 r7 (~5km). Guarda todos los resultados en `_allItems` con Fisher-Yates shuffle (desegrega agrupamiento por celda H3).
-- `PAGE_SIZE` — `computed` (no constante): zoom≥15 → 20, zoom<14 → 40. Reactivo a cambios de zoom.
-- `items` — `computed` que slice `_allItems` según `page.value` y `PAGE_SIZE`.
-- `next()` / `prev()` — paginación local (sin petición al back).
-- `page` se resetea a 0 en cada nuevo `fetchByBbox`.
+- `fetchByBbox(payload: BboxPayload)` — `propertiesApi.getFeedMap` con `{ min_lat, max_lat, min_lon, max_lon, resolution }`. `resolution`: zoom≥15 → H3 r9, zoom<15 → H3 r7. Ordena con `sortForMap` (promocionadas primero, luego distancia al centro del bbox, desempate por id) y descarta la respuesta si mientras tanto se pidió otro bbox (`latestRequest`).
+- `allItems` — todo el bbox, para el mapa (el cluster agrupa).
+- `items` — los primeros `visibleCount` (tandas de `PAGE_SIZE.FEED_MAP_CHUNK` = 20), para la lista; `loadMore()` suma una tanda y devuelve si cargó algo. Cada bbox nuevo vuelve a la primera tanda.
 
-Diferencia clave con `useFeed`: no usa cursor — la paginación es client-side sobre la respuesta completa del bbox.
+Diferencia clave con `useFeed`: no usa cursor ni hace requests extra al scrollear — el backend ya devuelve el bbox completo.
 
 ### `usePropertyMapper` ([composables/properties/usePropertyMapper.ts](frontend/src/composables/properties/usePropertyMapper.ts))
 
@@ -322,24 +318,20 @@ Usado en `NeighborhoodSelector` (tabbed, por localidad) y `FeedFilters` (flat, t
 
 ### `useOnboarding` ([composables/onboarding/useOnboarding.ts](frontend/src/composables/onboarding/useOnboarding.ts))
 
-Orquesta el modal de onboarding:
-- `STEP_MAP`: `{ intent, city, neighborhood, property_type }` → componente Vue.
-- `activeComponent: shallowRef<Component | null>` — qué selector renderizar.
-- `isModalOpen: ref<boolean>`.
-- `startFlow()`: chequea `userDismissedModal` + `checkOnboardingStep()`; si step != "done" y matchea STEP_MAP, abre modal.
-- `closeFlow()`: cierra modal + `userStore.dismissModal()`.
-- `saveCity(localities)`: POST `/v1/onboarding/city` → avanza a "neighborhood".
-- `saveNeighborhoods(localities)`: POST `/v1/onboarding/neighborhood` → avanza a "property_type".
+Guarda cada paso y avanza el flujo; **abrir y cerrar el modal es del padre** (desde el 2026-10-09):
+- `shouldStart()`: no descartado en la sesión y `onboardingStep !== "done"`.
+- `completeIntent()`, `saveCity(localities)`, `saveNeighborhoods(localities)`, `savePropertyTypes(selections)`: llaman a `usersApi` y avanzan con `authStore.setOnboardingStep`; devuelven `true`/`false`.
+- Sin estado de módulo ni imports de componentes.
 
 Detalle en [[frontend-onboarding-flow]].
 
-### `Location.ts` ([composables/Location.ts](frontend/src/composables/Location.ts))
+### `useLocation.ts` ([composables/catalog/useLocation.ts](frontend/src/composables/catalog/useLocation.ts))
 
 Funciones puras (no es composable Vue strictly hablando, son helpers que aceptan parámetros):
-- `getCitiesByCountry(id)`: GET `/v1/localities/by-country` → cachea por country en `sessionStorage`.
-- `getNeighborhoodsByLocalities(localityIds)`: GET `/v1/neighborhoods/by-localities` con dedup de cached vs missing. Cachea por locality en `sessionStorage`.
+- `getCitiesByCountry(id)`: `catalogApi.getLocalitiesByCountry` → cachea por country en `sessionStorage`.
+- `getNeighborhoodsByLocalities(localityIds)`: `catalogApi.getNeighborhoodsByLocalities` con dedup de cached vs missing. Cachea por locality en `sessionStorage`.
 - `locations()`: combina `detectLocation` (ipapi) + `countries` (catalog) → devuelve `(countryDetected, countryUser)`.
-- `getNeighborhood(lat, lon)`: dos requests en cadena — GET `/v1/geo-resolution/by-coordinates` → `neighborhood_id`, luego GET `/v1/neighborhoods/by-id` → retorna `name` (string). Usado por `useAvmForm` para mostrar el barrio detectado al seleccionar dirección.
+- `getNeighborhood(lat, lon)`: dos requests en cadena — `catalogApi.resolveCoordinates` → `neighborhood_id`, luego `catalogApi.getNeighborhoodById` → nombre. Usado por `useAvmForm` para mostrar el barrio detectado al seleccionar dirección.
 
 ## Router con guard global
 
@@ -355,28 +347,32 @@ Hash history (`createWebHashHistory`) — ver [[adr-hash-history-static-hosting]
 
 ## API consumption pattern
 
-**Instancias dedicadas por servicio** — cada servicio tiene su propia instancia de axios en `src/api/`:
+**Dos niveles** ([[adr-api-layer-by-domain]]):
+
+1. **Clientes** en `src/api/clients/` — una instancia de axios por servicio:
 
 | Archivo | baseURL (dev) | `withCredentials` | Auth interceptor |
 |---|---|---|---|
-| `catalogApi.ts` | `/api/catalog` | Sí (desde 2026-10-04) | Sí — los endpoints `/admin` leen la cookie |
-| `avmApi.ts` | `/api/avm` | No | No — sin auth hoy |
-| `usersApi.ts` | `/api/users` | Sí | Sí |
-| `propertiesApi.ts` | `/api/properties` | Sí | Sí |
+| `clients/catalog.ts` | `/api/catalog` | Sí (desde 2026-10-04) | Sí — los endpoints `/admin` leen la cookie |
+| `clients/avm.ts` | `/api/avm` | No | No — `/v1/predict` sin auth hoy |
+| `clients/users.ts` | `/api/users` | Sí | Sí |
+| `clients/properties.ts` | `/api/properties` | Sí | Sí |
 
-`auth.ts` (store Pinia) usa `usersApi` para `fillUserData`/`login`/`register`. `checkAuth` y el POST de `logout` usan `axios` puro a propósito (ver sección de stores) — no pasan por el interceptor.
+2. **Funciones por dominio** en `src/api/{users,catalog,properties,avm}.ts` y `src/api/admin/{properties,catalog}.ts`: una por endpoint, con la ruta de `*_ENDPOINTS`, tipos de `types/` y `data` como retorno. Las conversiones de payload (camelCase → snake_case, campos opcionales omitidos) viven acá. Se importan como namespace: `import * as usersApi from "@/api/users"` → `usersApi.login(...)` (no choca con las acciones del store y se mockea el módulo entero).
+
+Fuera de `api/` nadie importa un cliente. Composables, stores, componentes y vistas llaman a estas funciones; componentes y vistas solo para acciones puntuales sin estado (borrar, cargar un detalle). Las únicas llamadas HTTP fuera de los clientes son el refresh del interceptor, `ipapi.co` (`detectLocation`) y los `fetch` a URLs presignadas de storage.
 
 Las baseURLs son rutas relativas (proxy en dev) — ver sección "Webpack devServer proxy".
 
-### Silent refresh interceptor (`src/api/interceptors.ts`)
+### Silent refresh interceptor (`src/api/clients/interceptors.ts`)
 
-`applyAuthInterceptor(instance)` se llama en `usersApi` y `propertiesApi`. Comportamiento:
+`applyAuthInterceptor(instance)` se llama en los clientes de users, properties y catalog. Comportamiento:
 
 ```
 response 401
   └─ !error.config → reject inmediato (error sin config = cancelado/red)
   └─ original._retry → reject (evita loop infinito en el retry)
-  └─ url matchea AUTH_ENTRYPOINTS (/auth/login, /auth/register) → reject inmediato
+  └─ url matchea AUTH_ENTRYPOINTS (login, register, logout) → reject inmediato
   └─ isRefreshing === true → encolar en failedQueue; resolver/rechazar cuando termine el refresh en curso
   └─ isRefreshing === false →
        original._retry = true
@@ -387,9 +383,9 @@ response 401
        finally: isRefreshing = false
 ```
 
-**`AUTH_ENTRYPOINTS`** excluye `/auth/login`/`/auth/register` del retry-refresh — un 401 ahí es "credenciales inválidas", no "sesión expirada"; intentar un refresh (que tampoco tiene con qué autenticar) solo enmascararía el error real de login.
+**`AUTH_ENTRYPOINTS`** excluye login y register del retry-refresh — un 401 ahí es "credenciales inválidas", no "sesión expirada". **Logout también está excluido (2026-10-09)**: si el refresh falla, `forceLogout → logout → 401` se encolaría en `failedQueue` esperando un refresh que ya terminó, y la promesa no resolvería nunca. Las rutas salen de `USERS_ENDPOINTS`.
 
-**`forceLogout()`** reemplazó al viejo `redirectToLogin()` (`window.location.href` hardcodeado a `/#/login`, hard reload). Ahora hace `const { useAuthStore } = await import("@/stores/auth"); await useAuthStore().logout()` — invalida el refresh token en el back de verdad y limpia el estado de Pinia antes de redirigir, en vez de solo tirar un reload. El `import()` dinámico es deliberado: evita un ciclo de imports estático (`auth.ts → usersApi.ts → interceptors.ts → auth.ts`), ya que `auth.ts` importa `usersApi` para sus propias llamadas.
+**`forceLogout()`** solo llama a `logout()` si `authStore.isAuthenticated` (2026-10-09): un anónimo cuyo `checkAuth` da 401 y no tiene refresh simplemente queda anónimo, sin redirección a `/`. Reemplazó al viejo `redirectToLogin()` (`window.location.href` hardcodeado a `/#/login`, hard reload). Ahora hace `const { useAuthStore } = await import("@/stores/auth"); await useAuthStore().logout()` — invalida el refresh token en el back de verdad y limpia el estado de Pinia antes de redirigir, en vez de solo tirar un reload. El `import()` dinámico es deliberado: evita un ciclo de imports estático (`auth.ts → usersApi.ts → interceptors.ts → auth.ts`), ya que `auth.ts` importa `usersApi` para sus propias llamadas.
 
 **`isRefreshing` y `failedQueue` son module-level** (declarados fuera de cualquier función o composable Vue), no instancia-por-componente. Esto es intencional: sobreviven al desmonte/remonte de componentes. Si fueran `ref` dentro de un composable, cada componente tendría su propio flag y podrían dispararse múltiples refresh concurrentes.
 
@@ -436,12 +432,12 @@ Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. `ONBOARDING_DISMISSE
 | Carpeta | Propósito |
 |---|---|
 | `shared/` | NavBar, NavGuest (no-logged), NavUser (logged), BaseModal, PrimaryButton (botón primario único, verde liso, con `size` sm|md|lg y `loading` que muestra spinner y deshabilita), PaginationArrows, EmptyState, BaseSpinner y **BaseTable** (tabla dumb genérica sobre TanStack, un slot por columna, con selección de fila opcional vía `rowKey`/`selectedKey` + emit `rowClick` — ver [[adr-tanstack-table]]) — reusables transversales. Gotcha de la selección: la clase de fila activa y el `hover:` se aplican de forma **excluyente**, porque Tailwind emite la variante `hover:` con más especificidad y si conviven despinta la fila seleccionada al pasarle el mouse. |
-| `onboarding/` | 4 selectors (Intent, Locality, Neighborhood, PropertyType) — usados desde el modal. |
+| `onboarding/` | `OnboardingModal` (controlado por `v-model` desde `App.vue`) + 4 selectors (Intent, Locality, Neighborhood, PropertyType) que emiten `submit` y reciben `saving`. Ver [[frontend-onboarding-flow]]. |
 | `properties/` | Organizado en subcarpetas por dominio desde 2026-06-21. `cards/PropertyCard` — card del feed (`HouseCard` se borró el 2026-10-05: no lo usaba nadie). `photos/{PropertyPhotoGrid, PhotoGalleryPopup}`. `detail/{PropertyOverview, NearbyPlaces}`. `feed/FeedFilters` — sidebar de filtros con secciones Preferencias (ciudad, barrio, tipo) y Filtros (precio, área, habitaciones, baños); se pre-pobla con ciudades de `useCities`, barrios cargados dinámicamente al seleccionar ciudad vía `watch`. Mantiene estado local (`selected`, `selectedNeighborhoods`, `selectedTypes`, `filters: ref<FeedFilters>({})` con `v-model.number`); `property_types` se togglea con `toggleType(type)` (push/filter sobre el array). **Emite un solo `submit` con `{preferences, filters}` al click en "Aplicar"** — no reactivo con `watch`, decisión para evitar una petición por cada cambio de campo. El objeto `preferences` se arma en `onSubmit` leyendo los refs (`selected.value`, etc.), sin ref `preferences` duplicado. |
 | `settings/` | SettingsSidebar — navegación lateral del SettingsLayout. |
 | `admin/` | `properties/{BulkUploadPropertiesModal, AdminPropertiesTable, AdminPropertyPreviewPanel}` — el modal de import por presigned PUT, la tabla de moderación (columnas + badges sobre `BaseTable`) y el panel de vista previa, que reusa `PropertyOverview` y `PhotoGalleryPopup` del detalle público. Ver [[frontend-admin-panel]]. |
-| `map/` | MapUser — componente de mapa dumb/reusable (vue-leaflet declarativo, markers-prop + slot). Ver [[frontend-map-component]]. |
-| `avm/` | AvmForm / AvmResult — form del avalúo multi-step. `AvmForm` consume `composables/useAvmForm` (expone `AvmFormPayload`, `AvmPredictRequest`; `SelectedPlace` vive en `types/maps.ts`). Emite `place-selected` (marker en tiempo real) y `submit` (payload + place + neighborhood resuelto). `DevPlaygroundView` orquesta: recibe `place-selected` → actualiza `center` y `marker` reactivos → pasa al mapa. |
+| `map/` | MapUser — mapa dumb/reusable: vue-leaflet para mapa, tiles y `subject`; el resto de marcadores en un cluster imperativo (`useMarkerCluster`). `PoiPopup` es el contenido del popup de POIs. Ver [[frontend-map-component]]. |
+| `avm/` | AvmForm / AvmResult — form del avalúo multi-step. `AvmForm` consume `composables/avm/useAvmForm` (los tipos viven en `types/avm/{form,predict}.ts`; `SelectedPlace` en `types/maps/base.ts`). Emite `place-selected` (marker en tiempo real) y `submit` (`AvmSubmitEvent`: payload + place + neighborhood resuelto). `DevPlaygroundView` orquesta: recibe `place-selected` → actualiza `center` y `marker` reactivos → pasa al mapa. |
 
 ## Estilos: Tailwind + diseño tokens
 
@@ -517,6 +513,8 @@ npx -p vue-tsc@2 -p typescript@5.6 vue-tsc --noEmit -p tsconfig.json
 
 `HouseCard.vue` se borró. Quedan `ResetPasswordView.vue:51` y dos errores nuevos en `AdminModerationForm.vue:52` y `:81` (`null` como índice). Al tipar los `any` del proyecto apareció además un bug real: `useCities` hacía `.map` sobre el `undefined` que devuelve `getCitiesByCountry` cuando falla.
 
+**Update 2026-10-09 — el build no typecheckea los `.vue`, y eso dejó pasar dos errores.** Se confirmó inyectando un error de tipos en `BaseTable.vue`: `vue-cli-service build` termina "Build complete" con solo un warning de ESLint. `tsc --noEmit` tampoco sirve: no lee `.vue`. La única verificación real es el comando de arriba. Sin correrlo se mergearon #22 (`AvmForm.vue` sin el import de `SelectedPlace`) y #23 (`MapUser.vue` pasando un `DivIcon` a `<l-marker>`), ambos arreglados en #24. Quedan 3 errores: `AdminModerationForm.vue:52` y `:81` (`null` como índice, inocuos) y `ResetPasswordView.vue:51`, que **es un bug real**: el `<form>` llama a `loginUser`, que no existe (es `resetPasswordUser`). Además, `eslint src` sin `--ext .ts,.vue` no revisa los `.vue`; el comando correcto es el de `scripts/audit.sh`. Ver [[open-items]]. **Update (harness, 2026-10-09):** los 3 se arreglaron y `vue-tsc` quedó en 0. `ResetPasswordView` envía por el `<form>` (`resetPasswordUser`) y el botón ya no tiene `@click`, que con `type="submit"` mandaba dos veces. Ahora corre solo: `npm run typecheck`, el hook `Stop` de Claude Code y `make audit` ([[dev-workflow]], "Harness").
+
 ### Reglas de ESLint desactivadas
 
 `no-undef` está apagado a nivel proyecto desde el 2026-07-29. `eslint-plugin-vue` está en v8 (2022) y no entiende `<script setup generic="T">` ni `defineSlots`, así que marcaba los parámetros de tipo como identificadores no definidos. La regla además es redundante con `vue-tsc` —que sí ve el type-space de TS— y es lo que recomienda typescript-eslint para proyectos TS. Sin esto, cada componente genérico nuevo daría falsos positivos.
@@ -537,24 +535,24 @@ La migración sigue diferida ([[adr-vue-cli-deferred-vite-migration]]), pero al 
 Acordadas al auditar los smells del front:
 
 - **Comentarios de una línea**, preferiblemente inline al final de la línea que explican. Nada de bloques `/** */` multilínea; la razón larga va a la wiki o al commit.
-- **Tipos en `types/`** como `interface` exportada (o unión con `type`). No se declaran tipos ni shapes complejos dentro de componentes, vistas o composables. Las claves de acciones van como uniones tipadas (`NeighborhoodAction`), no como `string`.
+- **Tipos en `types/<dominio>/`** como `interface` exportada (o unión con `type`); `base.ts` cuando el dominio tiene 1-2 tipos, archivos temáticos cuando crece, `shared/` para lo transversal. No se declaran tipos dentro de componentes, vistas o composables. Las claves de acciones van como uniones tipadas (`NeighborhoodAction`), no como `string`.
 - **Constantes en `constants/`, separadas por dominio** (`propertiesFilters.ts`, `catalogFilters.ts`), como ya lo están los `*Endpoints.ts`.
-- **HTTP en `api/` o en composables**, nunca dentro de una constante ni de una definición de filtro: `NEIGHBORHOOD_FILTERS` solo referencia `loadCountryOptions` / `loadLocalityOptions`.
+- **HTTP solo en `api/`** (2026-10-09), nunca en composables, componentes, constantes ni definiciones de filtro: `NEIGHBORHOOD_FILTERS` solo referencia `loadCountryOptions` / `loadLocalityOptions` de `api/admin/catalog`. Ver [[adr-api-layer-by-domain]].
+- **Errores de formulario con `FormMessage`** (`variant="error" | "success"`, `role="alert"`), no con `alert()`.
 - **Logs con `logger.error`** de `utils/logger.ts`, no con `console`.
 - **Textos de la interfaz en tuteo**: la app es es-CO.
 
-Lo que la auditoría dejó abierto (errores tragados, `alert()`, HTTP en vistas, rutas `/v1` a mano, tipos fuera de `types/`, `useLocation`) está en [[open-items]].
+Lo que la auditoría dejó abierto está en [[open-items]]. HTTP en vistas, rutas `/v1` a mano y tipos fuera de `types/` se cerraron el 2026-10-09; siguen abiertos los errores tragados, el último `alert()` y `useLocation`.
 
 ## Tipos — separación UI vs API
 
-`types/feed.ts` tiene dos shapes distintas:
+`types/feed/cards.ts` tiene dos shapes distintas:
 - `PropertyCard` — response shape de la API de properties-service.
 - `PropertyCardUI` — shape para render del card en feed (UI). Antes vivía como `Property` en `PropertyCard.vue` — causaba TS2614 al importar desde `.ts` files.
-- `PropertyImageCard` — imagen de una propiedad, compartida por feed y detail.
 
-`types/properties.ts`:
-- `PropertyDetail` — shape completa del response `GET /v1/properties/{id}`.
-- `PropertyLocationDetail` — ubicación (neighborhood_id, city_id, country_id, lat, lon). Usa `city_id` — es el campo de properties-service, distinto al rename `locality_id` de catalog-service.
+`types/properties/`:
+- `images.ts`: `PropertyImageCard` — imagen de una propiedad, compartida por card y detalle.
+- `detail.ts`: `PropertyDetail` (response de `GET /v1/properties/{id}`) y `PropertyLocationDetail` (usa `city_id`, el campo de properties-service, distinto al `locality_id` de catalog-service).
 
 Regla: nunca exportar interfaces de tipos desde archivos `.vue` — rompe TypeScript en consumers `.ts`.
 
@@ -568,7 +566,7 @@ Vista de detalle del listing en `/listing/:id` (`views/properties/detail/Propert
 - **Padding de la view**: `px-[8%] sm:px-[12%] lg:px-[18%]` — más estrecho que navbar para dar respiro visual.
 - **Lógica de detalle**: `composables/properties/usePropertyDetail.ts` — la view solo destructura el composable.
 - **Location label**: `buildNeighborhoodMap` (`composables/catalog/useNeighborhoodLookup.ts`) resuelto en `onMounted` de la view tras cargar la propiedad — resuelve barrio, no ciudad.
-- **Fetch real**: `propertiesApi.get<PropertyDetail>('/v1/properties/${route.params.id}')` usando el `id` de la ruta (`/listing/:id`) — reemplaza el mock hardcodeado que tenía antes.
+- **Fetch real**: `propertiesApi.getProperty(props.id)`. La ruta `/listing/:id` declara `props: true`, así que la vista recibe `id` como prop tipada en vez de leer `route.params.id as string` (igual `/properties/:id/edit` y `/users/:userId`).
 
 ## PublicProfileView
 
@@ -585,39 +583,39 @@ Vista pública del perfil de un publicante en `/users/:userId` (`views/public/Pu
 
 En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` — usa `total.value` (cantidad ya cargada) como offset del siguiente fetch, más robusto que llevar un contador de páginas aparte.
 
-**`usePagination` solo lo consumen `MyPropertiesView` y `PublicProfileView`** — `FeedView` sigue con el estado propio de `useFeed` (cursor) y `MapView` con el de `useFeedMap` (bbox + slice local), cada uno con su propia noción de "página". Lo que **sí** comparten los cuatro es el componente visual `PaginationArrows.vue` (`components/shared/`) — botones con estilo relleno/atenuado + íconos, cada view le pasa su propio `hasPrev`/`hasNext`/`@prev`/`@next` sin importar el mecanismo de paginación de fondo.
+**`usePagination` solo lo consumen `MyPropertiesView` y `PublicProfileView`** — `FeedView` sigue con el estado propio de `useFeed` (cursor) y `MapView` ya no pagina: es scroll infinito sobre `useFeedMap` (desde el 2026-10-09). `MyPropertiesView`, `FeedView` y `PublicProfileView` comparten el componente visual `PaginationArrows.vue` (`components/shared/`) — botones con estilo relleno/atenuado + íconos, cada view le pasa su propio `hasPrev`/`hasNext`/`@prev`/`@next` sin importar el mecanismo de paginación de fondo.
 
 ## Claims
 
 - `main.ts` registra Pinia, vue-router, vue3-cookies y Vueform — sin axios instance global ([main.ts:15-20](frontend/src/main.ts#L15-L20)).
-- `useAuthStore.checkAuth` envía `withCredentials: true` y usa `_authChecked` para no re-disparar en cada navegación protegida ([stores/auth.ts:73-94](frontend/src/stores/auth.ts#L73-L94)).
+- `useAuthStore.checkAuth` obtiene el perfil con `usersApi.getAuthProfile()` y usa `_authChecked` para no re-disparar en cada navegación protegida ([stores/auth.ts:42-48](frontend/src/stores/auth.ts#L42-L48)).
 - `useAuthStore.fillUserData()` no tiene try/catch propio — un 401 (con refresh fallido) lo maneja el interceptor de `usersApi` centralizadamente; el error que llegue a propagarse lo atrapa el `watch` de `App.vue` ([stores/auth.ts](frontend/src/stores/auth.ts), [App.vue](frontend/src/App.vue)).
-- `composables/Location.ts` cachea countries en `localStorage` y cities/neighborhoods en `sessionStorage` ([composables/Location.ts:7-9](frontend/src/composables/Location.ts#L7-L9), [composables/Location.ts:28-30](frontend/src/composables/Location.ts#L28-L30)).
+- `composables/catalog/useLocation.ts` cachea countries en `localStorage` y cities/neighborhoods en `sessionStorage` ([composables/catalog/useLocation.ts](frontend/src/composables/catalog/useLocation.ts)).
 - `detectLocation` usa el provider externo `ipapi.co` para inferir país por IP ([stores/user.ts:69](frontend/src/stores/user.ts#L69)).
 - El guard del router llama `checkAuth()` solo si `_authChecked === false` ([router/index.ts:104-110](frontend/src/router/index.ts#L104-L110)).
-- `useOnboarding` mantiene `activeComponent` como `shallowRef<Component | null>` — `shallowRef` porque los componentes Vue son reactivos por sí solos ([composables/useOnboarding.ts:19](frontend/src/composables/useOnboarding.ts#L19)).
-- Hay 4 instancias de axios dedicadas por servicio: `avmApi` sin `withCredentials` ni interceptor; `usersApi`, `propertiesApi` y `catalogApi` con `withCredentials: true` y `applyAuthInterceptor` ([api/](frontend/src/api/), [catalogApi.ts:8-11](frontend/src/api/catalogApi.ts#L8-L11)).
+- `useOnboarding` no declara estado a nivel de módulo ni importa componentes; avanza el paso con `authStore.setOnboardingStep` ([composables/onboarding/useOnboarding.ts](frontend/src/composables/onboarding/useOnboarding.ts), [stores/auth.ts:116](frontend/src/stores/auth.ts#L116)).
+- Hay 4 instancias de axios dedicadas por servicio en `api/clients/`: `avm` sin `withCredentials` ni interceptor; `users`, `properties` y `catalog` con `withCredentials: true` y `applyAuthInterceptor` ([api/clients/](frontend/src/api/clients)).
 - `config/index.ts` usa `VUE_APP_CATALOG_URL` si está definida y si no `/api/catalog`; `frontend/.env.development` la define como `http://localhost:8001` ([config/index.ts:3](frontend/src/config/index.ts#L3), [.env.development](frontend/.env.development)).
-- `applyAuthInterceptor` intercepta 401, refresca token con POST `/v1/auth/refresh` (timeout 3s), reintenta la request original; si el refresh falla, llama `forceLogout()` (logout real vía `authStore`, no un hard redirect) ([api/interceptors.ts](frontend/src/api/interceptors.ts)).
-- `AUTH_ENTRYPOINTS` (`/auth/login`, `/auth/register`) están excluidos del retry-refresh del interceptor — un 401 ahí es credenciales inválidas, no sesión expirada ([api/interceptors.ts](frontend/src/api/interceptors.ts)).
-- `checkAuth()` es la única llamada de `auth.ts` que usa `axios` puro en vez de `usersApi` — un 401 ahí es "no autenticado" (normal para anónimos), y pasarla por el interceptor dispararía `forceLogout()`/redirect para cualquier visitante sin sesión ([stores/auth.ts](frontend/src/stores/auth.ts)).
-- `isRefreshing` y `failedQueue` en `interceptors.ts` son variables de módulo (no Vue ref ni composable) — sobreviven al ciclo de vida de los componentes y garantizan que solo se dispare un refresh concurrente aunque múltiples requests fallen con 401 simultáneamente ([api/interceptors.ts:6-11](frontend/src/api/interceptors.ts#L6-L11)).
-- El guard `!error.config` en el interceptor evita TypeError cuando `error.config` es `undefined` (request cancelada o error de red antes de que axios termine de construirla) ([api/interceptors.ts:39](frontend/src/api/interceptors.ts#L39)).
+- `applyAuthInterceptor` intercepta 401, refresca token con POST `/v1/auth/refresh` (timeout 3s), reintenta la request original; si el refresh falla, llama `forceLogout()` ([api/clients/interceptors.ts](frontend/src/api/clients/interceptors.ts)).
+- `AUTH_ENTRYPOINTS` (login, register y logout, tomados de `USERS_ENDPOINTS`) están excluidos del retry-refresh del interceptor ([api/clients/interceptors.ts:29-33](frontend/src/api/clients/interceptors.ts#L29-L33)).
+- `forceLogout()` solo llama a `authStore.logout()` si `authStore.isAuthenticated` es `true` ([api/clients/interceptors.ts:35-39](frontend/src/api/clients/interceptors.ts#L35-L39)).
+- `isRefreshing` y `failedQueue` en `interceptors.ts` son variables de módulo (no Vue ref ni composable) — garantizan que solo se dispare un refresh concurrente aunque múltiples requests fallen con 401 simultáneamente ([api/clients/interceptors.ts](frontend/src/api/clients/interceptors.ts)).
+- El guard `!error.config` en el interceptor evita TypeError cuando `error.config` es `undefined` (request cancelada o error de red antes de que axios termine de construirla) ([api/clients/interceptors.ts](frontend/src/api/clients/interceptors.ts)).
 - Las baseURLs usan rutas relativas (`/api/*`) en dev — el proxy de `vue.config.js` las reenvía a cada backend dentro del container; en prod se sobreescriben con `VUE_APP_*_URL` ([config/index.ts](frontend/src/config/index.ts), [vue.config.js](frontend/vue.config.js)).
 - El proxy de webpack es necesario porque Chrome bloquea subresource requests entre puertos `localhost` distintos en un devcontainer (VS Code port forwarding + keep-alive reuse); Firefox no tiene este problema ([vue.config.js](frontend/vue.config.js)).
 - `leaflet` (^1.9.4) y `@vue-leaflet/vue-leaflet` (^0.10.1) están en `devDependencies`, pero **se usan en runtime** en `MapUser.vue` — deberían moverse a `dependencies` ([package.json:35](frontend/package.json#L35), [package.json:46](frontend/package.json#L46), [components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - `main.ts` no contiene ninguna referencia a firebase ([main.ts](frontend/src/main.ts)).
-- `MapUser.vue` es un componente de mapa dumb (vue-leaflet declarativo, props + `<slot>`, `defineModel` para zoom) — ver [[frontend-map-component]] ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
-- El form del avalúo está partido en `components/avm/` (`AvmForm`, `AvmResult`, `AvmMap`) con la lógica en `composables/useAvmForm.ts` ([components/avm/](frontend/src/components/avm), [composables/useAvmForm.ts](frontend/src/composables/useAvmForm.ts)).
+- `MapUser.vue` es un componente de mapa dumb: vue-leaflet para mapa, tiles y el marcador `subject`, y `useMarkerCluster` para el resto de marcadores — ver [[frontend-map-component]] ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- El form del avalúo está partido en `components/avm/` (`AvmForm`, `AvmResult`) con la lógica en `composables/avm/useAvmForm.ts` ([components/avm/](frontend/src/components/avm), [composables/avm/useAvmForm.ts](frontend/src/composables/avm/useAvmForm.ts)).
 - Vue está en `^3.5.35`; upgrade completado 2026-05-29 ([package.json:23](frontend/package.json#L23)).
 - `useTemplateRef<T>('refName')` es el patrón Vue 3.5 para refs de template — requiere `ref="refName"` (string) en el template, no binding dinámico ([components/avm/AvmForm.vue](frontend/src/components/avm/AvmForm.vue)).
-- `getNeighborhood(lat, lon)` en `Location.ts` hace dos requests en cadena: `/geo-resolution/by-coordinates` → `neighborhood_id`, luego `/neighborhoods/by-id` → nombre del barrio ([composables/Location.ts](frontend/src/composables/Location.ts)).
-- `AvmPredictRequest` extiende `AvmFormPayload` con `lat`, `lon`, `barrio_ideca` — vive en `composables/useAvmForm.ts` y es el shape del body de `POST /v1/predict` ([composables/useAvmForm.ts](frontend/src/composables/useAvmForm.ts)).
-- `fetchPredict` es una función local en `DevPlaygroundView` (no composable) porque es una sola call sin estado compartido — patrón: `axios.post(AVM_BASE_URL/v1/predict, payload, { withCredentials: true })` → retorna `res.data.predicted_price` ([views/dev/DevPlaygroundView.vue](frontend/src/views/dev/DevPlaygroundView.vue)).
+- `getNeighborhood(lat, lon)` en `useLocation.ts` hace dos requests en cadena: `catalogApi.resolveCoordinates` → `neighborhood_id`, luego `catalogApi.getNeighborhoodById` → nombre del barrio ([composables/catalog/useLocation.ts](frontend/src/composables/catalog/useLocation.ts)).
+- `AvmPredictRequest` extiende `AvmFormPayload` con `lat`, `lon`, `barrio_ideca` — vive en `types/avm/predict.ts` y es el body de `POST /v1/predict` ([types/avm/predict.ts](frontend/src/types/avm/predict.ts)).
+- `fetchPredict` es una función local en `AvmView` que llama `avmApi.predict(payload)` y devuelve `predicted_price` ([views/avm/AvmView.vue:124-125](frontend/src/views/avm/AvmView.vue#L124-L125)).
 - `allow_origins=["*"]` es incompatible con `withCredentials: true` — el analytics-service usa `allow_origins=["http://localhost:8080"]` + `allow_credentials=True` ([analytics-service/src/app/main.py](backend/analytics-service/src/app/main.py)).
 - `useFeed.load()` lee `userStore.userInterests` dentro del cuerpo de `load()`, no al inicializar el composable — garantiza que los datos del store estén frescos tras login ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
 - axios serializa arrays como `key[]=v` (bracket notation) por defecto; FastAPI no parsea `key[]` como el parámetro `key` — fix: `paramsSerializer: { indexes: null }` en el request de `useFeed` ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
-- `buildNeighborhoodMap` aplana `Object.values(getNeighborhoodsByLocalities(ids)).flat()` y reduce a `Record<neighborhoodId, name>` — lookup O(1) usado en `toCard` de `FeedView` ([composables/catalog/useNeighborhoodLookup.ts](frontend/src/composables/catalog/useNeighborhoodLookup.ts)).
+- `buildNeighborhoodMap` aplana `Object.values(getNeighborhoodsByLocalities(ids)).flat()` y arma `Record<neighborhoodId, name>` con `Object.fromEntries` ([composables/catalog/useNeighborhoodLookup.ts](frontend/src/composables/catalog/useNeighborhoodLookup.ts)).
 - `useCities` es un singleton de módulo (`export const cities`) — estado compartido entre todos los componentes que lo importen en la misma sesión ([composables/catalog/useCities.ts](frontend/src/composables/catalog/useCities.ts)).
 - `FeedFilters` carga barrios dinámicamente via `watch(selected, ...)` sobre las ciudades seleccionadas — llama `useNeighborhoodMultiselect.load(localities)` y resetea `selectedNeighborhoods` al cambiar ciudades ([components/properties/feed/FeedFilters.vue](frontend/src/components/properties/feed/FeedFilters.vue)).
 - `FeedFilters` emite un único evento `submit` con `{ preferences, filters }` desde `onSubmit` al click en "Aplicar" — no es reactivo con `watch`; el componente no llama al backend ([components/properties/feed/FeedFilters.vue:269-278](frontend/src/components/properties/feed/FeedFilters.vue#L269-L278)).
@@ -626,27 +624,27 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 - `useFeed` expone `nextCursor`, `isFirstPage`, `loadNext(cursor)` y `loadPrev()` para paginación — `loadPrev` es siempre local (sin petición al back) ([composables/feed/useFeed.ts](frontend/src/composables/feed/useFeed.ts)).
 - `useProfileListings.ts` exporta solo `fetchUserListings(account_id, offset)` — función async pura, sin `ref` ni estado propio ([composables/users/useProfileListings.ts](frontend/src/composables/users/useProfileListings.ts)).
 - `usePagination<T>(pageSize)` cubre paginación client-side pura y paginación por red con un mismo composable: `next(fetchMore?)` solo dispara `fetchMore` si la página pedida excede lo ya cargado y `hasMore` es `true`; si no, es un slice local ([composables/shared/usePagination.ts](frontend/src/composables/shared/usePagination.ts)).
-- Solo `MyPropertiesView` y `PublicProfileView` usan `usePagination` como fuente de estado — `MyPropertiesView` nunca pasa `fetchMore` (ya tiene todo cargado), `PublicProfileView` sí, porque el backend pagina por offset. `FeedView` (cursor, `useFeed`) y `MapView` (bbox + slice, `useFeedMap`) mantienen su propio estado de paginación ([composables/shared/usePagination.ts](frontend/src/composables/shared/usePagination.ts)).
-- Las 4 views (`MyPropertiesView`, `FeedView`, `MapView`, `PublicProfileView`) comparten el componente visual `PaginationArrows.vue`, independiente del composable de estado que use cada una ([components/shared/PaginationArrows.vue](frontend/src/components/shared/PaginationArrows.vue)).
+- Solo `MyPropertiesView` y `PublicProfileView` usan `usePagination` como fuente de estado; `FeedView` usa el cursor de `useFeed` y `MapView` el scroll infinito de `useFeedMap` ([composables/shared/usePagination.ts](frontend/src/composables/shared/usePagination.ts)).
+- `MyPropertiesView`, `FeedView` y `PublicProfileView` usan `PaginationArrows.vue`; `MapView` no ([components/shared/PaginationArrows.vue](frontend/src/components/shared/PaginationArrows.vue), [views/properties/feed/MapView.vue](frontend/src/views/properties/feed/MapView.vue)).
 - `FeedView`, `MapView`, `MyPropertiesView` y `PublicProfileView` tienen `@click="router.push('/listing/${card.id}')"` en el `v-for` de cards ([views/properties/feed/FeedView.vue](frontend/src/views/properties/feed/FeedView.vue), [views/public/PublicProfileView.vue](frontend/src/views/public/PublicProfileView.vue)).
-- `types/properties.ts` contiene `CreatePropertyForm` — shape del body `POST /v1/properties`, incluye `location: { neighborhood_id, city_id, country_id, latitude, longitude }` ([types/properties.ts](frontend/src/types/properties.ts)).
+- `types/properties/forms.ts` contiene `CreatePropertyForm` — shape del body `POST /v1/properties/create`, incluye `location: { neighborhood_id, city_id, country_id, latitude, longitude }` ([types/properties/forms.ts](frontend/src/types/properties/forms.ts)).
 - `PrimaryButton.vue` recibe `disabled`, `loading` y `size` (`sm`|`md`|`lg`); `loading` muestra un `BaseSpinner` y deshabilita, y `class`, `type` y `@click` llegan al `<button>` por attrs fallthrough ([components/shared/PrimaryButton.vue](frontend/src/components/shared/PrimaryButton.vue)).
 - `tailwind.config.js` toma la paleta `brand` de `src/theme/brandColors.json`, que `constants/brandColors.ts` reexporta como `BRAND_COLORS` ([tailwind.config.js](frontend/tailwind.config.js), [constants/brandColors.ts](frontend/src/constants/brandColors.ts)).
 - Ningún archivo de `src/` llama a `console` salvo `utils/logger.ts` ([utils/logger.ts](frontend/src/utils/logger.ts)).
 - `LOCALE` de `config/index.ts` es el único lugar donde aparece `"es-CO"` ([config/index.ts](frontend/src/config/index.ts)).
-- `PROPERTIES_ENDPOINTS` incluye `images(id)` para el batch delete de fotos — los endpoints de presigned-urls/confirm siguen inline como string literals en `useImageUpload.ts`, no centralizados en este archivo de constants ([constants/propertiesEndpoints.ts](frontend/src/constants/propertiesEndpoints.ts)).
-- `GET /v1/search/feed` retorna `FeedPage { items: PropertyCard[], next_cursor: string | null }` — el composable desempaqueta `.items` ([types/feed.ts](frontend/src/types/feed.ts)).
-- `PropertiesView` es la vista padre en `/feed` con el header y toggle Lista/Mapa; el estado activo del toggle se deriva de `route.name` (computed), no de un ref local ([views/properties/PropertiesView.vue](frontend/src/views/properties/PropertiesView.vue)).
-- El `<router-view />` de `PropertiesView` está fuera del div con padding del header para evitar doble padding en las vistas hijas ([views/properties/PropertiesView.vue](frontend/src/views/properties/PropertiesView.vue)).
-- `MapView.vue` implementa el feed-mapa: layout split (lista izquierda, mapa derecho), `useFeedMap` + `usePropertyMapper`, marcadores hover, paginación local, URL state vía `router.replace` ([views/properties/MapView.vue](frontend/src/views/properties/MapView.vue)).
-- `MapView` persiste el bbox en `route.query` con `router.replace` en cada `moveend` — el handler `onBbox` llama primero `router.replace({ query: bbox })` y luego `fetchByBbox`; no hay `watch` sobre `route.query` porque el mapa es el único que escribe la URL ([views/properties/MapView.vue](frontend/src/views/properties/MapView.vue)).
-- `MapView` inicializa `center` síncronamente desde `localStorage` (clave `STORAGE_KEYS.USER_LOCATION`) para evitar la race condition de vue-leaflet; el `onMounted` solo llama `fetchByBbox` alrededor de `loc ± 0.05°` ([views/properties/MapView.vue](frontend/src/views/properties/MapView.vue)).
-- El interface `FeedFilters`, `FeedPreferences`, `FeedPage` y `PageCache` viven en `types/feed.ts` ([types/feed.ts](frontend/src/types/feed.ts)).
+- `PROPERTIES_ENDPOINTS` incluye `images(id)`, `imagesPresignedUrls` e `imagesConfirm(id)`; ninguna ruta `/v1/...` aparece fuera de `constants/*Endpoints.ts` ([constants/propertiesEndpoints.ts](frontend/src/constants/propertiesEndpoints.ts)).
+- `GET /v1/search/feed` retorna `FeedPage { items: PropertyCard[], next_cursor: string | null }` ([types/feed/search.ts](frontend/src/types/feed/search.ts)).
+- `PropertiesView` es la vista padre en `/feed` con el header y toggle Lista/Mapa; el estado activo del toggle se deriva de `route.name` (computed), no de un ref local ([views/properties/feed/PropertiesView.vue](frontend/src/views/properties/feed/PropertiesView.vue)).
+- El `<router-view />` de `PropertiesView` está fuera del div con padding del header para evitar doble padding en las vistas hijas ([views/properties/feed/PropertiesView.vue](frontend/src/views/properties/feed/PropertiesView.vue)).
+- `MapView.vue` implementa el feed-mapa: lista con scroll infinito a la izquierda y mapa con todo el bbox a la derecha, `useFeedMap` + `useInfiniteScroll` + `usePropertyMapper`, hover en ambos sentidos y bbox en la URL vía `router.replace` ([views/properties/feed/MapView.vue](frontend/src/views/properties/feed/MapView.vue)).
+- `MapView` persiste el bbox en `route.query` con `router.replace` en cada `moveend` — el handler `onBbox` llama primero `router.replace({ query: bbox })` y luego `fetchByBbox`; no hay `watch` sobre `route.query` porque el mapa es el único que escribe la URL ([views/properties/feed/MapView.vue](frontend/src/views/properties/feed/MapView.vue)).
+- `MapView` inicializa `center` síncronamente desde `localStorage` (clave `STORAGE_KEYS.USER_LOCATION`) para evitar la race condition de vue-leaflet; el `onMounted` solo llama `fetchByBbox` alrededor de `loc ± 0.05°` ([views/properties/feed/MapView.vue](frontend/src/views/properties/feed/MapView.vue)).
+- `FeedFilters` y `FeedPreferences` viven en `types/feed/filters.ts`; `FeedPage`, `PageCache`, `FeedQuery` y `BboxPayload` en `types/feed/search.ts` ([types/feed/](frontend/src/types/feed)).
 - No hay ningún import de `vuelidate` ni de `@vuelidate/*` en `src/`; `LoginView` y `RegisterView` validan con inputs nativos y `ref`, sin librería de forms ([views/auth/LoginView.vue](frontend/src/views/auth/LoginView.vue), [views/auth/RegisterView.vue](frontend/src/views/auth/RegisterView.vue)).
 - Ningún template usa componentes de `@vueform/vueform` pese a estar registrado en `main.ts`; `@vueform/multiselect` sí se importa en `main.ts`, `FeedFilters.vue`, `LocalitySelector.vue` y `NeighborhoodSelector.vue` ([main.ts](frontend/src/main.ts), [components/properties/feed/FeedFilters.vue](frontend/src/components/properties/feed/FeedFilters.vue)).
 - `@vueform/multiselect` no figura en `package.json` — llega como dependencia transitiva de `@vueform/vueform` ([package.json](frontend/package.json)).
 - `firebase` no está en `package.json` ni hay imports de `firebase/*` en `src/` — removido el 2026-07-28 ([package.json](frontend/package.json)).
-- `process.env` aparece 5 veces en `src/`, todas en `config/index.ts`; el único uso de una API específica de webpack es `require("leaflet.markercluster")` en `MapUser.vue` ([config/index.ts](frontend/src/config/index.ts), [components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- `process.env` aparece 5 veces en `src/`, todas en `config/index.ts`; el único uso de una API específica de webpack es `require("leaflet.markercluster")` en `useMarkerCluster.ts` ([config/index.ts](frontend/src/config/index.ts), [composables/map/useMarkerCluster.ts](frontend/src/composables/map/useMarkerCluster.ts)).
 - `tailwind.config.js` carga `require("@vueform/vueform/tailwind")` como plugin y escanea los temas de Vueform en `content`, lo que ata la versión de Tailwind a la que soporte Vueform ([tailwind.config.js:6-8,30](frontend/tailwind.config.js#L30)).
 - `tsconfig.json` declara `baseUrl` y `resolveJsonModule` ([tsconfig.json](frontend/tsconfig.json)).
 - `vue.config.js` no invoca `vue-tsc`; el `build` de `vue-cli-service` valida con ESLint, no con el compilador de tipos ([vue.config.js](frontend/vue.config.js), [package.json](frontend/package.json)).
@@ -654,3 +652,8 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 - `formatCurrency` es la única función de formateo de moneda con símbolo, y no queda ningún `Intl.NumberFormat` ni `toLocaleString` fuera de `utils/` ([utils/money.ts](frontend/src/utils/money.ts), [utils/number.ts](frontend/src/utils/number.ts)).
 - `utils/date.ts` construye su `Intl.DateTimeFormat` a nivel de módulo, no por llamada ([utils/date.ts](frontend/src/utils/date.ts)).
 - `StepImagenes.vue` genera las previews con un `watch` sobre `files` (no un `computed`) y las revoca en `onUnmounted` ([StepImagenes.vue](frontend/src/components/properties/create/StepImagenes.vue)).
+- Ningún archivo fuera de `src/api/` importa un cliente de `api/clients/`; composables, stores, componentes y vistas usan las funciones de `api/{users,catalog,properties,avm}.ts` y `api/admin/` ([api/](frontend/src/api)).
+- `useFeedMap` solo aplica la respuesta del último bbox pedido (`latestRequest`) y la ordena con `sortForMap` ([composables/feed/useFeedMap.ts:19-31](frontend/src/composables/feed/useFeedMap.ts#L19-L31)).
+- `authStore.onboardingStep` está tipado como `OnboardingStep` (`"intent" | "city" | "neighborhood" | "property_type" | "done"`) ([types/users/base.ts](frontend/src/types/users/base.ts)).
+- Las rutas `/listing/:id`, `/properties/:id/edit` y `/users/:userId` declaran `props: true` ([router/routes/properties.ts:21](frontend/src/router/routes/properties.ts#L21), [router/routes/public.ts:20](frontend/src/router/routes/public.ts#L20)).
+- `ResetPasswordView.vue` envía con `@submit.prevent="resetPasswordUser"` en el `<form>` y su botón de submit no declara `@click` ([views/auth/ResetPasswordView.vue:51](frontend/src/views/auth/ResetPasswordView.vue#L51)).

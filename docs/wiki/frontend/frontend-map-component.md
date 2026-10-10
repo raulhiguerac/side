@@ -1,7 +1,7 @@
 ---
 title: Componente de mapa reusable (MapUser)
 status: stable
-last-verified: 2026-10-04
+last-verified: 2026-10-09
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -9,6 +9,7 @@ related:
   - "[[frontend-poi-reachable]]"
   - "[[adr-mapbox-geocoding-leaflet-rendering]]"
   - "[[adr-gmaps-places-geocoding]]"
+  - "[[adr-feed-map-whole-bbox-cluster]]"
 sources:
   - ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md
   - ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md
@@ -17,17 +18,18 @@ sources:
   - ../../sources/frontend/2026-06-15-poi-detail-view-mapuser-cluster.md
   - ../../sources/frontend/2026-06-20-property-detail-view-refactor.md
   - ../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md
+  - ../../sources/frontend/2026-10-09-api-layer-map-cluster-and-typecheck.md
 ---
 
 ## TL;DR
 
-`MapUser.vue` (`components/map/`) es el componente de mapa **dumb/controlado** y reusable del frontend: props que entran, eventos que salen, cero estado de negocio. Usa `@vue-leaflet/vue-leaflet` (declarativo). Patrón **híbrido**: una prop `markers` tipada para el caso común + un `<slot>` como escape hatch para cualquier otra capa Leaflet. Los iconos son **data-driven** (SVGs en `public/icons/` elegidos por `marker.imageType`). D3 se suma como **capa plug-and-play** aparte, no dentro del componente.
+`MapUser.vue` (`components/map/`) es el componente de mapa **dumb/controlado** y reusable del frontend: props que entran, eventos que salen, cero estado de negocio. Usa `@vue-leaflet/vue-leaflet` para el mapa, los tiles y el marcador `subject`; **todos los demás marcadores** (propiedades y POIs) van a un cluster imperativo, `useMarkerCluster`, desde el 2026-10-09. Patrón **híbrido**: una prop `markers` tipada + un `<slot>` como escape hatch para cualquier otra capa Leaflet. Los iconos son **data-driven**: componentes lucide elegidos por `marker.imageType` vía `markerIconMap`. D3 se suma como **capa plug-and-play** aparte, no dentro del componente.
 
 ## Por qué dumb/controlado
 
 El componente se reusa en varios lados (form AVM, futuro feed-mapa, etc.), así que no puede hardcodear *qué* renderiza ni la lógica de negocio. Patrón:
 - **Props in**: `center`, `markers`, `zoom` (vía `v-model`).
-- **Eventos out**: lo que el mapa emita (clicks, cambios de zoom) los decide el padre.
+- **Eventos out**: `bbox` (en cada `moveend`), `markerClick(id)` y `markerHover(id | null)`; qué hacer con ellos lo decide el padre.
 - El **padre posee los datos y las decisiones**; el componente posee la **instancia Leaflet** (el ciclo de vida del mapa).
 
 ## Stack: vue-leaflet declarativo
@@ -38,11 +40,12 @@ Se usa `@vue-leaflet/vue-leaflet` (`<l-map>`, `<l-tile-layer>`, `<l-marker>`, `<
 
 ```
 <l-map> + <l-tile-layer>
-  ├── <l-marker v-for="markers">  ← caso común, typed (MarkerData[])
-  └── <slot/>                      ← escape hatch para capas extra
+  ├── <l-marker v-for="subjectMarkers">  ← solo el inmueble avaluado, con <l-icon>
+  ├── useMarkerCluster(markers ≠ subject) ← propiedades y POIs, imperativo
+  └── <slot/>                             ← escape hatch para capas extra
 ```
 
-- **`markers: MarkerData[]`** (prop typed) cubre el 90% — el padre solo pasa datos.
+- **`markers: MarkerData[]`** (prop typed) cubre el 90% — el padre solo pasa datos; `MapUser` decide qué va al cluster.
 - **`<slot>`** permite que el padre componga cualquier otra capa (`<l-circle>`, `<l-geo-json>`, controles...). Los hijos del slot se compilan en el **scope del padre** → `MapUser` **no importa** todos los `L*`, solo `LMap`/`LTileLayer`/`LMarker`/`LIcon`. Cada vista trae lo que usa; el bundle queda flaco.
 
 > Alternativa descartada: importar/registrar los ~22 componentes `L*` en `MapUser` — infla el bundle y sigue hardcodeando qué se renderiza. El slot es el camino "acepta cualquier cosa".
@@ -78,6 +81,10 @@ watch(center, (val) => {
 
 Template: `v-model:center="internalCenter"` en `<l-map>`. El padre pasa el centro inicial y puede moverlo programáticamente (vía `v-model:center`); cuando el usuario hace pan, `internalCenter` se actualiza localmente sin contaminar el estado del padre. El bbox se emite por `@moveend` — los padres que necesitan saber la posición actual usan eso.
 
+### El zoom del `v-model` llega tarde en `moveend` (2026-10-09)
+
+vue-leaflet actualiza `update:zoom`/`update:center` desde **su propio** listener de `moveend`, envuelto en un debounce. Nuestro `@moveend` corre antes, así que si arma el bbox con `zoom.value` manda el zoom **anterior**. Con la rueda no se notaba (pasos de 1), pero un click en una burbuja del cluster salta varios niveles: el feed pedía H3 r7 sobre un bbox de zoom 16, ninguna celda r7 tenía su centro adentro y volvía `[]` — el mapa quedaba vacío. **Fix**: `onMoveEnd` lee bordes y zoom del mapa del evento (`event.target.getZoom()`), nunca del `v-model`.
+
 ### Race condition histórica: inicialización del center
 
 vue-leaflet registra su watcher de `center` **dentro de un `onMounted` async** (necesita await del import dinámico de Leaflet). Si el padre actualiza `center.value` también en `onMounted`, el watcher puede no estar registrado aún → el mapa ignora el pan.
@@ -102,7 +109,7 @@ Así el mapa arranca ya en la ubicación correcta sin necesitar un `setView` pos
 
 ## Iconos data-driven
 
-El tipo de cada marker decide su ícono. Definido en `types/maps.ts`:
+El tipo de cada marker decide su ícono. Definido en `types/maps/base.ts`:
 
 ```ts
 export type MarkerImageType = "subject" | "house" | "apartment" | "food" | "education"; // evoluciona
@@ -122,7 +129,8 @@ export interface MarkerData {
 
 - **`subject`** = el inmueble que se está avaluando (marker propio, diferenciado de los comparables `house`/`apartment` y de los POIs `food`/`education`...).
 - Los iconos son **componentes Lucide** (no SVGs en `public/icons/`). El mapeo `MarkerImageType → Component` vive en `constants/markerIcons.ts` como `Record<MarkerImageType, Component>` — p.ej. `house: MapPinHouse`, `apartment: Building`, `food: ChefHat`, `education: NotebookPen`.
-- En el template: `<component :is="markerIconMap[marker.imageType]" :size="24" color="#22C55E" />` dentro del `<l-icon>`.
+- Para el cluster, `utils/markerIcon.ts` arma el `L.divIcon`: renderiza el componente de `markerIconMap` con `renderToElement` **una vez por tipo y estado** y cachea el HTML resultante (`htmlCache`); el resto de marcadores reusa el string. Casa y `subject` son pines con relleno navy (verde si están resaltados); apartamento, un círculo navy con el ícono; los POIs, un círculo del color de `POI_COLORS` con su ícono. `clusterIcon(n)` dibuja la burbuja navy con el conteo.
+- `subject` sigue declarativo: `<l-icon>` con `<MapPinHouse>`. **No** se le pasa el `DivIcon` de `markerIcon` porque vue-leaflet tipa la prop `icon` de `<l-marker>` como `Icon` y `vue-tsc` lo rechaza.
 - `MarkerData`/`MarkerImageType` son **una sola fuente de verdad** importada tanto por `MapUser` como por el padre que arma los markers.
 
 ### Gotchas de `l-icon` con componentes Vue
@@ -134,49 +142,30 @@ export interface MarkerData {
 - El componente Lucide necesita `color` explícito — dentro del div de Leaflet `currentColor` no resuelve a ningún color visible.
 - **Lucide `Building` es stroke-only** — pasar `:fill` no tiene efecto. Para cambiar el fondo, envolver en un `div` con clase de background: `<div class="rounded-full bg-[#1e3a5f]"><Building :size="14" color="#FFF" /></div>`.
 
-### Hover state en feed-mapa (MapView)
+### Hover en ambos sentidos (feed-mapa)
 
-`MapView` pasa `hoveredId: string | null` como prop a `MapUser`. El marcador activo usa icono más grande y color verde:
+- **Tarjeta → marcador**: `MapView` pasa `hoveredId` como prop; `MapUser` llama `cluster.highlight(id)`, que agranda el marcador (`setIcon`) o, si está dentro de una burbuja, le pone la clase `is-highlighted` a la burbuja (verde y escalada, en `main.css`). Se reaplica tras cada zoom o animación del cluster.
+- **Marcador → tarjeta**: `MapUser` emite `markerHover(id | null)`; `MapView` resalta la tarjeta solo si ya está pintada en la lista.
 
-- Normal: tamaño 24×24, anchor `[12, 24]`, fondo `#1e3a5f`
-- Hover: tamaño 48×48, anchor `[24, 48]`, fondo `#22C55E`
+## Cluster maker — `useMarkerCluster` (2026-10-09)
 
-`hoveredId` se setea en `@mouseenter`/`@mouseleave` de cada `PropertyCard` en la vista padre.
+Desde el 2026-10-09 el cluster es genérico y agrupa **propiedades y POIs**, no solo POIs. Vive en `composables/map/useMarkerCluster.ts` y `MapUser` lo usa con todo lo que no es `subject`:
 
-## Cluster de POI markers — `leaflet.markercluster`
+| Función | Qué hace |
+|---|---|
+| `attach(map)` | Mete el `MarkerClusterGroup` en el mapa cuando dispara `@ready` |
+| `sync(markers)` | Compara con lo que ya hay por `id` y solo quita/agrega lo que cambió, en lote (`removeLayers`/`addLayers`) — no rearma el grupo |
+| `highlight(id)` | Agranda el marcador; si está agrupado, resalta la burbuja que lo contiene (`getVisibleParent`) |
+| `detach()` | Saca el grupo del mapa en `onUnmounted` |
 
-Cuando el padre pasa markers de tipo POI (no `subject | house | apartment`), `MapUser` los renderiza imperativamentce con `leaflet.markercluster` en vez de declarativamente con `<l-marker>`. Esto permite manejar cientos de POIs sin degradar el render.
+Recibe callbacks opcionales (`MarkerClusterHandlers` en `types/maps/cluster.ts`): `popup(marker)`, `onClick(marker)`, `onHover(id)`. `MapUser` los conecta a `PoiPopup` y a los emits `markerClick`/`markerHover`. Opciones: `maxClusterRadius: 50`, `chunkedLoading`, `showCoverageOnHover: false` y `iconCreateFunction` con `clusterIcon`.
 
-**Split de markers:**
-- `specialMarkers` (computed): tipos `subject | house | apartment` — declarativos con `<l-marker>` + `<l-icon>` (iconos Lucide, hover state).
-- `poiMarkers` (computed): el resto — imperativo con `MarkerClusterGroup`.
-
-**Implementación:**
+`@vue-leaflet` no trae componente de cluster: por eso lo agrupable es imperativo y solo `subject` queda en el template.
 
 ```ts
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { MarkerClusterGroup } = require("leaflet.markercluster");
-let clusterGroup: any = null; // L.MarkerClusterGroup no está en @types/leaflet
-```
-
-En `onMapReady` y en `watch(poiMarkers, ...)`:
-```ts
-function buildCluster() {
-  const map = (mapRef.value as any)?.leafletObject;
-  if (!map) return;
-  if (clusterGroup) map.removeLayer(clusterGroup);
-  clusterGroup = new MarkerClusterGroup({ maxClusterRadius: 50, chunkedLoading: true });
-  for (const m of poiMarkers.value) {
-    const color = POI_COLORS[m.imageType] ?? "#6b7280";
-    const icon = L.divIcon({
-      html: `<div style="width:10px;height:10px;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4)"></div>`,
-      className: "", iconSize: [10, 10], iconAnchor: [5, 5],
-    });
-    const marker = L.marker([m.lat, m.lon], { icon }).addTo(clusterGroup);
-    if (m.label) marker.bindPopup(buildPoiPopupHtml(m));
-  }
-  map.addLayer(clusterGroup);
-}
+import type {} from "leaflet.markercluster"; // tipos de L.MarkerClusterGroup
 ```
 
 **`POI_COLORS` por `MarkerImageType`** — vive en `constants/poiColors.ts` (no inline en `MapUser.vue`), junto a `POI_BUCKET_LABELS` (labels en español por bucket):
@@ -200,19 +189,18 @@ export const POI_BUCKET_LABELS: Partial<Record<MarkerImageType, string>> = {
 
 Se sacó de `MapUser.vue` para que un componente nuevo (`MapLegend.vue`) lo pueda reusar sin duplicar el objeto — ver [[frontend-poi-reachable]]. `MapUser` solo importa `POI_COLORS`.
 
-**Tipos nuevos en `MarkerImageType`** (`types/maps.ts`): `health | transport | commerce | poi` — mapeados en `constants/markerIcons.ts` con `HeartPulse | Bus | ShoppingCart | MapPin`.
+**Tipos nuevos en `MarkerImageType`** (`types/maps/base.ts`): `health | transport | commerce | poi` — mapeados en `constants/markerIcons.ts` con `HeartPulse | Bus | ShoppingCart | MapPin`.
 
 ### Popup al click en markers del cluster
 
-Cada marker del cluster soporta `bindPopup` con la info del POI (Leaflet lo muestra al click por default, sin código extra de eventos). `MarkerData` gana campos opcionales para esto: `label` (nombre), `categoryLabel`, `address`, `phone`, `website`. `buildPoiPopupHtml(m)` arma el HTML con los campos disponibles (cada uno opcional, solo se renderiza si existe) y `website` como link clickeable.
-
-**Escapado obligatorio**: el nombre/dirección de un POI viene de OSM/Overpass (dato externo, no confiable). `escapeHtml(text)` usa el truco `div.textContent = text; return div.innerHTML` para escapar antes de interpolar en el string HTML del popup — sin esto, un POI con `<script>` en el nombre sería XSS.
+Cada marker con `label` recibe `bindPopup` con un `HTMLElement` renderizado desde **`PoiPopup.vue`** (`renderToElement(PoiPopup, { marker })`): nombre, categoría, dirección, teléfono y web, cada uno solo si existe. Reemplazó en 2026-10-09 a `buildPoiPopupHtml` + `escapeHtml`, que armaban el HTML como string: Vue ya escapa el texto. **El `website` solo se enlaza si empieza con `http(s)://`** — viene de OSM/Overpass y ni `encodeURI` (antes) ni Vue bloquean un `javascript:` en un `href`.
 
 **CSS e imports:** webpack requiere imports explícitos (no CDN):
 ```ts
 import "leaflet.markercluster/dist/MarkerCluster.css";
-import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 ```
+
+`MarkerCluster.Default.css` ya no se importa: las burbujas las dibuja `clusterIcon`.
 
 `shims-vue.d.ts` necesita:
 ```ts
@@ -225,7 +213,7 @@ declare module 'leaflet.markercluster';
 globals: { defineModel: "readonly" }
 ```
 
-`onUnmounted`: `map.removeLayer(clusterGroup)` para limpiar.
+`onUnmounted`: `cluster.detach()` para limpiar.
 
 ## D3 como capa plug-and-play
 
@@ -246,6 +234,8 @@ Ver [[adr-mapbox-geocoding-leaflet-rendering]] para la decisión de stack (Leafl
 - `POI_COLORS`/`POI_BUCKET_LABELS` centralizados en `constants/poiColors.ts`; nuevo componente reusable `MapLegend.vue`.
 - `MapUser` usado en `DevPlaygroundView` (AVM), `MapView` (feed-mapa) y `NearbyPlaces` (dentro de `PropertyDetailView`, POI section).
 
+**Update 2026-10-09:** cluster genérico con iconos lucide para propiedades y POIs (`useMarkerCluster`), `PoiPopup`, emits `markerClick`/`markerHover`, zoom leído del mapa en `moveend`. El feed-mapa pinta todo el bbox ([[adr-feed-map-whole-bbox-cluster]]). `MapUser` se usa en `AvmView`, `MapView` y `NearbyPlaces`.
+
 ## Segundo mapa: `NeighborhoodMap.vue` del panel admin (2026-10-04)
 
 El panel de barrios ([[frontend-admin-panel]]) usa un componente propio y no `MapUser`, que está pensado para marcadores con cluster, tiene zoom mínimo 14 y no expone `fitBounds`. `NeighborhoodMap` es igual de tonto, pero dibuja polígonos:
@@ -258,29 +248,32 @@ El panel de barrios ([[frontend-admin-panel]]) usa un componente propio y no `Ma
 ## Claims
 
 - `MapUser.vue` usa `@vue-leaflet/vue-leaflet` (`LMap`, `LTileLayer`, `LMarker`, `LIcon`) ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
-- El padre debe pasar `:markers="marker ? [marker] : []"` cuando el marker puede ser `null` ([views/dev/DevPlaygroundView.vue](frontend/src/views/dev/DevPlaygroundView.vue)).
+- El padre debe pasar `:markers="marker ? [marker] : []"` cuando el marker puede ser `null` ([views/avm/AvmView.vue](frontend/src/views/avm/AvmView.vue)).
 - `zoom` es two-way vía `defineModel` + `v-model:zoom` en `<l-map>` — requiere Vue 3.4+ ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - `center` usa `internalCenter` como intermediario — Leaflet emite `LatLng` objects en `update:center`, no tuples; vincular `defineModel center` directo a `<l-map>` causa crash `Invalid LatLng object: (undefined, undefined)` ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
 - `internalCenter` se inicializa con `center.value ?? [4.681414, -74.046864]`; un `watch(center, ...)` permite que el padre mueva el mapa programáticamente ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
-- vue-leaflet registra su watcher de `center` dentro de un `onMounted` async — actualizar `center.value` desde el padre en `onMounted` crea una race condition; el fix es inicializar el ref síncronamente en script setup ([views/properties/MapView.vue](frontend/src/views/properties/MapView.vue)).
-- POI markers (non-special) se renderizan con `leaflet.markercluster` (`MarkerClusterGroup` imperativo); special markers (`subject | house | apartment`) siguen siendo declarativos con `<l-marker>` ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
-- `require("leaflet.markercluster")` en vez de `import` — webpack no adjunta el plugin al namespace `L` con ES import ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
-- `clusterGroup` tipado como `any` — `L.MarkerClusterGroup` no está en `@types/leaflet` ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
-- CSS del cluster requiere imports explícitos: `import "leaflet.markercluster/dist/MarkerCluster.css"` y `"...Default.css"` ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- vue-leaflet registra su watcher de `center` dentro de un `onMounted` async — actualizar `center.value` desde el padre en `onMounted` crea una race condition; el fix es inicializar el ref síncronamente en script setup ([views/properties/feed/MapView.vue](frontend/src/views/properties/feed/MapView.vue)).
+- Todos los markers salvo `subject` (propiedades y POIs) se renderizan con `useMarkerCluster`; `subject` es un `<l-marker>` declarativo ([components/map/MapUser.vue:18-24](frontend/src/components/map/MapUser.vue#L18-L24), [:70-77](frontend/src/components/map/MapUser.vue#L70-L77)).
+- `require("leaflet.markercluster")` en vez de `import` — webpack no adjunta el plugin al namespace `L` con ES import ([composables/map/useMarkerCluster.ts:4](frontend/src/composables/map/useMarkerCluster.ts#L4)).
+- El grupo está tipado como `L.MarkerClusterGroup` vía `import type {} from "leaflet.markercluster"` ([composables/map/useMarkerCluster.ts:21](frontend/src/composables/map/useMarkerCluster.ts#L21)).
+- El CSS del cluster se importa explícito y solo `MarkerCluster.css`; las burbujas las dibuja `clusterIcon` ([composables/map/useMarkerCluster.ts:2](frontend/src/composables/map/useMarkerCluster.ts#L2), [utils/markerIcon.ts:65](frontend/src/utils/markerIcon.ts#L65)).
 - `shims-vue.d.ts` necesita `declare module '*.css'` y `declare module 'leaflet.markercluster'` para que TypeScript acepte esos imports ([shims-vue.d.ts](frontend/src/shims-vue.d.ts)).
 - `defineModel` añadido a `.eslintrc.js` globals (`"readonly"`) — macro Vue 3.4 no reconocida sin esto ([.eslintrc.js](frontend/.eslintrc.js)).
 - `v-model` no acepta TypeScript `as` casts (inválido como LHS) — usar un ref correctamente tipado en su lugar.
-- `MapUser` expone una prop `markers: MarkerData[]` (v-for de `<l-marker>`) **y** un `<slot>` para capas extra ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
-- Los iconos de marker son componentes Lucide resueltos por `markerIconMap` (`Record<MarkerImageType, Component>`) — renderizados con `<component :is="markerIconMap[marker.imageType]">` ([constants/markerIcons.ts](frontend/src/constants/markerIcons.ts)).
-- `<l-icon>` requiere `class-name="!bg-transparent !border-0 !shadow-none"` para limpiar el contenedor Leaflet ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
-- Anchor para pins con punta: `[w/2, h]` (e.g. `[12, 24]`). Anchor para iconos cuadrados: `[w/2, h/2]` (e.g. `[12, 12]`) ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
-- Lucide `Building` es stroke-only — `:fill` no tiene efecto; usar div wrapper con bg color para cambiar el fondo ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
-- `MarkerData` y `MarkerImageType` viven en `types/maps.ts` ([types/maps.ts](frontend/src/types/maps.ts)).
+- `MapUser` expone una prop `markers: MarkerData[]` **y** un `<slot>` para capas extra, y emite `bbox`, `markerClick` y `markerHover` ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- Los iconos de marker son componentes Lucide resueltos por `markerIconMap`; `markerIcon` los renderiza una vez por tipo y estado y cachea el HTML en `htmlCache` ([utils/markerIcon.ts:17](frontend/src/utils/markerIcon.ts#L17), [constants/markerIcons.ts](frontend/src/constants/markerIcons.ts)).
+- El `<l-icon>` del `subject` usa `class-name=""` y renderiza `<MapPinHouse>`; no recibe un `DivIcon` porque vue-leaflet tipa `icon` como `Icon` ([components/map/MapUser.vue:22](frontend/src/components/map/MapUser.vue#L22)).
+- Anchor para pins con punta: `[w/2, h]` (e.g. `[12, 24]`); para iconos circulares, el centro `[w/2, h/2]` ([utils/markerIcon.ts](frontend/src/utils/markerIcon.ts)).
+- Lucide `Building` es stroke-only — `:fill` no tiene efecto; `markerIcon` lo envuelve en un círculo con fondo ([utils/markerIcon.ts](frontend/src/utils/markerIcon.ts)).
+- `MarkerData`, `MarkerImageType` y `Bbox` viven en `types/maps/base.ts` ([types/maps/base.ts](frontend/src/types/maps/base.ts)).
 - El CSS de Leaflet se carga vía `<link>` en `public/index.html`, no por import ([public/index.html:11](frontend/public/index.html#L11)).
 - `POI_COLORS` y `POI_BUCKET_LABELS` viven en `constants/poiColors.ts`, no inline en `MapUser.vue` — reusados por `MapLegend.vue` ([constants/poiColors.ts](frontend/src/constants/poiColors.ts)).
-- Cada marker del cluster con `label` definido recibe `bindPopup(buildPoiPopupHtml(m))` — Leaflet lo muestra al click sin manejo de eventos adicional ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
-- `escapeHtml` (`div.textContent`/`innerHTML`) sanitiza cada campo del POI antes de interpolarlo en el HTML del popup — el dato viene de OSM/Overpass, fuente externa ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- Cada marker del cluster con `label` definido recibe `bindPopup` con `PoiPopup` renderizado por `renderToElement` ([components/map/MapUser.vue](frontend/src/components/map/MapUser.vue)).
+- `PoiPopup.vue` solo enlaza el `website` si empieza con `http://` o `https://` ([components/map/PoiPopup.vue:25-26](frontend/src/components/map/PoiPopup.vue#L25-L26)).
 - `MapLegend.vue` (`components/map/`) es un componente sin estado que itera `POI_COLORS`/`POI_BUCKET_LABELS` — pensado para reusarse en `AvmView` además de `NearbyPlaces` ([components/map/MapLegend.vue](frontend/src/components/map/MapLegend.vue)).
+- `useMarkerCluster.sync` solo quita y agrega los markers que cambiaron (por `id`), con `removeLayers`/`addLayers` en lote ([composables/map/useMarkerCluster.ts:47-66](frontend/src/composables/map/useMarkerCluster.ts#L47-L66)).
+- `useMarkerCluster.highlight` resalta la burbuja que contiene al marker con la clase `is-highlighted` cuando el marker está agrupado ([composables/map/useMarkerCluster.ts:76-79](frontend/src/composables/map/useMarkerCluster.ts#L76-L79), [main.css:34](frontend/src/main.css#L34)).
+- `onMoveEnd` arma el bbox con `map.getZoom()` del evento, no con el `zoom` del `v-model` ([components/map/MapUser.vue:107](frontend/src/components/map/MapUser.vue#L107)).
 - `NeighborhoodMap.vue` desactiva zoom y arrastre en `MAP_OPTIONS` y encuadra con `fitBounds` sobre la geometría del barrio ([NeighborhoodMap.vue:49](frontend/src/components/admin/catalog/neighborhoods/NeighborhoodMap.vue#L49), [:98](frontend/src/components/admin/catalog/neighborhoods/NeighborhoodMap.vue#L98)).
 - `NeighborhoodMap.vue` emite `bounds` como `[oeste, sur, este, norte]` desde `map.getBounds()` ([NeighborhoodMap.vue:106](frontend/src/components/admin/catalog/neighborhoods/NeighborhoodMap.vue#L106)).
 - El `watch` de `NeighborhoodMap.vue` observa `geometry`, `center[0]` y `center[1]` como fuentes separadas ([NeighborhoodMap.vue:116](frontend/src/components/admin/catalog/neighborhoods/NeighborhoodMap.vue#L116)).

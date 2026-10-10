@@ -25,6 +25,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
   - [ADR-0007 — Config de dev versionada, secretos en .env.local, artefactos en R2](wiki/_shared/adrs/adr-dev-config-versioned-artifacts-in-r2.md)
   - [ADR-0008 — La infra se reconcilia con init jobs idempotentes](wiki/_shared/adrs/adr-infra-reconciled-by-init-jobs.md)
   - [ADR-0009 — SeaweedFS como S3 de dev y rclone como cliente](wiki/_shared/adrs/adr-seaweedfs-dev-object-storage.md)
+  - [ADR-0011 — Cluster sin estado para la demo pública: datos en Neon y R2, Redis efímero adentro](wiki/_shared/adrs/adr-stateless-cluster-external-data.md)
 
 ## analytics-service (piloto)
 
@@ -86,7 +87,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 
 - [frontend](wiki/frontend/frontend.md) — overview: scope funcional vs scaffolding, stack actual + deuda técnica reconocida, routes, consumers de servicios backend, roadmap
 - [frontend-architecture](wiki/frontend/frontend-architecture.md) — layout interno, stores Pinia, composables, router guard, axios pattern, caching local, forms y mapas
-- [frontend-map-component](wiki/frontend/frontend-map-component.md) — componente de mapa dumb/reusable (MapUser): vue-leaflet declarativo, markers-prop + slot, defineModel zoom, iconos data-driven, D3 plug-and-play
+- [frontend-map-component](wiki/frontend/frontend-map-component.md) — componente de mapa dumb/reusable (MapUser): vue-leaflet para mapa y `subject`, cluster maker genérico (`useMarkerCluster`) con iconos lucide para propiedades y POIs, markers-prop + slot, zoom leído del mapa en `moveend`, D3 plug-and-play
 
 ### flows/
 - [frontend-onboarding-flow](wiki/frontend/flows/frontend-onboarding-flow.md) — modal wizard de 4 pasos, state machine, persistencia dual server+client, refactor users-service ↔ catalog pendiente
@@ -111,6 +112,8 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0010 — Moderar se hace en el panel de vista previa, con un formulario de guardado explícito](wiki/frontend/adrs/adr-moderation-panel-staged-form.md)
 - [ADR-0011 — Promocionar vive en su propia sub-tab, no en el panel de moderación](wiki/frontend/adrs/adr-promotions-own-subtab.md)
 - [ADR-0012 — Los filtros del panel admin viven en la URL, no en el composable](wiki/frontend/adrs/adr-admin-filters-in-query-params.md)
+- [ADR-0013 — Todo el HTTP del front pasa por funciones tipadas de api/, por dominio](wiki/frontend/adrs/adr-api-layer-by-domain.md)
+- [ADR-0014 — El feed en mapa pinta todo el bbox con cluster y la lista hace scroll infinito](wiki/frontend/adrs/adr-feed-map-whole-bbox-cluster.md)
 
 ## properties-service
 

@@ -1,14 +1,14 @@
 ---
 title: Runbook — properties-service local dev
 status: draft
-last-verified: 2026-09-27
+last-verified: 2026-10-05
 owners: [properties-service]
 related:
   - "[[properties-service]]"
   - "[[properties-service-architecture]]"
   - "[[catalog-service-local-dev]]"
   - "[[analytics-service-local-dev]]"
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md]
+sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md, ../../../sources/_shared/2026-10-05-stacked-prs-and-roadmap.md]
 ---
 
 ## TL;DR
@@ -160,6 +160,16 @@ docker exec -it $(docker ps -qf name=redis) redis-cli
 > KEYS feed:*
 > KEYS map:h3:*
 ```
+
+**Tests en otro checkout, sin romper el venv compartido (2026-10-05).** En el devcontainer, `UV_PROJECT_ENVIRONMENT=/home/vscode/.venv` apunta a un venv de root, y `uv run` intenta sincronizarlo: falla por permisos o lo deja con las dependencias de otro checkout. Para un worktree o una rama distinta, usar un venv aislado:
+
+```bash
+export UV_PROJECT_ENVIRONMENT=/tmp/props-venv
+uv sync --frozen --all-extras        # pytest vive en los extras de dev
+uv run --no-sync pytest -q tests -p no:cacheprovider
+```
+
+En `main` fallan 2 tests desde antes del 2026-10-05: `test_raises_storage_misconfigured_when_bucket_missing`, en `test_confirm_image_uploads.py` y `test_request_presigned_urls.py`. Son de configuración del bucket de storage y no de un cambio reciente; no hay que tomarlos como regresión.
 
 ## Claims
 
