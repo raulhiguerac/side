@@ -33,3 +33,7 @@ up_dev_env.sh
 down_dev_env.sh
 logs/
 .dev/
+audit-report.txt
+
+# caché de los hooks de Claude Code
+.claude/.cache/
