@@ -4,9 +4,9 @@ import type { AdminFilterDefinition } from "@/types/admin/filters";
 import { sanitizeFilterQuery } from "@/utils/adminFilters";
 
 // La URL manda: el filtro se comparte y, con push, el back lo deshace.
-export function useUrlFilters(
+export function useUrlFilters<T extends object = Record<string, string>>(
   filters: readonly AdminFilterDefinition[],
-  onChange: (values: Record<string, string>) => void
+  onChange: (values: T) => void
 ) {
   const route = useRoute();
   const router = useRouter();
@@ -17,7 +17,8 @@ export function useUrlFilters(
     router.push({ query: values });
   }
 
-  watch(urlFilters, onChange, { immediate: true });
+  // Único cast: sanitizeFilterQuery ya validó cada valor contra su enum.
+  watch(urlFilters, (values) => onChange(values as T), { immediate: true });
 
   return { urlFilters, pushFilters };
 }

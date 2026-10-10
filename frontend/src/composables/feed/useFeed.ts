@@ -6,6 +6,7 @@ import type { FeedPage, PageCache } from "@/types/feed/search";
 import type { PropertyCard } from "@/types/feed/cards";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
 import { logger } from "@/utils/logger";
+import { cityIdsOf } from "@/utils/property";
 
 async function fetchFeed(
   preferences: FeedPreferences,
@@ -42,11 +43,7 @@ export function useFeed() {
   const currentPageKey = ref<string>("first");
 
   async function updateLookup(items: PropertyCard[]) {
-    const locations = new Set(
-      items.map((obj) => obj.location?.city_id).filter(Boolean)
-    );
-    const uniqueLocations = Array.from(locations) as string[];
-    neighborhoodLookup.value = await buildNeighborhoodMap(uniqueLocations);
+    neighborhoodLookup.value = await buildNeighborhoodMap(cityIdsOf(items));
   }
 
   async function load(preferences?: FeedPreferences, filters?: FeedFilters) {

@@ -17,6 +17,7 @@ export const publicRoutes: RouteRecordRaw[] = [
     path: "/users/:userId",
     name: "public-profile",
     component: () => import("@/views/public/PublicProfileView.vue"),
+    props: true,
     meta: { requiresAuth: false },
   },
 ];

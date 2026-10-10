@@ -35,14 +35,6 @@ export interface PropertyEditForm {
   description: string;
 }
 
-/** Opción de un selector de tarjetas del formulario de creación. */
-export interface ChoiceOption<V extends string> {
-  value: V;
-  label: string;
-  desc?: string;
-  icon: Component;
-}
-
 export interface NumericFieldOption {
   key: "area_m2" | "bedrooms" | "bathrooms";
   label: string;
@@ -50,4 +42,14 @@ export interface NumericFieldOption {
   min: string;
   step: string;
   placeholder: string;
+}
+
+// Contrato común de los pasos del formulario de creación.
+export interface CreateStepProps {
+  form: CreatePropertyForm;
+  attempted?: boolean;
+}
+
+export interface CreateStepEmits {
+  "update:form": [form: CreatePropertyForm];
 }

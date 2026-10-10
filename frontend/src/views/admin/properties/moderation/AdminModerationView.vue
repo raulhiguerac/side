@@ -106,9 +106,8 @@ async function onSave(payload: ModerationPayload, propertyId: string) {
 
 watch(selectedId, resetModeration); // los mensajes son de la fila anterior
 
-// Cast seguro: sanitizeFilterQuery ya validó contra el enum.
-const { urlFilters, pushFilters } = useUrlFilters(
+const { urlFilters, pushFilters } = useUrlFilters<AdminPropertiesFilters>(
   MODERATION_FILTERS,
-  (filters) => load(filters as AdminPropertiesFilters)
+  load
 );
 </script>

@@ -17,12 +17,7 @@
         </PrimaryButton>
       </div>
 
-      <FilterTabs
-        :model-value="activeTab"
-        :tabs="tabs"
-        :get-count="getTabCount"
-        @update:model-value="(v) => (activeTab = v as ListingStatusTab)"
-      />
+      <FilterTabs v-model="activeTab" :tabs="tabs" :get-count="getTabCount" />
 
       <!-- Loading -->
       <div v-if="isLoading" class="flex items-center justify-center py-20">

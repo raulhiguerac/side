@@ -74,7 +74,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 import * as usersApi from "@/api/users";
 import { BadgeCheck, MessageCircle, MessageSquare, Phone } from "@lucide/vue";
 
@@ -90,9 +90,8 @@ import type { PropertyCard as PropertyCardData } from "@/types/feed/cards";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { logger } from "@/utils/logger";
 
-const route = useRoute();
 const router = useRouter();
-const userId = route.params.userId as string;
+const props = defineProps<{ userId: string }>();
 
 const profile = ref<CurrentUserProfileOut>();
 
@@ -101,17 +100,17 @@ const { pagedItems, hasPrev, hasNext, hasMore, total, setItems, next, prev } =
 const { cards } = usePropertyMapper(pagedItems);
 
 function fetchNextPage() {
-  return fetchUserListings(userId, total.value);
+  return fetchUserListings(props.userId, total.value);
 }
 
 onMounted(async () => {
   try {
-    profile.value = await usersApi.getPublicProfile(userId);
+    profile.value = await usersApi.getPublicProfile(props.userId);
   } catch (error) {
     logger.error("Error al obtener el perfil:", error);
   }
 
-  const first = await fetchUserListings(userId, 0);
+  const first = await fetchUserListings(props.userId, 0);
   setItems(first.items, first.hasMore);
 });
 

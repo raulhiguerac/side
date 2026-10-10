@@ -270,11 +270,14 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { DollarSign, Car, Layers, Calendar } from "@lucide/vue";
-import type { CreatePropertyForm } from "@/types/properties/forms";
+import type {
+  CreateStepEmits,
+  CreateStepProps,
+} from "@/types/properties/forms";
 import { formatMoney, parseMoney } from "@/utils/money";
 
-const props = defineProps<{ form: CreatePropertyForm; attempted?: boolean }>();
-const emit = defineEmits<{ (e: "update:form", v: CreatePropertyForm): void }>();
+const props = defineProps<CreateStepProps>();
+const emit = defineEmits<CreateStepEmits>();
 
 const displayPrice = ref(formatMoney(props.form.price));
 const displayAdminFee = ref(formatMoney(props.form.admin_fee));
