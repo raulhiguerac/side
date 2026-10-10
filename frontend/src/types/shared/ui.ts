@@ -18,3 +18,9 @@ export interface ChoiceOption<V extends string> {
   desc?: string;
   icon: Component;
 }
+
+// Una línea de la lista ✓/✕ de `FileUploadField`.
+export interface FileRequirement {
+  text: string;
+  accepted: boolean;
+}
