@@ -67,11 +67,11 @@
         <button
           @click="handleNext"
           type="button"
-          :disabled="isSaving"
+          :disabled="saving"
           class="w-3/5 bg-brand-primary text-white text-sm font-semibold py-2.5 rounded-full hover:bg-green-500 hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          <BaseSpinner v-if="isSaving" class="h-4 w-4" />
-          {{ isSaving ? "Guardando..." : "Continuar" }}
+          <BaseSpinner v-if="saving" class="h-4 w-4" />
+          {{ saving ? "Guardando..." : "Continuar" }}
         </button>
       </div>
     </template>
@@ -82,12 +82,12 @@
 import { ref, onMounted } from "vue";
 import houseIcon from "@/assets/house.svg";
 import apartmentIcon from "@/assets/apartment.svg";
-import { useOnboarding } from "@/composables/onboarding/useOnboarding";
 import { useLocalitiesWithNames } from "@/composables/catalog/useLocalitiesWithNames";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import type { CatalogItem } from "@/types/catalog/base";
 
-const { savePropertyTypes } = useOnboarding();
+defineProps<{ saving?: boolean }>();
+const emit = defineEmits<{ submit: [selections: Record<string, string[]>] }>();
 const { load: loadLocalities } = useLocalitiesWithNames();
 
 const propertyTypes = [
@@ -99,7 +99,6 @@ const cities = ref<CatalogItem[]>([]);
 const selections = ref<Record<string, string[]>>({});
 const activeTab = ref("");
 const isLoading = ref(true);
-const isSaving = ref(false);
 
 onMounted(async () => {
   const enrichedLocalities = await loadLocalities();
@@ -125,10 +124,8 @@ function toggleType(type: string) {
   }
 }
 
-async function handleNext() {
-  isSaving.value = true;
-  await savePropertyTypes(selections.value);
-  isSaving.value = false;
+function handleNext() {
+  emit("submit", selections.value);
 }
 </script>
 

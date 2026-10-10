@@ -14,41 +14,7 @@
 
     <AppFooter />
 
-    <BaseModal
-      v-model="isModalOpen"
-      @update:modelValue="(val) => !val && closeFlow()"
-    >
-      <div class="p-4">
-        <div class="mb-2 text-center">
-          <span
-            class="block text-brand-primary text-[10px] sm:text-xs font-semibold sm:font-bold uppercase sm:uppercase tracking-[0.06em] sm:tracking-wider text-center mb-2 sm:mb-1"
-          >
-            Sabemos que esta decisión no es fácil
-          </span>
-          <h2
-            class="text-sm sm:text-lg leading-snug sm:leading-tight font-semibold sm:font-bold text-brand-text text-center mx-auto max-w-[32ch] sm:max-w-none"
-          >
-            Cuéntanos qué estás buscando y te mostraremos
-            <br class="hidden sm:block" />
-            opciones pensadas para ti, sin complicaciones.
-          </h2>
-        </div>
-        <transition name="scale" mode="out-in">
-          <component
-            :is="activeComponent"
-            v-bind="dynamicProps"
-            @complete="closeFlow"
-          />
-        </transition>
-      </div>
-      <div class="mb-6 text-center">
-        <span
-          class="text-xs sm:text-sm text-gray-500 mt-4 text-left sm:text-center max-w-[32ch] sm:max-w-none mx-auto text-muted"
-        >
-          Puedes cambiar estas opciones más adelante desde Configuración.
-        </span>
-      </div>
-    </BaseModal>
+    <OnboardingModal v-model="isOnboardingOpen" />
   </div>
 </template>
 
@@ -58,19 +24,16 @@ import { onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useOnboarding } from "@/composables/onboarding/useOnboarding";
 import NavBar from "@/components/shared/NavBar.vue";
-import BaseModal from "@/components/shared/BaseModal.vue";
+import OnboardingModal from "@/components/onboarding/OnboardingModal.vue";
 import AppFooter from "@/components/shared/AppFooter.vue";
 import { useUserStore } from "./stores/user";
 import { ref } from "vue";
-import IntentSelector from "@/components/onboarding/IntentSelector.vue";
-import type { AccountIntent } from "@/types/users/base";
-import { computed } from "vue";
 import { logger } from "@/utils/logger";
 
 const authStore = useAuthStore();
 const userStore = useUserStore();
-const { activeComponent, isModalOpen, startFlow, closeFlow, advanceToCity } =
-  useOnboarding();
+const { shouldStart } = useOnboarding();
+const isOnboardingOpen = ref(false);
 
 const navigationLinks = [
   { names: "Home", router: "/" },
@@ -90,25 +53,13 @@ watch(
     try {
       await authStore.fillUserData();
       await userStore.checkInterests();
-      startFlow();
+      isOnboardingOpen.value = shouldStart();
     } catch (e) {
       logger.error("Error al inicializar la sesión", e);
     }
   },
   { immediate: true }
 );
-
-const intent = ref<AccountIntent | null>(null);
-const dynamicProps = computed(() => {
-  if (activeComponent.value === IntentSelector) {
-    return {
-      modelValue: intent.value,
-      "onUpdate:modelValue": (val: AccountIntent) => (intent.value = val),
-      onSaved: advanceToCity,
-    };
-  }
-  return {};
-});
 </script>
 
 <style scoped>
@@ -119,16 +70,6 @@ const dynamicProps = computed(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-}
-
-.scale-enter-active,
-.scale-leave-active {
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.scale-enter-from,
-.scale-leave-to {
-  opacity: 0;
-  transform: scale(0.9);
 }
 
 /* Limpieza de estilos globales */

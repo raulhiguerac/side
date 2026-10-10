@@ -1,92 +1,70 @@
-import { ref, shallowRef, type Component } from "vue";
 import * as usersApi from "@/api/users";
-import { useUserStore } from "@/stores/user";
 import { useAuthStore } from "@/stores/auth";
-import IntentSelector from "@/components/onboarding/IntentSelector.vue";
-import LocalitySelector from "@/components/onboarding/LocalitySelector.vue";
-import NeighborhoodSelector from "@/components/onboarding/NeighborhoodSelector.vue";
-import PropertyTypeSelector from "@/components/onboarding/PropertyTypeSelector.vue";
-import { logger } from "@/utils/logger";
+import { useUserStore } from "@/stores/user";
 import type { CatalogItem } from "@/types/catalog/base";
 import type { NeighborhoodSelection } from "@/types/users/interests";
+import { logger } from "@/utils/logger";
 
-const STEP_MAP: Record<string, Component> = {
-  intent: IntentSelector,
-  city: LocalitySelector,
-  neighborhood: NeighborhoodSelector,
-  property_type: PropertyTypeSelector,
-};
-
-const isModalOpen = ref(false);
-const activeComponent = shallowRef<Component | null>(null);
-
+// Guarda cada paso y avanza el flujo; abrir y cerrar el modal es del padre.
 export function useOnboarding() {
-  const userStore = useUserStore();
   const authStore = useAuthStore();
+  const userStore = useUserStore();
 
-  const startFlow = () => {
-    if (userStore.isOnboardingDismissed()) {
-      return;
-    }
+  function shouldStart(): boolean {
+    return (
+      !userStore.isOnboardingDismissed() && authStore.onboardingStep !== "done"
+    );
+  }
 
-    const step = authStore.onboardingStep;
+  function completeIntent() {
+    authStore.setOnboardingStep("city");
+  }
 
-    if (step != "done" && STEP_MAP[step]) {
-      activeComponent.value = STEP_MAP[step];
-      isModalOpen.value = true;
-    }
-  };
-
-  const closeFlow = () => {
-    isModalOpen.value = false;
-    userStore.dismissModal();
-  };
-
-  const advanceToCity = () => {
-    authStore.onboardingStep = "city";
-    activeComponent.value = STEP_MAP["city"];
-  };
-
-  const saveCity = async (localities: CatalogItem[]) => {
+  async function saveCity(localities: CatalogItem[]): Promise<boolean> {
     try {
-      await usersApi.saveCities(localities.map((l) => l.id));
-      userStore.userInterests.localities = localities.map((l) => l.id);
-      authStore.onboardingStep = "neighborhood";
-      activeComponent.value = STEP_MAP["neighborhood"];
+      const ids = localities.map((l) => l.id);
+      await usersApi.saveCities(ids);
+      userStore.setLocalities(ids);
+      authStore.setOnboardingStep("neighborhood");
+      return true;
     } catch (e) {
       logger.error("Onboarding saveCity error", e);
+      return false;
     }
-  };
+  }
 
-  const saveNeighborhoods = async (localities: NeighborhoodSelection[]) => {
+  async function saveNeighborhoods(
+    localities: NeighborhoodSelection[]
+  ): Promise<boolean> {
     try {
       await usersApi.saveNeighborhoods(localities);
-      authStore.onboardingStep = "property_type";
-      activeComponent.value = STEP_MAP["property_type"];
+      authStore.setOnboardingStep("property_type");
+      return true;
     } catch (e) {
       logger.error("Onboarding saveNeighborhoods error", e);
+      return false;
     }
-  };
+  }
 
-  const savePropertyTypes = async (selections: Record<string, string[]>) => {
+  async function savePropertyTypes(
+    selections: Record<string, string[]>
+  ): Promise<boolean> {
     try {
       await Promise.all(
-        Object.entries(selections).map(([locality_id, property_type]) =>
-          usersApi.savePropertyTypes(locality_id, property_type)
+        Object.entries(selections).map(([localityId, types]) =>
+          usersApi.savePropertyTypes(localityId, types)
         )
       );
-      closeFlow();
+      return true;
     } catch (e) {
       logger.error("Onboarding savePropertyTypes error", e);
+      return false;
     }
-  };
+  }
 
   return {
-    isModalOpen,
-    activeComponent,
-    startFlow,
-    closeFlow,
-    advanceToCity,
+    shouldStart,
+    completeIntent,
     saveCity,
     saveNeighborhoods,
     savePropertyTypes,

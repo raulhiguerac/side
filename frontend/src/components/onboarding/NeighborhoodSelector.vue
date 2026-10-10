@@ -95,11 +95,11 @@
         <button
           @click="handleNext"
           type="button"
-          :disabled="isSaving"
+          :disabled="saving"
           class="w-3/5 bg-brand-primary text-white text-sm font-semibold py-2.5 rounded-full hover:bg-green-500 hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          <BaseSpinner v-if="isSaving" class="h-4 w-4" />
-          {{ isSaving ? "Guardando..." : "Continuar" }}
+          <BaseSpinner v-if="saving" class="h-4 w-4" />
+          {{ saving ? "Guardando..." : "Continuar" }}
         </button>
       </div>
     </template>
@@ -109,19 +109,19 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import Multiselect from "@vueform/multiselect";
-import { useOnboarding } from "@/composables/onboarding/useOnboarding";
 import { useLocalitiesWithNames } from "@/composables/catalog/useLocalitiesWithNames";
 import { useNeighborhoodMultiselect } from "@/composables/shared/useMultiselect";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
+import type { NeighborhoodSelection } from "@/types/users/interests";
 
-const { saveNeighborhoods } = useOnboarding();
+defineProps<{ saving?: boolean }>();
+const emit = defineEmits<{ submit: [localities: NeighborhoodSelection[]] }>();
 const { load: loadLocalities } = useLocalitiesWithNames();
 const { cities, selectedByCity, allSelected, removeNeighborhood, load } =
   useNeighborhoodMultiselect();
 
 const activeTab = ref("");
 const isLoading = ref(true);
-const isSaving = ref(false);
 
 onMounted(async () => {
   const enrichedLocalities = await loadLocalities();
@@ -130,8 +130,7 @@ onMounted(async () => {
   isLoading.value = false;
 });
 
-async function handleNext() {
-  isSaving.value = true;
+function handleNext() {
   const payload = cities.value.map((city) => ({
     locality_id: city.id,
     neighborhoods: Object.fromEntries(
@@ -141,7 +140,6 @@ async function handleNext() {
       ])
     ),
   }));
-  await saveNeighborhoods(payload);
-  isSaving.value = false;
+  emit("submit", payload);
 }
 </script>
