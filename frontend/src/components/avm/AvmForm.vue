@@ -334,6 +334,7 @@
 import { ref, useTemplateRef, watch } from "vue";
 import { useAvmForm } from "@/composables/avm/useAvmForm";
 import type { AvmSubmitEvent } from "@/types/avm/form";
+import type { SelectedPlace } from "@/types/maps/base";
 import { getNeighborhood } from "@/composables/catalog/useLocation";
 
 const emit = defineEmits<{

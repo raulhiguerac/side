@@ -249,14 +249,15 @@ import {
   PROPERTY_TYPE_LABELS,
 } from "@/constants/propertyLabels";
 import type { ListingType, PropertyType } from "@/types/properties/base";
+import type { ChoiceOption } from "@/types/shared/ui";
 import type {
-  ChoiceOption,
-  CreatePropertyForm,
+  CreateStepEmits,
+  CreateStepProps,
   NumericFieldOption,
 } from "@/types/properties/forms";
 
-defineProps<{ form: CreatePropertyForm; attempted?: boolean }>();
-const emit = defineEmits<{ (e: "update:form", v: CreatePropertyForm): void }>();
+defineProps<CreateStepProps>();
+const emit = defineEmits<CreateStepEmits>();
 
 const propertyTypes: ChoiceOption<PropertyType>[] = [
   {

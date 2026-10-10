@@ -77,20 +77,20 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import Multiselect from "@vueform/multiselect";
-import { useOnboarding } from "@/composables/onboarding/useOnboarding";
 import { load, cities } from "@/composables/catalog/useCities";
 import { useCityMultiselect } from "@/composables/shared/useMultiselect";
+import type { CatalogItem } from "@/types/catalog/base";
 
-const { saveCity } = useOnboarding();
+const emit = defineEmits<{ submit: [localities: CatalogItem[]] }>();
 const { selected, removeCity } = useCityMultiselect();
 
 onMounted(() => load());
 
-async function handleNext() {
+function handleNext() {
   const localities = selected.value.map((id) => ({
     id,
     name: cities.value.get(id) ?? "",
   }));
-  await saveCity(localities);
+  emit("submit", localities);
 }
 </script>

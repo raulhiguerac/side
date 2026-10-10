@@ -5,17 +5,13 @@ import type {
   PropertyCardUI,
 } from "@/types/feed/cards";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
-import { propertyTitle } from "@/utils/property";
+import { cityIdsOf, propertyTitle } from "@/utils/property";
 
 export function usePropertyMapper(items: Ref<FeedCard[]>) {
   const neighborhoodLookup = ref<Record<string, string>>({});
 
   watch(items, async (newItems) => {
-    const cityIds = [
-      ...new Set(
-        newItems.map((p) => p.location?.city_id).filter(Boolean) as string[]
-      ),
-    ];
+    const cityIds = cityIdsOf(newItems);
     if (cityIds.length) {
       neighborhoodLookup.value = await buildNeighborhoodMap(cityIds);
     }

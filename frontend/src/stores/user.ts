@@ -37,6 +37,10 @@ export const useUserStore = defineStore("user", {
       return location;
     },
 
+    setLocalities(localityIds: string[]) {
+      this.userInterests.localities = localityIds;
+    },
+
     resetInterests() {
       this.userInterests = {
         localities: [],

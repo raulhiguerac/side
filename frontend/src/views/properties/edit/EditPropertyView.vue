@@ -58,7 +58,7 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, computed } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import PageContainer from "@/components/shared/PageContainer.vue";
 import PropertyHeaderCard from "@/components/properties/edit/PropertyHeaderCard.vue";
@@ -75,9 +75,9 @@ import type { PropertyDetail } from "@/types/properties/detail";
 import type { PropertyEditForm as EditForm } from "@/types/properties/forms";
 import { logger } from "@/utils/logger";
 
-const route = useRoute();
+const props = defineProps<{ id: string }>();
 const router = useRouter();
-const propertyId = computed(() => route.params.id as string);
+const propertyId = computed(() => props.id);
 
 const isLoading = ref(true);
 const property = ref<PropertyDetail | null>(null);

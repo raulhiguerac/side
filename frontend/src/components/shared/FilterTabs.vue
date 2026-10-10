@@ -27,15 +27,15 @@
   </div>
 </template>
 
-<script lang="ts" setup>
+<script lang="ts" setup generic="V extends string">
 import type { TabOption } from "@/types/shared/ui";
 defineProps<{
-  tabs: TabOption[];
-  modelValue: string;
-  getCount?: (value: string) => number;
+  tabs: TabOption<V>[];
+  modelValue: V;
+  getCount?: (value: V) => number;
 }>();
 
 defineEmits<{
-  (e: "update:modelValue", value: string): void;
+  (e: "update:modelValue", value: V): void;
 }>();
 </script>

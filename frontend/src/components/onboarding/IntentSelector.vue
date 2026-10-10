@@ -67,6 +67,7 @@ import { ref, computed, h, watch } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import * as usersApi from "@/api/users";
 import type { AccountIntent } from "@/types/users/base";
+import type { ChoiceOption } from "@/types/shared/ui";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { logger } from "@/utils/logger";
 
@@ -197,11 +198,11 @@ const ExplorerIcon = () =>
     ]
   );
 
-const options = [
-  { value: "buyer" as AccountIntent, label: "Comprar", icon: BuyerIcon },
-  { value: "seller" as AccountIntent, label: "Vender", icon: SellerIcon },
-  { value: "renter" as AccountIntent, label: "Arrendar", icon: RenterIcon },
-  { value: "explorer" as AccountIntent, label: "Explorar", icon: ExplorerIcon },
+const options: ChoiceOption<AccountIntent>[] = [
+  { value: "buyer", label: "Comprar", icon: BuyerIcon },
+  { value: "seller", label: "Vender", icon: SellerIcon },
+  { value: "renter", label: "Arrendar", icon: RenterIcon },
+  { value: "explorer", label: "Explorar", icon: ExplorerIcon },
 ];
 
 const selectIntent = (value: AccountIntent) => {

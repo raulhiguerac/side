@@ -45,7 +45,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { useRoute } from "vue-router";
 import type { PropertyDetail } from "@/types/properties/detail";
 import { usePropertyDetail } from "@/composables/properties/usePropertyDetail";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
@@ -55,7 +54,7 @@ import PropertyOverview from "@/components/properties/detail/PropertyOverview.vu
 import NearbyPlaces from "@/components/properties/detail/NearbyPlaces.vue";
 import PageContainer from "@/components/shared/PageContainer.vue";
 
-const route = useRoute();
+const props = defineProps<{ id: string }>();
 const property = ref<PropertyDetail | null>(null);
 const loading = ref(true);
 const locationLabel = ref<string>("");
@@ -76,7 +75,7 @@ const {
 } = usePropertyDetail(property);
 
 onMounted(async () => {
-  property.value = await propertiesApi.getProperty(route.params.id as string);
+  property.value = await propertiesApi.getProperty(props.id);
   loading.value = false;
 
   if (property.value.location) {

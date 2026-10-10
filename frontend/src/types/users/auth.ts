@@ -1,4 +1,4 @@
-import type { AccountIntent } from "@/types/users/base";
+import type { AccountIntent, OnboardingStep } from "@/types/users/base";
 
 export interface AuthProfile {
   first_name: string;
@@ -24,7 +24,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   _authChecked: boolean;
-  onboardingStep: string;
+  onboardingStep: OnboardingStep;
   isAdmin: boolean;
   accountId: string | null;
 }

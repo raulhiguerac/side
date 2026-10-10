@@ -3,6 +3,7 @@ import router from "@/router";
 import * as usersApi from "@/api/users";
 import { useUserStore } from "./user";
 import type { AuthState, AuthUser, RegisterPayload } from "@/types/users/auth";
+import type { OnboardingStep } from "@/types/users/base";
 import { logger } from "@/utils/logger";
 
 export const useAuthStore = defineStore("auth", {
@@ -110,6 +111,10 @@ export const useAuthStore = defineStore("auth", {
         // Redirigimos al Home o Login
         router.push("/");
       }
+    },
+
+    setOnboardingStep(step: OnboardingStep): void {
+      this.onboardingStep = step;
     },
 
     updateUser(userData: Partial<AuthUser>): void {
