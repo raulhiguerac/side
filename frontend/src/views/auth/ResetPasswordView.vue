@@ -48,7 +48,10 @@
         </div>
 
         <div class="w-full flex flex-col">
-          <form class="flex flex-col flex-1" @submit.prevent="loginUser">
+          <form
+            class="flex flex-col flex-1"
+            @submit.prevent="resetPasswordUser"
+          >
             <!-- Campos -->
             <div class="flex flex-col gap-4">
               <!-- Email -->
@@ -68,7 +71,6 @@
             <div class="flex flex-col gap-3 mt-6">
               <!-- Botón iniciar sesión -->
               <PrimaryButton
-                @click="resetPasswordUser"
                 type="submit"
                 size="lg"
                 :disabled="!user.email"

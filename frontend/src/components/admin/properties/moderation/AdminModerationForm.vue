@@ -47,7 +47,10 @@
               {{ option.label }}
             </option>
           </select>
-          <p v-if="verificationChanged" class="text-brand-muted mt-1 text-xs">
+          <p
+            v-if="verificationChanged && draftVerification"
+            class="text-brand-muted mt-1 text-xs"
+          >
             {{ VERIFICATION_STATUS_LABELS[verificationStatus] }} →
             {{ VERIFICATION_STATUS_LABELS[draftVerification] }}
           </p>
@@ -76,7 +79,10 @@
               {{ option.label }}
             </option>
           </select>
-          <p v-if="statusChanged" class="text-brand-muted mt-1 text-xs">
+          <p
+            v-if="statusChanged && draftStatus"
+            class="text-brand-muted mt-1 text-xs"
+          >
             {{ LISTING_STATUS_LABELS[status] }} →
             {{ LISTING_STATUS_LABELS[draftStatus] }}
           </p>
