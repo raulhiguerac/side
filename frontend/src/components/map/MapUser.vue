@@ -18,8 +18,11 @@
       v-for="marker in subjectMarkers"
       :key="marker.id"
       :lat-lng="[marker.lat, marker.lon]"
-      :icon="markerIcon('subject')"
-    />
+    >
+      <l-icon class-name="" :icon-size="[24, 24]" :icon-anchor="[12, 24]">
+        <MapPinHouse :size="24" color="white" :fill="BRAND_COLORS.navy" />
+      </l-icon>
+    </l-marker>
 
     <slot />
   </l-map>
@@ -27,14 +30,15 @@
 
 <script lang="ts" setup>
 import { ref, computed, watch, onUnmounted } from "vue";
-import { LMarker, LTileLayer, LMap } from "@vue-leaflet/vue-leaflet";
+import { LIcon, LMarker, LTileLayer, LMap } from "@vue-leaflet/vue-leaflet";
+import { MapPinHouse } from "@lucide/vue";
 import type * as L from "leaflet";
 import type { LeafletEvent } from "leaflet";
 import PoiPopup from "@/components/map/PoiPopup.vue";
+import { BRAND_COLORS } from "@/constants/brandColors";
 import { useMarkerCluster } from "@/composables/map/useMarkerCluster";
 import type { BboxPayload } from "@/types/feed/search";
 import type { MarkerData } from "@/types/maps/base";
-import { markerIcon } from "@/utils/markerIcon";
 import { renderToElement } from "@/utils/renderToElement";
 
 const zoom = defineModel<number>("zoom", { default: 15 });
