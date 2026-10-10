@@ -13,7 +13,7 @@
 
 <script lang="ts" setup>
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
-import type { ButtonSize } from "@/types/ui";
+import type { ButtonSize } from "@/types/shared/ui";
 
 withDefaults(
   defineProps<{ disabled?: boolean; loading?: boolean; size?: ButtonSize }>(),

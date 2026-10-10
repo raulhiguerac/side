@@ -118,18 +118,13 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
 import { RotateCcw } from "@lucide/vue";
-import propertiesApi from "@/api/propertiesApi";
+import * as adminPropertiesApi from "@/api/admin/properties";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
-import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
 import {
   BULK_JOB_STATUS_LABELS,
   BULK_JOB_STATUS_BADGE_CLASSES,
 } from "@/constants/bulkJobStatus";
-import type {
-  BulkJobRow,
-  BulkJobRowError,
-  BulkJobStatusDetail,
-} from "@/types/admin/bulk";
+import type { BulkJobRow, BulkJobRowError } from "@/types/admin/bulk";
 import { formatLongDateTime } from "@/utils/date";
 import { formatNumber } from "@/utils/number";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
@@ -173,9 +168,7 @@ async function loadErrors(job: BulkJobRow | null) {
   loading.value = true;
 
   try {
-    const { data } = await propertiesApi.get<BulkJobStatusDetail>(
-      PROPERTIES_ENDPOINTS.adminBulkJobStatus(job.id)
-    );
+    const data = await adminPropertiesApi.getBulkJobStatus(job.id);
     if (token !== requestToken) return;
     errors.value = data.errors;
   } catch (e) {

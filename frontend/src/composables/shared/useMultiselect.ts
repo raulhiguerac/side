@@ -1,16 +1,6 @@
 import { ref, computed } from "vue";
 import { getNeighborhoodsByLocalities } from "@/composables/catalog/useLocation";
-
-export interface Neighborhood {
-  id: string;
-  name: string;
-}
-
-export interface CityWithNeighborhoods {
-  id: string;
-  name: string;
-  neighborhoods: Neighborhood[];
-}
+import type { CityWithNeighborhoods } from "@/types/catalog/neighborhoods";
 
 export function useCityMultiselect() {
   const selected = ref<string[]>([]);

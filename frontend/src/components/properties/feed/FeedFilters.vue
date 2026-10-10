@@ -223,7 +223,7 @@ import {
   useCityMultiselect,
   useNeighborhoodMultiselect,
 } from "@/composables/shared/useMultiselect";
-import { FeedPreferences, FeedFilters } from "@/types/feed";
+import type { FeedPreferences, FeedFilters } from "@/types/feed/filters";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 const { selected, removeCity } = useCityMultiselect();

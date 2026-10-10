@@ -3,9 +3,13 @@
 import { defineStore } from "pinia";
 import axios from "axios";
 import { API, STORAGE_KEYS } from "@/config";
-import usersApi from "@/api/usersApi";
+import * as usersApi from "@/api/users";
 import { useAuthStore } from "./auth";
-import type { UserLocation, UserInterests, UserState } from "@/types/user";
+import type {
+  UserLocation,
+  UserInterests,
+  UserState,
+} from "@/types/users/interests";
 
 export const useUserStore = defineStore("user", {
   state: (): UserState => ({
@@ -15,9 +19,7 @@ export const useUserStore = defineStore("user", {
   actions: {
     async checkInterests(): Promise<UserInterests> {
       if (this.userInterests.localities.length > 0) return this.userInterests;
-      const { data } = await usersApi.get<UserInterests>(
-        "/v1/users/me/interests"
-      );
+      const data = await usersApi.getInterests();
 
       this.userInterests = data;
       return data;

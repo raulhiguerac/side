@@ -62,9 +62,8 @@ import BaseModal from "@/components/shared/BaseModal.vue";
 import AppFooter from "@/components/shared/AppFooter.vue";
 import { useUserStore } from "./stores/user";
 import { ref } from "vue";
-import IntentSelector, {
-  type Intent,
-} from "@/components/onboarding/IntentSelector.vue";
+import IntentSelector from "@/components/onboarding/IntentSelector.vue";
+import type { AccountIntent } from "@/types/users/base";
 import { computed } from "vue";
 import { logger } from "@/utils/logger";
 
@@ -99,12 +98,12 @@ watch(
   { immediate: true }
 );
 
-const intent = ref<Intent | null>(null);
+const intent = ref<AccountIntent | null>(null);
 const dynamicProps = computed(() => {
   if (activeComponent.value === IntentSelector) {
     return {
       modelValue: intent.value,
-      "onUpdate:modelValue": (val: Intent) => (intent.value = val),
+      "onUpdate:modelValue": (val: AccountIntent) => (intent.value = val),
       onSaved: advanceToCity,
     };
   }

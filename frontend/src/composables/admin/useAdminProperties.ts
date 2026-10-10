@@ -1,6 +1,5 @@
 import { ref, computed } from "vue";
-import propertiesApi from "@/api/propertiesApi";
-import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
+import * as adminPropertiesApi from "@/api/admin/properties";
 import { PAGE_SIZE } from "@/constants/pagination";
 import { usePagination } from "@/composables/shared/usePagination";
 import type {
@@ -15,17 +14,11 @@ async function fetchAdminProperties(
   page: number,
   filters: AdminPropertiesFilters
 ): Promise<AdminPropertiesPage> {
-  const { data } = await propertiesApi.get<AdminPropertiesPage>(
-    PROPERTIES_ENDPOINTS.adminList,
-    {
-      params: {
-        page,
-        page_size: PAGE_SIZE.ADMIN_PROPERTIES,
-        ...filters,
-      },
-    }
-  );
-  return data;
+  return adminPropertiesApi.getProperties({
+    page,
+    page_size: PAGE_SIZE.ADMIN_PROPERTIES,
+    ...filters,
+  });
 }
 
 export function useAdminProperties() {

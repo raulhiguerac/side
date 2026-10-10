@@ -53,7 +53,7 @@ import { useFeedMap } from "@/composables/feed/useFeedMap";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import { useUserStore } from "@/stores/user";
 import router from "@/router";
-import type { BboxPayload } from "@/types/feed";
+import type { BboxPayload } from "@/types/feed/search";
 import { STORAGE_KEYS } from "@/config";
 
 function getInitialCenter(): [number, number] {

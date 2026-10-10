@@ -1,6 +1,9 @@
 import { ref, computed, watch } from "vue";
 import type { Ref } from "vue";
-import type { PropertyCard as FeedCard, PropertyCardUI } from "@/types/feed";
+import type {
+  PropertyCard as FeedCard,
+  PropertyCardUI,
+} from "@/types/feed/cards";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
 import { propertyTitle } from "@/utils/property";
 

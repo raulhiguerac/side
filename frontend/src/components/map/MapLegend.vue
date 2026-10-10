@@ -16,7 +16,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { MarkerImageType } from "@/types/maps";
+import type { MarkerImageType } from "@/types/maps/base";
 import { POI_COLORS, POI_BUCKET_LABELS } from "@/constants/poiColors";
 
 const buckets = computed(() =>

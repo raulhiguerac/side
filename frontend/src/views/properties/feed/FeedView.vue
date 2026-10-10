@@ -61,7 +61,7 @@ import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import type {
   FeedPreferences,
   FeedFilters as FeedFiltersParams,
-} from "@/types/feed";
+} from "@/types/feed/filters";
 import FeedFilters from "@/components/properties/feed/FeedFilters.vue";
 
 const { data, loading, load, nextCursor, isFirstPage, loadNext, loadPrev } =

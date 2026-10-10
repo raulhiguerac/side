@@ -64,25 +64,23 @@
 
 <script lang="ts" setup>
 import { ref, computed, h, watch } from "vue";
-import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
-import { API } from "@/config";
+import * as usersApi from "@/api/users";
+import type { AccountIntent } from "@/types/users/base";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { logger } from "@/utils/logger";
 
-export type Intent = "buyer" | "seller" | "renter" | "explorer";
-
 const props = defineProps<{
-  modelValue: Intent | null;
+  modelValue: AccountIntent | null;
 }>();
 
 const emit = defineEmits<{
-  (e: "update:modelValue", value: Intent): void;
-  (e: "saved", value: Intent): void;
+  (e: "update:modelValue", value: AccountIntent): void;
+  (e: "saved", value: AccountIntent): void;
 }>();
 
 const isLoading = ref(false);
-const originalValue = ref<Intent | null>(props.modelValue);
+const originalValue = ref<AccountIntent | null>(props.modelValue);
 
 // Sync original value when prop changes from parent
 watch(
@@ -100,7 +98,7 @@ const hasChanges = computed(
 );
 
 // Descripciones para cada intención
-const descriptions: Record<Intent, string> = {
+const descriptions: Record<AccountIntent, string> = {
   buyer:
     "Estás buscando comprar una propiedad. Te mostraremos las mejores opciones de venta disponibles.",
   seller:
@@ -200,13 +198,13 @@ const ExplorerIcon = () =>
   );
 
 const options = [
-  { value: "buyer" as Intent, label: "Comprar", icon: BuyerIcon },
-  { value: "seller" as Intent, label: "Vender", icon: SellerIcon },
-  { value: "renter" as Intent, label: "Arrendar", icon: RenterIcon },
-  { value: "explorer" as Intent, label: "Explorar", icon: ExplorerIcon },
+  { value: "buyer" as AccountIntent, label: "Comprar", icon: BuyerIcon },
+  { value: "seller" as AccountIntent, label: "Vender", icon: SellerIcon },
+  { value: "renter" as AccountIntent, label: "Arrendar", icon: RenterIcon },
+  { value: "explorer" as AccountIntent, label: "Explorar", icon: ExplorerIcon },
 ];
 
-const selectIntent = (value: Intent) => {
+const selectIntent = (value: AccountIntent) => {
   emit("update:modelValue", value);
 };
 
@@ -217,11 +215,7 @@ const saveIntent = async () => {
 
   isLoading.value = true;
   try {
-    await axios.post(
-      `${API.USERS_BASE_URL}/v1/onboarding/intent`,
-      { intent: props.modelValue },
-      { withCredentials: true }
-    );
+    await usersApi.saveIntent(props.modelValue);
     authStore.updateUser({ intent: props.modelValue });
     originalValue.value = props.modelValue;
     emit("saved", props.modelValue);

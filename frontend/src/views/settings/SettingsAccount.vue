@@ -62,7 +62,7 @@
         </div>
       </div>
 
-      <!-- Delete Account -->
+      <!-- Delete Account: deshabilitado, el backend no implementa el borrado de cuentas.
       <div class="border border-red-200 rounded-xl p-5 bg-red-50/50">
         <div
           class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
@@ -84,13 +84,14 @@
           </button>
         </div>
       </div>
+      -->
     </div>
 
     <!-- Deactivate Modal -->
     <div
       v-if="showDeactivateModal"
       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-      @click.self="showDeactivateModal = false"
+      @click.self="closeDeactivateModal"
     >
       <div class="bg-white rounded-2xl max-w-md w-full p-6">
         <div class="flex items-center gap-4 mb-4">
@@ -134,30 +135,34 @@
           />
         </div>
 
+        <FormMessage v-if="error" variant="error" class="mb-4">
+          {{ error }}
+        </FormMessage>
+
         <div class="flex gap-3">
           <button
-            @click="showDeactivateModal = false"
+            @click="closeDeactivateModal"
             class="flex-1 py-3 rounded-xl text-sm font-semibold text-brand-text hover:bg-brand-bg transition-colors"
           >
             Cancelar
           </button>
           <button
-            @click="deactivateAccount"
-            :disabled="deactivateConfirm !== 'DESACTIVAR' || isLoading"
+            @click="deactivate"
+            :disabled="deactivateConfirm !== 'DESACTIVAR' || deactivating"
             class="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
             :class="
-              deactivateConfirm === 'DESACTIVAR' && !isLoading
+              deactivateConfirm === 'DESACTIVAR' && !deactivating
                 ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             "
           >
-            {{ isLoading ? "Procesando..." : "Desactivar" }}
+            {{ deactivating ? "Procesando..." : "Desactivar" }}
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Delete Modal -->
+    <!-- Delete Modal: deshabilitado junto con el botón de arriba.
     <div
       v-if="showDeleteModal"
       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
@@ -242,57 +247,43 @@
         </div>
       </div>
     </div>
+    -->
   </div>
 </template>
 
 <script lang="ts" setup>
 import { ref } from "vue";
-import { useAuthStore } from "@/stores/auth";
-import usersApi from "@/api/usersApi";
-import router from "@/router";
-import { logger } from "@/utils/logger";
+import FormMessage from "@/components/shared/FormMessage.vue";
+import { useAccountSettings } from "@/composables/users/useAccountSettings";
 
-const authStore = useAuthStore();
-const isLoading = ref(false);
+const { deactivating, error, deactivate, reset } = useAccountSettings();
 
 const showDeactivateModal = ref(false);
-const showDeleteModal = ref(false);
-
 const deactivateConfirm = ref("");
-const deleteConfirm = ref("");
 
-const deactivateAccount = async () => {
-  isLoading.value = true;
-  try {
-    await usersApi.post("/v1/users/me/deactivate", {});
+function closeDeactivateModal() {
+  showDeactivateModal.value = false;
+  deactivateConfirm.value = "";
+  reset();
+}
 
-    // Logout después de desactivar
-    await authStore.logout();
-  } catch (error) {
-    logger.error("Error al desactivar cuenta:", error);
-    alert("Error al desactivar la cuenta");
-  } finally {
-    isLoading.value = false;
-    showDeactivateModal.value = false;
-  }
-};
-
-const deleteAccount = async () => {
-  isLoading.value = true;
-  try {
-    await usersApi.delete("/v1/users/me");
-
-    // Logout y redirigir
-    authStore.user = null;
-    authStore.isAuthenticated = false;
-    authStore._authChecked = false;
-    router.push("/");
-  } catch (error) {
-    logger.error("Error al eliminar cuenta:", error);
-    alert("Error al eliminar la cuenta");
-  } finally {
-    isLoading.value = false;
-    showDeleteModal.value = false;
-  }
-};
+// Deshabilitado: el backend no implementa el borrado de cuentas (ver el template).
+// const showDeleteModal = ref(false);
+// const deleteConfirm = ref("");
+// const deleteAccount = async () => {
+//   isLoading.value = true;
+//   try {
+//     await usersApi.deleteAccount();
+//     authStore.user = null;
+//     authStore.isAuthenticated = false;
+//     authStore._authChecked = false;
+//     router.push("/");
+//   } catch (error) {
+//     logger.error("Error al eliminar cuenta:", error);
+//     alert("Error al eliminar la cuenta");
+//   } finally {
+//     isLoading.value = false;
+//     showDeleteModal.value = false;
+//   }
+// };
 </script>

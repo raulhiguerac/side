@@ -137,8 +137,10 @@ import {
   VERIFICATION_STATUS_LABELS,
 } from "@/constants/propertyStatus";
 import type { ModerationPayload } from "@/types/admin/moderation";
-import type { ListingStatus } from "@/types/feed";
-import type { VerificationStatus } from "@/types/properties";
+import type {
+  ListingStatus,
+  VerificationStatus,
+} from "@/types/properties/base";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 /** Acumula los cambios y los emite juntos: cambiar la verificación saca la fila del filtro. */

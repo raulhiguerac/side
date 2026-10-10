@@ -51,7 +51,7 @@ import {
   LISTING_STATUS_LABELS,
   LISTING_STATUS_BADGE_CLASSES,
 } from "@/constants/propertyStatus";
-import type { PropertyDetail } from "@/types/properties";
+import type { PropertyDetail } from "@/types/properties/detail";
 import { propertyTitle } from "@/utils/property";
 
 const props = defineProps<{

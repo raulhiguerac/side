@@ -1,5 +1,10 @@
-import type { ListingStatus, ListingType, PropertyType } from "@/types/feed";
-import type { PropertyDetail, VerificationStatus } from "@/types/properties";
+import type {
+  ListingStatus,
+  ListingType,
+  PropertyType,
+  VerificationStatus,
+} from "@/types/properties/base";
+import type { PropertyDetail } from "@/types/properties/detail";
 
 /** Detalle admin: el de la property más los destinos legales del backend. */
 export interface AdminPropertyDetail extends PropertyDetail {

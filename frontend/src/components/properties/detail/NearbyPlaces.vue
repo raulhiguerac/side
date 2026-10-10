@@ -139,8 +139,8 @@
 import { ref, onMounted, computed, watch, nextTick } from "vue";
 import { LPolygon } from "@vue-leaflet/vue-leaflet";
 import { ChevronDown } from "@lucide/vue";
-import type { MarkerData } from "@/types/maps";
-import { CATEGORY_META } from "@/types/pois";
+import type { MarkerData } from "@/types/maps/base";
+import { CATEGORY_META } from "@/constants/poiCategories";
 import { useReachablePois } from "@/composables/pois/useReachablePois";
 import { ISOCHRONE_COLORS } from "@/constants/poiColors";
 import MapUser from "@/components/map/MapUser.vue";

@@ -1,11 +1,10 @@
-import propertiesApi from "@/api/propertiesApi";
-import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
+import * as propertiesApi from "@/api/properties";
 import { logger } from "@/utils/logger";
 
 export function usePropertyVisibility() {
   async function toggleVisibility(propertyId: string): Promise<boolean> {
     try {
-      await propertiesApi.post(PROPERTIES_ENDPOINTS.visibility(propertyId));
+      await propertiesApi.toggleVisibility(propertyId);
       return true;
     } catch (error) {
       logger.error("Error al cambiar visibilidad:", error);

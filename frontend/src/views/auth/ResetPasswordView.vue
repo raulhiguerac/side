@@ -96,7 +96,7 @@
 /** Pantalla de recuperación de contraseña. */
 import { ref } from "vue";
 import axios from "axios";
-import usersApi from "@/api/usersApi";
+import * as usersApi from "@/api/users";
 import router from "@/router";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
@@ -115,9 +115,7 @@ const resetPasswordUser = async () => {
 
   try {
     // 1. Hacemos la petición
-    await usersApi.post("/v1/auth/reset-password/request", {
-      email: user.value.email,
-    });
+    await usersApi.requestPasswordReset(user.value.email);
 
     // Éxito: el reset no loguea, solo avisa que revises el correo.
     router.push("/login");

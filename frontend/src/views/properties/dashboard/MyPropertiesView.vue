@@ -21,7 +21,7 @@
         :model-value="activeTab"
         :tabs="tabs"
         :get-count="getTabCount"
-        @update:model-value="(v) => (activeTab = v as TabValue)"
+        @update:model-value="(v) => (activeTab = v as ListingStatusTab)"
       />
 
       <!-- Loading -->
@@ -111,7 +111,9 @@ import FilterTabs from "@/components/shared/FilterTabs.vue";
 import PaginationArrows from "@/components/shared/PaginationArrows.vue";
 import DeletePropertyModal from "@/components/properties/dashboard/DeletePropertyModal.vue";
 import PageContainer from "@/components/shared/PageContainer.vue";
-import type { ListingStatus, PropertyCardUI } from "@/types/feed";
+import type { ListingStatusTab } from "@/types/properties/base";
+import type { TabOption } from "@/types/shared/ui";
+import type { PropertyCardUI } from "@/types/feed/cards";
 import { usePagination } from "@/composables/shared/usePagination";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import { usePropertyVisibility } from "@/composables/properties/usePropertyVisibility";
@@ -119,14 +121,12 @@ import { useMyProperties } from "@/composables/properties/useMyProperties";
 import { PAGE_SIZE } from "@/constants/pagination";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
-type TabValue = "all" | ListingStatus;
-
 const router = useRouter();
 const { properties, isLoading, fetchProperties } = useMyProperties();
 const { cards } = usePropertyMapper(properties);
 
-const activeTab = ref<TabValue>("all");
-const tabs: { label: string; value: TabValue }[] = [
+const activeTab = ref<ListingStatusTab>("all");
+const tabs: TabOption<ListingStatusTab>[] = [
   { label: "Todas", value: "all" },
   { label: "Borrador", value: "draft" },
   { label: "Activas", value: "active" },

@@ -1,4 +1,4 @@
-import type { SelectedPlace } from "@/types/maps";
+import type { SelectedPlace } from "@/types/maps/base";
 
 // Monta el autocompletado de Google Places en `container` y avisa el lugar elegido.
 export async function mountPlaceAutocomplete(

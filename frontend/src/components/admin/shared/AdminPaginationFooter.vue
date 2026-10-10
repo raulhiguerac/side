@@ -17,7 +17,7 @@
 
 <script lang="ts" setup>
 import PaginationArrows from "@/components/shared/PaginationArrows.vue";
-import type { PageRange } from "@/types/pagination";
+import type { PageRange } from "@/types/shared/pagination";
 import { formatNumber } from "@/utils/number";
 
 defineProps<{

@@ -1,18 +1,14 @@
 import { useUserStore } from "@/stores/user";
+import type { CatalogItem } from "@/types/catalog/base";
 import {
   locations,
   getCitiesByCountry,
 } from "@/composables/catalog/useLocation";
 
-export interface LocalityWithName {
-  id: string;
-  name: string;
-}
-
 export function useLocalitiesWithNames() {
   const userStore = useUserStore();
 
-  const load = async (): Promise<LocalityWithName[]> => {
+  const load = async (): Promise<CatalogItem[]> => {
     let localityIds: string[] = userStore.userInterests.localities;
 
     if (localityIds.length === 0) {

@@ -1,7 +1,8 @@
 import { STORAGE_KEYS } from "@/config";
-import catalogApi from "@/api/catalogApi";
+import * as catalogApi from "@/api/catalog";
 import { useUserStore } from "@/stores/user";
-import type { CatalogItem, Locality } from "@/types/catalog";
+import type { CatalogItem, Locality } from "@/types/catalog/base";
+import type { ResolvedNeighborhood } from "@/types/catalog/neighborhoods";
 import { logger } from "@/utils/logger";
 
 export async function getCitiesByCountry(
@@ -11,9 +12,7 @@ export async function getCitiesByCountry(
     const key = STORAGE_KEYS.CITIES_BY_COUNTRY(id);
     const raw = sessionStorage.getItem(key);
     if (raw) return JSON.parse(raw);
-    const { data } = await catalogApi.get(`/v1/localities/by-country`, {
-      params: { country_id: id },
-    });
+    const data = await catalogApi.getLocalitiesByCountry(id);
     sessionStorage.setItem(key, JSON.stringify(data));
     return data;
   } catch (error) {
@@ -41,13 +40,9 @@ export async function getNeighborhoodsByLocalities(
   if (missing.length === 0) return cached;
 
   try {
-    const { data } = await catalogApi.get(`/v1/neighborhoods/by-localities`, {
-      params: new URLSearchParams(missing.map((id) => ["locality_ids", id])),
-    });
+    const byLocality = await catalogApi.getNeighborhoodsByLocalities(missing);
 
-    for (const [lid, neighborhoods] of Object.entries(
-      data.neighborhoods as Record<string, CatalogItem[]>
-    )) {
+    for (const [lid, neighborhoods] of Object.entries(byLocality)) {
       cached[lid] = neighborhoods;
       sessionStorage.setItem(
         STORAGE_KEYS.NEIGHBORHOODS_BY_LOCALITY(lid),
@@ -69,7 +64,7 @@ export async function locations() {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.COUNTRIES);
       if (raw) return JSON.parse(raw);
-      const { data } = await catalogApi.get(`/v1/countries`);
+      const data = await catalogApi.getCountries();
       localStorage.setItem(STORAGE_KEYS.COUNTRIES, JSON.stringify(data));
       return data;
     } catch (error) {
@@ -86,25 +81,13 @@ export async function locations() {
   return { countryDetected, countryUser };
 }
 
-export interface ResolvedNeighborhood {
-  name: string;
-  neighborhood_id: string;
-  city_id: string;
-  country_id: string;
-}
-
 export async function getNeighborhood(
   lat: number,
   lon: number
 ): Promise<ResolvedNeighborhood | undefined> {
   try {
-    const { data: coords } = await catalogApi.get(
-      `/v1/geo-resolution/by-coordinates`,
-      { params: { lat, lon } }
-    );
-    const { data: nbh } = await catalogApi.get(`/v1/neighborhoods/by-id`, {
-      params: { neighborhood_id: coords.neighborhood_id },
-    });
+    const coords = await catalogApi.resolveCoordinates(lat, lon);
+    const nbh = await catalogApi.getNeighborhoodById(coords.neighborhood_id);
 
     return {
       name: nbh.name,

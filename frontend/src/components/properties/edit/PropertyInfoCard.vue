@@ -33,7 +33,7 @@ import {
   LISTING_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
 } from "@/constants/propertyLabels";
-import type { PropertyDetail } from "@/types/properties";
+import type { PropertyDetail } from "@/types/properties/detail";
 
 const props = defineProps<{
   property: PropertyDetail | null;

@@ -60,7 +60,7 @@ import { computed } from "vue";
 import PropertyPhotoGrid from "@/components/properties/photos/PropertyPhotoGrid.vue";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { LIMITS } from "@/config";
-import type { PropertyDetail } from "@/types/properties";
+import type { PropertyDetail } from "@/types/properties/detail";
 
 const props = defineProps<{
   property: PropertyDetail | null;

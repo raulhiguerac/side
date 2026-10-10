@@ -1,6 +1,7 @@
 import { ref, computed } from "vue";
-import propertiesApi from "@/api/propertiesApi";
-import type { PropertyCard, BboxPayload } from "@/types/feed";
+import * as propertiesApi from "@/api/properties";
+import type { PropertyCard } from "@/types/feed/cards";
+import type { BboxPayload } from "@/types/feed/search";
 
 export function useFeedMap() {
   const loading = ref(false);
@@ -28,14 +29,12 @@ export function useFeedMap() {
       zoom.value = payload.zoom;
       page.value = 0;
       const h3_resolution = zoom.value >= 15 ? 9 : 7;
-      const { data } = await propertiesApi.get("/v1/search/feed/map", {
-        params: {
-          min_lat: payload.min_lat,
-          max_lat: payload.max_lat,
-          min_lon: payload.min_lon,
-          max_lon: payload.max_lon,
-          resolution: h3_resolution,
-        },
+      const data = await propertiesApi.getFeedMap({
+        min_lat: payload.min_lat,
+        max_lat: payload.max_lat,
+        min_lon: payload.min_lon,
+        max_lon: payload.max_lon,
+        resolution: h3_resolution,
       });
       _allItems.value = data.sort(() => Math.random() - 0.5);
     } finally {

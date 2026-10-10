@@ -1,9 +1,5 @@
 import { ref, computed, type Ref } from "vue";
-
-interface FetchPageResult<T> {
-  items: T[];
-  hasMore: boolean;
-}
+import type { FetchPageResult } from "@/types/shared/pagination";
 
 export function usePagination<T>(pageSize = 20) {
   const allItems = ref([]) as Ref<T[]>;

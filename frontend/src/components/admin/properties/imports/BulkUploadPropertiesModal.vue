@@ -40,7 +40,7 @@
 <script lang="ts" setup>
 import { ref } from "vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
-import propertiesApi from "@/api/propertiesApi";
+import * as adminPropertiesApi from "@/api/admin/properties";
 import { logger } from "@/utils/logger";
 
 defineProps<{ modelValue: boolean }>();
@@ -48,17 +48,6 @@ const emit = defineEmits<{
   "update:modelValue": [value: boolean];
   queued: [batchId: string];
 }>();
-
-interface BulkUploadUrl {
-  storage_key: string;
-  upload_url: string;
-  max_size_bytes: number;
-  expires_in: number;
-}
-
-interface BulkJobAccepted {
-  batch_id: string;
-}
 
 const file = ref<File | null>(null);
 const uploading = ref(false);
@@ -78,9 +67,8 @@ async function upload() {
   error.value = "";
 
   try {
-    const { data: presigned } = await propertiesApi.post<BulkUploadUrl>(
-      "/v1/admin/properties/bulk/upload-url",
-      { filename: file.value.name }
+    const presigned = await adminPropertiesApi.requestBulkUploadUrl(
+      file.value.name
     );
 
     if (file.value.size > presigned.max_size_bytes) {
@@ -99,10 +87,7 @@ async function upload() {
       throw new Error(`storage responded ${stored.status}`);
     }
 
-    const { data: job } = await propertiesApi.post<BulkJobAccepted>(
-      "/v1/admin/properties/bulk",
-      { storage_key: presigned.storage_key }
-    );
+    const job = await adminPropertiesApi.startBulkJob(presigned.storage_key);
 
     emit("queued", job.batch_id);
     close();

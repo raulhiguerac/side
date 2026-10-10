@@ -75,7 +75,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import usersApi from "@/api/usersApi";
+import * as usersApi from "@/api/users";
 import { BadgeCheck, MessageCircle, MessageSquare, Phone } from "@lucide/vue";
 
 import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
@@ -85,8 +85,8 @@ import { fetchUserListings } from "@/composables/users/useProfileListings";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import { usePagination } from "@/composables/shared/usePagination";
 import { PAGE_SIZE } from "@/constants/pagination";
-import type { CurrentUserProfileOut } from "@/types/user";
-import type { PropertyCard as PropertyCardData } from "@/types/feed";
+import type { CurrentUserProfileOut } from "@/types/users/profile";
+import type { PropertyCard as PropertyCardData } from "@/types/feed/cards";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { logger } from "@/utils/logger";
 
@@ -106,10 +106,7 @@ function fetchNextPage() {
 
 onMounted(async () => {
   try {
-    const { data } = await usersApi.get<CurrentUserProfileOut>(
-      `/v1/users/profiles/${userId}`
-    );
-    profile.value = data;
+    profile.value = await usersApi.getPublicProfile(userId);
   } catch (error) {
     logger.error("Error al obtener el perfil:", error);
   }

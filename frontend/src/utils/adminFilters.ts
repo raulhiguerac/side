@@ -1,5 +1,5 @@
 import type { LocationQuery } from "vue-router";
-import type { CatalogItem } from "@/types/catalog";
+import type { CatalogItem } from "@/types/catalog/base";
 import type {
   AdminFilterDefinition,
   AdminFilterOptions,

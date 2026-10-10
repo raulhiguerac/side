@@ -1,6 +1,5 @@
 import { ref } from "vue";
-import propertiesApi from "@/api/propertiesApi";
-import type { PresignedUrlsResponse } from "@/types/properties";
+import * as propertiesApi from "@/api/properties";
 
 export function useImageUpload() {
   const loading = ref(false);
@@ -13,12 +12,10 @@ export function useImageUpload() {
     loading.value = true;
     error.value = null;
     try {
-      const { data } = await propertiesApi.post<PresignedUrlsResponse>(
-        "/v1/properties/images/presigned-urls",
-        { property_id: propertyId, create_count: files.length }
+      const { batch_id, items } = await propertiesApi.requestImageUploadUrls(
+        propertyId,
+        files.length
       );
-
-      const { batch_id, items } = data;
 
       const results = await Promise.allSettled(
         items.map((item, i) =>
@@ -42,10 +39,11 @@ export function useImageUpload() {
         return false;
       }
 
-      await propertiesApi.post(`/v1/properties/${propertyId}/images/confirm`, {
+      await propertiesApi.confirmImageUploads(
+        propertyId,
         batch_id,
-        confirmed_keys,
-      });
+        confirmed_keys
+      );
 
       return true;
     } catch {

@@ -30,7 +30,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import type { PropertyImageCard } from "@/types/feed";
+import type { PropertyImageCard } from "@/types/properties/images";
 import PhotoGalleryPopup from "@/components/properties/photos/PhotoGalleryPopup.vue";
 
 const isOpen = ref<boolean>(false);

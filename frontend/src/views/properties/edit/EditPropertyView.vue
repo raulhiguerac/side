@@ -68,14 +68,11 @@ import DeletePropertyImagesModal from "@/components/properties/edit/DeleteProper
 import PropertyInfoCard from "@/components/properties/edit/PropertyInfoCard.vue";
 import PropertyEditForm from "@/components/properties/edit/PropertyEditForm.vue";
 import PropertyEditActions from "@/components/properties/edit/PropertyEditActions.vue";
-import propertiesApi from "@/api/propertiesApi";
-import { PROPERTIES_ENDPOINTS } from "@/constants/propertiesEndpoints";
+import * as propertiesApi from "@/api/properties";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
 import { LIMITS } from "@/config";
-import type {
-  PropertyDetail,
-  PropertyEditForm as EditForm,
-} from "@/types/properties";
+import type { PropertyDetail } from "@/types/properties/detail";
+import type { PropertyEditForm as EditForm } from "@/types/properties/forms";
 import { logger } from "@/utils/logger";
 
 const route = useRoute();
@@ -102,9 +99,7 @@ const form = ref<EditForm>({
 });
 
 async function fetchProperty() {
-  const { data } = await propertiesApi.get<PropertyDetail>(
-    PROPERTIES_ENDPOINTS.byId(propertyId.value)
-  );
+  const data = await propertiesApi.getProperty(propertyId.value);
   property.value = data;
   return data;
 }
@@ -143,10 +138,7 @@ async function handleSave() {
   if (saveError.value) return;
 
   try {
-    await propertiesApi.patch(
-      PROPERTIES_ENDPOINTS.byId(propertyId.value),
-      form.value
-    );
+    await propertiesApi.updateProperty(propertyId.value, form.value);
     router.push("/properties");
   } catch (error) {
     logger.error("Error al guardar los cambios:", error);

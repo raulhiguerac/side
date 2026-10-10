@@ -73,12 +73,10 @@ import AvmForm from "@/components/avm/AvmForm.vue";
 import AvmResult from "@/components/avm/AvmResult.vue";
 import MapUser from "@/components/map/MapUser.vue";
 import PageContainer from "@/components/shared/PageContainer.vue";
-import type {
-  AvmPredictRequest,
-  AvmFormPayload,
-} from "@/composables/avm/useAvmForm";
-import type { MarkerData, SelectedPlace } from "@/types/maps";
-import avmApi from "@/api/avmApi";
+import type { AvmSubmitEvent } from "@/types/avm/form";
+import type { AvmPredictRequest } from "@/types/avm/predict";
+import type { MarkerData, SelectedPlace } from "@/types/maps/base";
+import * as avmApi from "@/api/avm";
 import { logger } from "@/utils/logger";
 
 const showResult = ref(false);
@@ -99,11 +97,7 @@ function onPlaceSelected(data: { place: SelectedPlace }) {
   };
 }
 
-async function onSubmit(data: {
-  payload: AvmFormPayload;
-  place: SelectedPlace;
-  neighborhood: string;
-}) {
+async function onSubmit(data: AvmSubmitEvent) {
   const avmPayload: AvmPredictRequest = {
     area_m2: data.payload.area_m2,
     bedrooms: data.payload.bedrooms,
@@ -128,8 +122,8 @@ async function onSubmit(data: {
 }
 
 async function fetchPredict(payload: AvmPredictRequest): Promise<number> {
-  const response = await avmApi.post("/v1/predict", payload);
-  return response.data.predicted_price;
+  const { predicted_price } = await avmApi.predict(payload);
+  return predicted_price;
 }
 
 function reset() {

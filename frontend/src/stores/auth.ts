@@ -1,30 +1,9 @@
 import { defineStore } from "pinia";
-import axios from "axios";
 import router from "@/router";
-import { API } from "@/config";
-import usersApi from "@/api/usersApi";
+import * as usersApi from "@/api/users";
 import { useUserStore } from "./user";
-import type {
-  AuthProfile,
-  AuthUser,
-  RegisterPayload,
-  User as AccountUser,
-} from "@/types/user";
+import type { AuthState, AuthUser, RegisterPayload } from "@/types/users/auth";
 import { logger } from "@/utils/logger";
-
-interface ProfileResponse {
-  profile: AuthProfile;
-}
-
-interface AuthState {
-  user: AuthUser | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  _authChecked: boolean;
-  onboardingStep: string;
-  isAdmin: boolean;
-  accountId: string | null;
-}
 
 export const useAuthStore = defineStore("auth", {
   state: (): AuthState => ({
@@ -65,12 +44,9 @@ export const useAuthStore = defineStore("auth", {
       this.isLoading = true;
 
       try {
-        const response = await axios.get<ProfileResponse>(
-          `${API.USERS_BASE_URL}/v1/users/me/profile`,
-          { withCredentials: true }
-        );
+        const { profile } = await usersApi.getAuthProfile();
 
-        this.user = response.data.profile;
+        this.user = profile;
         this.isAuthenticated = true;
       } catch (error) {
         this.user = null;
@@ -82,7 +58,7 @@ export const useAuthStore = defineStore("auth", {
     },
 
     async fillUserData() {
-      const { data } = await usersApi.get<AccountUser>("/v1/users/me/");
+      const data = await usersApi.getAccount();
 
       this.onboardingStep = data.onboarding_step ?? "intent";
       this.isAdmin = data.is_admin;
@@ -91,7 +67,7 @@ export const useAuthStore = defineStore("auth", {
 
     async login(email: string, password: string): Promise<boolean> {
       try {
-        await usersApi.post("/v1/auth/login", { email, password });
+        await usersApi.login({ email, password });
 
         await this.checkAuth(true);
         return this.isAuthenticated;
@@ -104,7 +80,7 @@ export const useAuthStore = defineStore("auth", {
 
     async register(userData: RegisterPayload): Promise<boolean> {
       try {
-        await usersApi.post("/v1/auth/register", userData);
+        await usersApi.register(userData);
 
         await this.checkAuth(true);
         return this.isAuthenticated;
@@ -116,11 +92,7 @@ export const useAuthStore = defineStore("auth", {
     /** Logout optimizado: no bloquea la transición out-in. */
     async logout(): Promise<void> {
       try {
-        await axios.post(
-          `${API.USERS_BASE_URL}/v1/auth/logout`,
-          {},
-          { withCredentials: true }
-        );
+        await usersApi.logout();
       } catch (error) {
         logger.error("Error en logout:", error);
       } finally {

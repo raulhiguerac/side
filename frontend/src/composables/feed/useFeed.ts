@@ -1,13 +1,9 @@
 import { ref, computed } from "vue";
 import { useUserStore } from "@/stores/user";
-import propertiesApi from "@/api/propertiesApi";
-import type {
-  FeedPreferences,
-  FeedFilters,
-  FeedPage,
-  PropertyCard,
-  PageCache,
-} from "@/types/feed";
+import * as propertiesApi from "@/api/properties";
+import type { FeedPreferences, FeedFilters } from "@/types/feed/filters";
+import type { FeedPage, PageCache } from "@/types/feed/search";
+import type { PropertyCard } from "@/types/feed/cards";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
 import { logger } from "@/utils/logger";
 
@@ -17,11 +13,11 @@ async function fetchFeed(
   cursor?: string | null
 ): Promise<FeedPage> {
   try {
-    const { data } = await propertiesApi.get("/v1/search/feed", {
-      params: { ...preferences, ...filters, ...(cursor ? { cursor } : {}) },
-      paramsSerializer: { indexes: null },
+    return await propertiesApi.getFeed({
+      ...preferences,
+      ...filters,
+      ...(cursor ? { cursor } : {}),
     });
-    return data as FeedPage;
   } catch (error) {
     logger.error("Error al obtener listings:", error);
     return { items: [], next_cursor: null };

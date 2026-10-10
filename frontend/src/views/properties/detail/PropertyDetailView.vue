@@ -46,10 +46,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
-import type { PropertyDetail } from "@/types/properties";
+import type { PropertyDetail } from "@/types/properties/detail";
 import { usePropertyDetail } from "@/composables/properties/usePropertyDetail";
 import { buildNeighborhoodMap } from "@/composables/catalog/useNeighborhoodLookup";
-import propertiesApi from "@/api/propertiesApi";
+import * as propertiesApi from "@/api/properties";
 import PropertyPhotoGrid from "@/components/properties/photos/PropertyPhotoGrid.vue";
 import PropertyOverview from "@/components/properties/detail/PropertyOverview.vue";
 import NearbyPlaces from "@/components/properties/detail/NearbyPlaces.vue";
@@ -76,10 +76,7 @@ const {
 } = usePropertyDetail(property);
 
 onMounted(async () => {
-  const { data } = await propertiesApi.get<PropertyDetail>(
-    `/v1/properties/${route.params.id}`
-  );
-  property.value = data;
+  property.value = await propertiesApi.getProperty(route.params.id as string);
   loading.value = false;
 
   if (property.value.location) {

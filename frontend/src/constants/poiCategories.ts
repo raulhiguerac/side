@@ -1,5 +1,3 @@
-import type { Component } from "vue";
-import type { MarkerImageType } from "@/types/maps";
 import {
   School,
   HeartPulse,
@@ -10,38 +8,7 @@ import {
   Landmark,
   TreePine,
 } from "@lucide/vue";
-
-export type OrsProfile = "foot-walking" | "cycling-regular" | "driving-car";
-
-export interface ProfileOption {
-  key: OrsProfile;
-  label: string;
-  icon: Component;
-  description: string;
-}
-
-export interface ReachablePoiItem {
-  name: string;
-  category: string | null;
-  latitude: number;
-  longitude: number;
-  full_address: string | null;
-  phone: string | null;
-  website: string | null;
-}
-
-export interface ReachablePoisResult {
-  profile: OrsProfile;
-  range: number | null;
-  isochrone: GeoJsonPolygon | null;
-  pois: ReachablePoiItem[];
-  error: string | null;
-}
-
-export interface GeoJsonPolygon {
-  type: "Polygon";
-  coordinates: number[][][];
-}
+import type { CategoryMeta } from "@/types/pois/base";
 
 export const CATEGORY_PRIORITY: Record<string, number> = {
   // Salud
@@ -75,12 +42,6 @@ export const CATEGORY_PRIORITY: Record<string, number> = {
 
 export const PRIORITY_CATEGORIES = new Set(Object.keys(CATEGORY_PRIORITY));
 
-export interface CategoryMeta {
-  label: string;
-  icon: Component;
-  bucket: MarkerImageType;
-}
-
 export const CATEGORY_META: Record<string, CategoryMeta> = {
   school: { label: "Educación", icon: School, bucket: "education" },
   kindergarten: { label: "Educación", icon: School, bucket: "education" },
@@ -109,13 +70,3 @@ export const CATEGORY_META: Record<string, CategoryMeta> = {
   park: { label: "Parques", icon: TreePine, bucket: "poi" },
   fitness_centre: { label: "Gimnasio", icon: TreePine, bucket: "poi" },
 };
-
-export interface RangeGroup {
-  profile: OrsProfile;
-  minutes: number;
-  seconds: number;
-  dot: string;
-  count: number;
-  pois: ReachablePoiItem[];
-  isochrone: GeoJsonPolygon | null;
-}

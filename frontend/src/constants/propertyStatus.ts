@@ -1,5 +1,7 @@
-import type { ListingStatus } from "@/types/feed";
-import type { VerificationStatus } from "@/types/properties";
+import type {
+  ListingStatus,
+  VerificationStatus,
+} from "@/types/properties/base";
 
 export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   draft: "Borrador",
