@@ -29,3 +29,10 @@
     display: none !important;
   }
 }
+
+@layer components {
+  .map-cluster.is-highlighted > div {
+    background: theme("colors.brand.primary") !important;
+    transform: scale(1.15);
+  }
+}

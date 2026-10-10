@@ -13,45 +13,13 @@
       name="OpenStreetMap"
     />
 
-    <!-- Property markers (subject, house, apartment) — declarative with custom icon -->
+    <!-- El inmueble que se avalúa: uno solo, fuera del cluster -->
     <l-marker
-      v-for="marker in specialMarkers"
+      v-for="marker in subjectMarkers"
       :key="marker.id"
       :lat-lng="[marker.lat, marker.lon]"
-    >
-      <l-icon
-        class-name="!bg-transparent !border-0 !shadow-none"
-        :icon-size="marker.id === props.hoveredId ? [48, 48] : [24, 24]"
-        :icon-anchor="marker.id === props.hoveredId ? [24, 48] : [12, 24]"
-      >
-        <component
-          v-if="marker.imageType === 'house' || marker.imageType === 'subject'"
-          :is="markerIconMap[marker.imageType]"
-          :size="marker.id === props.hoveredId ? 48 : 24"
-          color="white"
-          :fill="
-            marker.id === props.hoveredId
-              ? BRAND_COLORS.primary
-              : BRAND_COLORS.navy
-          "
-        />
-        <div
-          v-else
-          class="rounded-full flex items-center justify-center transition-all"
-          :class="
-            marker.id === props.hoveredId
-              ? 'w-12 h-12 bg-brand-primary'
-              : 'w-6 h-6 bg-brand-navy'
-          "
-        >
-          <component
-            :is="markerIconMap[marker.imageType]"
-            :size="marker.id === props.hoveredId ? 28 : 14"
-            color="white"
-          />
-        </div>
-      </l-icon>
-    </l-marker>
+      :icon="markerIcon('subject')"
+    />
 
     <slot />
   </l-map>
@@ -59,44 +27,15 @@
 
 <script lang="ts" setup>
 import { ref, computed, watch, onUnmounted } from "vue";
-import { LMarker, LTileLayer, LMap, LIcon } from "@vue-leaflet/vue-leaflet";
-import * as L from "leaflet";
-import "leaflet.markercluster/dist/MarkerCluster.css";
-import "leaflet.markercluster/dist/MarkerCluster.Default.css";
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { MarkerClusterGroup } = require("leaflet.markercluster");
-import type { MarkerData, MarkerImageType } from "@/types/maps/base";
-import { markerIconMap } from "@/constants/markerIcons";
-import { BRAND_COLORS } from "@/constants/brandColors";
-import { POI_COLORS } from "@/constants/poiColors";
+import { LMarker, LTileLayer, LMap } from "@vue-leaflet/vue-leaflet";
+import type * as L from "leaflet";
 import type { LeafletEvent } from "leaflet";
-import type {} from "leaflet.markercluster"; // tipos de L.MarkerClusterGroup
-
-const SPECIAL_TYPES: MarkerImageType[] = ["subject", "house", "apartment"];
-
-function escapeHtml(text: string): string {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-function buildPoiPopupHtml(m: MarkerData): string {
-  const rows: string[] = [`<strong>${escapeHtml(m.label ?? "")}</strong>`];
-  if (m.categoryLabel) rows.push(escapeHtml(m.categoryLabel));
-  if (m.address) rows.push(escapeHtml(m.address));
-  if (m.phone) rows.push(escapeHtml(m.phone));
-  if (m.website) {
-    const safeHref = encodeURI(m.website);
-    rows.push(
-      `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${escapeHtml(
-        m.website
-      )}</a>`
-    );
-  }
-  return `<div style="font-size:12px;line-height:1.4">${rows.join(
-    "<br/>"
-  )}</div>`;
-}
+import PoiPopup from "@/components/map/PoiPopup.vue";
+import { useMarkerCluster } from "@/composables/map/useMarkerCluster";
+import type { BboxPayload } from "@/types/feed/search";
+import type { MarkerData } from "@/types/maps/base";
+import { markerIcon } from "@/utils/markerIcon";
+import { renderToElement } from "@/utils/renderToElement";
 
 const zoom = defineModel<number>("zoom", { default: 15 });
 const center = defineModel<[number, number]>("center");
@@ -119,72 +58,49 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  bbox: [
-    payload: {
-      min_lat: number;
-      max_lat: number;
-      min_lon: number;
-      max_lon: number;
-      zoom: number;
-    }
-  ];
+  bbox: [payload: BboxPayload];
+  markerClick: [id: string];
+  markerHover: [id: string | null];
 }>();
 
-let map: L.Map | null = null;
-let clusterGroup: L.MarkerClusterGroup | null = null;
-
-const specialMarkers = computed(() =>
-  props.markers.filter((m) => SPECIAL_TYPES.includes(m.imageType))
+const subjectMarkers = computed(() =>
+  props.markers.filter((m) => m.imageType === "subject")
 );
-const poiMarkers = computed(() =>
-  props.markers.filter((m) => !SPECIAL_TYPES.includes(m.imageType))
+const clusteredMarkers = computed(() =>
+  props.markers.filter((m) => m.imageType !== "subject")
 );
 
-function buildCluster() {
-  if (!map) return;
-
-  if (clusterGroup) map.removeLayer(clusterGroup);
-
-  const group: L.MarkerClusterGroup = new MarkerClusterGroup({
-    maxClusterRadius: 50,
-    chunkedLoading: true,
-  });
-
-  for (const m of poiMarkers.value) {
-    const color = POI_COLORS[m.imageType] ?? BRAND_COLORS.muted;
-    const icon = L.divIcon({
-      html: `<div style="width:10px;height:10px;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4)"></div>`,
-      className: "",
-      iconSize: [10, 10],
-      iconAnchor: [5, 5],
-    });
-    const marker = L.marker([m.lat, m.lon], { icon }).addTo(group);
-    if (m.label) marker.bindPopup(buildPoiPopupHtml(m));
-  }
-
-  map.addLayer(group);
-  clusterGroup = group;
-}
-
-function onMapReady(instance: L.Map) {
-  map = instance;
-  buildCluster();
-}
-
-watch(poiMarkers, buildCluster, { deep: true });
-
-onUnmounted(() => {
-  if (map && clusterGroup) map.removeLayer(clusterGroup);
+const cluster = useMarkerCluster({
+  popup: (m) =>
+    m.label ? renderToElement(PoiPopup, { marker: m }) : undefined,
+  onClick: (m) => emit("markerClick", m.id),
+  onHover: (id) => emit("markerHover", id),
 });
 
+function onMapReady(instance: L.Map) {
+  cluster.attach(instance);
+  cluster.sync(clusteredMarkers.value);
+  cluster.highlight(props.hoveredId);
+}
+
+watch(clusteredMarkers, (markers) => cluster.sync(markers));
+watch(
+  () => props.hoveredId,
+  (id) => cluster.highlight(id)
+);
+
+onUnmounted(cluster.detach);
+
 function onMoveEnd(event: LeafletEvent) {
-  const bounds = event.target.getBounds();
+  const map = event.target as L.Map;
+  const bounds = map.getBounds();
   emit("bbox", {
     min_lat: bounds.getSouth(),
     max_lat: bounds.getNorth(),
     min_lon: bounds.getWest(),
     max_lon: bounds.getEast(),
-    zoom: zoom.value,
+    // Del mapa y no del v-model: vue-leaflet lo actualiza con debounce y aquí aún vale el anterior.
+    zoom: map.getZoom(),
   });
 }
 </script>
