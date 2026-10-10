@@ -1,7 +1,7 @@
 ---
 title: Panel admin (frontend)
 status: draft
-last-verified: 2026-10-05
+last-verified: 2026-10-09
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -21,6 +21,7 @@ related:
   - "[[adr-admin-filters-in-query-params]]"
   - "[[adr-mapbox-geocoding-leaflet-rendering]]"
   - "[[frontend-map-component]]"
+  - "[[adr-api-layer-by-domain]]"
   - "[[catalog-service-catalog-admin]]"
   - "[[catalog-service-geo-catalog]]"
   - "[[open-items]]"
@@ -40,6 +41,7 @@ sources:
   - ../../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md
   - ../../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md
   - ../../../sources/frontend/2026-10-05-admin-actions-and-front-smell-audit.md
+  - ../../../sources/frontend/2026-10-09-api-layer-map-cluster-and-typecheck.md
 ---
 
 ## TL;DR
@@ -317,6 +319,8 @@ El total volvió a 23 con el `GET /admin/properties/bulk` nuevo ([[properties-se
 
 Tampoco hay módulo de API admin. Se evaluó crear `src/api/adminApi.ts` y **se descartó**: las instancias de axios del proyecto son una por servicio, y "admin" no es un servicio — los endpoints admin viven en properties y en catalog. En su lugar la ruta se agregó a `constants/propertiesEndpoints.ts` y el fetch vive en el composable, que es el patrón que ya usan `useFeed` y `useProfileListings`.
 
+**Update 2026-10-09.** Con la capa `api/` ([[adr-api-layer-by-domain]]) sí hay módulos admin, pero no un cliente propio: `api/admin/properties.ts` y `api/admin/catalog.ts` son funciones sobre los clientes de properties y catalog, así que la razón de arriba ("admin no es un servicio") se respeta. Los composables admin ya no hacen el fetch: llaman a esas funciones (`adminPropertiesApi.getProperties`, `setVerification`, `createPromotion`, …). `api/catalogOptions.ts` pasó a `api/admin/catalog.ts`. `useUrlFilters` es genérico (`useUrlFilters<T>`), así que la vista de moderación ya no castea los filtros, y `BaseTable` lee `columnDef.meta?.align` tipado gracias al aumento de `ColumnMeta` en `types/shared/table.ts`.
+
 ## Sección de catálogo — diseño (2026-09-28)
 
 **Update 2026-09-28 — tabs montadas.** `AdminCatalogView.vue` ya funciona como layout: título, `AdminTabsNav` y `RouterView`. Tiene cuatro rutas hijas, con los mismos nombres de recurso que el backend. `admin-catalog` pasó al hijo por defecto (Barrios), así que la card del hub no cambió. Cada tab es un `EmptyState` hasta que exista el read path admin. El archivo conserva su nombre aunque sea un layout; alinearlo a `AdminCatalogLayout.vue` es opcional.
@@ -389,8 +393,8 @@ Pendiente: las acciones del panel (editar, reemplazar geometría, desactivar). *
 - `AdminPropertiesLayout.vue` y `AdminPromotionsLayout.vue` usan el mismo `AdminTabsNav`, y solo el primero pasa `stretch` ([AdminPropertiesLayout.vue](frontend/src/views/admin/properties/AdminPropertiesLayout.vue), [AdminPromotionsLayout.vue](frontend/src/views/admin/properties/promotions/AdminPromotionsLayout.vue)).
 - El guard `requiresAdmin` llama `authStore.fillUserData()` si `!authStore.accountId` antes de chequear `isAdmin` — evita que un admin sea rebotado en un deep-link directo ([router/index.ts](frontend/src/router/index.ts)).
 - `AdminHomeView.vue` muestra 4 KPI cards con valor placeholder `"—"` — sin wiring a ningún endpoint de conteo todavía ([views/admin/AdminHomeView.vue](frontend/src/views/admin/AdminHomeView.vue)).
-- `BulkUploadPropertiesModal.upload()` encadena `POST /v1/admin/properties/bulk/upload-url` → `fetch(upload_url, { method: "PUT" })` → `POST /v1/admin/properties/bulk` con `{ storage_key }`, y emite `queued` con el `batch_id` antes de cerrar ([BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/imports/BulkUploadPropertiesModal.vue)).
-- El `PUT` a storage no usa `propertiesApi`: es `fetch` nativo sin credenciales, porque la firma va en el query string ([BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/imports/BulkUploadPropertiesModal.vue)).
+- `BulkUploadPropertiesModal.upload()` encadena `adminPropertiesApi.requestBulkUploadUrl` (`POST /v1/admin/properties/bulk/upload-url`) → `fetch(upload_url, { method: "PUT" })` → `adminPropertiesApi.startBulkJob` (`POST /v1/admin/properties/bulk` con `{ storage_key }`), y emite `queued` con el `batch_id` antes de cerrar ([BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/imports/BulkUploadPropertiesModal.vue)).
+- El `PUT` a storage no usa el cliente de properties: es `fetch` nativo sin credenciales, porque la firma va en el query string ([BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/imports/BulkUploadPropertiesModal.vue)).
 - La presigned URL se pide dentro de `upload()`, no en `onFileChange()` ([BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/imports/BulkUploadPropertiesModal.vue)).
 - El modal compara `file.size` contra `presigned.max_size_bytes` antes de subir; no hay validación de tamaño del lado del servidor en el flujo de presigned PUT ([BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/imports/BulkUploadPropertiesModal.vue)).
 - `AdminImportsView.vue` monta `<BulkUploadPropertiesModal v-model="isBulkModalOpen" />` sin listener de `@queued` ([AdminImportsView.vue](frontend/src/views/admin/properties/imports/AdminImportsView.vue)).
@@ -401,18 +405,18 @@ Pendiente: las acciones del panel (editar, reemplazar geometría, desactivar). *
 - `AdminPropertiesTable.vue` define 6 columnas —`verification_status`, `property_type`, `listing_type`, `price`, `created_at`, `status`— y agrega la de acciones solo si el padre pasa el slot ([AdminPropertiesTable.vue](frontend/src/components/admin/properties/AdminPropertiesTable.vue)).
 - `BaseTable.vue` acepta `rowKey` y `selectedKey` opcionales y emite `rowClick`; sin `rowKey` no marca ninguna fila como seleccionada ([BaseTable.vue](frontend/src/components/shared/BaseTable.vue)).
 - La fila seleccionada de `BaseTable` recibe `bg-brand-primary-light` **en lugar de** `hover:bg-brand-bg`, no además ([BaseTable.vue](frontend/src/components/shared/BaseTable.vue)).
-- `AdminPropertyPreviewPanel.vue` pide `PROPERTIES_ENDPOINTS.adminDetail(id)` (`/v1/admin/properties/{id}`), no el detalle público ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue), [propertiesEndpoints.ts](frontend/src/constants/propertiesEndpoints.ts)).
+- `AdminPropertyPreviewPanel.vue` pide el detalle con `adminPropertiesApi.getProperty(id)` (`PROPERTIES_ENDPOINTS.adminDetail`, `/v1/admin/properties/{id}`), no el detalle público ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue), [api/admin/properties.ts](frontend/src/api/admin/properties.ts)).
 - `AdminPropertyPreviewPanel.vue` descarta respuestas cuyo `requestToken` ya no es el vigente, en los tres puntos donde puede llegar tarde ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue)).
 - `AdminPropertyPreviewPanel.vue` monta `PropertyOverview` y `PhotoGalleryPopup`, y no monta `NearbyPlaces` ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue)).
 - `useAdminProperties` mantiene `serverTotal` en un ref propio, separado del `total` de `usePagination` ([useAdminProperties.ts](frontend/src/composables/admin/useAdminProperties.ts)).
-- La ruta del listado admin vive en `PROPERTIES_ENDPOINTS.adminList`, y el fetch está en el composable — no hay módulo de API admin ([propertiesEndpoints.ts](frontend/src/constants/propertiesEndpoints.ts), [useAdminProperties.ts](frontend/src/composables/admin/useAdminProperties.ts)).
-- No existe `src/api/adminApi.ts` — el directorio `src/api/` tiene solo `avmApi`, `catalogApi`, `interceptors`, `propertiesApi` y `usersApi`, uno por servicio ([api/](frontend/src/api)).
+- La ruta del listado admin vive en `PROPERTIES_ENDPOINTS.adminList` y la usa `adminPropertiesApi.getProperties`; `useAdminProperties` llama a esa función ([api/admin/properties.ts](frontend/src/api/admin/properties.ts), [useAdminProperties.ts](frontend/src/composables/admin/useAdminProperties.ts)).
+- No hay cliente axios admin: `src/api/clients/` tiene uno por servicio (`users`, `catalog`, `properties`, `avm`), y `src/api/admin/{properties,catalog}.ts` son funciones sobre esos clientes ([api/](frontend/src/api)).
 - No existe ningún botón de bulk-import en `AdminCatalogView.vue` — el endpoint de catálogo requiere `locality_id`, no es una acción global ([views/admin/catalog/AdminCatalogView.vue](frontend/src/views/admin/catalog/AdminCatalogView.vue)).
-- `propertiesApi` tiene `timeout: 8000`, suficiente ahora que los tres requests del modal son cortos ([api/propertiesApi.ts](frontend/src/api/propertiesApi.ts)).
+- El cliente de properties tiene `timeout: 8000`, suficiente ahora que los tres requests del modal son cortos ([api/clients/properties.ts](frontend/src/api/clients/properties.ts)).
 - Ninguna vista declara `<template #actions>`, así que `AdminPropertiesTable` no agrega la columna de acciones ([AdminModerationView.vue](frontend/src/views/admin/properties/moderation/AdminModerationView.vue), [AdminPropertiesTable.vue](frontend/src/components/admin/properties/AdminPropertiesTable.vue)).
 - `AdminModerationForm.vue` construye las opciones de sus dos selects desde las props `allowedVerificationTargets` y `allowedStatusTargets`, que por default son `[]` ([AdminModerationForm.vue](frontend/src/components/admin/properties/moderation/AdminModerationForm.vue)).
 - No existe ninguna tabla de transiciones en el frontend: `constants/moderationTransitions.ts` fue eliminado ([constants/](frontend/src/constants)).
-- `AdminModerationForm.vue` no importa `propertiesApi`: emite `save` con los campos que cambiaron y nada más ([AdminModerationForm.vue](frontend/src/components/admin/properties/moderation/AdminModerationForm.vue)).
+- `AdminModerationForm.vue` no importa nada de `api/`: emite `save` con los campos que cambiaron y nada más ([AdminModerationForm.vue](frontend/src/components/admin/properties/moderation/AdminModerationForm.vue)).
 - El textarea del motivo solo se renderiza cuando el target de verificación elegido es `rejected`, y bloquea "Guardar" si está vacío ([AdminModerationForm.vue](frontend/src/components/admin/properties/moderation/AdminModerationForm.vue)).
 - `AdminPropertyPreviewPanel.vue` tipa la respuesta como `AdminPropertyDetail` y le pasa al formulario los `allowed_*` que trae el detalle ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue), [types/admin/properties.ts](frontend/src/types/admin/properties.ts)).
 - `AdminPropertyPreviewPanel.vue` monta el formulario detrás de `v-if="property"` y reenvía su `save` con el `propertyId` ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue)).
@@ -420,7 +424,7 @@ Pendiente: las acciones del panel (editar, reemplazar geometría, desactivar). *
 - `usePagination.replaceCurrentPage` reemplaza la página visible y trunca las siguientes, y retrocede una página si la nueva viene vacía ([usePagination.ts](frontend/src/composables/shared/usePagination.ts)).
 - `useModerateProperty.moderate()` manda el PATCH de verificación antes que el de status y devuelve `true` si al menos uno se aplicó ([useModerateProperty.ts](frontend/src/composables/admin/useModerateProperty.ts)).
 - `AdminPropertyPreviewPanel.vue` expone `refresh()` con `defineExpose`, y `AdminModerationView` solo lo invoca si la fila seleccionada sobrevivió al `reload()` ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue), [AdminModerationView.vue](frontend/src/views/admin/properties/moderation/AdminModerationView.vue)).
-- `PROPERTIES_ENDPOINTS` declara `adminVerification` y `adminStatus`, y `useModerateProperty` es su único consumidor ([propertiesEndpoints.ts](frontend/src/constants/propertiesEndpoints.ts), [useModerateProperty.ts](frontend/src/composables/admin/useModerateProperty.ts)).
+- `PROPERTIES_ENDPOINTS` declara `adminVerification` y `adminStatus`, que solo usan `setVerification`/`setStatus` de `api/admin/properties.ts`; `useModerateProperty` es quien las llama ([api/admin/properties.ts](frontend/src/api/admin/properties.ts), [useModerateProperty.ts](frontend/src/composables/admin/useModerateProperty.ts)).
 - `AdminPromotionsCreateView.vue` pide el listado admin con `{ status: "active", is_promoted: false }` ([AdminPromotionsCreateView.vue](frontend/src/views/admin/properties/promotions/AdminPromotionsCreateView.vue)).
 - `AdminPromotionsActiveView.vue` lista `GET /v1/admin/promotions` vía `useActivePromotions` y selecciona por `property_id` ([AdminPromotionsActiveView.vue](frontend/src/views/admin/properties/promotions/AdminPromotionsActiveView.vue), [useActivePromotions.ts](frontend/src/composables/admin/useActivePromotions.ts)).
 - `AdminPropertyPreviewPanel.vue` no importa ningún formulario: expone un slot `footer` con la property cargada como slot prop ([AdminPropertyPreviewPanel.vue](frontend/src/components/admin/properties/AdminPropertyPreviewPanel.vue)).
@@ -437,13 +441,13 @@ Pendiente: las acciones del panel (editar, reemplazar geometría, desactivar). *
 - `BulkJobRow` declara `error_count` y no un array de errores ([types/admin/bulk.ts](frontend/src/types/admin/bulk.ts)).
 - El botón de relanzar de `AdminBulkJobPanel` no tiene handler: se deshabilita si el job está `pending` o si `expires_at` ya pasó ([AdminBulkJobPanel.vue](frontend/src/components/admin/properties/imports/AdminBulkJobPanel.vue)).
 - `AdminImportsView` ya no monta el empty state fijo: renderiza `AdminSplitView` con la tabla de corridas ([AdminImportsView.vue](frontend/src/views/admin/properties/imports/AdminImportsView.vue)).
-- `BulkUploadPropertiesModal.vue` escribe a mano los paths `/v1/admin/properties/bulk/upload-url` y `/v1/admin/properties/bulk` en vez de tomarlos de `PROPERTIES_ENDPOINTS` ([BulkUploadPropertiesModal.vue](frontend/src/components/admin/properties/imports/BulkUploadPropertiesModal.vue), [propertiesEndpoints.ts](frontend/src/constants/propertiesEndpoints.ts)).
+- Los paths del bulk (`adminBulkUploadUrl`, `adminBulkJobs`) viven en `PROPERTIES_ENDPOINTS`; `BulkUploadPropertiesModal.vue` no escribe rutas a mano ([propertiesEndpoints.ts](frontend/src/constants/propertiesEndpoints.ts)).
 - `/admin/catalog` es una ruta padre sin `name` con cuatro hijos (`""`, `localities`, `admin-divisions`, `countries`), el `name` `admin-catalog` vive en el hijo por defecto, y solo el padre declara `meta: { requiresAuth: true, requiresAdmin: true }` ([router/routes/admin/catalog.ts](frontend/src/router/routes/admin/catalog.ts)).
 - `AdminCatalogView.vue` monta `AdminTabsNav` con las tabs Barrios, Localidades, Divisiones y Países, y un `RouterView` ([AdminCatalogView.vue](frontend/src/views/admin/catalog/AdminCatalogView.vue)).
 - Localidades, Divisiones y Países solo renderizan `EmptyState`; Barrios es la única tab de catálogo que llama a la API ([views/admin/catalog/](frontend/src/views/admin/catalog)).
 - `AdminNeighborhoodsView` monta `AdminFilterBar` fuera de `AdminSplitView` y recarga con `useUrlFilters(NEIGHBORHOOD_FILTERS, load)` ([AdminNeighborhoodsView.vue](frontend/src/views/admin/catalog/neighborhoods/AdminNeighborhoodsView.vue)).
 - `useUrlFilters` sanea `route.query` contra las definiciones, navega con `router.push` y llama `onChange` con `immediate: true` ([useUrlFilters.ts](frontend/src/composables/admin/useUrlFilters.ts)).
-- `NEIGHBORHOOD_FILTERS` vive en `constants/catalogFilters.ts` y sus `loadOptions` son `loadCountryOptions` / `loadLocalityOptions` de `api/catalogOptions.ts`; `MODERATION_FILTERS` y `BULK_JOB_FILTERS` viven en `constants/propertiesFilters.ts` ([catalogFilters.ts](frontend/src/constants/catalogFilters.ts), [propertiesFilters.ts](frontend/src/constants/propertiesFilters.ts)).
+- `NEIGHBORHOOD_FILTERS` vive en `constants/catalogFilters.ts` y sus `loadOptions` son `loadCountryOptions` / `loadLocalityOptions` de `api/admin/catalog.ts`; `MODERATION_FILTERS` y `BULK_JOB_FILTERS` viven en `constants/propertiesFilters.ts` ([catalogFilters.ts](frontend/src/constants/catalogFilters.ts), [api/admin/catalog.ts](frontend/src/api/admin/catalog.ts)).
 - `AdminActionBar` es genérico sobre la key (`generic="K extends string"`), recibe `AdminAction<K>[]` y emite `action(key)` ([AdminActionBar.vue](frontend/src/components/admin/shared/AdminActionBar.vue), [types/admin/actions.ts](frontend/src/types/admin/actions.ts)).
 - `AdminNeighborhoodPanel` reemite `action` con un `NeighborhoodAction` (`edit`|`geometry`|`deactivate`) y `AdminNeighborhoodsView` abre un `BaseModal` mock con `activeAction` ([AdminNeighborhoodPanel.vue](frontend/src/components/admin/catalog/neighborhoods/AdminNeighborhoodPanel.vue), [AdminNeighborhoodsView.vue](frontend/src/views/admin/catalog/neighborhoods/AdminNeighborhoodsView.vue)).
 - `AdminFilterBar` calcula `--cols` contando el botón como una celda: `n + 1` hasta 4, `ceil((n + 1) / 2)` desde 5 ([AdminFilterBar.vue](frontend/src/components/admin/shared/AdminFilterBar.vue)).
@@ -455,3 +459,5 @@ Pendiente: las acciones del panel (editar, reemplazar geometría, desactivar). *
 - `useNeighborhoodNeighbors` serializa el bbox con `paramsSerializer: { indexes: null }` ([useNeighborhoodNeighbors.ts:22](frontend/src/composables/admin/useNeighborhoodNeighbors.ts#L22)).
 - Los tipos admin viven en `types/admin/{properties,moderation,promotions,bulk,filters,catalog}.ts`, sin `index.ts` que los reexporte ([types/admin/](frontend/src/types/admin)).
 - `package.json` del frontend no declara `d3` ni `d3-geo` ([package.json](frontend/package.json)).
+- `useUrlFilters<T>` es genérico y hace el único cast de los filtros, después de `sanitizeFilterQuery`; `AdminModerationView` lo usa como `useUrlFilters<AdminPropertiesFilters>(MODERATION_FILTERS, load)` ([useUrlFilters.ts](frontend/src/composables/admin/useUrlFilters.ts), [AdminModerationView.vue](frontend/src/views/admin/properties/moderation/AdminModerationView.vue)).
+- `types/shared/table.ts` aumenta `ColumnMeta` de `@tanstack/vue-table` con `align?: ColumnAlign`, y `BaseTable` lee `columnDef.meta?.align` sin cast ([types/shared/table.ts](frontend/src/types/shared/table.ts), [BaseTable.vue](frontend/src/components/shared/BaseTable.vue)).
