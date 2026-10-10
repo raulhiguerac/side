@@ -1,31 +1,34 @@
 <template>
   <PageContainer class="flex h-[80vh] min-h-[360px] gap-4">
-    <!-- lista lado izquierdo -->
-    <div class="w-1/2 flex flex-col gap-3 overflow-hidden">
+    <!-- lista lado izquierdo: scroll infinito sobre todo el bbox -->
+    <div
+      ref="listRoot"
+      class="w-1/2 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+    >
       <div
-        class="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        v-if="loading && allItems.length === 0"
+        class="flex justify-center py-10"
       >
-        <div class="grid grid-cols-2 gap-3 py-2">
-          <PropertyCard
-            v-for="card in cards"
-            :key="card.id"
-            :property="card"
-            :show-favorite="false"
-            @click="router.push(`/listing/${card.id}`)"
-            @mouseenter="hoveredId = card.id"
-            @mouseleave="hoveredId = null"
-          />
-        </div>
+        <BaseSpinner class="h-6 w-6" />
       </div>
-
-      <!-- flechas de paginación -->
-      <PaginationArrows
-        class="pb-2 shrink-0"
-        :has-prev="hasPrev"
-        :has-next="hasNext"
-        @prev="prev"
-        @next="next"
+      <EmptyState
+        v-else-if="allItems.length === 0"
+        title="No hay propiedades en esta zona"
+        description="Mueve el mapa o aléjate para ver más."
       />
+      <div v-else class="grid grid-cols-2 gap-3 py-2">
+        <PropertyCard
+          v-for="card in cards"
+          :key="card.id"
+          :property="card"
+          :show-favorite="false"
+          :class="{ 'ring-2 ring-brand-primary': card.id === mapHoveredId }"
+          @click="goToListing(card.id)"
+          @mouseenter="hoveredId = card.id"
+          @mouseleave="hoveredId = null"
+        />
+      </div>
+      <div ref="sentinel" class="h-px" />
     </div>
 
     <!-- mapa lado derecho -->
@@ -38,22 +41,27 @@
         :markers="markers"
         :hovered-id="hoveredId"
         @bbox="onBbox"
+        @marker-click="goToListing"
+        @marker-hover="mapHoveredId = $event"
       />
     </div>
   </PageContainer>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import MapUser from "@/components/map/MapUser.vue";
 import PropertyCard from "@/components/properties/cards/PropertyCard.vue";
-import PaginationArrows from "@/components/shared/PaginationArrows.vue";
+import BaseSpinner from "@/components/shared/BaseSpinner.vue";
+import EmptyState from "@/components/shared/EmptyState.vue";
 import PageContainer from "@/components/shared/PageContainer.vue";
 import { useFeedMap } from "@/composables/feed/useFeedMap";
+import { useInfiniteScroll } from "@/composables/shared/useInfiniteScroll";
 import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import { useUserStore } from "@/stores/user";
 import router from "@/router";
 import type { BboxPayload } from "@/types/feed/search";
+import type { MarkerData } from "@/types/maps/base";
 import { STORAGE_KEYS } from "@/config";
 
 function getInitialCenter(): [number, number] {
@@ -73,22 +81,33 @@ const zoom = ref(15);
 const center = ref<[number, number]>(getInitialCenter());
 
 const hoveredId = ref<string | null>(null);
+const mapHoveredId = ref<string | null>(null);
+const listRoot = ref<HTMLElement | null>(null);
+const sentinel = ref<HTMLElement | null>(null);
 
-const { items, loading, fetchByBbox, next, prev, hasNext, hasPrev } =
-  useFeedMap();
-
+const { allItems, items, loading, fetchByBbox, loadMore } = useFeedMap();
 const { cards } = usePropertyMapper(items);
+const { recheck } = useInfiniteScroll(sentinel, listRoot, loadMore);
 
-const markers = computed(() =>
-  items.value
-    .filter((p) => p.location?.latitude && p.location?.longitude)
-    .map((p) => ({
-      id: p.id,
-      lat: p.location!.latitude!,
-      lon: p.location!.longitude!,
-      imageType: p.property_type,
-    }))
+// El mapa pinta todo el bbox; el cluster se encarga de no encimar.
+const markers = computed<MarkerData[]>(() =>
+  allItems.value.flatMap((p) => {
+    const lat = p.location?.latitude;
+    const lon = p.location?.longitude;
+    if (lat == null || lon == null) return [];
+    return [{ id: p.id, lat, lon, imageType: p.property_type }];
+  })
 );
+
+// Área nueva: la lista vuelve arriba y se re-evalúa si hace falta otra tanda.
+watch(allItems, () => {
+  if (listRoot.value) listRoot.value.scrollTop = 0;
+  recheck();
+});
+
+function goToListing(id: string) {
+  router.push(`/listing/${id}`);
+}
 
 onMounted(async () => {
   const store = useUserStore();

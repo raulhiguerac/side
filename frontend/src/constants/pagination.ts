@@ -5,4 +5,5 @@ export const PAGE_SIZE = {
   ADMIN_PROMOTIONS: 20,
   ADMIN_BULK_JOBS: 20,
   ADMIN_NEIGHBORHOODS: 20,
+  FEED_MAP_CHUNK: 20,
 } as const;

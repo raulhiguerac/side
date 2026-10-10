@@ -7,6 +7,7 @@
       <img
         :src="property.image || defaultImage"
         :alt="property.title"
+        loading="lazy"
         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
       />
 
