@@ -1,7 +1,7 @@
 ---
 title: Dev workflow — reglas de trabajo del monorepo
 status: stable
-last-verified: 2026-09-27
+last-verified: 2026-10-09
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -16,7 +16,7 @@ sources:
 
 ## TL;DR
 
-Dos reglas de trabajo cross-cutting: (1) discutir antes de codificar (enforced vía `.claude/CLAUDE.md`), (2) pre-commit hook que avisa cuando el wiki está stale respecto a los archivos tocados en el commit.
+Reglas de trabajo cross-cutting: (1) discutir antes de codificar y (2) auditar al terminar hasta production grade, ambas en `.claude/CLAUDE.md`; (3) un harness de checks automáticos que corre todo en el devcontainer (hooks de Claude Code, `make audit`, pre-commit de wiki staleness).
 
 ## Levantar el entorno
 
@@ -58,6 +58,8 @@ mientras tanto.
 3. Usuario confirma.
 4. Solo entonces se escribe código.
 
+**Terminado significa auditado (regla #2, 2026-10-09).** Al cerrar un trabajo, de Claude o del usuario, se corren los checks de lo tocado (lint, vue-tsc, ruff, pytest, `/wiki-lint`) dentro del devcontainer, se revisa el diff buscando bugs y smells, y se itera hasta production grade o hasta dejar explícito lo que falta. Incluye consultar la wiki antes de afirmar cómo funciona algo, revisar el estado del PR antes de hacer push y reportar las verificaciones con el comando exacto. Ver "Harness" más abajo.
+
 El archivo está en inglés — mejor adherencia del modelo que en español.
 
 ## Pre-commit hook — wiki staleness
@@ -92,6 +94,31 @@ El devcontainer lo hace automático vía `postCreateCommand`. En el host hay que
 
 `pipx` instala herramientas CLI en virtualenvs aislados con el binario disponible en PATH. Evita conflictos con el Python del sistema (que en Debian/Ubuntu está marcado como "externally managed").
 
+## Harness — checks automáticos (2026-10-09)
+
+Un **harness** es el conjunto de controles que rodean el trabajo para que un error se detenga solo, sin depender de que alguien se acuerde de correr algo. Se armó después de que dos errores de tipos llegaran a `main` (#22, #23): el build no typecheckea los `.vue` y nadie corría `vue-tsc`.
+
+**Regla de oro: todo corre dentro del devcontainer.** El host queda limpio (sin Python, uv ni ruff); los hooks solo orquestan desde el host con `jq`, `git` y `docker compose exec -T develop`.
+
+| Puesto | Cuándo | Qué corre | Bloquea | Dónde vive |
+|---|---|---|---|---|
+| Hook `PostToolUse` | Cada vez que Claude edita un archivo | `.vue`/`.ts` de `frontend/src` → `eslint --fix` del archivo; `.py` de `backend/*-service` → `uvx ruff check` del archivo, desde la carpeta del servicio | Sí: exit 2 devuelve los errores a Claude | `.claude/hooks/post-edit-lint.sh` |
+| Hook `Stop` | Cuando Claude termina el turno, si hay `.vue`/`.ts` cambiados | `npm run typecheck` (vue-tsc) | Sí: no deja cerrar el turno con errores de tipos | `.claude/hooks/stop-typecheck.sh` |
+| `make audit` | A mano | ruff + pytest por servicio, eslint, vue-tsc, links de la wiki → `audit-report.txt` | No (es un reporte) | `scripts/audit.sh` |
+| Pre-commit | En cada commit (desde el devcontainer) | Wiki staleness | No (solo avisa) | `.pre-commit-config.yaml` |
+
+Detalles del hook `Stop`:
+- Guarda en `.claude/.cache/` (ignorado por git) la huella de los cambios de `frontend/src`; si no cambió desde la última corrida verde, no repite vue-tsc (~6 s).
+- Si vuelve a fallar con exactamente los mismos cambios en un turno que ya bloqueó, deja terminar con un aviso: evita un bucle infinito cuando el error no es corregible en ese momento.
+
+Si el devcontainer está apagado, los dos hooks avisan y no bloquean: nunca caen al host.
+
+**Comandos base** (definidos una vez, los usan hooks y `audit.sh`): en `frontend/package.json`, `lint:check` (`eslint --ext .ts,.vue src`; sin `--ext` ESLint no revisa los `.vue`) y `typecheck` (vue-tsc 2 con TypeScript 5.6 fijados vía `npx`, sin tocar las dependencias del proyecto).
+
+**Saltarlo en una emergencia:** `/hooks` en Claude Code para desactivarlos en la sesión, o `"disableAllHooks": true` en `.claude/settings.local.json` (personal, no se commitea).
+
+**Pendiente:** CI en GitHub (`.github/workflows`), tests del front (Vitest), lint y typecheck en el pre-commit, y un typechecker para el backend (ningún servicio tiene mypy/pyright). Ver [[open-items]].
+
 ## Claims
 
 - `make bootstrap` baja de R2 los artefactos que no viven en git (~85 MB: el .pbf de Bogota, los dumps de seed y el modelo AVM) y `make up` levanta los 17 servicios activos del compose, que hoy son solo infra ([Makefile](Makefile), [docker-compose.yml](docker-compose.yml)).
@@ -102,3 +129,7 @@ El devcontainer lo hace automático vía `postCreateCommand`. En el host hay que
 - `scripts/wiki-lint-hook.sh` mapea prefijos de path a servicios y chequea `last-verified` en front-matter de páginas wiki ([scripts/wiki-lint-hook.sh](scripts/wiki-lint-hook.sh)).
 - El devcontainer corre `uv tool install pre-commit && pre-commit install` en `postCreateCommand` ([.devcontainer/devcontainer.json](.devcontainer/devcontainer.json)).
 - Commits desde el host requieren `pipx install pre-commit && pre-commit install` manualmente — el hook no aplica dentro del container.
+- `.claude/settings.json` registra un hook `PostToolUse` (matcher `Edit|Write|MultiEdit`) que corre `.claude/hooks/post-edit-lint.sh` y un hook `Stop` que corre `.claude/hooks/stop-typecheck.sh` ([.claude/settings.json](.claude/settings.json)).
+- Los dos hooks ejecutan las herramientas con `docker compose exec -T develop` y salen con código 0 y un aviso si el contenedor `develop` no está corriendo ([.claude/hooks/](.claude/hooks)).
+- `frontend/package.json` define `lint:check` y `typecheck`, y `scripts/audit.sh` los invoca ([frontend/package.json](frontend/package.json), [scripts/audit.sh](scripts/audit.sh)).
+- `.claude/.cache/` está en `.gitignore` ([.gitignore](.gitignore)).

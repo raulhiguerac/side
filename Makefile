@@ -13,7 +13,7 @@ RCLONE := docker run --rm --user $$(id -u):$$(id -g) -e HOME=/tmp -v "$(CURDIR):
 	rclone/rclone:1.75.1
 
 .DEFAULT_GOAL := help
-.PHONY: help bootstrap up down stop reset seed data-pull logs ps
+.PHONY: help bootstrap up down stop reset seed data-pull logs ps audit
 
 help: ## Muestra esta ayuda
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -82,3 +82,6 @@ logs: ## Sigue los logs de todos los servicios
 
 ps: ## Estado de los servicios
 	$(COMPOSE) ps
+
+audit: ## Lint, tests y links de la wiki de todo el monorepo → audit-report.txt
+	$(COMPOSE) exec -T develop bash scripts/audit.sh
