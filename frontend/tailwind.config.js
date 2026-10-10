@@ -1,3 +1,5 @@
+const plugin = require("tailwindcss/plugin");
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -17,5 +19,11 @@ module.exports = {
       },
     },
   },
-  plugins: [require("@vueform/vueform/tailwind")],
+  plugins: [
+    require("@vueform/vueform/tailwind"),
+    // vueform redefine `disabled:` solo para descendientes; se suma el `:disabled` estándar.
+    plugin(({ addVariant }) => {
+      addVariant("disabled", ["&:disabled", "&[disabled]", "[disabled] &"]);
+    }),
+  ],
 };
