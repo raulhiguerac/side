@@ -1,14 +1,14 @@
 ---
 title: Dominio geo_catalog (catalog-service)
 status: draft
-last-verified: 2026-09-28
+last-verified: 2026-10-10
 owners: [catalog-service]
 related:
   - "[[catalog-service]]"
   - "[[catalog-service-architecture]]"
   - "[[catalog-service-catalog-admin]]"
   - "[[frontend-admin-panel]]"
-sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/frontend/2026-09-28-admin-catalog-geometry-design.md]
+sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/frontend/2026-09-28-admin-catalog-geometry-design.md, ../../../sources/catalog-service/2026-10-10-admin-localities-list-endpoint.md]
 ---
 
 ## TL;DR
@@ -88,7 +88,7 @@ Ejemplos:
 - **No hace point-in-polygon** — eso vive en `geo_resolution` (ver [[catalog-service-poi-lifecycle]]).
 - **No valida tokens** — endpoints son públicos.
 - **No expone `geom` ni `h3_cells`** — solo metadata legible para el frontend. Si un consumer necesita el polígono, deberá usar una API específica (no existe hoy).
-- **Solo devuelve entidades activas.** Los repositorios filtran `is_active == True`, así que no sirven como listado admin: lo desactivado no se ve ni se puede reactivar desde ahí. La sección de catálogo del panel admin necesita un read path propio ([[frontend-admin-panel]], [[open-items]]).
+- **Solo devuelve entidades activas.** Los repositorios filtran `is_active == True`, así que no sirven como listado admin: lo desactivado no se ve ni se puede reactivar desde ahí. El panel admin usa su propio read path en [[catalog-service-catalog-admin]] (barrios y localidades; divisiones y países pendientes, ver [[open-items]]). Estos no se parametrizan con un `include_inactive` porque van cacheados y son públicos.
 
 ## Open items
 
