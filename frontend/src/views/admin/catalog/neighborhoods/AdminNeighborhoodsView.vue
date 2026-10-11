@@ -1,11 +1,36 @@
 <template>
   <!-- Arriba del split y no en su slot: la cascada filtra la tabla y también el mapa. -->
-  <AdminFilterBar
-    class="mb-4"
-    :filters="NEIGHBORHOOD_FILTERS"
-    :initial="urlFilters"
-    @apply="pushFilters"
-  />
+  <div class="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-[4fr_1fr]">
+    <AdminFilterBar
+      :filters="NEIGHBORHOOD_FILTERS"
+      :initial="urlFilters"
+      @apply="pushFilters"
+    />
+
+    <div
+      class="border-brand-divider flex flex-col justify-center gap-2 rounded-2xl border bg-white p-4"
+    >
+      <button
+        type="button"
+        class="border-brand-primary bg-brand-primary flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-600"
+        @click="creating = true"
+      >
+        <Plus class="h-4 w-4 shrink-0" />
+        <span class="truncate">Crear barrio</span>
+      </button>
+
+      <button
+        v-for="action in BULK_ACTIONS"
+        :key="action.key"
+        type="button"
+        class="border-brand-divider text-brand-text hover:bg-brand-bg flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors"
+        @click="bulkModal = action.key"
+      >
+        <component :is="action.icon" class="h-4 w-4 shrink-0" />
+        <span class="truncate">{{ action.label }}</span>
+      </button>
+    </div>
+  </div>
 
   <AdminSplitView :error="error">
     <template v-if="coverage" #filters>
@@ -24,6 +49,9 @@
     <template #panel>
       <AdminNeighborhoodPanel
         :neighborhood-id="selectedId"
+        :detail="detail"
+        :loading="detailLoading"
+        :error="detailError"
         @action="activeAction = $event"
       />
     </template>
@@ -40,34 +68,66 @@
     </template>
   </AdminSplitView>
 
-  <BaseModal
-    :model-value="activeAction !== null"
-    @update:model-value="activeAction = null"
-  >
-    <h3 class="text-brand-text mb-2 text-lg font-bold">
-      {{ activeAction && MOCK_MODALS[activeAction] }}
-    </h3>
-    <p class="text-brand-muted mb-6 text-sm">Mock: contenido pendiente.</p>
-    <button
-      type="button"
-      class="text-brand-text hover:bg-brand-bg w-full rounded-xl py-3 text-sm font-semibold transition-colors"
-      @click="activeAction = null"
-    >
-      Cerrar
-    </button>
-  </BaseModal>
+  <EditNeighborhoodModal
+    :neighborhood="activeAction === 'edit' ? detail : null"
+    @close="activeAction = null"
+    @confirm="onSaved"
+  />
+
+  <NeighborhoodStatusModal
+    :neighborhood="activeAction === 'status' ? detail : null"
+    @close="activeAction = null"
+    @confirm="onSaved"
+  />
+
+  <CreateNeighborhoodModal
+    :open="creating"
+    :initial-country-id="urlFilters.country_id || null"
+    :initial-locality-id="urlFilters.locality_id || null"
+    @close="creating = false"
+    @confirm="onCreated"
+  />
+
+  <BulkNeighborhoodsModal
+    :open="bulkModal === 'neighborhoods'"
+    :initial-country-id="urlFilters.country_id || null"
+    :initial-locality-id="urlFilters.locality_id || null"
+    @close="bulkModal = null"
+    @confirm="onBulkDone"
+  />
+
+  <BulkGeometriesModal
+    :open="bulkModal === 'geometries'"
+    :initial-country-id="urlFilters.country_id || null"
+    :initial-locality-id="urlFilters.locality_id || null"
+    @close="bulkModal = null"
+    @confirm="onBulkDone"
+  />
+
+  <ReplaceGeometryModal
+    :neighborhood="activeAction === 'geometry' ? detail : null"
+    @close="activeAction = null"
+    @confirm="onSaved"
+  />
 </template>
 
 <script lang="ts" setup>
 import { ref } from "vue";
+import { FileUp, MapPinned, Plus } from "@lucide/vue";
 import AdminNeighborhoodPanel from "@/components/admin/catalog/neighborhoods/AdminNeighborhoodPanel.vue";
 import AdminNeighborhoodsTable from "@/components/admin/catalog/neighborhoods/AdminNeighborhoodsTable.vue";
-import NeighborhoodCoverageBar from "@/components/admin/catalog/neighborhoods/NeighborhoodCoverageBar.vue";
+import BulkGeometriesModal from "@/components/admin/catalog/neighborhoods/modals/BulkGeometriesModal.vue";
+import BulkNeighborhoodsModal from "@/components/admin/catalog/neighborhoods/modals/BulkNeighborhoodsModal.vue";
+import CreateNeighborhoodModal from "@/components/admin/catalog/neighborhoods/modals/CreateNeighborhoodModal.vue";
+import EditNeighborhoodModal from "@/components/admin/catalog/neighborhoods/modals/EditNeighborhoodModal.vue";
+import NeighborhoodCoverageBar from "@/components/admin/catalog/neighborhoods/widgets/NeighborhoodCoverageBar.vue";
+import NeighborhoodStatusModal from "@/components/admin/catalog/neighborhoods/modals/NeighborhoodStatusModal.vue";
+import ReplaceGeometryModal from "@/components/admin/catalog/neighborhoods/modals/ReplaceGeometryModal.vue";
 import AdminFilterBar from "@/components/admin/shared/AdminFilterBar.vue";
 import AdminPaginationFooter from "@/components/admin/shared/AdminPaginationFooter.vue";
 import AdminSplitView from "@/components/admin/shared/AdminSplitView.vue";
-import BaseModal from "@/components/shared/BaseModal.vue";
 import { useAdminNeighborhoods } from "@/composables/admin/useAdminNeighborhoods";
+import { useNeighborhoodDetail } from "@/composables/admin/useNeighborhoodDetail";
 import { useRowSelection } from "@/composables/admin/useRowSelection";
 import { useUrlFilters } from "@/composables/admin/useUrlFilters";
 import { NEIGHBORHOOD_FILTERS } from "@/constants/catalogFilters";
@@ -83,20 +143,45 @@ const {
   loading,
   error,
   load,
+  reload: reloadList,
   next,
   prev,
 } = useAdminNeighborhoods();
 
 const { selectedId } = useRowSelection(rows);
 
-// Mock: título por acción hasta tener los modales reales.
-const MOCK_MODALS: Record<NeighborhoodAction, string> = {
-  edit: "Editar barrio",
-  geometry: "Actualizar geometría",
-  deactivate: "Desactivar barrio",
-};
+const {
+  detail,
+  loading: detailLoading,
+  error: detailError,
+  reload: reloadDetail,
+} = useNeighborhoodDetail(selectedId);
 
 const activeAction = ref<NeighborhoodAction | null>(null);
 
+const BULK_ACTIONS = [
+  { key: "neighborhoods", label: "Subir barrios", icon: FileUp },
+  { key: "geometries", label: "Subir geometrías", icon: MapPinned },
+] as const;
+
+const bulkModal = ref<(typeof BULK_ACTIONS)[number]["key"] | null>(null);
+
 const { urlFilters, pushFilters } = useUrlFilters(NEIGHBORHOOD_FILTERS, load);
+
+const creating = ref(false);
+
+async function onCreated() {
+  creating.value = false;
+  await reloadList();
+}
+
+async function onBulkDone() {
+  bulkModal.value = null;
+  await Promise.all([reloadList(), reloadDetail()]);
+}
+
+async function onSaved() {
+  activeAction.value = null;
+  await Promise.all([reloadList(), reloadDetail()]);
+}
 </script>

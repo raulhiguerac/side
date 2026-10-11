@@ -1,5 +1,12 @@
 import type { Geometry } from "geojson";
 import type { Bbox } from "@/types/maps/base";
+import type {
+  BulkCreateNeighborhoodsResult,
+  BulkEnrichNeighborhoodGeometriesResult,
+  CreateNeighborhoodRequest,
+  NeighborhoodAdminResponse as GeneratedNeighborhoodAdminResponse,
+  UpdateNeighborhoodRequest,
+} from "@/types/generated/catalog";
 
 /** Fila de `GET /v1/admin/neighborhoods`: `svg_path` y `bbox` vienen nulos si el barrio no tiene geometría. */
 export interface NeighborhoodAdminRow {
@@ -56,4 +63,19 @@ export interface NeighborhoodGeometryItem {
   geometry: Geometry;
 }
 
-export type NeighborhoodAction = "edit" | "geometry" | "deactivate";
+export type NeighborhoodAction = "edit" | "geometry" | "status";
+
+/** Resultado del CSV de barrios: `errors` trae los nombres que no se guardaron. */
+export type BulkNeighborhoodsResult = BulkCreateNeighborhoodsResult;
+
+/** Resultado del GeoJSON en bloque: `unmatched` son barrios de la localidad sin Feature. */
+export type BulkGeometriesResult = BulkEnrichNeighborhoodGeometriesResult;
+
+/** Body de `POST /v1/admin/neighborhoods`: sin geometría, se sube aparte. */
+export type NeighborhoodCreatePayload = CreateNeighborhoodRequest;
+
+/** Body de `PATCH /v1/admin/neighborhoods/{id}`: solo se aplica lo que viaja. */
+export type NeighborhoodUpdatePayload = UpdateNeighborhoodRequest;
+
+/** Respuesta del PATCH: sin geometría ni área. */
+export type NeighborhoodAdminResponse = GeneratedNeighborhoodAdminResponse;

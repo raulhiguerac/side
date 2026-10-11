@@ -13,7 +13,7 @@ RCLONE := docker run --rm --user $$(id -u):$$(id -g) -e HOME=/tmp -v "$(CURDIR):
 	rclone/rclone:1.75.1
 
 .DEFAULT_GOAL := help
-.PHONY: help bootstrap up down stop reset seed data-pull logs ps audit
+.PHONY: help bootstrap up down stop reset seed data-pull logs ps audit generate-types
 
 help: ## Muestra esta ayuda
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -85,3 +85,6 @@ ps: ## Estado de los servicios
 
 audit: ## Lint, tests y links de la wiki de todo el monorepo → audit-report.txt
 	$(COMPOSE) exec -T develop bash scripts/audit.sh
+
+generate-types: ## Genera los tipos TS del front desde el OpenAPI de catalog
+	$(COMPOSE) exec -T develop bash -lc 'cd /workspace/frontend && npx openapi-ts'

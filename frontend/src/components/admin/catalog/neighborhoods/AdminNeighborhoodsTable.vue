@@ -31,7 +31,7 @@
 <script setup lang="ts">
 import type { ColumnDef } from "@tanstack/vue-table";
 import BaseTable from "@/components/shared/BaseTable.vue";
-import NeighborhoodSilhouette from "@/components/admin/catalog/neighborhoods/NeighborhoodSilhouette.vue";
+import NeighborhoodSilhouette from "@/components/admin/catalog/neighborhoods/widgets/NeighborhoodSilhouette.vue";
 import type { NeighborhoodAdminRow } from "@/types/admin/catalog";
 
 defineProps<{
