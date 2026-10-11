@@ -2,16 +2,31 @@ import uuid
 
 from fastapi import APIRouter, Depends
 
-from app.api.deps.catalog_admin.localities import create_locality_uc, update_locality_uc
+from app.api.deps.catalog_admin.localities import (
+    create_locality_uc,
+    list_localities_uc,
+    update_locality_uc,
+)
 from app.services.catalog_admin.schemas.locality import (
     CreateLocalityRequest,
+    GetAllLocalitiesPage,
+    GetAllLocalitiesRequest,
     LocalityAdminResponse,
     UpdateLocalityRequest,
 )
 from app.services.catalog_admin.use_cases.locality.create import CreateLocalityUseCase
+from app.services.catalog_admin.use_cases.locality.list_all import ListLocalitiesUseCase
 from app.services.catalog_admin.use_cases.locality.update import UpdateLocalityUseCase
 
 router = APIRouter()
+
+
+@router.get("/localities", response_model=GetAllLocalitiesPage)
+async def list_localities(
+    req: GetAllLocalitiesRequest = Depends(),
+    uc: ListLocalitiesUseCase = Depends(list_localities_uc),
+) -> GetAllLocalitiesPage:
+    return await uc.execute(req=req)
 
 
 @router.post("/localities", response_model=LocalityAdminResponse, status_code=201)
