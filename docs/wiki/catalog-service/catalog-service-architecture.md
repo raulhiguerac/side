@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna de catalog-service
 status: stable
-last-verified: 2026-10-04
+last-verified: 2026-10-14
 owners: [catalog-service]
 related:
   - "[[architecture]]"
@@ -11,7 +11,7 @@ related:
   - "[[adr-poi-cache-aside]]"
   - "[[adr-isochrone-ors-h3]]"
   - "[[adr-geospatial-feature-engineering]]"
-sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md, ../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md]
+sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md, ../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md, ../../sources/catalog-service/2026-10-14-admin-pagination-standard.md]
 ---
 
 ## TL;DR
@@ -55,7 +55,7 @@ src/app/
 │   └── storage/minio/          # scaffolded, no uso runtime
 ├── models/
 │   └── location.py             # Country, AdminDivision, Locality, Neighborhood, POI, FetchZone
-├── schemas/                    # principal, base DTOs
+├── schemas/                    # principal, base DTOs, paginación admin (PageRequest/Page[T])
 ├── services/
 │   ├── catalog_admin/          # writes, bulk uploads y reads admin
 │   ├── geo_catalog/            # reads frontend
