@@ -1,8 +1,8 @@
 ---
 name: wiki-capture
-description: Distill the recent conversation (or provided text) into a markdown file under docs/sources/ to preserve a decision, finding, or author directive without storing a literal transcript. After capture, wiki-ingest can be run on the new file to propagate findings into the curated wiki.
+description: Distill the recent conversation (or provided text) into a markdown file under docs/sources/ to preserve a decision, finding, or author directive without storing a literal transcript, then hand it to wiki-ingest. USE on your own when finished and verified work contradicts what the wiki says, changes documented behavior, or adds functionality (endpoints, schemas, contracts, flows, decisions), so the wiki stays up to date. SKIP for discussions without a decision, one-off questions, exploratory answers, or work still in progress.
 argument-hint: optional topic descriptor (e.g. "wiki-pilot-decision")
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 You will distill a conversation or text into a wiki source. **Never store literal transcripts** — extract only actionable content.
@@ -13,7 +13,7 @@ You will distill a conversation or text into a wiki source. **Never store litera
    - If `$ARGUMENTS` contains pasted text or a topic description, use that.
    - Otherwise, assume "recent conversation in this session" and summarize what was discussed.
 
-2. **Ask the user** (only if not obvious from context):
+2. **Infer from context; ask the user only if ambiguous:**
    - **Service** the capture relates to: `analytics-service`, `properties-service`, `_shared`, etc.
    - **Descriptor** in kebab-case for the filename (e.g. `wiki-pilot-decision`, `mlflow-vs-bentoml`).
 

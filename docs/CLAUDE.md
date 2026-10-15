@@ -19,8 +19,8 @@ Esta carpeta es un wiki versionado del proyecto. Está pensado para que un dev n
 
 Viven en `.claude/skills/`. Se invocan con `/<nombre>`.
 
-- `/wiki-capture <tema>` — destila la conversación reciente (o texto pegado) a un archivo de `sources/`. Útil cuando una charla con el LLM llegó a una decisión y querés preservarla sin transcript literal. _User-only._
-- `/wiki-ingest <ruta>` — procesa una fuente en `sources/`, propone updates a 1-5 páginas. _User-only._
+- `/wiki-capture <tema>` — destila la conversación reciente (o texto pegado) a un archivo de `sources/`. Útil cuando una charla con el LLM llegó a una decisión y querés preservarla sin transcript literal. _Auto-trigger habilitado_: el modelo la invoca al cerrar trabajo verificado que contradice, cambia o amplía lo que dice el wiki.
+- `/wiki-ingest <ruta>` — procesa una fuente en `sources/`, propone updates a 1-5 páginas. _Auto-trigger habilitado_ (lo encadena `wiki-capture`), pero no edita el wiki sin aprobación del plan.
 - `/wiki-query <pregunta>` — responde usando el wiki, ofrece archivar Q&A valioso. _Auto-trigger habilitado_: el modelo la invoca al detectar preguntas sobre arquitectura/dominio/servicios del proyecto.
 - `/wiki-lint` — chequea contradicciones, páginas stale, huérfanas. _User-only._
 
