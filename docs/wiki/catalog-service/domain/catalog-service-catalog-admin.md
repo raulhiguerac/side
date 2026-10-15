@@ -1,7 +1,7 @@
 ---
 title: Dominio catalog_admin (catalog-service)
 status: stable
-last-verified: 2026-10-04
+last-verified: 2026-10-14
 owners: [catalog-service]
 related:
   - "[[catalog-service]]"
@@ -9,12 +9,12 @@ related:
   - "[[catalog-service-geo-catalog]]"
   - "[[catalog-service-poi-lifecycle]]"
   - "[[frontend-admin-panel]]"
-sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md, ../../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md, ../../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md, ../../../sources/frontend/2026-09-28-admin-catalog-geometry-design.md]
+sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md, ../../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md, ../../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md, ../../../sources/frontend/2026-09-28-admin-catalog-geometry-design.md, ../../../sources/catalog-service/2026-10-10-admin-localities-list-endpoint.md, ../../../sources/catalog-service/2026-10-14-admin-pagination-standard.md, ../../../sources/catalog-service/2026-10-14-admin-divisions-countries-list-endpoints.md]
 ---
 
 ## TL;DR
 
-Dominio admin del catálogo geográfico: **writes** (CRUD por entidad + bulk uploads de CSV de barrios y GeoJSON de polígonos, con cache invalidation explícita) y **reads admin** de barrios para el panel (listado paginado con silueta, detalle con geometría, vecinos por bbox). Todo protegido por `require_admin`; las lecturas admin van directo a la DB, sin cache.Errores SQL mapeados a errores de dominio vía traductor centralizado.
+Dominio admin del catálogo geográfico: **writes** (CRUD por entidad + bulk uploads de CSV de barrios y GeoJSON de polígonos, con cache invalidation explícita) y **reads admin** para el panel: barrios (listado paginado con silueta, detalle con geometría, vecinos por bbox) y listados paginados con inactivos de localidades, divisiones y países. Todo protegido por `require_admin`; las lecturas admin van directo a la DB, sin cache. Errores SQL mapeados a errores de dominio vía traductor centralizado.
 
 ## Public surface
 
@@ -25,6 +25,9 @@ Todo bajo `/v1/admin/*`, protegido globalmente con `Depends(require_admin)` (ver
 | GET | `/neighborhoods` (paginado + filtros) | `ListNeighborhoodsUseCase` |
 | GET | `/neighborhoods/geometries?neighborhood_id&bbox` | `ListNeighborhoodGeometriesUseCase` |
 | GET | `/neighborhoods/{neighborhood_id}` | `GetNeighborhoodDetailUseCase` |
+| GET | `/localities` (paginado + filtros) | `ListLocalitiesUseCase` |
+| GET | `/admin-divisions` (paginado + filtros) | `ListAdminDivisionsUseCase` |
+| GET | `/countries` (paginado + filtros) | `ListCountriesUseCase` |
 | POST | `/countries` | `CreateCountryUseCase` |
 | PATCH | `/countries/{country_id}` | `UpdateCountryUseCase` |
 | POST | `/admin-divisions` | `CreateAdminDivisionUseCase` |
@@ -108,7 +111,7 @@ Logging detallado para diagnóstico de matching imperfecto (sample de unmatched,
 
 Alimentan la tab de barrios del panel admin ([[frontend-admin-panel]]). A diferencia de [[catalog-service-geo-catalog]], incluyen inactivos y **no pasan por cache**: el admin escribe y mira la misma pantalla para comprobar el resultado. Las columnas calculadas (silueta, bbox, GeoJSON, área) salen de PostGIS y el adapter arma los schemas con `model_validate(row)`; se seleccionan columnas sueltas para no cargar `geom` ni `h3_cells` completos.
 
-**Listado — `GET /neighborhoods`.** Paginado por offset. Request: `page`, `page_size` (≤100), `locality_id`, `is_active`, `has_geometry`, `search_term`. Respuesta `NeighborhoodAdminPage`: `items`, `total_items`, `total_pages`, `current_page`, `items_per_page`, `coverage`. Los nombres difieren a propósito de `total/page/page_size` de properties.
+**Listado — `GET /neighborhoods`.** Paginado por offset con el contrato compartido (ver [Paginación de los listados admin](#paginación-de-los-listados-admin)). Request `ListNeighborhoodsAdminRequest(PageRequest)`: `page`, `page_size` + `locality_id`, `is_active`, `has_geometry`, `search_term`. Respuesta `NeighborhoodAdminPage(Page[NeighborhoodAdminListItem])`: los campos de `Page` + `coverage`, armada con `NeighborhoodAdminPage.build(..., coverage=coverage)`. Los nombres difieren a propósito de `total/page/page_size` de properties.
 - Cada item trae `has_geometry`, `svg_path` (`ST_AsSVG` relativo, 5 decimales, sobre la geometría simplificada) y `bbox` `(min_lon, min_lat, max_lon, max_lat)` para el `viewBox`. `ST_AsSVG` invierte la Y, así que el `viewBox` es `min_lon, -max_lat, ancho, alto`.
 - `get_all`, `count_all` y `get_coverage` comparten `_apply_filters`, así que `total_items` siempre cuadra con la lista.
 - `coverage` (`with_geometry` / `total`) ignora `has_geometry`; con ese filtro la barra marcaría siempre 0 % o 100 %.
@@ -129,6 +132,33 @@ Alimentan la tab de barrios del panel admin ([[frontend-admin-panel]]). A difere
 | Cambio máximo de área | — | 1,1 % | 25 % |
 
 Al simplificar, los `MULTIPOLYGON` de una sola parte vuelven como `Polygon` (1196 de 1202); el front tiene que aceptar ambos tipos.
+
+## Paginación de los listados admin
+
+Los `GET` de listado admin comparten un contrato único definido en [`app/schemas/pagination.py`](backend/catalog-service/src/app/schemas/pagination.py), junto a `StrictBase` y no dentro de `catalog_admin` porque es transversal. El back calcula todo lo que el front necesita para paginar.
+
+- **`PageRequest`**: `page` (≥1, def. 1) y `page_size` (1–100, def. 20). Expone `offset = (page - 1) * page_size` como **propiedad**, no como campo: no aparece como query param y los repos usan `req.offset` sin repetir la fórmula.
+- **`Page[T]`** (genérico de Pydantic): `items`, `total_items`, `total_pages`, `current_page`, `items_per_page`. `Page.build(items=, total_items=, req=, **extra)` calcula `total_pages` y deja pasar campos propios de cada listado (como `coverage`).
+- **Se hereda, no se anida.** Cada request de listado extiende `PageRequest` y suma solo sus filtros; cada página extiende `Page[Item]`. Un campo anidado (`pagination: PageRequest`) no sirve: `Depends()` no aplana modelos anidados a query params. Heredando, el OpenAPI muestra los params planos.
+- Solo catalog-service. properties-service usa otro formato (`total`, `page`, `page_size`); unificarlo rompería moderación, promociones e imports del front y queda como pregunta abierta.
+
+## Reads admin de localidades, divisiones y países
+
+Alimentan las tabs de localidades, divisiones y países del panel ([[frontend-admin-panel]]). Mismo criterio que barrios: incluyen inactivos y va directo a la DB, sin cache. Los GET públicos de [[catalog-service-geo-catalog]] no se parametrizan con un `include_inactive`: van cacheados y son públicos, así que el admin tiene su propio read path.
+
+**Listado — `GET /localities`.** Request `GetAllLocalitiesRequest(PageRequest)` (en la ruta como `Depends()`): `page`, `page_size` + `country_id`, `admin_division_id`, `is_active` opcionales. Respuesta `GetAllLocalitiesPage(Page[GetAllLocalitiesResponse])`, armada con `build`: mismos metadatos que barrios, sin `coverage`. Cada item trae `id`, `country_id`, `admin_division_id`, `code`, `name`, `local_name`, `locality_type`, `point {latitude, longitude}`, `timezone`, `is_active`, `is_capital`: todo lo editable por el `PATCH` más los ids para la cascada país → división del formulario (los campos se sumaron el 2026-10-14; son columnas que `Locality` ya tenía).
+- Hasta 2026-10-14 paginaba con `offset` y devolvía solo `total_items`; se unificó con barrios para que el front use un solo tipo de página.
+- `get_all` (con `order_by(name, id)`, `req.offset`, `limit`) y `count_all` comparten `_apply_filters`, igual que barrios. `is_active` se compara con `is not None` para que el filtro `false` funcione.
+- `Locality` guarda `latitude`/`longitude` como columnas planas, así que `model_validate` no arma el `point` anidado: el UC mapea con una list comprehension. El `point` queda listo para un mapa.
+- El `try/except → translate_db_error` envuelve solo las llamadas al repo; el mapeo queda afuera para que un bug de mapeo no salga como error de DB.
+
+**Listado — `GET /admin-divisions`.** `GetAllAdminDivisionsRequest(PageRequest)` con `country_id` e `is_active` opcionales. Responde `GetAllAdminDivisionsPage(Page[AdminDivisionResponse])`: reusa el schema del POST/PATCH porque ya trae todos los campos editables (`country_id`, `code`, `iso_code`, `name`, `type_name`, `is_active`). Desbloquea crear una localidad desde el panel, que exige `admin_division_id`.
+
+**Listado — `GET /countries`.** `GetAllCountriesRequest(PageRequest)` con `is_active` e `is_supported` opcionales. Responde `GetAllCountriesPage(Page[GetAllCountriesResponse])`, con un item propio que trae todos los campos del modelo (`iso_alpha2/3`, `iso_numeric`, `official_name`, `native_name`, `phone_code`, `currency_code`, `default_locale`, `default_timezone`, flags). No extiende `CountryResponse` para no cambiar la respuesta de POST/PATCH ni sus tests.
+
+Los dos copian el patrón de localidades: `_apply_filters` compartido por `get_all`/`count_all`, `order_by(name, id)`, `req.offset`/`limit`, `translate_db_error` solo sobre el repo, `model_validate` del ORM (no hay campos anidados que armar) y `Page.build`. Probados contra el Postgres de dev el 2026-10-14 con un país y una división, así que la paginación con volumen no se ejercitó contra la base.
+
+**Los cuatro listados son casi iguales.** Es la ceremonia hexagonal sobre una lectura pura. Lo único que amerita abstraerse es el repo (`get_all`/`count_all` genérico sobre modelo + filtros + orden), y solo para localidades, divisiones y países: el `get_all` de barrios selecciona columnas calculadas (`svg_path`, `bbox`), no el modelo. Los UCs divergen (barrios hace 3 queries y suma `coverage`; localidades arma `point`) y deps/rutas son el idiom de FastAPI. Sin decidir.
 
 ## Translator de errores SQL → dominio
 
@@ -170,7 +200,7 @@ Llamadas a `cache_client.*` siempre wrapeadas en `try/except pass` — cache bes
 
 ## Boundaries
 
-- **Reads públicos no** — esos viven en [[catalog-service-geo-catalog]] (cacheados, solo activos). Aquí solo están los reads admin de barrios.
+- **Reads públicos no** — esos viven en [[catalog-service-geo-catalog]] (cacheados, solo activos). Aquí solo están los reads admin (barrios, localidades, divisiones y países).
 - **No hace geocoding** — eso vive en `geo_resolution`.
 - **No valida JWT** — solo lo consume vía `require_admin` que valida internamente con JWKS.
 - **No parsea polígonos** — delega a `geom_from_geojson` de `shared/helpers/geometry.py`.
@@ -178,7 +208,8 @@ Llamadas a `cache_client.*` siempre wrapeadas en `try/except pass` — cache bes
 ## Open items
 
 - Trasladar la normalización de `search_name` (NFKD+lower+strip) a `shared/helpers/text.py` — hoy está copiada en 8 archivos (UCs de barrio y localidad, bulks, el adapter de barrios y `geo_resolution/.../overpass.py`).
-- `GET` admin de localidades, divisiones y países (incluyendo inactivos): los públicos filtran `is_active == True`, así que el admin no puede ver ni reactivar lo que desactivó. De divisiones no existe ni el público.
+- ¿Repo base genérico para los listados de localidades, divisiones y países (~30 líneas menos, un solo sitio si cambia la paginación) o copia explícita? Barrios quedaría afuera.
+- ¿El select de división al crear una localidad debe ofrecer divisiones inactivas?
 - `total_pages` sale 0 sin resultados; sin `locality_id`, `coverage` mide todo el catálogo filtrado; ¿bbox con comas en vez de repetido? — decisiones abiertas.
 - Hay barrios con nombre repetido ("El Bagazal", "El Refugio"): sin confirmar si son homónimos o duplicados de origen.
 - Las queries del adapter (`_apply_filters`, coverage, `get_geometries`) no tienen tests de integración con PostGIS.
@@ -195,10 +226,23 @@ Llamadas a `cache_client.*` siempre wrapeadas en `try/except pass` — cache bes
 - La silueta del listado usa `ST_AsSVG(ST_SimplifyPreserveTopology(geom, 0.00001), 1, 5)` ([sql_neighborhood_repository.py:41](backend/catalog-service/src/app/services/catalog_admin/adapters/sql_neighborhood_repository.py#L41), [:77](backend/catalog-service/src/app/services/catalog_admin/adapters/sql_neighborhood_repository.py#L77)).
 - `area_m2` del detalle se calcula con `ST_Area` sobre la geometría original casteada a `Geography` ([sql_neighborhood_repository.py:116](backend/catalog-service/src/app/services/catalog_admin/adapters/sql_neighborhood_repository.py#L116)).
 - `get_geometries` filtra con `ST_Intersects` y recorta con `ST_ClipByBox2D` antes de simplificar ([sql_neighborhood_repository.py:121-130](backend/catalog-service/src/app/services/catalog_admin/adapters/sql_neighborhood_repository.py#L121-L130)).
-- `ListNeighborhoodGeometriesRequest` rechaza un bbox con `min >= max` o con un lado mayor a `0.135°` ([schemas/neighborhood.py:8](backend/catalog-service/src/app/services/catalog_admin/schemas/neighborhood.py#L8), [:81-93](backend/catalog-service/src/app/services/catalog_admin/schemas/neighborhood.py#L81-L93)).
-- `total_pages` se calcula como `ceil(total_items / page_size)` ([list_all.py:29](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/list_all.py#L29)).
+- `ListNeighborhoodGeometriesRequest` rechaza un bbox con `min >= max` o con un lado mayor a `0.135°` ([schemas/neighborhood.py:9](backend/catalog-service/src/app/services/catalog_admin/schemas/neighborhood.py#L9), [:75-86](backend/catalog-service/src/app/services/catalog_admin/schemas/neighborhood.py#L75-L86)).
+- `PageRequest` expone `offset` como propiedad `(page - 1) * page_size`, no como campo ([schemas/pagination.py:12-18](backend/catalog-service/src/app/schemas/pagination.py#L12-L18)).
+- `Page.build` calcula `total_pages` como `ceil(total_items / page_size)` y reenvía campos extra al constructor ([schemas/pagination.py:28-37](backend/catalog-service/src/app/schemas/pagination.py#L28-L37)).
+- `ListNeighborhoodsAdminRequest` y `GetAllLocalitiesRequest` heredan de `PageRequest`; `NeighborhoodAdminPage` y `GetAllLocalitiesPage` heredan de `Page[...]` ([schemas/neighborhood.py:48](backend/catalog-service/src/app/services/catalog_admin/schemas/neighborhood.py#L48), [:71](backend/catalog-service/src/app/services/catalog_admin/schemas/neighborhood.py#L71), [schemas/locality.py:47](backend/catalog-service/src/app/services/catalog_admin/schemas/locality.py#L47), [:68](backend/catalog-service/src/app/services/catalog_admin/schemas/locality.py#L68)).
+- Los use cases de listado de barrios y localidades arman la respuesta con `Page.build` ([neighborhood/list_all.py:25](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/list_all.py#L25), [locality/list_all.py:39](backend/catalog-service/src/app/services/catalog_admin/use_cases/locality/list_all.py#L39)).
 - `GetNeighborhoodDetailUseCase` lanza `NeighborhoodAdminNotFoundError` si el repo devuelve `None` ([get_detail.py:25](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/get_detail.py#L25)).
 - Los providers de los tres reads admin no inyectan `cache_client` ([deps/catalog_admin/neighborhoods.py:33-48](backend/catalog-service/src/app/api/deps/catalog_admin/neighborhoods.py#L33-L48)).
+- `_apply_filters` de localidades compara `is_active` con `is not None` ([sql_locality_repository.py:16](backend/catalog-service/src/app/services/catalog_admin/adapters/sql_locality_repository.py#L16)).
+- `get_all` de localidades ordena por `name, id` y pagina con `req.offset`/`limit`; `count_all` aplica los mismos filtros sobre `func.count()` ([sql_locality_repository.py:25-36](backend/catalog-service/src/app/services/catalog_admin/adapters/sql_locality_repository.py#L25-L36)).
+- `ListLocalitiesUseCase` arma `point` desde `latitude`/`longitude` del modelo ([locality/list_all.py:32](backend/catalog-service/src/app/services/catalog_admin/use_cases/locality/list_all.py#L32)).
+- El provider del listado de localidades no inyecta `cache_client` ([deps/catalog_admin/localities.py:12-15](backend/catalog-service/src/app/api/deps/catalog_admin/localities.py#L12-L15)).
+- `GetAllLocalitiesResponse` incluye `country_id`, `admin_division_id`, `local_name` y `timezone` ([schemas/locality.py:58-69](backend/catalog-service/src/app/services/catalog_admin/schemas/locality.py#L58-L69)).
+- `GetAllAdminDivisionsRequest` y `GetAllCountriesRequest` heredan de `PageRequest`; la página de divisiones reusa `AdminDivisionResponse` como item ([schemas/admin_division.py:33-39](backend/catalog-service/src/app/services/catalog_admin/schemas/admin_division.py#L33-L39), [schemas/country.py:46](backend/catalog-service/src/app/services/catalog_admin/schemas/country.py#L46)).
+- `GetAllCountriesResponse` es un schema propio, distinto de `CountryResponse` ([schemas/country.py:51-64](backend/catalog-service/src/app/services/catalog_admin/schemas/country.py#L51-L64)).
+- El repo de divisiones filtra por `country_id` e `is_active`; el de países por `is_active` e `is_supported`, ambos con `is not None` para los booleanos ([sql_admin_division_repository.py:16](backend/catalog-service/src/app/services/catalog_admin/adapters/sql_admin_division_repository.py#L16), [sql_country_repository.py:12](backend/catalog-service/src/app/services/catalog_admin/adapters/sql_country_repository.py#L12)).
+- `ListAdminDivisionsUseCase` y `ListCountriesUseCase` mapean con `model_validate` y arman la respuesta con `Page.build` ([admin_division/list_all.py:25-26](backend/catalog-service/src/app/services/catalog_admin/use_cases/admin_division/list_all.py#L25-L26), [country/list_all.py:25-26](backend/catalog-service/src/app/services/catalog_admin/use_cases/country/list_all.py#L25-L26)).
+- Los providers de los listados de divisiones y países no inyectan `cache_client` ([deps/catalog_admin/admin_divisions.py:18](backend/catalog-service/src/app/api/deps/catalog_admin/admin_divisions.py#L18), [deps/catalog_admin/countries.py:12](backend/catalog-service/src/app/api/deps/catalog_admin/countries.py#L12)).
 - `BulkCreateNeighborhoodsUseCase` intenta bulk insert primero y cae a row-by-row con savepoints (`begin_nested`/`rollback_to_savepoint`) si el bulk falla ([neighborhood/bulk_create.py:45-83](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/bulk_create.py#L45-L83)).
 - `SqlNeighborhoodAdminRepository.bulk_insert` excluye `created_at`/`updated_at` del `model_dump()` antes del `INSERT` — sin esto, el `NOT NULL` de esas columnas (`server_default`, sin default Python) rechazaba el insert y el happy path nunca corría ([sql_neighborhood_repository.py:33-37](backend/catalog-service/src/app/services/catalog_admin/adapters/sql_neighborhood_repository.py#L33-L37)). Corregido 2026-06-23.
 - `BulkEnrichNeighborhoodGeometriesUseCase` matchea features de GeoJSON con barrios por `search_name` normalizado (NFKD + lowercase + strip) y reporta `unmatched` ([neighborhood/bulk_enrich_geometries.py:37-99](backend/catalog-service/src/app/services/catalog_admin/use_cases/neighborhood/bulk_enrich_geometries.py#L37-L99)).
@@ -207,4 +251,4 @@ Llamadas a `cache_client.*` siempre wrapeadas en `try/except pass` — cache bes
 - Las llamadas a `cache_client` están envueltas en `try/except pass` — cache es best-effort, su caída no rompe writes ([country/update.py:42-48](backend/catalog-service/src/app/services/catalog_admin/use_cases/country/update.py#L42-L48)).
 - El parser de archivos acepta `.csv`, `.json`, `.txt`; cualquier otra extensión lanza `ValueError` ([file_parser.py:8-14](backend/catalog-service/src/app/services/catalog_admin/helpers/file_parser.py#L8-L14)).
 - La normalización NFKD+lowercase+strip de `search_name` está copiada en `neighborhood/bulk_create.py`, `neighborhood/bulk_enrich_geometries.py`, `neighborhood/create.py`, `neighborhood/update.py`, `locality/create.py`, `locality/update.py`, `sql_neighborhood_repository.py` y `geo_resolution/adapters/poi/overpass.py`.
-- `NeighborhoodAdminResponse` devuelve el centroide (`latitude`/`longitude`) pero no `geom`; la geometría solo sale en `NeighborhoodAdminDetail` ([neighborhood.py:31-39](backend/catalog-service/src/app/services/catalog_admin/schemas/neighborhood.py#L31-L39)).
+- `NeighborhoodAdminResponse` devuelve el centroide (`latitude`/`longitude`) pero no `geom`; la geometría solo sale en `NeighborhoodAdminDetail` ([neighborhood.py:32-40](backend/catalog-service/src/app/services/catalog_admin/schemas/neighborhood.py#L32-L40)).

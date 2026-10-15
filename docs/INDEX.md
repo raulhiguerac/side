@@ -63,7 +63,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [catalog-service-architecture](wiki/catalog-service/catalog-service-architecture.md) — layout interno, los 3 dominios, capa de integración, auth via cookie, caching de 3 capas para POIs
 
 ### domain/
-- [catalog-service-catalog-admin](wiki/catalog-service/domain/catalog-service-catalog-admin.md) — writes (CRUD por entidad + bulk CSV/GeoJSON, traductor de errores SQL→dominio) y reads admin de barrios (listado paginado con silueta y cobertura, detalle con área, vecinos por bbox)
+- [catalog-service-catalog-admin](wiki/catalog-service/domain/catalog-service-catalog-admin.md) — writes (CRUD por entidad + bulk CSV/GeoJSON, traductor de errores SQL→dominio) y reads admin de barrios (listado paginado con silueta y cobertura, detalle con área, vecinos por bbox) y listados paginados con inactivos de localidades, divisiones y países (contrato común `PageRequest`/`Page[T]`)
 - [catalog-service-geo-catalog](wiki/catalog-service/domain/catalog-service-geo-catalog.md) — reads para frontend: 5 UCs con patrón cache-aside uniforme + batch lookup multi-locality
 - [catalog-service-poi-lifecycle](wiki/catalog-service/domain/catalog-service-poi-lifecycle.md) — POI side-effect only: 3 capas de dedup (cache+lock+FetchZone), lazy-fill de h3_cells, gap del read path no aprovechando el H3
 

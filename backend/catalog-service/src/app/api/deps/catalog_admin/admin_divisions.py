@@ -6,10 +6,19 @@ from app.services.catalog_admin.ports.unit_of_work import CatalogAdminUnitOfWork
 from app.services.catalog_admin.use_cases.admin_division.create import (
     CreateAdminDivisionUseCase,
 )
+from app.services.catalog_admin.use_cases.admin_division.list_all import (
+    ListAdminDivisionsUseCase,
+)
 from app.services.catalog_admin.use_cases.admin_division.update import (
     UpdateAdminDivisionUseCase,
 )
 from app.services.shared.ports.cache import CachePort
+
+
+def list_admin_divisions_uc(
+    uow: CatalogAdminUnitOfWork = Depends(get_uow),
+) -> ListAdminDivisionsUseCase:
+    return ListAdminDivisionsUseCase(uow=uow)
 
 
 def create_admin_division_uc(

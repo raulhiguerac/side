@@ -2,6 +2,7 @@ import uuid
 from typing import Optional
 
 from app.schemas.base import StrictBase
+from app.schemas.pagination import Page, PageRequest
 
 
 class CreateAdminDivisionRequest(StrictBase):
@@ -27,3 +28,12 @@ class AdminDivisionResponse(StrictBase):
     name: str
     type_name: str
     is_active: bool
+
+
+class GetAllAdminDivisionsRequest(PageRequest):
+    country_id: uuid.UUID | None = None
+    is_active: bool | None = None
+
+
+class GetAllAdminDivisionsPage(Page[AdminDivisionResponse]):
+    pass

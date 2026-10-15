@@ -1,4 +1,3 @@
-import math
 from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
@@ -23,11 +22,4 @@ class ListNeighborhoodsUseCase:
         except Exception as exc:
             raise translate_db_error(exc) from exc
 
-        return NeighborhoodAdminPage(
-            items=items,
-            total_items=total_items,
-            total_pages=math.ceil(total_items / req.page_size),
-            current_page=req.page,
-            items_per_page=req.page_size,
-            coverage=coverage,
-        )
+        return NeighborhoodAdminPage.build(items=items, total_items=total_items, req=req, coverage=coverage)

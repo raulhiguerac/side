@@ -1,7 +1,7 @@
 ---
 title: Panel admin (frontend)
 status: draft
-last-verified: 2026-10-09
+last-verified: 2026-10-14
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -42,6 +42,7 @@ sources:
   - ../../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md
   - ../../../sources/frontend/2026-10-05-admin-actions-and-front-smell-audit.md
   - ../../../sources/frontend/2026-10-09-api-layer-map-cluster-and-typecheck.md
+  - ../../../sources/catalog-service/2026-10-14-admin-divisions-countries-list-endpoints.md
 ---
 
 ## TL;DR
@@ -365,7 +366,7 @@ Pendiente: las acciones del panel (editar, reemplazar geometría, desactivar). *
 
 ## Acciones del panel de barrios y layout de filtros (2026-10-05)
 
-**Cobertura de catalog.** De los 14 endpoints `/v1/admin/*` de catalog-service, el front consume 3: las tres lecturas de barrios. Faltan las 11 escrituras (crear/editar países, divisiones, localidades y barrios, más los tres uploads de barrios). Localidades y países solo tienen los `GET` públicos, que traen activos; las divisiones no tienen ningún listado.
+**Cobertura de catalog.** De los 14 endpoints `/v1/admin/*` de catalog-service, el front consume 3: las tres lecturas de barrios. Faltan las 11 escrituras (crear/editar países, divisiones, localidades y barrios, más los tres uploads de barrios). Localidades y países solo tienen los `GET` públicos, que traen activos; las divisiones no tienen ningún listado. **Update 2026-10-14:** el back ya tiene los listados admin de localidades, divisiones y países (17 endpoints admin en total), los cuatro con el mismo contrato de página (`items`, `total_items`, `total_pages`, `current_page`, `items_per_page`), así que un solo `AdminPage<T>` sirve para las cuatro tabs. Tras el CRUD de barrios (#27) el front consume 8, todos de barrios (listado, detalle, vecinos, crear, editar, geometría y los dos bulk); los listados y escrituras de localidades, divisiones y países siguen sin cablear, con sus tipos ya generados ([[catalog-service-catalog-admin]]).
 
 **El mapa no edita.** `POST /admin/neighborhoods/{id}/geometry` recibe un **archivo** GeoJSON, no una geometría dibujada, así que "reemplazar geometría" es un modal de subida y `NeighborhoodMap` sigue siendo de solo lectura ([[frontend-map-component]]). Editar vértices sobre el mapa sería otro proyecto: leaflet-geoman y un endpoint que acepte JSON.
 

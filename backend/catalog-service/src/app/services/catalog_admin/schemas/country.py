@@ -2,6 +2,7 @@ import uuid
 from typing import Optional
 
 from app.schemas.base import StrictBase
+from app.schemas.pagination import Page, PageRequest
 
 
 class CreateCountryRequest(StrictBase):
@@ -40,3 +41,28 @@ class CountryResponse(StrictBase):
     default_timezone: str
     is_active: bool
     is_supported: bool
+
+
+class GetAllCountriesRequest(PageRequest):
+    is_active: bool | None = None
+    is_supported: bool | None = None
+
+
+class GetAllCountriesResponse(StrictBase):
+    id: uuid.UUID
+    iso_alpha2: str
+    iso_alpha3: str
+    iso_numeric: str
+    name: str
+    official_name: str | None
+    native_name: str | None
+    phone_code: str
+    currency_code: str
+    default_locale: str
+    default_timezone: str
+    is_active: bool
+    is_supported: bool
+
+
+class GetAllCountriesPage(Page[GetAllCountriesResponse]):
+    pass

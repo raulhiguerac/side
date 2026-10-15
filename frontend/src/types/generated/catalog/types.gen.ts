@@ -356,6 +356,186 @@ export type GeoJsonPolygon = {
 };
 
 /**
+ * GetAllAdminDivisionsPage
+ */
+export type GetAllAdminDivisionsPage = {
+    /**
+     * Items
+     */
+    items: Array<AdminDivisionResponse>;
+    /**
+     * Total Items
+     */
+    total_items: number;
+    /**
+     * Total Pages
+     */
+    total_pages: number;
+    /**
+     * Current Page
+     */
+    current_page: number;
+    /**
+     * Items Per Page
+     */
+    items_per_page: number;
+};
+
+/**
+ * GetAllCountriesPage
+ */
+export type GetAllCountriesPage = {
+    /**
+     * Items
+     */
+    items: Array<GetAllCountriesResponse>;
+    /**
+     * Total Items
+     */
+    total_items: number;
+    /**
+     * Total Pages
+     */
+    total_pages: number;
+    /**
+     * Current Page
+     */
+    current_page: number;
+    /**
+     * Items Per Page
+     */
+    items_per_page: number;
+};
+
+/**
+ * GetAllCountriesResponse
+ */
+export type GetAllCountriesResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Iso Alpha2
+     */
+    iso_alpha2: string;
+    /**
+     * Iso Alpha3
+     */
+    iso_alpha3: string;
+    /**
+     * Iso Numeric
+     */
+    iso_numeric: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Official Name
+     */
+    official_name: string | null;
+    /**
+     * Native Name
+     */
+    native_name: string | null;
+    /**
+     * Phone Code
+     */
+    phone_code: string;
+    /**
+     * Currency Code
+     */
+    currency_code: string;
+    /**
+     * Default Locale
+     */
+    default_locale: string;
+    /**
+     * Default Timezone
+     */
+    default_timezone: string;
+    /**
+     * Is Active
+     */
+    is_active: boolean;
+    /**
+     * Is Supported
+     */
+    is_supported: boolean;
+};
+
+/**
+ * GetAllLocalitiesPage
+ */
+export type GetAllLocalitiesPage = {
+    /**
+     * Items
+     */
+    items: Array<GetAllLocalitiesResponse>;
+    /**
+     * Total Items
+     */
+    total_items: number;
+    /**
+     * Total Pages
+     */
+    total_pages: number;
+    /**
+     * Current Page
+     */
+    current_page: number;
+    /**
+     * Items Per Page
+     */
+    items_per_page: number;
+};
+
+/**
+ * GetAllLocalitiesResponse
+ */
+export type GetAllLocalitiesResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Country Id
+     */
+    country_id: string;
+    /**
+     * Admin Division Id
+     */
+    admin_division_id: string;
+    /**
+     * Code
+     */
+    code: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Local Name
+     */
+    local_name: string | null;
+    locality_type: LocalityType;
+    point: LocalityPoint;
+    /**
+     * Timezone
+     */
+    timezone: string;
+    /**
+     * Is Active
+     */
+    is_active: boolean;
+    /**
+     * Is Capital
+     */
+    is_capital: boolean;
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -455,6 +635,20 @@ export type LocalityListItem = {
      */
     name: string;
     admin_division: AdminDivisionRef;
+};
+
+/**
+ * LocalityPoint
+ */
+export type LocalityPoint = {
+    /**
+     * Latitude
+     */
+    latitude: number;
+    /**
+     * Longitude
+     */
+    longitude: number;
 };
 
 /**
@@ -1302,6 +1496,48 @@ export type ReachablePoisResponses = {
 
 export type ReachablePoisResponse = ReachablePoisResponses[keyof ReachablePoisResponses];
 
+export type ListCountriesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Page Size
+         */
+        page_size?: number;
+        /**
+         * Is Active
+         */
+        is_active?: boolean | null;
+        /**
+         * Is Supported
+         */
+        is_supported?: boolean | null;
+    };
+    url: '/v1/admin/countries';
+};
+
+export type ListCountriesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListCountriesError = ListCountriesErrors[keyof ListCountriesErrors];
+
+export type ListCountriesResponses = {
+    /**
+     * Successful Response
+     */
+    200: GetAllCountriesPage;
+};
+
+export type ListCountriesResponse = ListCountriesResponses[keyof ListCountriesResponses];
+
 export type CreateCountryData = {
     body: CreateCountryRequest;
     path?: never;
@@ -1357,6 +1593,48 @@ export type UpdateCountryResponses = {
 
 export type UpdateCountryResponse = UpdateCountryResponses[keyof UpdateCountryResponses];
 
+export type ListAdminDivisionsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Page Size
+         */
+        page_size?: number;
+        /**
+         * Country Id
+         */
+        country_id?: string | null;
+        /**
+         * Is Active
+         */
+        is_active?: boolean | null;
+    };
+    url: '/v1/admin/admin-divisions';
+};
+
+export type ListAdminDivisionsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListAdminDivisionsError = ListAdminDivisionsErrors[keyof ListAdminDivisionsErrors];
+
+export type ListAdminDivisionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: GetAllAdminDivisionsPage;
+};
+
+export type ListAdminDivisionsResponse = ListAdminDivisionsResponses[keyof ListAdminDivisionsResponses];
+
 export type CreateAdminDivisionData = {
     body: CreateAdminDivisionRequest;
     path?: never;
@@ -1411,6 +1689,52 @@ export type UpdateAdminDivisionResponses = {
 };
 
 export type UpdateAdminDivisionResponse = UpdateAdminDivisionResponses[keyof UpdateAdminDivisionResponses];
+
+export type ListLocalitiesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Page Size
+         */
+        page_size?: number;
+        /**
+         * Country Id
+         */
+        country_id?: string | null;
+        /**
+         * Admin Division Id
+         */
+        admin_division_id?: string | null;
+        /**
+         * Is Active
+         */
+        is_active?: boolean | null;
+    };
+    url: '/v1/admin/localities';
+};
+
+export type ListLocalitiesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListLocalitiesError = ListLocalitiesErrors[keyof ListLocalitiesErrors];
+
+export type ListLocalitiesResponses = {
+    /**
+     * Successful Response
+     */
+    200: GetAllLocalitiesPage;
+};
+
+export type ListLocalitiesResponse = ListLocalitiesResponses[keyof ListLocalitiesResponses];
 
 export type CreateLocalityData = {
     body: CreateLocalityRequest;

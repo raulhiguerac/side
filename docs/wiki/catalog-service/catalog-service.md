@@ -1,7 +1,7 @@
 ---
 title: catalog-service
 status: draft
-last-verified: 2026-10-04
+last-verified: 2026-10-14
 owners: [catalog-service]
 related:
   - "[[architecture]]"
@@ -9,7 +9,7 @@ related:
   - "[[catalog-service-catalog-admin]]"
   - "[[catalog-service-geo-catalog]]"
   - "[[catalog-service-poi-lifecycle]]"
-sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md, ../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md]
+sources: [../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md, ../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md, ../../sources/catalog-service/2026-10-14-admin-divisions-countries-list-endpoints.md]
 ---
 
 ## TL;DR
@@ -50,6 +50,7 @@ Tres jobs distintos:
 | POST | `/v1/geo-resolution/by-coordinates/bulk` | properties-service (bulk create, futuro caller) | público |
 | POST | `/v1/geo-resolution/reachable-pois` | frontend (`NearbyPlaces.vue`, "Cerca del lugar") | público |
 | GET | `/v1/admin/neighborhoods` (paginado + filtros), `/v1/admin/neighborhoods/{id}`, `/v1/admin/neighborhoods/geometries?bbox` | panel admin (tab de barrios) | `require_admin` |
+| GET | `/v1/admin/{countries,admin-divisions,localities}` (paginados con `page`, incluyen inactivos) | panel admin (tabs de catálogo) | `require_admin` |
 | POST/PATCH | `/v1/admin/{countries,admin-divisions,localities,neighborhoods}` | UI admin futura, scripts | `require_admin` |
 | POST | `/v1/admin/localities/{id}/neighborhoods/bulk` (CSV upload) | UI admin | `require_admin` |
 | POST | `/v1/admin/.../bulk/geometry` (GeoJSON FeatureCollection) | UI admin | `require_admin` |
