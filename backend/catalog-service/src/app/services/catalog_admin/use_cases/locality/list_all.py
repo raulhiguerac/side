@@ -26,14 +26,18 @@ class ListLocalitiesUseCase:
         items = [
             GetAllLocalitiesResponse(
                 id=loc.id,
+                country_id=loc.country_id,
+                admin_division_id=loc.admin_division_id,
                 code=loc.code,
                 name=loc.name,
+                local_name=loc.local_name,
                 locality_type=loc.locality_type,
                 point=LocalityPoint(latitude=loc.latitude, longitude=loc.longitude),
+                timezone=loc.timezone,
                 is_active=loc.is_active,
                 is_capital=loc.is_capital,
             )
             for loc in localities
         ]
 
-        return GetAllLocalitiesPage(items=items, total_items=total_items)
+        return GetAllLocalitiesPage.build(items=items, total_items=total_items, req=req)

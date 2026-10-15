@@ -4,6 +4,7 @@ from typing import Annotated, Optional
 from pydantic import Field, model_validator
 
 from app.schemas.base import StrictBase
+from app.schemas.pagination import Page, PageRequest
 
 _MAX_BBOX_SIDE = 0.135  # ~15 km
 
@@ -44,9 +45,7 @@ class NeighborhoodAdminDetail(NeighborhoodAdminResponse):
     area_m2: Optional[float] = None
 
 
-class ListNeighborhoodsAdminRequest(StrictBase):
-    page: int = Field(default=1, ge=1)
-    page_size: int = Field(default=20, ge=1, le=100)
+class ListNeighborhoodsAdminRequest(PageRequest):
     locality_id: Optional[uuid.UUID] = None
     is_active: Optional[bool] = None
     has_geometry: Optional[bool] = None
@@ -69,12 +68,7 @@ class NeighborhoodCoverage(StrictBase):
     total: int
 
 
-class NeighborhoodAdminPage(StrictBase):
-    items: list[NeighborhoodAdminListItem]
-    total_items: int
-    total_pages: int
-    current_page: int
-    items_per_page: int
+class NeighborhoodAdminPage(Page[NeighborhoodAdminListItem]):
     coverage: NeighborhoodCoverage
 
 

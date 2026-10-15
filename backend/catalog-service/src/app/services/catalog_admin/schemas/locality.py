@@ -1,9 +1,8 @@
 import uuid
 
-from pydantic import Field
-
 from app.models.location import LocalityType
 from app.schemas.base import StrictBase
+from app.schemas.pagination import Page, PageRequest
 
 
 class CreateLocalityRequest(StrictBase):
@@ -45,16 +44,10 @@ class LocalityAdminResponse(StrictBase):
     is_capital: bool
 
 
-class GetAllLocalitiesRequest(StrictBase):
+class GetAllLocalitiesRequest(PageRequest):
     country_id: uuid.UUID | None = None
     admin_division_id: uuid.UUID | None = None
     is_active: bool | None = None
-    page_size: int = Field(default=20, ge=1, le=100)
-    offset: int = Field(default=0, ge=0)
-
-
-class GetLocalityByIdRequest(GetAllLocalitiesRequest):
-    id: uuid.UUID
 
 
 class LocalityPoint(StrictBase):
@@ -64,14 +57,17 @@ class LocalityPoint(StrictBase):
 
 class GetAllLocalitiesResponse(StrictBase):
     id: uuid.UUID
+    country_id: uuid.UUID
+    admin_division_id: uuid.UUID
     code: str
     name: str
+    local_name: str | None
     locality_type: LocalityType
     point: LocalityPoint
+    timezone: str
     is_active: bool
     is_capital: bool
 
 
-class GetAllLocalitiesPage(StrictBase):
-    items: list[GetAllLocalitiesResponse]
-    total_items: int
+class GetAllLocalitiesPage(Page[GetAllLocalitiesResponse]):
+    pass
