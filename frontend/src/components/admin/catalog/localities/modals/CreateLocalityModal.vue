@@ -20,16 +20,16 @@
       />
 
       <div>
-        <label :class="LABEL_CLASSES" for="new-locality-code">Código</label>
-        <input
-          id="new-locality-code"
-          v-model="code"
-          type="text"
-          maxlength="20"
-          placeholder="Obligatorio"
-          :disabled="saving"
-          :class="FIELD_CLASSES"
-        />
+        <FormField label="Código" input-id="new-locality-code">
+          <BaseInput
+            id="new-locality-code"
+            v-model="code"
+            type="text"
+            maxlength="20"
+            placeholder="Obligatorio"
+            :disabled="saving"
+          />
+        </FormField>
       </div>
 
       <LocalityFormFields
@@ -48,6 +48,8 @@
 </template>
 
 <script lang="ts" setup>
+import FormField from "@/components/shared/form/FormField.vue";
+import BaseInput from "@/components/shared/form/BaseInput.vue";
 import { computed, reactive, ref, watch } from "vue";
 import { Plus } from "@lucide/vue";
 import AdminFormModal from "@/components/admin/shared/AdminFormModal.vue";
@@ -129,8 +131,4 @@ const onSave = async () => {
 
   if (await create(payload)) emit("confirm");
 };
-
-const LABEL_CLASSES = "text-brand-text mb-1 block text-sm font-medium";
-const FIELD_CLASSES =
-  "border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border bg-white px-3 py-2 text-sm transition-colors focus:outline-none disabled:opacity-50";
 </script>

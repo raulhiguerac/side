@@ -38,7 +38,7 @@
         >
           Agregar fotos
         </BaseButton>
-        <p v-if="imagesAllowed === 0" class="text-xs text-red-600">
+        <p v-if="imagesAllowed === 0" class="text-xs text-brand-danger">
           Primero debes borrar algunas
         </p>
       </div>

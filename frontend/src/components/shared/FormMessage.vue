@@ -13,7 +13,8 @@ import type { MessageVariant } from "@/types/shared/ui";
 defineProps<{ variant: MessageVariant }>();
 
 const VARIANT_CLASSES: Record<MessageVariant, string> = {
-  error: "border-red-200 bg-red-50 text-red-600",
-  success: "border-green-200 bg-green-50 text-green-700",
+  error: "border-brand-danger-border bg-brand-danger-light text-brand-danger",
+  success:
+    "border-brand-success-border bg-brand-success-light text-brand-success",
 };
 </script>

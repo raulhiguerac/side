@@ -43,7 +43,7 @@
         <div class="w-full lg:w-1/2 flex flex-col gap-8">
           <PropertyInfoCard :property="property" />
           <PropertyEditForm :form="form" @update:form="form = $event" />
-          <p v-if="saveError" class="text-sm text-red-600 -mt-4">
+          <p v-if="saveError" class="text-sm text-brand-danger -mt-4">
             {{ saveError }}
           </p>
           <PropertyEditActions

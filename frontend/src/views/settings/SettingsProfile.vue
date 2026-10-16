@@ -23,7 +23,7 @@
                   class="w-20 h-20 rounded-full object-cover border-2 border-brand-bg"
                 />
                 <label
-                  class="absolute bottom-0 right-0 w-7 h-7 bg-brand-primary rounded-full flex items-center justify-center cursor-pointer hover:bg-green-600 shadow-md"
+                  class="absolute bottom-0 right-0 w-7 h-7 bg-brand-primary rounded-full flex items-center justify-center cursor-pointer hover:bg-brand-primary-dark shadow-md"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -50,26 +50,24 @@
 
             <!-- Nombre y Apellido -->
             <div class="grid grid-cols-2 gap-2 mb-2 flex-shrink-0">
-              <input
+              <BaseInput
                 v-model="form.first_name"
                 type="text"
                 placeholder="Nombre"
-                class="h-9 px-3 bg-white border border-brand-border rounded-lg text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary"
               />
-              <input
+              <BaseInput
                 v-model="form.last_name"
                 type="text"
                 placeholder="Apellido"
-                class="h-9 px-3 bg-white border border-brand-border rounded-lg text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary"
               />
             </div>
 
             <!-- Teléfono -->
-            <input
+            <BaseInput
               v-model="form.phone"
               type="tel"
               placeholder="Celular"
-              class="h-9 px-3 mb-2 bg-white border border-brand-border rounded-lg text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary flex-shrink-0"
+              class="mb-2 shrink-0"
             />
 
             <!-- Tipo de cuenta -->
@@ -80,11 +78,11 @@
             </div>
 
             <!-- Descripción -->
-            <textarea
+            <BaseTextarea
               v-model="form.description"
               placeholder="Descripción"
-              class="min-h-[100px] lg:flex-1 lg:min-h-0 px-3 py-2 mb-3 bg-white border border-brand-border rounded-lg text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary resize-none"
-            ></textarea>
+              class="mb-3 min-h-[100px] lg:min-h-0 lg:flex-1"
+            />
 
             <FormMessage
               v-if="error"
@@ -128,6 +126,8 @@
 </template>
 
 <script lang="ts" setup>
+import BaseInput from "@/components/shared/form/BaseInput.vue";
+import BaseTextarea from "@/components/shared/form/BaseTextarea.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref, onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";

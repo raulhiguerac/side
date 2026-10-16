@@ -8,7 +8,7 @@
       SIZE_CLASSES[size],
       VARIANT_CLASSES[variant],
       danger
-        ? 'hover:bg-red-50 hover:text-red-600'
+        ? 'hover:bg-brand-danger-light hover:text-brand-danger'
         : variant === 'plain'
         ? 'hover:bg-brand-bg hover:text-brand-text'
         : 'hover:bg-white',

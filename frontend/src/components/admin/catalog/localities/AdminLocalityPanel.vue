@@ -15,7 +15,7 @@
             <span class="truncate">{{ locality.name }}</span>
             <Star
               v-if="locality.is_capital"
-              class="h-4 w-4 shrink-0 fill-amber-400 text-amber-400"
+              class="h-4 w-4 shrink-0 fill-brand-accent text-brand-accent"
               aria-label="Capital"
             />
           </h2>

@@ -282,11 +282,11 @@
                     <label class="text-brand-text text-xs font-semibold"
                       >Nombres</label
                     >
-                    <input
+                    <BaseInput
+                      size="lg"
                       v-model="user.name"
                       type="text"
                       placeholder="Nombre completo"
-                      class="w-full h-12 px-4 bg-white border-[1.5px] border-brand-border rounded-[10px] text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary transition-colors"
                     />
                   </div>
 
@@ -295,11 +295,11 @@
                     <label class="text-brand-text text-xs font-semibold"
                       >Apellidos</label
                     >
-                    <input
+                    <BaseInput
+                      size="lg"
                       v-model="user.lastName"
                       type="text"
                       placeholder="Apellidos"
-                      class="w-full h-12 px-4 bg-white border-[1.5px] border-brand-border rounded-[10px] text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary transition-colors"
                     />
                   </div>
                 </div>
@@ -309,11 +309,11 @@
                   <label class="text-brand-text text-xs font-semibold"
                     >Celular</label
                   >
-                  <input
+                  <BaseInput
+                    size="lg"
                     v-model="user.phone"
                     type="text"
                     placeholder="Número telefónico +57"
-                    class="w-full h-12 px-4 bg-white border-[1.5px] border-brand-border rounded-[10px] text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary transition-colors"
                   />
                 </div>
               </div>
@@ -346,11 +346,11 @@
                   <label class="text-brand-text text-xs font-semibold"
                     >Email</label
                   >
-                  <input
+                  <BaseInput
+                    size="lg"
                     v-model="user.email"
                     type="email"
                     placeholder="correo@ejemplo.com"
-                    class="w-full h-12 px-4 bg-white border-[1.5px] border-brand-border rounded-[10px] text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary transition-colors"
                   />
                 </div>
 
@@ -359,65 +359,11 @@
                   <label class="text-brand-text text-xs font-semibold"
                     >Contraseña</label
                   >
-                  <div class="relative">
-                    <input
-                      v-model="user.password"
-                      :type="showPassword ? 'text' : 'password'"
-                      placeholder="••••••••"
-                      class="w-full h-12 px-4 pr-12 bg-white border-[1.5px] border-brand-border rounded-[10px] text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary transition-colors"
-                    />
-                    <button
-                      :aria-label="
-                        showPassword
-                          ? 'Ocultar contraseña'
-                          : 'Mostrar contraseña'
-                      "
-                      type="button"
-                      @click="showPassword = !showPassword"
-                      class="absolute right-4 top-1/2 -translate-y-1/2 text-brand-placeholder hover:text-brand-muted transition-colors"
-                    >
-                      <!-- Ojo abierto -->
-                      <svg
-                        v-if="showPassword"
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      >
-                        <path
-                          d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"
-                        />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                      <!-- Ojo cerrado -->
-                      <svg
-                        v-else
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      >
-                        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-                        <path
-                          d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"
-                        />
-                        <path
-                          d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"
-                        />
-                        <line x1="2" x2="22" y1="2" y2="22" />
-                      </svg>
-                    </button>
-                  </div>
+                  <PasswordInput
+                    v-model="user.password"
+                    placeholder="••••••••"
+                    size="lg"
+                  />
                 </div>
 
                 <!-- Texto protección -->
@@ -435,7 +381,7 @@
                 <!-- Mensaje de error -->
                 <p
                   v-if="errorMessage"
-                  class="text-red-500 text-xs text-center bg-red-50 py-2 px-3 rounded-lg"
+                  class="text-brand-danger text-xs text-center bg-brand-danger-light py-2 px-3 rounded-lg"
                 >
                   {{ errorMessage }}
                 </p>
@@ -470,6 +416,8 @@
 </template>
 
 <script lang="ts" setup>
+import PasswordInput from "@/components/shared/form/PasswordInput.vue";
+import BaseInput from "@/components/shared/form/BaseInput.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 import OptionCard from "@/components/shared/OptionCard.vue";
 /** Registro en 3 pasos: tipo de cuenta, datos personales y credenciales. */
@@ -491,7 +439,6 @@ const user = ref({
 });
 
 const step = ref(1);
-const showPassword = ref(false);
 const isLoading = ref(false);
 const errorMessage = ref(""); // Para mostrar errores
 

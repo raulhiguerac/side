@@ -43,12 +43,12 @@
               class="max-w-lg mx-auto py-6 flex flex-col items-center gap-5"
             >
               <div
-                class="w-full rounded-2xl border border-orange-200 bg-orange-50 p-8 flex flex-col items-center text-center gap-5"
+                class="w-full rounded-2xl border border-brand-warning-border bg-brand-warning-light p-8 flex flex-col items-center text-center gap-5"
               >
                 <div
-                  class="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center"
+                  class="w-14 h-14 rounded-full bg-brand-warning-light flex items-center justify-center"
                 >
-                  <AlertTriangle class="w-7 h-7 text-orange-500" />
+                  <AlertTriangle class="w-7 h-7 text-brand-warning" />
                 </div>
 
                 <div class="space-y-1.5">
@@ -62,7 +62,7 @@
                 </div>
 
                 <div
-                  class="w-full text-left bg-white rounded-xl border border-orange-100 px-4 py-3"
+                  class="w-full text-left bg-white rounded-xl border border-brand-warning-light px-4 py-3"
                 >
                   <p
                     class="text-xs font-semibold text-brand-muted uppercase tracking-wide mb-2"

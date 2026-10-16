@@ -118,7 +118,7 @@
         <div class="border-t border-brand-divider pt-2">
           <button
             @click="logout"
-            class="flex items-center gap-3 px-4 py-2 w-full text-left text-red-500 text-sm hover:bg-red-50 transition-colors"
+            class="flex items-center gap-3 px-4 py-2 w-full text-left text-brand-danger text-sm hover:bg-brand-danger-light transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

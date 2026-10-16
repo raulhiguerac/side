@@ -40,7 +40,9 @@
       <span
         :class="[
           'tabular-nums',
-          row.error_count ? 'font-semibold text-red-600' : 'text-brand-muted',
+          row.error_count
+            ? 'font-semibold text-brand-danger'
+            : 'text-brand-muted',
         ]"
       >
         {{ formatNumber(row.error_count) }}

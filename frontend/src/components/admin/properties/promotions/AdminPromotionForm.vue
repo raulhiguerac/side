@@ -9,14 +9,14 @@
 
     <p
       v-if="successMessage"
-      class="mb-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700"
+      class="mb-3 rounded-xl border border-brand-success-border bg-brand-success-light px-3 py-2 text-sm text-brand-success"
     >
       {{ successMessage }}
     </p>
 
     <p
       v-if="errorMessage"
-      class="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600"
+      class="mb-3 rounded-xl border border-brand-danger-border bg-brand-danger-light px-3 py-2 text-sm text-brand-danger"
     >
       {{ errorMessage }}
     </p>
@@ -40,14 +40,14 @@
             >
               {{ preset }}d
             </ChoiceChip>
-            <input
+            <BaseInput
               id="promotion-days"
               v-model.number="days"
               type="number"
               :min="MIN_DAYS"
               :max="MAX_DAYS"
               :disabled="saving"
-              class="border-brand-border text-brand-text focus:border-brand-primary w-20 rounded-xl border px-3 py-1.5 text-sm transition-colors focus:outline-none disabled:opacity-50"
+              class="w-20"
             />
           </div>
           <p class="text-brand-muted mt-1 text-xs">
@@ -67,16 +67,15 @@
           Prioridad
         </label>
         <div class="min-w-0 flex-1">
-          <select
+          <BaseSelect
             id="promotion-priority"
             v-model.number="priority"
             :disabled="saving"
-            class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none disabled:opacity-50"
           >
             <option v-for="level in PRIORITIES" :key="level" :value="level">
               {{ level }}
             </option>
-          </select>
+          </BaseSelect>
           <p class="text-brand-muted mt-1 text-xs">
             La más alta aparece primero en el feed.
           </p>
@@ -93,6 +92,8 @@
 </template>
 
 <script lang="ts" setup>
+import BaseInput from "@/components/shared/form/BaseInput.vue";
+import BaseSelect from "@/components/shared/form/BaseSelect.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 import ChoiceChip from "@/components/shared/ChoiceChip.vue";
 import { computed, ref, watch } from "vue";

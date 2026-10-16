@@ -59,11 +59,11 @@
                 <label class="text-brand-text text-xs font-semibold"
                   >Email</label
                 >
-                <input
+                <BaseInput
+                  size="lg"
                   v-model="user.email"
                   type="email"
                   placeholder="correo@ejemplo.com"
-                  class="w-full h-12 px-4 bg-white border-[1.5px] border-brand-border rounded-[10px] text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary transition-colors"
                 />
               </div>
             </div>
@@ -95,6 +95,7 @@
 </template>
 
 <script lang="ts" setup>
+import BaseInput from "@/components/shared/form/BaseInput.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 /** Pantalla de recuperación de contraseña. */
 import { ref } from "vue";

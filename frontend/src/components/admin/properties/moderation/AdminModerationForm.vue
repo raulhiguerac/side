@@ -12,14 +12,14 @@
 
     <p
       v-if="successMessage"
-      class="mb-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700"
+      class="mb-3 rounded-xl border border-brand-success-border bg-brand-success-light px-3 py-2 text-sm text-brand-success"
     >
       {{ successMessage }}
     </p>
 
     <p
       v-if="errorMessage"
-      class="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600"
+      class="mb-3 rounded-xl border border-brand-danger-border bg-brand-danger-light px-3 py-2 text-sm text-brand-danger"
     >
       {{ errorMessage }}
     </p>
@@ -33,11 +33,10 @@
           Verificación
         </label>
         <div class="min-w-0 flex-1">
-          <select
+          <BaseSelect
             id="moderation-verification"
             v-model="draftVerification"
             :disabled="saving"
-            class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none disabled:opacity-50"
           >
             <option
               v-for="option in verificationOptions"
@@ -46,7 +45,7 @@
             >
               {{ option.label }}
             </option>
-          </select>
+          </BaseSelect>
           <p
             v-if="verificationChanged && draftVerification"
             class="text-brand-muted mt-1 text-xs"
@@ -65,11 +64,10 @@
           Estado
         </label>
         <div class="min-w-0 flex-1">
-          <select
+          <BaseSelect
             id="moderation-status"
             v-model="draftStatus"
             :disabled="saving"
-            class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none disabled:opacity-50"
           >
             <option
               v-for="option in statusOptions"
@@ -78,7 +76,7 @@
             >
               {{ option.label }}
             </option>
-          </select>
+          </BaseSelect>
           <p
             v-if="statusChanged && draftStatus"
             class="text-brand-muted mt-1 text-xs"
@@ -91,21 +89,16 @@
 
       <!-- Inline y no modal: el motivo es parte de elegir "Rechazada", que es donde el backend lo acepta. -->
       <div v-if="requiresReason">
-        <label
-          for="moderation-reason"
-          class="text-brand-text mb-1 block text-sm font-medium"
-        >
-          Motivo del rechazo *
-        </label>
-        <textarea
-          id="moderation-reason"
-          v-model="reason"
-          rows="3"
-          maxlength="500"
-          :disabled="saving"
-          placeholder="Qué encontraste que impide aprobarla"
-          class="border-brand-border text-brand-text placeholder:text-brand-placeholder focus:border-brand-primary w-full resize-none rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none disabled:opacity-50"
-        />
+        <FormField label="Motivo del rechazo *" input-id="moderation-reason">
+          <BaseTextarea
+            id="moderation-reason"
+            v-model="reason"
+            rows="3"
+            maxlength="500"
+            :disabled="saving"
+            placeholder="Qué encontraste que impide aprobarla"
+          />
+        </FormField>
         <div class="mt-1 flex items-center justify-between">
           <p class="text-brand-muted text-xs">
             El propietario va a ver este texto.
@@ -131,6 +124,9 @@
 </template>
 
 <script lang="ts" setup>
+import FormField from "@/components/shared/form/FormField.vue";
+import BaseSelect from "@/components/shared/form/BaseSelect.vue";
+import BaseTextarea from "@/components/shared/form/BaseTextarea.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 import { computed, ref, watch } from "vue";
 import {

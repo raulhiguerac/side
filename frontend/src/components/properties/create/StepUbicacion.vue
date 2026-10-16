@@ -16,7 +16,7 @@
 
       <p
         v-if="attempted && !form.location.neighborhood_id"
-        class="text-xs text-red-500 mb-2"
+        class="text-xs text-brand-danger mb-2"
       >
         Ingresa una dirección para continuar
       </p>

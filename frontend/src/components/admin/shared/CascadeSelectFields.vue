@@ -2,48 +2,45 @@
   <div>
     <div class="grid gap-3" :style="{ gridTemplateColumns: columns }">
       <div v-for="field in fields" :key="field.key" class="min-w-0">
-        <label
-          class="text-brand-text mb-1 block text-sm font-medium"
-          :for="`${idPrefix}-${field.key}`"
-        >
-          {{ field.label }}
-        </label>
-        <select
-          :id="`${idPrefix}-${field.key}`"
-          :value="model[field.key] ?? ''"
-          :disabled="
-            disabled ||
-            cascade.isBlocked(field, model) ||
-            cascade.loading.value[field.key]
-          "
-          class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border bg-white px-3 py-2 text-sm transition-colors focus:outline-none disabled:opacity-50"
-          @change="onChange(field.key, $event)"
-        >
-          <option value="" disabled>
-            {{
+        <FormField :label="field.label" :input-id="`${idPrefix}-${field.key}`">
+          <BaseSelect
+            :id="`${idPrefix}-${field.key}`"
+            :model-value="model[field.key] ?? ''"
+            :disabled="
+              disabled ||
+              cascade.isBlocked(field, model) ||
               cascade.loading.value[field.key]
-                ? "Cargando…"
-                : "Elige una opción"
-            }}
-          </option>
-          <option
-            v-for="(label, value) in cascade.options.value[field.key] ?? {}"
-            :key="value"
-            :value="value"
+            "
+            @change="onChange(field.key, $event)"
           >
-            {{ label }}
-          </option>
-        </select>
+            <option value="" disabled>
+              {{
+                cascade.loading.value[field.key]
+                  ? "Cargando…"
+                  : "Elige una opción"
+              }}
+            </option>
+            <option
+              v-for="(label, value) in cascade.options.value[field.key] ?? {}"
+              :key="value"
+              :value="value"
+            >
+              {{ label }}
+            </option>
+          </BaseSelect>
+        </FormField>
       </div>
     </div>
 
-    <p v-if="cascade.error.value" class="mt-2 text-sm text-red-600">
+    <p v-if="cascade.error.value" class="mt-2 text-sm text-brand-danger">
       {{ cascade.error.value }}
     </p>
   </div>
 </template>
 
 <script lang="ts" setup>
+import FormField from "@/components/shared/form/FormField.vue";
+import BaseSelect from "@/components/shared/form/BaseSelect.vue";
 import { computed, toRaw, watch } from "vue";
 import { useCascadeOptions } from "@/composables/admin/useCascadeOptions";
 import type { AdminAsyncSelectFilter } from "@/types/admin/filters";

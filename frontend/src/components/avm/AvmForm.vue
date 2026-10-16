@@ -132,13 +132,14 @@
                 >Área construida</label
               >
               <div class="relative">
-                <input
+                <BaseInput
+                  size="lg"
                   v-model.number="form.area_m2"
                   type="number"
                   min="1"
                   max="2000"
                   placeholder="120"
-                  class="w-full border border-brand-border rounded-xl px-4 py-3 pr-10 text-sm text-brand-text placeholder-brand-placeholder focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                  class="pr-10"
                 />
                 <span
                   class="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted text-xs font-medium pointer-events-none"
@@ -155,13 +156,13 @@
                   >(opcional)</span
                 >
               </label>
-              <input
+              <BaseInput
+                size="lg"
                 v-model.number="form.year_built"
                 type="number"
                 min="1900"
                 max="2100"
                 placeholder="2006"
-                class="w-full border border-brand-border rounded-xl px-4 py-3 text-sm text-brand-text placeholder-brand-placeholder focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
               />
             </div>
           </div>
@@ -300,6 +301,7 @@
 </template>
 
 <script setup lang="ts">
+import BaseInput from "@/components/shared/form/BaseInput.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 import ChoiceChip from "@/components/shared/ChoiceChip.vue";
 import OptionCard from "@/components/shared/OptionCard.vue";

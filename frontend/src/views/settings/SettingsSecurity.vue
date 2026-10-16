@@ -48,57 +48,11 @@
             <label class="text-brand-text text-sm font-semibold"
               >Contraseña actual</label
             >
-            <div class="relative">
-              <input
-                v-model="form.currentPassword"
-                :type="showCurrentPassword ? 'text' : 'password'"
-                placeholder="••••••••"
-                class="w-full h-12 px-4 pr-12 bg-white border-[1.5px] border-brand-border rounded-xl text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary transition-colors"
-              />
-              <button
-                :aria-label="
-                  showCurrentPassword
-                    ? 'Ocultar contraseña'
-                    : 'Mostrar contraseña'
-                "
-                type="button"
-                @click="showCurrentPassword = !showCurrentPassword"
-                class="absolute right-4 top-1/2 -translate-y-1/2 text-brand-placeholder hover:text-brand-muted transition-colors"
-              >
-                <svg
-                  v-if="showCurrentPassword"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-                <svg
-                  v-else
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-                  <path
-                    d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"
-                  />
-                  <path
-                    d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"
-                  />
-                  <line x1="2" x2="22" y1="2" y2="22" />
-                </svg>
-              </button>
-            </div>
+            <PasswordInput
+              v-model="form.currentPassword"
+              placeholder="••••••••"
+              size="lg"
+            />
           </div>
 
           <!-- Nueva contraseña -->
@@ -106,55 +60,11 @@
             <label class="text-brand-text text-sm font-semibold"
               >Nueva contraseña</label
             >
-            <div class="relative">
-              <input
-                v-model="form.newPassword"
-                :type="showNewPassword ? 'text' : 'password'"
-                placeholder="••••••••"
-                class="w-full h-12 px-4 pr-12 bg-white border-[1.5px] border-brand-border rounded-xl text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary transition-colors"
-              />
-              <button
-                :aria-label="
-                  showNewPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'
-                "
-                type="button"
-                @click="showNewPassword = !showNewPassword"
-                class="absolute right-4 top-1/2 -translate-y-1/2 text-brand-placeholder hover:text-brand-muted transition-colors"
-              >
-                <svg
-                  v-if="showNewPassword"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-                <svg
-                  v-else
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-                  <path
-                    d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"
-                  />
-                  <path
-                    d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"
-                  />
-                  <line x1="2" x2="22" y1="2" y2="22" />
-                </svg>
-              </button>
-            </div>
+            <PasswordInput
+              v-model="form.newPassword"
+              placeholder="••••••••"
+              size="lg"
+            />
             <p class="text-brand-placeholder text-xs">Mínimo 8 caracteres</p>
           </div>
 
@@ -163,63 +73,15 @@
             <label class="text-brand-text text-sm font-semibold"
               >Confirmar contraseña</label
             >
-            <div class="relative">
-              <input
-                v-model="form.confirmPassword"
-                :type="showConfirmPassword ? 'text' : 'password'"
-                placeholder="••••••••"
-                class="w-full h-12 px-4 pr-12 bg-white border-[1.5px] border-brand-border rounded-xl text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary transition-colors"
-                :class="{
-                  'border-red-500': form.confirmPassword && !passwordsMatch,
-                }"
-              />
-              <button
-                :aria-label="
-                  showConfirmPassword
-                    ? 'Ocultar contraseña'
-                    : 'Mostrar contraseña'
-                "
-                type="button"
-                @click="showConfirmPassword = !showConfirmPassword"
-                class="absolute right-4 top-1/2 -translate-y-1/2 text-brand-placeholder hover:text-brand-muted transition-colors"
-              >
-                <svg
-                  v-if="showConfirmPassword"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-                <svg
-                  v-else
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-                  <path
-                    d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"
-                  />
-                  <path
-                    d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"
-                  />
-                  <line x1="2" x2="22" y1="2" y2="22" />
-                </svg>
-              </button>
-            </div>
+            <PasswordInput
+              v-model="form.confirmPassword"
+              placeholder="••••••••"
+              size="lg"
+              :invalid="!!form.confirmPassword && !passwordsMatch"
+            />
             <p
               v-if="form.confirmPassword && !passwordsMatch"
-              class="text-red-500 text-xs"
+              class="text-brand-danger text-xs"
             >
               Las contraseñas no coinciden
             </p>
@@ -228,7 +90,7 @@
           <!-- Error message -->
           <p
             v-if="errorMessage"
-            class="text-red-500 text-sm text-center bg-red-50 py-3 px-4 rounded-xl"
+            class="text-brand-danger text-sm text-center bg-brand-danger-light py-3 px-4 rounded-xl"
           >
             {{ errorMessage }}
           </p>
@@ -236,7 +98,7 @@
           <!-- Success message -->
           <p
             v-if="successMessage"
-            class="text-green-600 text-sm text-center bg-green-50 py-3 px-4 rounded-xl"
+            class="text-brand-success text-sm text-center bg-brand-success-light py-3 px-4 rounded-xl"
           >
             {{ successMessage }}
           </p>
@@ -284,6 +146,7 @@
 </template>
 
 <script lang="ts" setup>
+import PasswordInput from "@/components/shared/form/PasswordInput.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref, computed } from "vue";
 import axios from "axios";
@@ -292,10 +155,6 @@ import * as usersApi from "@/api/users";
 const isLoading = ref(false);
 const errorMessage = ref("");
 const successMessage = ref("");
-
-const showCurrentPassword = ref(false);
-const showNewPassword = ref(false);
-const showConfirmPassword = ref(false);
 
 const form = ref({
   currentPassword: "",

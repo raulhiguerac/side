@@ -30,20 +30,18 @@
       />
 
       <div>
-        <label
-          class="text-brand-text mb-1 block text-sm font-medium"
-          for="bulk-geometries-name-field"
+        <FormField
+          label="Propiedad con el nombre del barrio"
+          input-id="bulk-geometries-name-field"
         >
-          Propiedad con el nombre del barrio
-        </label>
-        <input
-          id="bulk-geometries-name-field"
-          v-model="nameField"
-          type="text"
-          placeholder="Obligatoria, p. ej. name"
-          :disabled="saving"
-          class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none"
-        />
+          <BaseInput
+            id="bulk-geometries-name-field"
+            v-model="nameField"
+            type="text"
+            placeholder="Obligatoria, p. ej. name"
+            :disabled="saving"
+          />
+        </FormField>
       </div>
 
       <FileUploadField
@@ -63,6 +61,8 @@
 </template>
 
 <script lang="ts" setup>
+import FormField from "@/components/shared/form/FormField.vue";
+import BaseInput from "@/components/shared/form/BaseInput.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 import { computed, ref, watch } from "vue";
 import { MapPinned } from "@lucide/vue";

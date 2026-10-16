@@ -132,17 +132,17 @@
             Precio
           </label>
           <div class="flex gap-2">
-            <input
+            <BaseInput
               v-model.number="filters.min_price"
               type="number"
               placeholder="Mín"
-              class="w-1/2 px-3 py-2 text-sm rounded-xl border border-brand-border focus:outline-none focus:border-brand-primary"
+              class="w-1/2"
             />
-            <input
+            <BaseInput
               v-model.number="filters.max_price"
               type="number"
               placeholder="Máx"
-              class="w-1/2 px-3 py-2 text-sm rounded-xl border border-brand-border focus:outline-none focus:border-brand-primary"
+              class="w-1/2"
             />
           </div>
         </div>
@@ -155,17 +155,17 @@
             Área (m²)
           </label>
           <div class="flex gap-2">
-            <input
+            <BaseInput
               v-model.number="filters.min_area_m2"
               type="number"
               placeholder="Mín"
-              class="w-1/2 px-3 py-2 text-sm rounded-xl border border-brand-border focus:outline-none focus:border-brand-primary"
+              class="w-1/2"
             />
-            <input
+            <BaseInput
               v-model.number="filters.max_area_m2"
               type="number"
               placeholder="Máx"
-              class="w-1/2 px-3 py-2 text-sm rounded-xl border border-brand-border focus:outline-none focus:border-brand-primary"
+              class="w-1/2"
             />
           </div>
         </div>
@@ -177,12 +177,11 @@
           >
             Habitaciones
           </label>
-          <input
+          <BaseInput
             v-model.number="filters.bedrooms"
             type="number"
             placeholder="Ej. 3"
             min="1"
-            class="w-full px-3 py-2 text-sm rounded-xl border border-brand-border focus:outline-none focus:border-brand-primary"
           />
         </div>
 
@@ -193,12 +192,11 @@
           >
             Baños (mín)
           </label>
-          <input
+          <BaseInput
             v-model.number="filters.min_bathrooms"
             type="number"
             placeholder="Ej. 2"
             min="1"
-            class="w-full px-3 py-2 text-sm rounded-xl border border-brand-border focus:outline-none focus:border-brand-primary"
           />
         </div>
 
@@ -212,6 +210,7 @@
 </template>
 
 <script lang="ts" setup>
+import BaseInput from "@/components/shared/form/BaseInput.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 import ChoiceChip from "@/components/shared/ChoiceChip.vue";
 import IconButton from "@/components/shared/IconButton.vue";

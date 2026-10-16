@@ -11,7 +11,7 @@
         class="block text-xs font-semibold mb-3"
         :class="
           attempted && !form.property_type
-            ? 'text-red-500'
+            ? 'text-brand-danger'
             : 'text-brand-muted uppercase tracking-wide'
         "
         >Tipo de propiedad<span
@@ -24,7 +24,7 @@
         class="grid grid-cols-2 gap-3"
         :class="
           attempted && !form.property_type
-            ? 'ring-2 ring-red-300 rounded-2xl p-1'
+            ? 'ring-2 ring-brand-danger-border rounded-2xl p-1'
             : ''
         "
       >
@@ -69,7 +69,7 @@
         class="block text-xs font-semibold mb-3"
         :class="
           attempted && !form.listing_type
-            ? 'text-red-500'
+            ? 'text-brand-danger'
             : 'text-brand-muted uppercase tracking-wide'
         "
         >Tipo de negocio<span
@@ -82,7 +82,7 @@
         class="grid grid-cols-2 gap-3"
         :class="
           attempted && !form.listing_type
-            ? 'ring-2 ring-red-300 rounded-2xl p-1'
+            ? 'ring-2 ring-brand-danger-border rounded-2xl p-1'
             : ''
         "
       >
@@ -129,7 +129,7 @@
           class="block text-xs font-semibold mb-3"
           :class="
             attempted && !form.condition
-              ? 'text-red-500'
+              ? 'text-brand-danger'
               : 'text-brand-muted uppercase tracking-wide'
           "
           >Condición<span
@@ -142,7 +142,7 @@
           class="flex gap-2"
           :class="
             attempted && !form.condition
-              ? 'ring-2 ring-red-300 rounded-xl p-1'
+              ? 'ring-2 ring-brand-danger-border rounded-xl p-1'
               : ''
           "
         >
@@ -189,7 +189,8 @@
             :is="field.icon"
             class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted"
           />
-          <input
+          <BaseInput
+            :invalid="attempted && !form[field.key]"
             :value="form[field.key]"
             @input="
               emit('update:form', {
@@ -201,12 +202,7 @@
             :min="field.min"
             :step="field.step"
             :placeholder="field.placeholder"
-            :class="[
-              'w-full border-2 rounded-xl pl-9 pr-3 py-2.5 text-sm text-brand-text focus:outline-none focus:ring-4 transition-all',
-              attempted && !form[field.key]
-                ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
-                : 'border-brand-border focus:border-brand-primary focus:ring-brand-primary/10',
-            ]"
+            class="pl-9"
           />
         </div>
       </div>
@@ -215,6 +211,7 @@
 </template>
 
 <script setup lang="ts">
+import BaseInput from "@/components/shared/form/BaseInput.vue";
 import ChoiceChip from "@/components/shared/ChoiceChip.vue";
 import OptionCard from "@/components/shared/OptionCard.vue";
 import {

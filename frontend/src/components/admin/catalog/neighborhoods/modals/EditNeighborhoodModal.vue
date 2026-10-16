@@ -13,65 +13,43 @@
   >
     <div v-if="neighborhood" class="mb-6 space-y-3">
       <div>
-        <label
-          class="text-brand-text mb-1 block text-sm font-medium"
-          for="neighborhood-name"
-        >
-          Nombre
-        </label>
-        <input
-          id="neighborhood-name"
-          type="text"
-          v-model="name"
-          class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none"
-        />
+        <FormField label="Nombre" input-id="neighborhood-name">
+          <BaseInput id="neighborhood-name" type="text" v-model="name" />
+        </FormField>
       </div>
 
       <div>
-        <label
-          class="text-brand-text mb-1 block text-sm font-medium"
-          for="neighborhood-postal-code"
-        >
-          Código postal
-        </label>
-        <input
-          id="neighborhood-postal-code"
-          type="text"
-          v-model="postalCode"
-          class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none"
-        />
+        <FormField label="Código postal" input-id="neighborhood-postal-code">
+          <BaseInput
+            id="neighborhood-postal-code"
+            type="text"
+            v-model="postalCode"
+          />
+        </FormField>
       </div>
 
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label
-            class="text-brand-text mb-1 block text-sm font-medium"
-            for="neighborhood-latitude"
-          >
-            Latitud
-          </label>
-          <input
-            id="neighborhood-latitude"
-            type="number"
-            step="any"
-            v-model.number="latitude"
-            class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm tabular-nums transition-colors focus:outline-none"
-          />
+          <FormField label="Latitud" input-id="neighborhood-latitude">
+            <BaseInput
+              id="neighborhood-latitude"
+              type="number"
+              step="any"
+              v-model.number="latitude"
+              class="tabular-nums"
+            />
+          </FormField>
         </div>
         <div>
-          <label
-            class="text-brand-text mb-1 block text-sm font-medium"
-            for="neighborhood-longitude"
-          >
-            Longitud
-          </label>
-          <input
-            id="neighborhood-longitude"
-            type="number"
-            step="any"
-            v-model.number="longitude"
-            class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm tabular-nums transition-colors focus:outline-none"
-          />
+          <FormField label="Longitud" input-id="neighborhood-longitude">
+            <BaseInput
+              id="neighborhood-longitude"
+              type="number"
+              step="any"
+              v-model.number="longitude"
+              class="tabular-nums"
+            />
+          </FormField>
         </div>
       </div>
     </div>
@@ -79,6 +57,8 @@
 </template>
 
 <script lang="ts" setup>
+import FormField from "@/components/shared/form/FormField.vue";
+import BaseInput from "@/components/shared/form/BaseInput.vue";
 import { computed, ref, watch } from "vue";
 import { Pencil } from "@lucide/vue";
 import AdminFormModal from "@/components/admin/shared/AdminFormModal.vue";
