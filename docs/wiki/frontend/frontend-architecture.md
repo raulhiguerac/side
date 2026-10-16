@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-10-09
+last-verified: 2026-10-16
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -47,6 +47,7 @@ sources:
   - ../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md
   - ../../sources/frontend/2026-10-05-admin-actions-and-front-smell-audit.md
   - ../../sources/frontend/2026-10-09-api-layer-map-cluster-and-typecheck.md
+  - ../../sources/frontend/2026-10-16-shared-buttons.md
 ---
 
 ## TL;DR
@@ -142,7 +143,7 @@ frontend/
 │   │   ├── dev/{DevPlaygroundView, CreatePropertyDevView}  # sin auth, dev only
 │   │   └── admin/{AdminHomeView, properties/{AdminPropertiesLayout, moderation/AdminModerationView, promotions/{AdminPromotionsLayout, AdminPromotionsActiveView, AdminPromotionsCreateView}, imports/AdminImportsView}, catalog/{AdminCatalogView, neighborhoods/AdminNeighborhoodsView, localities/AdminLocalitiesView, divisions/AdminDivisionsView, countries/AdminCountriesView}}  # requiresAdmin — ver [[frontend-admin-panel]]
 │   └── components/
-│       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState, PrimaryButton, BaseTable, FormMessage}
+│       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState, BaseButton, IconButton, ChoiceChip, OptionCard, BaseTable, FormMessage}
 │       ├── onboarding/{OnboardingModal, IntentSelector, LocalitySelector, NeighborhoodSelector, PropertyTypeSelector}
 │       ├── properties/
 │       │   ├── cards/PropertyCard
@@ -431,7 +432,7 @@ Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. `ONBOARDING_DISMISSE
 
 | Carpeta | Propósito |
 |---|---|
-| `shared/` | NavBar, NavGuest (no-logged), NavUser (logged), BaseModal, PrimaryButton (botón primario único, verde liso, con `size` sm|md|lg y `loading` que muestra spinner y deshabilita), PaginationArrows, EmptyState, BaseSpinner y **BaseTable** (tabla dumb genérica sobre TanStack, un slot por columna, con selección de fila opcional vía `rowKey`/`selectedKey` + emit `rowClick` — ver [[adr-tanstack-table]]) — reusables transversales. Gotcha de la selección: la clase de fila activa y el `hover:` se aplican de forma **excluyente**, porque Tailwind emite la variante `hover:` con más especificidad y si conviven despinta la fila seleccionada al pasarle el mouse. |
+| `shared/` | NavBar, NavGuest (no-logged), NavUser (logged), BaseModal, los cuatro botones compartidos — **BaseButton** (variantes `primary`/`secondary`/`ghost`/`danger`/`danger-soft`/`link`, tamaños `sm`–`xl`, `loading`, `block`, `to` para dibujarse como `RouterLink`), **IconButton** (solo icono, `label` obligatorio), **ChoiceChip** (opción chica elegible) y **OptionCard** (tarjeta elegible con el contenido en un slot) —, PaginationArrows, EmptyState, BaseSpinner y **BaseTable** (tabla dumb genérica sobre TanStack, un slot por columna, con selección de fila opcional vía `rowKey`/`selectedKey` + emit `rowClick` — ver [[adr-tanstack-table]]) — reusables transversales. Gotcha de la selección: la clase de fila activa y el `hover:` se aplican de forma **excluyente**, porque Tailwind emite la variante `hover:` con más especificidad y si conviven despinta la fila seleccionada al pasarle el mouse. |
 | `onboarding/` | `OnboardingModal` (controlado por `v-model` desde `App.vue`) + 4 selectors (Intent, Locality, Neighborhood, PropertyType) que emiten `submit` y reciben `saving`. Ver [[frontend-onboarding-flow]]. |
 | `properties/` | Organizado en subcarpetas por dominio desde 2026-06-21. `cards/PropertyCard` — card del feed (`HouseCard` se borró el 2026-10-05: no lo usaba nadie). `photos/{PropertyPhotoGrid, PhotoGalleryPopup}`. `detail/{PropertyOverview, NearbyPlaces}`. `feed/FeedFilters` — sidebar de filtros con secciones Preferencias (ciudad, barrio, tipo) y Filtros (precio, área, habitaciones, baños); se pre-pobla con ciudades de `useCities`, barrios cargados dinámicamente al seleccionar ciudad vía `watch`. Mantiene estado local (`selected`, `selectedNeighborhoods`, `selectedTypes`, `filters: ref<FeedFilters>({})` con `v-model.number`); `property_types` se togglea con `toggleType(type)` (push/filter sobre el array). **Emite un solo `submit` con `{preferences, filters}` al click en "Aplicar"** — no reactivo con `watch`, decisión para evitar una petición por cada cambio de campo. El objeto `preferences` se arma en `onSubmit` leyendo los refs (`selected.value`, etc.), sin ref `preferences` duplicado. |
 | `settings/` | SettingsSidebar — navegación lateral del SettingsLayout. |
@@ -444,8 +445,9 @@ Keys centralizadas en `STORAGE_KEYS` del `config/index.ts`. `ONBOARDING_DISMISSE
 - Tailwind 3 con clases utility directas en templates.
 - Custom utilities/colors en `tailwind.config.js` — usa nombres tipo `brand-primary`, `brand-text`, `brand-bg`, `brand-muted`, `brand-divider`, `brand-placeholder`, `brand-border` (vistos en `LoginView`).
 - **Paleta en un solo archivo (2026-10-05).** `src/theme/brandColors.json` es la fuente: `tailwind.config.js` la carga con `require`, y el JS que no acepta clases (estilos de Leaflet, `fill` de SVG) la lee como `BRAND_COLORS` desde `constants/brandColors.ts`. Por eso `tsconfig.json` activa `resolveJsonModule`. Se sumaron `primary-dark`, `navy` y `accent`. El tema del multiselect, que estaba duplicado en `LocalitySelector` y `NeighborhoodSelector`, vive en `main.css` como `.brand-multiselect`, con colores vía `theme()`.
-- Queda en `App.vue` CSS de la plantilla de Vue CLI (`#app { font-family: Avenir… }`) que probablemente pisa Plus Jakarta Sans. No se tocó porque cambia la tipografía global. Ver [[open-items]].
-- `assets/tailwind.css` y `main.css` cargados en `main.ts`.
+- `App.vue` ya no tiene CSS: el de la plantilla de Vue CLI se borró el 2026-10-16. Su `#app` nunca aplicó (un `<style scoped>` no alcanza al elemento de montaje); el `nav { padding: 30px }` sí, y ese padding ahora vive en `NavBar` como `p-[30px]`.
+- Un solo CSS de entrada, `main.css`, con las tres directivas de Tailwind; `main.ts` lo importa después de `leaflet/dist/leaflet.css`, que viene del paquete y no de un CDN. `.leaflet-container { isolation: isolate }` va fuera de `@layer` porque Tailwind purgaría una clase que solo agrega Leaflet en runtime.
+- **Botones por componente (2026-10-16).** Ningún botón lleva sus propias clases de estilo: van por `BaseButton`, `IconButton`, `ChoiceChip` u `OptionCard`. `BaseButton` es `type="button"` por defecto, así que un botón dentro de un `<form>` no lo envía sin pedirlo. Una clase que pasa el padre no pisa a una del componente del mismo grupo (`justify-start` contra `justify-center`): en Tailwind manda el orden del CSS generado, no el del atributo, así que la variación va por props. Quedan fuera las pestañas, los botones de la navbar, el switch de visibilidad, los "mostrar contraseña" y los CTAs del hero del home.
 - Sin component library tipo Element Plus — todos los componentes son custom, por decisión: ver [[adr-no-component-library]].
 
 ## Forms
@@ -628,7 +630,11 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 - `MyPropertiesView`, `FeedView` y `PublicProfileView` usan `PaginationArrows.vue`; `MapView` no ([components/shared/PaginationArrows.vue](frontend/src/components/shared/PaginationArrows.vue), [views/properties/feed/MapView.vue](frontend/src/views/properties/feed/MapView.vue)).
 - `FeedView`, `MapView`, `MyPropertiesView` y `PublicProfileView` tienen `@click="router.push('/listing/${card.id}')"` en el `v-for` de cards ([views/properties/feed/FeedView.vue](frontend/src/views/properties/feed/FeedView.vue), [views/public/PublicProfileView.vue](frontend/src/views/public/PublicProfileView.vue)).
 - `types/properties/forms.ts` contiene `CreatePropertyForm` — shape del body `POST /v1/properties/create`, incluye `location: { neighborhood_id, city_id, country_id, latitude, longitude }` ([types/properties/forms.ts](frontend/src/types/properties/forms.ts)).
-- `PrimaryButton.vue` recibe `disabled`, `loading` y `size` (`sm`|`md`|`lg`); `loading` muestra un `BaseSpinner` y deshabilita, y `class`, `type` y `@click` llegan al `<button>` por attrs fallthrough ([components/shared/PrimaryButton.vue](frontend/src/components/shared/PrimaryButton.vue)).
+- `BaseButton.vue` tiene `type` `"button"` por defecto, variante `primary` con hover `brand-primary-dark` y tamaño `xl` = `h-12 px-6 text-base`; `loading` muestra un `BaseSpinner` y deshabilita ([BaseButton.vue:39](frontend/src/components/shared/BaseButton.vue#L39), [:48](frontend/src/components/shared/BaseButton.vue#L48), [:61](frontend/src/components/shared/BaseButton.vue#L61)).
+- `IconButton.vue` declara `label` como prop obligatoria y la usa como `aria-label` ([IconButton.vue:4](frontend/src/components/shared/IconButton.vue#L4), [:27](frontend/src/components/shared/IconButton.vue#L27)).
+- `ChoiceChip.vue` y `OptionCard.vue` reflejan `selected` en `aria-pressed` ([ChoiceChip.vue:4](frontend/src/components/shared/ChoiceChip.vue#L4), [OptionCard.vue:4](frontend/src/components/shared/OptionCard.vue#L4)).
+- No existe `components/shared/PrimaryButton.vue` ([components/shared/](frontend/src/components/shared)).
+- `main.ts` importa `leaflet/dist/leaflet.css` y `main.css`, y no existe `assets/tailwind.css` ([main.ts](frontend/src/main.ts)).
 - `tailwind.config.js` toma la paleta `brand` de `src/theme/brandColors.json`, que `constants/brandColors.ts` reexporta como `BRAND_COLORS` ([tailwind.config.js](frontend/tailwind.config.js), [constants/brandColors.ts](frontend/src/constants/brandColors.ts)).
 - Ningún archivo de `src/` llama a `console` salvo `utils/logger.ts` ([utils/logger.ts](frontend/src/utils/logger.ts)).
 - `LOCALE` de `config/index.ts` es el único lugar donde aparece `"es-CO"` ([config/index.ts](frontend/src/config/index.ts)).

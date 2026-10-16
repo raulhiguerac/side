@@ -86,7 +86,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 ## frontend
 
 - [frontend](wiki/frontend/frontend.md) — overview: scope funcional vs scaffolding, stack actual + deuda técnica reconocida, routes, consumers de servicios backend, roadmap
-- [frontend-architecture](wiki/frontend/frontend-architecture.md) — layout interno, stores Pinia, composables, router guard, axios pattern, caching local, forms y mapas
+- [frontend-architecture](wiki/frontend/frontend-architecture.md) — layout interno, stores Pinia, composables, router guard, axios pattern, caching local, forms, mapas y botones compartidos (`BaseButton`, `IconButton`, `ChoiceChip`, `OptionCard`)
 - [frontend-map-component](wiki/frontend/frontend-map-component.md) — componente de mapa dumb/reusable (MapUser): vue-leaflet para mapa y `subject`, cluster maker genérico (`useMarkerCluster`) con iconos lucide para propiedades y POIs, markers-prop + slot, zoom leído del mapa en `moveend`, D3 plug-and-play
 
 ### flows/
