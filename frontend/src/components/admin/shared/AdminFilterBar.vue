@@ -40,24 +40,24 @@
       </select>
     </div>
 
-    <PrimaryButton
-      type="button"
+    <BaseButton
       :loading="loading"
-      class="w-full self-end border border-transparent"
       @click="apply"
+      block
+      class="self-end border border-transparent"
     >
       {{ loading ? "Buscando…" : "Aplicar" }}
-    </PrimaryButton>
+    </BaseButton>
   </div>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { computed, ref, watch } from "vue";
 import type {
   AdminFilterDefinition,
   AdminFilterOptions,
 } from "@/types/admin/filters";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { useCascadeOptions } from "@/composables/admin/useCascadeOptions";
 
 // Filtros genéricos: devuelve los valores elegidos sin saber qué filtran.

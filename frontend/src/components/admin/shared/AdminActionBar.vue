@@ -1,25 +1,24 @@
 <template>
   <div class="grid justify-center gap-2" :style="gridStyle">
-    <button
+    <BaseButton
       v-for="action in actions"
       :key="action.key"
-      type="button"
+      :variant="BUTTON_VARIANTS[action.variant ?? 'default']"
       :title="action.label"
-      :class="[
-        'flex min-w-0 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors',
-        VARIANT_CLASSES[action.variant ?? 'default'],
-      ]"
       @click="$emit('action', action.key)"
+      class="min-w-0"
     >
       <component :is="action.icon" class="h-4 w-4 shrink-0" />
       <span class="truncate">{{ action.label }}</span>
-    </button>
+    </BaseButton>
   </div>
 </template>
 
 <script lang="ts" setup generic="K extends string">
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { computed } from "vue";
 import type { AdminAction, AdminActionVariant } from "@/types/admin/actions";
+import type { ButtonVariant } from "@/types/shared/ui";
 
 const props = defineProps<{ actions: readonly AdminAction<K>[] }>();
 
@@ -31,10 +30,9 @@ const gridStyle = computed(() => {
   return { gridTemplateColumns: `repeat(${tracks}, calc((100% - 1rem) / 3))` };
 });
 
-const VARIANT_CLASSES: Record<AdminActionVariant, string> = {
-  default: "border-brand-divider text-brand-text hover:bg-brand-bg",
-  primary:
-    "border-brand-primary bg-brand-primary text-white hover:bg-green-600",
-  danger: "border-red-200 text-red-600 hover:bg-red-50",
+const BUTTON_VARIANTS: Record<AdminActionVariant, ButtonVariant> = {
+  default: "secondary",
+  primary: "primary",
+  danger: "danger-soft",
 };
 </script>

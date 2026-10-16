@@ -103,10 +103,10 @@
           Reprocesa el mismo archivo. Las filas ya cargadas se actualizan, no se
           duplican.
         </p>
-        <PrimaryButton type="button" :disabled="!canRetry" class="w-full">
+        <BaseButton :disabled="!canRetry" block>
           <RotateCcw class="h-4 w-4" />
           Relanzar job
-        </PrimaryButton>
+        </BaseButton>
         <p v-if="isExpired" class="text-brand-muted mt-2 text-center text-xs">
           El CSV ya venció en storage.
         </p>
@@ -116,6 +116,7 @@
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { computed, ref, watch } from "vue";
 import { RotateCcw } from "@lucide/vue";
 import * as adminPropertiesApi from "@/api/admin/properties";
@@ -127,7 +128,6 @@ import {
 import type { BulkJobRow, BulkJobRowError } from "@/types/admin/bulk";
 import { formatLongDateTime } from "@/utils/date";
 import { formatNumber } from "@/utils/number";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { logger } from "@/utils/logger";
 
 // La fila llega del listado; acá solo se piden los errores.

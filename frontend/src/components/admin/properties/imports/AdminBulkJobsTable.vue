@@ -48,19 +48,15 @@
     </template>
 
     <template #actions="{ row }">
-      <button
-        v-if="row.status !== 'pending'"
-        type="button"
-        title="Relanzar"
-        class="text-brand-muted hover:text-brand-primary rounded-lg p-1.5 transition-colors hover:bg-gray-50"
-      >
+      <IconButton label="Relanzar" v-if="row.status !== 'pending'">
         <RotateCcw class="h-4 w-4" />
-      </button>
+      </IconButton>
     </template>
   </BaseTable>
 </template>
 
 <script lang="ts" setup>
+import IconButton from "@/components/shared/IconButton.vue";
 import { computed } from "vue";
 import type { ColumnDef } from "@tanstack/vue-table";
 import { RotateCcw } from "@lucide/vue";

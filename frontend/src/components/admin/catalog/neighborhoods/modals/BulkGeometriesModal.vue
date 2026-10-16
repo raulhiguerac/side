@@ -57,18 +57,13 @@
     </div>
 
     <template v-if="result" #footer>
-      <button
-        type="button"
-        class="bg-brand-primary w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-        @click="$emit('confirm')"
-      >
-        Listo
-      </button>
+      <BaseButton size="lg" block @click="$emit('confirm')"> Listo </BaseButton>
     </template>
   </AdminFormModal>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { computed, ref, watch } from "vue";
 import { MapPinned } from "@lucide/vue";
 import AdminFormModal from "@/components/admin/shared/AdminFormModal.vue";

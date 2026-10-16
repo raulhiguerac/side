@@ -28,16 +28,12 @@
             : ''
         "
       >
-        <button
+        <OptionCard
           v-for="opt in propertyTypes"
           :key="opt.value"
+          :selected="form.property_type === opt.value"
           @click="emit('update:form', { ...form, property_type: opt.value })"
-          :class="[
-            'group relative flex flex-col items-start gap-2 p-4 rounded-2xl border-2 text-left transition-all duration-200',
-            form.property_type === opt.value
-              ? 'border-brand-primary bg-brand-primary-light shadow-md shadow-green-100'
-              : 'border-brand-border bg-white hover:-translate-y-0.5 hover:shadow-md hover:border-brand-primary/40',
-          ]"
+          class="group relative flex flex-col items-start gap-2 p-4"
         >
           <component
             :is="opt.icon"
@@ -64,7 +60,7 @@
               <Check class="w-3 h-3 text-white" />
             </div>
           </div>
-        </button>
+        </OptionCard>
       </div>
     </div>
 
@@ -90,16 +86,12 @@
             : ''
         "
       >
-        <button
+        <OptionCard
           v-for="opt in listingTypes"
           :key="opt.value"
+          :selected="form.listing_type === opt.value"
           @click="emit('update:form', { ...form, listing_type: opt.value })"
-          :class="[
-            'group relative flex flex-col items-start gap-2 p-4 rounded-2xl border-2 text-left transition-all duration-200',
-            form.listing_type === opt.value
-              ? 'border-brand-primary bg-brand-primary-light shadow-md shadow-green-100'
-              : 'border-brand-border bg-white hover:-translate-y-0.5 hover:shadow-md hover:border-brand-primary/40',
-          ]"
+          class="group relative flex flex-col items-start gap-2 p-4"
         >
           <component
             :is="opt.icon"
@@ -126,7 +118,7 @@
               <Check class="w-3 h-3 text-white" />
             </div>
           </div>
-        </button>
+        </OptionCard>
       </div>
     </div>
 
@@ -154,20 +146,16 @@
               : ''
           "
         >
-          <button
+          <ChoiceChip
             v-for="opt in conditions"
             :key="opt.value"
+            :selected="form.condition === opt.value"
             @click="emit('update:form', { ...form, condition: opt.value })"
-            :class="[
-              'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium transition-all duration-200',
-              form.condition === opt.value
-                ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
-                : 'border-brand-border text-brand-text hover:border-brand-primary/40',
-            ]"
+            class="flex-1"
           >
             <component :is="opt.icon" class="w-4 h-4" />
             {{ opt.label }}
-          </button>
+          </ChoiceChip>
         </div>
       </div>
 
@@ -177,19 +165,14 @@
           >Moneda</label
         >
         <div class="grid grid-cols-6 gap-1.5">
-          <button
+          <ChoiceChip
             v-for="c in currencies"
             :key="c"
+            :selected="form.currency === c"
             @click="emit('update:form', { ...form, currency: c })"
-            :class="[
-              'flex items-center justify-center py-2.5 rounded-xl border-2 text-xs font-semibold transition-all duration-200',
-              form.currency === c
-                ? 'border-brand-primary bg-brand-primary text-white shadow-sm'
-                : 'border-brand-border text-brand-muted hover:border-brand-primary/40 hover:text-brand-primary',
-            ]"
           >
             {{ c }}
-          </button>
+          </ChoiceChip>
         </div>
       </div>
     </div>
@@ -232,6 +215,8 @@
 </template>
 
 <script setup lang="ts">
+import ChoiceChip from "@/components/shared/ChoiceChip.vue";
+import OptionCard from "@/components/shared/OptionCard.vue";
 import {
   Home,
   Building2,

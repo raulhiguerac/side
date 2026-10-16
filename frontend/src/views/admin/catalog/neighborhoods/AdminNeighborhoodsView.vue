@@ -10,25 +10,20 @@
     <div
       class="border-brand-divider flex flex-col justify-center gap-2 rounded-2xl border bg-white p-4"
     >
-      <button
-        type="button"
-        class="border-brand-primary bg-brand-primary flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-600"
-        @click="creating = true"
-      >
+      <BaseButton @click="creating = true">
         <Plus class="h-4 w-4 shrink-0" />
         <span class="truncate">Crear barrio</span>
-      </button>
+      </BaseButton>
 
-      <button
+      <BaseButton
         v-for="action in BULK_ACTIONS"
         :key="action.key"
-        type="button"
-        class="border-brand-divider text-brand-text hover:bg-brand-bg flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors"
+        variant="secondary"
         @click="bulkModal = action.key"
       >
         <component :is="action.icon" class="h-4 w-4 shrink-0" />
         <span class="truncate">{{ action.label }}</span>
-      </button>
+      </BaseButton>
     </div>
   </div>
 
@@ -112,6 +107,7 @@
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref } from "vue";
 import { FileUp, MapPinned, Plus } from "@lucide/vue";
 import AdminNeighborhoodPanel from "@/components/admin/catalog/neighborhoods/AdminNeighborhoodPanel.vue";

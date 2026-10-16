@@ -81,32 +81,36 @@
           <span class="text-brand-primary/60 font-normal"
             >{{ item.cityName }} · </span
           >{{ item.neighborhoodName }}
-          <button
-            type="button"
+          <IconButton
+            label="Quitar barrio"
+            size="xs"
+            danger
             @click="removeNeighborhood(item.cityId, item.neighborhoodId)"
-            class="ml-1 hover:text-red-500 font-bold"
+            class="ml-1"
           >
             ×
-          </button>
+          </IconButton>
         </span>
       </div>
 
       <div class="flex justify-center mt-4">
-        <button
+        <BaseButton
+          size="lg"
+          :loading="saving"
           @click="handleNext"
-          type="button"
           :disabled="saving"
-          class="w-3/5 bg-brand-primary text-white text-sm font-semibold py-2.5 rounded-full hover:bg-green-500 hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+          class="w-3/5"
         >
-          <BaseSpinner v-if="saving" class="h-4 w-4" />
           {{ saving ? "Guardando..." : "Continuar" }}
-        </button>
+        </BaseButton>
       </div>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import BaseButton from "@/components/shared/BaseButton.vue";
+import IconButton from "@/components/shared/IconButton.vue";
 import { ref, onMounted } from "vue";
 import Multiselect from "@vueform/multiselect";
 import { useLocalitiesWithNames } from "@/composables/catalog/useLocalitiesWithNames";

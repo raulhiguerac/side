@@ -5,16 +5,18 @@
     @update:model-value="$emit('close')"
   >
     <div class="relative flex items-center">
-      <button
-        aria-label="Foto anterior"
-        class="absolute left-0 z-10 w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center"
+      <IconButton
+        label="Foto anterior"
+        variant="surface"
+        size="lg"
         @click="
           currentSlide =
             currentSlide === 0 ? props.images.length - 1 : currentSlide - 1
         "
+        class="absolute left-0 z-10"
       >
         <ChevronLeft :size="18" />
-      </button>
+      </IconButton>
 
       <Carousel v-model="currentSlide" :wrap-around="true" class="w-full">
         <Slide v-for="(img, i) in props.images" :key="i">
@@ -26,21 +28,24 @@
         </Slide>
       </Carousel>
 
-      <button
-        aria-label="Foto siguiente"
-        class="absolute right-0 z-10 w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center"
+      <IconButton
+        label="Foto siguiente"
+        variant="surface"
+        size="lg"
         @click="
           currentSlide =
             currentSlide === props.images.length - 1 ? 0 : currentSlide + 1
         "
+        class="absolute right-0 z-10"
       >
         <ChevronRight :size="18" />
-      </button>
+      </IconButton>
     </div>
   </BaseModal>
 </template>
 
 <script setup lang="ts">
+import IconButton from "@/components/shared/IconButton.vue";
 import { ref, watch } from "vue";
 import { Carousel, Slide } from "vue3-carousel";
 import "vue3-carousel/dist/carousel.css";

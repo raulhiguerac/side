@@ -112,14 +112,10 @@
               </p>
               <!-- Option cards (2, no 3) -->
               <div class="flex flex-col gap-4">
-                <button
+                <OptionCard
+                  :selected="user.accountType === 'person'"
                   @click="user.accountType = 'person'"
-                  class="w-full flex items-center gap-4 p-5 rounded-xl border-2 transition-all"
-                  :class="
-                    user.accountType === 'person'
-                      ? 'bg-brand-primary-light border-brand-primary'
-                      : 'bg-white border-brand-border hover:border-brand-muted'
-                  "
+                  class="flex w-full items-center gap-4 p-5"
                 >
                   <!-- Icono casa -->
                   <div
@@ -184,15 +180,11 @@
                     <circle cx="12" cy="12" r="10" />
                     <path d="m9 12 2 2 4-4" />
                   </svg>
-                </button>
-                <button
+                </OptionCard>
+                <OptionCard
+                  :selected="user.accountType === 'organization'"
                   @click="user.accountType = 'organization'"
-                  class="w-full flex items-center gap-4 p-5 rounded-xl border-2 transition-all"
-                  :class="
-                    user.accountType === 'organization'
-                      ? 'bg-brand-primary-light border-brand-primary'
-                      : 'bg-white border-brand-border hover:border-brand-muted'
-                  "
+                  class="flex w-full items-center gap-4 p-5"
                 >
                   <!-- Icono casa -->
                   <div
@@ -259,17 +251,17 @@
                     <circle cx="12" cy="12" r="10" />
                     <path d="m9 12 2 2 4-4" />
                   </svg>
-                </button>
+                </OptionCard>
               </div>
               <!-- Botón continuar -->
-              <PrimaryButton
+              <BaseButton
                 @click="nextStep"
-                size="lg"
+                size="xl"
                 :disabled="!user.accountType"
-                class="w-full"
+                block
               >
                 Continuar registro
-              </PrimaryButton>
+              </BaseButton>
               <!-- Paragraph abajo -->
               <p class="text-brand-placeholder text-xs text-center">
                 Sin tarjeta de crédito · Puedes cambiar esto más adelante
@@ -328,21 +320,17 @@
 
               <!-- Botones -->
               <div class="flex flex-col gap-3 mt-8">
-                <button
-                  @click="step--"
-                  type="button"
-                  class="w-full h-12 rounded-xl font-semibold bg-gray-400 hover:bg-gray-500 text-white transition-all"
-                >
+                <BaseButton variant="secondary" size="xl" block @click="step--">
                   ← Volver
-                </button>
-                <PrimaryButton
+                </BaseButton>
+                <BaseButton
                   @click="nextStep"
-                  size="lg"
+                  size="xl"
                   :disabled="!user.name || !user.lastName || !user.phone"
-                  class="w-full"
+                  block
                 >
                   Siguiente
-                </PrimaryButton>
+                </BaseButton>
               </div>
             </div>
             <div v-if="step === 3" class="flex flex-col flex-1">
@@ -455,25 +443,21 @@
 
               <!-- Botones -->
               <div class="flex flex-col gap-2 mt-3">
-                <button
-                  @click="step--"
-                  type="button"
-                  class="w-full h-10 rounded-xl font-semibold bg-gray-400 hover:bg-gray-500 text-white transition-all text-sm"
-                >
+                <BaseButton variant="secondary" size="xl" block @click="step--">
                   ← Volver
-                </button>
+                </BaseButton>
                 <!-- Botón finalizar -->
-                <PrimaryButton
+                <BaseButton
                   @click="registerUser"
-                  size="lg"
+                  size="xl"
                   :disabled="
                     !user.email || !user.password || user.password.length < 8
                   "
                   :loading="isLoading"
-                  class="w-full"
+                  block
                 >
                   Finalizar registro
-                </PrimaryButton>
+                </BaseButton>
 
                 <!-- Registro con Google: vuelve con Keycloak (ADR-0004). -->
               </div>
@@ -486,11 +470,12 @@
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
+import OptionCard from "@/components/shared/OptionCard.vue";
 /** Registro en 3 pasos: tipo de cuenta, datos personales y credenciales. */
 import { ref } from "vue";
 import router from "@/router";
 import { useAuthStore } from "@/stores/auth";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 // 🔌 Conectamos con el store de autenticación
 const authStore = useAuthStore();

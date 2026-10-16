@@ -28,19 +28,13 @@
       </div>
 
       <div class="flex gap-2 shrink-0">
-        <PrimaryButton>
-          <MessageCircle class="w-4 h-4" /> WhatsApp
-        </PrimaryButton>
-        <button
-          class="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-brand-border text-brand-text text-sm font-medium hover:bg-brand-primary-light transition"
-        >
+        <BaseButton> <MessageCircle class="w-4 h-4" /> WhatsApp </BaseButton>
+        <BaseButton variant="secondary">
           <MessageSquare class="w-4 h-4" /> Mensaje
-        </button>
-        <button
-          class="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-brand-border text-brand-text text-sm font-medium hover:bg-brand-primary-light transition"
-        >
+        </BaseButton>
+        <BaseButton variant="secondary">
           <Phone class="w-4 h-4" /> Llamar
-        </button>
+        </BaseButton>
       </div>
     </div>
 
@@ -73,6 +67,7 @@
 </template>
 
 <script setup lang="ts">
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import * as usersApi from "@/api/users";
@@ -87,7 +82,6 @@ import { usePagination } from "@/composables/shared/usePagination";
 import { PAGE_SIZE } from "@/constants/pagination";
 import type { CurrentUserProfileOut } from "@/types/users/profile";
 import type { PropertyCard as PropertyCardData } from "@/types/feed/cards";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { logger } from "@/utils/logger";
 
 const router = useRouter();

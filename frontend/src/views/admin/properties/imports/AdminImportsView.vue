@@ -1,13 +1,10 @@
 <template>
   <div>
     <div class="mb-6 flex justify-end">
-      <button
-        @click="isBulkModalOpen = true"
-        class="bg-brand-primary flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-      >
+      <BaseButton @click="isBulkModalOpen = true" class="whitespace-nowrap">
         <Upload class="h-4 w-4" />
         Importar CSV
-      </button>
+      </BaseButton>
     </div>
 
     <AdminSplitView :error="error">
@@ -50,6 +47,7 @@
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { computed, ref } from "vue";
 import { Upload } from "@lucide/vue";
 import AdminPaginationFooter from "@/components/admin/shared/AdminPaginationFooter.vue";

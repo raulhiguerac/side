@@ -40,14 +40,10 @@
             </p>
           </div>
           <div class="flex flex-col gap-6 my-auto py-6">
-            <button
+            <OptionCard
+              :selected="form.property_type === 'apartment'"
               @click="form.property_type = 'apartment'"
-              class="w-full flex items-center justify-center gap-4 px-6 py-7 rounded-2xl border-2 transition-all duration-200"
-              :class="
-                form.property_type === 'apartment'
-                  ? 'border-brand-primary bg-brand-primary-light'
-                  : 'border-brand-divider hover:border-brand-border'
-              "
+              class="flex w-full items-center justify-center gap-4 px-6 py-7"
             >
               <svg
                 class="w-6 h-6 flex-shrink-0"
@@ -77,15 +73,11 @@
                 "
                 >Apartamento</span
               >
-            </button>
-            <button
+            </OptionCard>
+            <OptionCard
+              :selected="form.property_type === 'house'"
               @click="form.property_type = 'house'"
-              class="w-full flex items-center justify-center gap-4 px-6 py-7 rounded-2xl border-2 transition-all duration-200"
-              :class="
-                form.property_type === 'house'
-                  ? 'border-brand-primary bg-brand-primary-light'
-                  : 'border-brand-divider hover:border-brand-border'
-              "
+              class="flex w-full items-center justify-center gap-4 px-6 py-7"
             >
               <svg
                 class="w-6 h-6 flex-shrink-0"
@@ -113,7 +105,7 @@
                 "
                 >Casa</span
               >
-            </button>
+            </OptionCard>
           </div>
         </div>
 
@@ -216,19 +208,15 @@
               >Estrato</label
             >
             <div class="flex gap-2">
-              <button
+              <ChoiceChip
                 v-for="s in [1, 2, 3, 4, 5, 6]"
                 :key="s"
+                :selected="form.stratum === s"
                 @click="form.stratum = s"
-                class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
-                :class="
-                  form.stratum === s
-                    ? 'bg-brand-primary text-white shadow-sm'
-                    : 'border border-brand-border text-brand-muted hover:border-brand-primary hover:text-brand-primary'
-                "
+                class="flex-1"
               >
                 {{ s }}
-              </button>
+              </ChoiceChip>
             </div>
           </div>
         </div>
@@ -290,47 +278,31 @@
     <div
       class="flex items-center justify-between mt-auto pt-4 border-t border-brand-divider"
     >
-      <button
-        v-if="step > 1"
-        @click="step--"
-        class="text-sm text-brand-muted font-semibold hover:text-brand-text transition-colors"
-      >
+      <BaseButton variant="ghost" v-if="step > 1" @click="step--">
         ← Atrás
-      </button>
+      </BaseButton>
       <span v-else />
 
-      <button
+      <BaseButton
         v-if="step < 3"
+        size="lg"
         @click="nextStep"
         :disabled="!canAdvance"
-        class="px-8 py-3 rounded-full text-sm font-semibold transition-all duration-200"
-        :class="
-          canAdvance
-            ? 'bg-brand-primary text-white hover:bg-green-500 shadow-sm'
-            : 'bg-brand-divider text-brand-placeholder cursor-not-allowed'
-        "
       >
         Continuar
-      </button>
+      </BaseButton>
 
-      <button
-        v-else
-        @click="onSubmit"
-        :disabled="!canAdvance"
-        class="px-8 py-3 rounded-full text-sm font-semibold transition-all duration-200"
-        :class="
-          canAdvance
-            ? 'bg-brand-primary text-white hover:bg-green-500 shadow-sm'
-            : 'bg-brand-divider text-brand-placeholder cursor-not-allowed'
-        "
-      >
+      <BaseButton size="lg" v-else @click="onSubmit" :disabled="!canAdvance">
         Ver avalúo →
-      </button>
+      </BaseButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import BaseButton from "@/components/shared/BaseButton.vue";
+import ChoiceChip from "@/components/shared/ChoiceChip.vue";
+import OptionCard from "@/components/shared/OptionCard.vue";
 import { ref, useTemplateRef, watch } from "vue";
 import { useAvmForm } from "@/composables/avm/useAvmForm";
 import type { AvmSubmitEvent } from "@/types/avm/form";

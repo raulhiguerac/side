@@ -116,27 +116,22 @@
     </div>
 
     <div class="mt-4 flex items-center justify-end gap-2">
-      <button
-        type="button"
+      <BaseButton
+        variant="ghost"
         :disabled="!hasChanges || saving"
-        class="text-brand-muted hover:bg-brand-bg rounded-xl px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40"
         @click="reset"
       >
         Descartar
-      </button>
-      <PrimaryButton
-        type="button"
-        :disabled="!canSave"
-        :loading="saving"
-        @click="onSave"
-      >
+      </BaseButton>
+      <BaseButton :disabled="!canSave" :loading="saving" @click="onSave">
         {{ saving ? "Guardando…" : "Guardar" }}
-      </PrimaryButton>
+      </BaseButton>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { computed, ref, watch } from "vue";
 import {
   LISTING_STATUS_LABELS,
@@ -147,7 +142,6 @@ import type {
   ListingStatus,
   VerificationStatus,
 } from "@/types/properties/base";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 /** Acumula los cambios y los emite juntos: cambiar la verificación saca la fila del filtro. */
 const props = withDefaults(

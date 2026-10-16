@@ -41,13 +41,12 @@
             </p>
 
             <div class="flex justify-end">
-              <button
-                type="button"
-                class="rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
+              <BaseButton
+                variant="danger-soft"
                 @click="pendingRemovalId = property.id"
               >
                 Quitar
-              </button>
+              </BaseButton>
             </div>
           </div>
         </template>
@@ -64,6 +63,7 @@
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { onMounted, ref, watch } from "vue";
 import AdminPaginationFooter from "@/components/admin/shared/AdminPaginationFooter.vue";
 import AdminSplitView from "@/components/admin/shared/AdminSplitView.vue";

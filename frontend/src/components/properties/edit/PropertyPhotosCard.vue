@@ -31,34 +31,34 @@
     <div class="grid grid-cols-[20%_25%_10%_25%_20%] mt-4 items-start">
       <div></div>
       <div class="flex flex-col items-center gap-1.5">
-        <PrimaryButton
+        <BaseButton
           @click="emit('add-photos')"
           :disabled="imagesAllowed === 0"
-          class="w-full"
+          block
         >
           Agregar fotos
-        </PrimaryButton>
+        </BaseButton>
         <p v-if="imagesAllowed === 0" class="text-xs text-red-600">
           Primero debes borrar algunas
         </p>
       </div>
       <div></div>
-      <button
+      <BaseButton
+        variant="danger-soft"
         @click="emit('delete-photos')"
         :disabled="!allImages.length"
-        class="px-5 py-2.5 rounded-xl border-2 border-red-500 text-sm font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
       >
         Eliminar
-      </button>
+      </BaseButton>
       <div></div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { computed } from "vue";
 import PropertyPhotoGrid from "@/components/properties/photos/PropertyPhotoGrid.vue";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { LIMITS } from "@/config";
 import type { PropertyDetail } from "@/types/properties/detail";
 

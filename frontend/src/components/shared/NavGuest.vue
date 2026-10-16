@@ -23,12 +23,7 @@
     </div>
 
     <!-- Botón Registrarse (siempre visible) -->
-    <router-link
-      to="/register"
-      class="bg-brand-primary hover:bg-green-600 text-white text-xs sm:text-sm font-semibold px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg transition-all"
-    >
-      Registrarse
-    </router-link>
+    <BaseButton to="/register" size="sm">Registrarse</BaseButton>
 
     <!-- Menú móvil -->
     <div class="sm:hidden relative">
@@ -94,6 +89,7 @@
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref } from "vue";
 
 const isMenuOpen = ref(false);

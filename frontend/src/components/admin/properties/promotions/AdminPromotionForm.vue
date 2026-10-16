@@ -31,21 +31,15 @@
         </label>
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
-            <button
+            <ChoiceChip
               v-for="preset in DAY_PRESETS"
               :key="preset"
-              type="button"
+              :selected="days === preset"
               :disabled="saving"
-              class="rounded-xl border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
-              :class="
-                days === preset
-                  ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
-                  : 'border-brand-border text-brand-muted hover:text-brand-text'
-              "
               @click="days = preset"
             >
               {{ preset }}d
-            </button>
+            </ChoiceChip>
             <input
               id="promotion-days"
               v-model.number="days"
@@ -91,23 +85,19 @@
     </div>
 
     <div class="mt-4 flex items-center justify-end">
-      <PrimaryButton
-        type="button"
-        :disabled="!canSubmit"
-        :loading="saving"
-        @click="onSubmit"
-      >
+      <BaseButton :disabled="!canSubmit" :loading="saving" @click="onSubmit">
         {{ saving ? "Promocionando…" : "Promocionar" }}
-      </PrimaryButton>
+      </BaseButton>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
+import ChoiceChip from "@/components/shared/ChoiceChip.vue";
 import { computed, ref, watch } from "vue";
 import { formatShortDate } from "@/utils/date";
 import type { PromotionPayload } from "@/types/admin/promotions";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 // No llama a la API: emite duración y prioridad.
 const props = withDefaults(

@@ -190,24 +190,20 @@
             <span class="text-brand-placeholder">(opcional)</span></label
           >
           <div class="flex gap-1.5">
-            <button
+            <ChoiceChip
               v-for="s in [1, 2, 3, 4, 5, 6]"
               :key="s"
+              :selected="form.stratum === s"
               @click="
                 emit('update:form', {
                   ...form,
                   stratum: form.stratum === s ? null : s,
                 })
               "
-              :class="[
-                'flex-1 py-2.5 rounded-xl border-2 text-xs font-bold transition-all duration-200',
-                form.stratum === s
-                  ? 'border-brand-primary bg-brand-primary text-white'
-                  : 'border-brand-border text-brand-muted hover:border-brand-primary/40',
-              ]"
+              class="flex-1"
             >
               {{ s }}
-            </button>
+            </ChoiceChip>
           </div>
         </div>
 
@@ -268,6 +264,7 @@
 </template>
 
 <script setup lang="ts">
+import ChoiceChip from "@/components/shared/ChoiceChip.vue";
 import { ref, watch } from "vue";
 import { DollarSign, Car, Layers, Calendar } from "@lucide/vue";
 import type {

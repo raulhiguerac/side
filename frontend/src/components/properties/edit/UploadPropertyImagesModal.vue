@@ -11,30 +11,27 @@
     <p v-if="error" class="text-sm text-red-600 mt-3">{{ error }}</p>
 
     <div class="flex gap-3 mt-6">
-      <button
-        @click="close"
-        class="flex-1 py-3 rounded-xl text-sm font-semibold text-brand-text hover:bg-brand-bg transition-colors"
-      >
+      <BaseButton variant="ghost" size="lg" @click="close" class="flex-1">
         Cancelar
-      </button>
-      <PrimaryButton
-        @click="handleUpload"
+      </BaseButton>
+      <BaseButton
         size="lg"
+        @click="handleUpload"
         :disabled="selectedFiles.length === 0"
         :loading="loading"
         class="flex-1"
       >
         {{ loading ? "Subiendo..." : "Subir fotos" }}
-      </PrimaryButton>
+      </BaseButton>
     </div>
   </BaseModal>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref, watch } from "vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
 import StepImagenes from "@/components/properties/create/StepImagenes.vue";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { useImageUpload } from "@/composables/properties/useImageUpload";
 
 const props = defineProps<{
