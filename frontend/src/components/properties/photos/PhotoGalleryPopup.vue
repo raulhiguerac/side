@@ -6,6 +6,7 @@
   >
     <div class="relative flex items-center">
       <button
+        aria-label="Foto anterior"
         class="absolute left-0 z-10 w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center"
         @click="
           currentSlide =
@@ -26,6 +27,7 @@
       </Carousel>
 
       <button
+        aria-label="Foto siguiente"
         class="absolute right-0 z-10 w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center"
         @click="
           currentSlide =

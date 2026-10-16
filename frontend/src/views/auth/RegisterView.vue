@@ -379,6 +379,11 @@
                       class="w-full h-12 px-4 pr-12 bg-white border-[1.5px] border-brand-border rounded-[10px] text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-brand-primary transition-colors"
                     />
                     <button
+                      :aria-label="
+                        showPassword
+                          ? 'Ocultar contraseña'
+                          : 'Mostrar contraseña'
+                      "
                       type="button"
                       @click="showPassword = !showPassword"
                       class="absolute right-4 top-1/2 -translate-y-1/2 text-brand-placeholder hover:text-brand-muted transition-colors"

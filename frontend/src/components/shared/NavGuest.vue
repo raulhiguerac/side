@@ -33,6 +33,8 @@
     <!-- Menú móvil -->
     <div class="sm:hidden relative">
       <button
+        :aria-label="isMenuOpen ? 'Cerrar menú' : 'Abrir menú'"
+        :aria-expanded="isMenuOpen"
         @click="isMenuOpen = !isMenuOpen"
         class="text-white/80 hover:text-white transition-colors p-1"
       >

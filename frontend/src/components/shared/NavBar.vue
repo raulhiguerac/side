@@ -1,5 +1,5 @@
 <template>
-  <nav class="bg-brand-dark w-full relative z-50">
+  <nav class="bg-brand-dark w-full relative z-50 p-[30px]">
     <PageContainer class="flex items-center justify-between py-1">
       <!-- Logo -->
       <router-link to="/" class="flex items-center">

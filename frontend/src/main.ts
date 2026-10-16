@@ -6,7 +6,7 @@ import VueCookies from "vue3-cookies";
 import Vueform from "@vueform/vueform";
 import vueformConfig from "./../vueform.config";
 import "@vueform/multiselect/themes/default.css";
-import "./assets/tailwind.css";
+import "leaflet/dist/leaflet.css";
 import "./main.css";
 
 const pinia = createPinia();

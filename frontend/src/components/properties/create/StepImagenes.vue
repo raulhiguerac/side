@@ -53,6 +53,7 @@
         />
 
         <button
+          aria-label="Quitar foto"
           @click.stop="removeFile(i)"
           class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white shadow border border-brand-border flex items-center justify-center hover:bg-red-50 transition-colors"
         >

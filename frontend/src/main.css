@@ -36,3 +36,45 @@
     transform: scale(1.15);
   }
 }
+
+@layer components {
+  gmp-place-autocomplete {
+    color-scheme: light;
+    --gmp-color-surface: #ffffff;
+    --gmp-color-surface-variant: #ffffff;
+    --gmp-color-surface-container: #ffffff;
+    --gmp-color-surface-container-low: #ffffff;
+    --gmp-color-surface-container-high: #ffffff;
+    --gmp-color-surface-container-highest: #ffffff;
+    --gmp-color-on-surface: theme("colors.brand.text");
+    --gmp-color-on-surface-variant: theme("colors.brand.muted");
+    --gmp-color-primary: theme("colors.brand.primary");
+    --gmp-color-on-primary: #ffffff;
+    --gmp-color-primary-container: theme("colors.brand.primary-light");
+    --gmp-color-on-primary-container: theme("colors.brand.text");
+    --gmp-color-secondary: theme("colors.brand.primary");
+    --gmp-color-on-secondary: #ffffff;
+    --gmp-color-secondary-container: theme("colors.brand.primary-light");
+    --gmp-color-on-secondary-container: theme("colors.brand.text");
+    --gmp-color-outline: theme("colors.brand.border");
+    --gmp-color-outline-variant: theme("colors.brand.divider");
+    background-color: #ffffff;
+    border: 1.5px solid theme("colors.brand.border");
+    border-radius: 0.75rem;
+    font-family: theme("fontFamily.sans");
+    font-size: 0.875rem;
+    width: 100%;
+  }
+
+  gmp-place-autocomplete:focus-within {
+    border-color: theme("colors.brand.primary");
+    outline: 2px solid theme("colors.brand.primary");
+    outline-offset: -1px;
+  }
+}
+
+/* Fuera de @layer: Tailwind purgaría la clase, que solo pone Leaflet en runtime.
+   Sus panes llevan z-index 400 y sin esto quedan sobre los modales (z-50). */
+.leaflet-container {
+  isolation: isolate;
+}
