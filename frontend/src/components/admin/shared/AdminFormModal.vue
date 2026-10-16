@@ -4,12 +4,15 @@
       <div
         :class="[
           'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl',
-          danger ? 'bg-red-100' : 'bg-brand-primary-light',
+          danger ? 'bg-brand-danger-light' : 'bg-brand-primary-light',
         ]"
       >
         <component
           :is="icon"
-          :class="['h-6 w-6', danger ? 'text-red-600' : 'text-brand-primary']"
+          :class="[
+            'h-6 w-6',
+            danger ? 'text-brand-danger' : 'text-brand-primary',
+          ]"
         />
       </div>
       <div class="min-w-0">

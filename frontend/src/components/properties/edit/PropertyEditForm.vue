@@ -9,20 +9,20 @@
     <div class="grid grid-cols-2 gap-3 mb-4">
       <div>
         <label class="block text-xs text-brand-muted mb-1.5"
-          >Precio <span class="text-red-500">*</span></label
+          >Precio <span class="text-brand-danger">*</span></label
         >
         <div class="relative">
           <DollarSign
             class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted"
           />
-          <input
+          <BaseInput
             :value="displayPrice"
             @focus="displayPrice = form.price ? String(form.price) : ''"
             @blur="displayPrice = formatMoney(form.price)"
             @input="onPriceInput"
             type="text"
             inputmode="numeric"
-            class="w-full border-2 border-brand-border rounded-xl pl-9 pr-3 py-2.5 text-sm text-brand-text focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
+            class="pl-9"
           />
         </div>
       </div>
@@ -35,7 +35,7 @@
           <DollarSign
             class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted"
           />
-          <input
+          <BaseInput
             :value="displayAdminFee"
             @focus="
               displayAdminFee = form.admin_fee ? String(form.admin_fee) : ''
@@ -44,7 +44,7 @@
             @input="onAdminFeeInput"
             type="text"
             inputmode="numeric"
-            class="w-full border-2 border-brand-border rounded-xl pl-9 pr-3 py-2.5 text-sm text-brand-text focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
+            class="pl-9"
           />
         </div>
       </div>
@@ -95,7 +95,7 @@
         Descripción
         <span class="normal-case font-normal">(opcional)</span>
       </label>
-      <textarea
+      <BaseTextarea
         :value="form.description"
         @input="
           emit('update:form', {
@@ -105,13 +105,14 @@
         "
         rows="6"
         maxlength="2000"
-        class="w-full border-2 border-brand-border rounded-xl px-4 py-3 text-sm text-brand-text resize-none focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
       />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import BaseInput from "@/components/shared/form/BaseInput.vue";
+import BaseTextarea from "@/components/shared/form/BaseTextarea.vue";
 import ChoiceChip from "@/components/shared/ChoiceChip.vue";
 import { ref, watch } from "vue";
 import { DollarSign } from "@lucide/vue";

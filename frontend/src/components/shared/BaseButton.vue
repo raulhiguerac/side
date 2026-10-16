@@ -45,13 +45,15 @@ withDefaults(
 );
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: "bg-brand-primary text-white hover:bg-brand-primary-dark",
+  primary:
+    "bg-brand-primary-strong text-white hover:bg-brand-primary-strong-hover",
   secondary:
     "border border-brand-border bg-white text-brand-text hover:bg-brand-bg",
   ghost: "text-brand-text hover:bg-brand-bg",
-  danger: "bg-red-500 text-white hover:bg-red-600",
-  "danger-soft": "border border-red-300 bg-white text-red-600 hover:bg-red-50",
-  link: "text-brand-primary-dark hover:underline",
+  danger: "bg-brand-danger text-white hover:bg-brand-danger-hover",
+  "danger-soft":
+    "border border-brand-danger-border bg-white text-brand-danger hover:bg-brand-danger-light",
+  link: "text-brand-primary-strong hover:underline",
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {

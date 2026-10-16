@@ -14,21 +14,20 @@
     <div class="mb-6 space-y-3">
       <div class="grid grid-cols-3 gap-3">
         <div v-for="field in ISO_FIELDS" :key="field.key">
-          <label
-            class="text-brand-text mb-1 block text-sm font-medium"
-            :for="`new-country-${field.key}`"
+          <FormField
+            :label="field.label"
+            :input-id="`new-country-${field.key}`"
           >
-            {{ field.label }}
-          </label>
-          <input
-            :id="`new-country-${field.key}`"
-            v-model="iso[field.key]"
-            type="text"
-            :maxlength="field.length"
-            :placeholder="field.placeholder"
-            :disabled="saving"
-            class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm uppercase transition-colors focus:outline-none disabled:opacity-50"
-          />
+            <BaseInput
+              :id="`new-country-${field.key}`"
+              v-model="iso[field.key]"
+              type="text"
+              :maxlength="field.length"
+              :placeholder="field.placeholder"
+              :disabled="saving"
+              class="uppercase"
+            />
+          </FormField>
         </div>
       </div>
 
@@ -49,6 +48,8 @@
 </template>
 
 <script lang="ts" setup>
+import FormField from "@/components/shared/form/FormField.vue";
+import BaseInput from "@/components/shared/form/BaseInput.vue";
 import { computed, reactive, watch } from "vue";
 import { Plus } from "@lucide/vue";
 import CountryFormFields from "@/components/admin/catalog/countries/widgets/CountryFormFields.vue";

@@ -6,7 +6,7 @@
       description="Elige un barrio de la tabla para ver su geometría."
     />
 
-    <p v-else-if="error" class="text-sm text-red-600">{{ error }}</p>
+    <p v-else-if="error" class="text-sm text-brand-danger">{{ error }}</p>
 
     <div v-else-if="loading && !detail" class="flex justify-center py-16">
       <BaseSpinner class="h-6 w-6 text-brand-primary" />

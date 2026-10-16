@@ -35,7 +35,7 @@
 
             <p
               v-if="removeError"
-              class="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600"
+              class="mb-3 rounded-xl border border-brand-danger-border bg-brand-danger-light px-3 py-2 text-sm text-brand-danger"
             >
               {{ removeError }}
             </p>

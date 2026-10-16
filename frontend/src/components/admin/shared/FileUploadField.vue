@@ -13,7 +13,7 @@
           v-if="requirement.accepted"
           class="text-brand-primary mt-0.5 h-4 w-4 shrink-0"
         />
-        <X v-else class="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+        <X v-else class="mt-0.5 h-4 w-4 shrink-0 text-brand-danger" />
         <span
           :class="requirement.accepted ? 'text-brand-text' : 'text-brand-muted'"
         >
@@ -29,7 +29,9 @@
       class="text-brand-muted block w-full text-sm"
       @change="onChange"
     />
-    <p v-if="localError" class="mt-2 text-xs text-red-600">{{ localError }}</p>
+    <p v-if="localError" class="mt-2 text-xs text-brand-danger">
+      {{ localError }}
+    </p>
   </div>
 </template>
 

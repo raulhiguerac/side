@@ -24,7 +24,7 @@
         <div class="flex flex-col sm:flex-row gap-3">
           <router-link
             to="/login"
-            class="w-full sm:w-56 text-center bg-brand-primary text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-green-500 transition-all duration-200 shadow-md"
+            class="w-full sm:w-56 text-center bg-brand-primary text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-brand-primary-dark transition-all duration-200 shadow-md"
           >
             Avalúa tu propiedad gratis
           </router-link>
@@ -256,7 +256,7 @@
       <div class="flex flex-col sm:flex-row gap-4">
         <router-link
           to="/register"
-          class="w-full sm:w-56 text-center bg-brand-primary text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-green-500 transition-all duration-200 shadow-md"
+          class="w-full sm:w-56 text-center bg-brand-primary text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-brand-primary-dark transition-all duration-200 shadow-md"
         >
           Empezar gratis
         </router-link>

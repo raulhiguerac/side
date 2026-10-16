@@ -2,7 +2,7 @@
   <BaseModal :model-value="isOpen" @update:model-value="$emit('close')">
     <div class="flex items-center gap-4 mb-4">
       <div
-        class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center"
+        class="w-12 h-12 bg-brand-danger-light rounded-xl flex items-center justify-center"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -12,7 +12,7 @@
           fill="none"
           stroke="currentColor"
           stroke-width="2"
-          class="text-red-600"
+          class="text-brand-danger"
         >
           <path d="M3 6h18" />
           <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />

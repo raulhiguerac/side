@@ -67,9 +67,9 @@ export function usePropertyDetail(property: Ref<PropertyDetail | null>) {
 
   const statusStyle = computed(() => {
     const map: Record<string, string> = {
-      active: "bg-green-100 text-green-700",
+      active: "bg-brand-success-light text-brand-success",
       draft: "bg-gray-100 text-gray-500",
-      inactive: "bg-yellow-100 text-yellow-700",
+      inactive: "bg-brand-warning-light text-brand-warning",
       sold: "bg-blue-100 text-blue-700",
       rented: "bg-purple-100 text-purple-700",
     };
@@ -88,10 +88,10 @@ export function usePropertyDetail(property: Ref<PropertyDetail | null>) {
 
   const verificationStyle = computed(() => {
     const map: Record<string, string> = {
-      verified: "bg-brand-primary-light text-green-700",
+      verified: "bg-brand-primary-light text-brand-success",
       unverified: "bg-gray-100 text-gray-500",
-      pending: "bg-yellow-100 text-yellow-700",
-      rejected: "bg-red-100 text-red-600",
+      pending: "bg-brand-warning-light text-brand-warning",
+      rejected: "bg-brand-danger-light text-brand-danger",
     };
     return map[property.value?.verification_status ?? ""] ?? "";
   });

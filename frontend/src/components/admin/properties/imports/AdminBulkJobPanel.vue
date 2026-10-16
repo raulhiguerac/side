@@ -38,7 +38,7 @@
             <dd
               :class="[
                 'font-semibold tabular-nums',
-                job.error_count ? 'text-red-600' : 'text-brand-text',
+                job.error_count ? 'text-brand-danger' : 'text-brand-text',
               ]"
             >
               {{ formatNumber(job.error_count) }}
@@ -67,7 +67,7 @@
 
         <p
           v-else-if="error"
-          class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600"
+          class="rounded-xl border border-brand-danger-border bg-brand-danger-light px-3 py-2 text-sm text-brand-danger"
         >
           {{ error }}
         </p>

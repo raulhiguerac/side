@@ -22,97 +22,77 @@
 
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label
-            class="text-brand-text mb-1 block text-sm font-medium"
-            for="new-neighborhood-code"
-          >
-            Código
-          </label>
-          <input
-            id="new-neighborhood-code"
-            placeholder="Obligatorio"
-            v-model="code"
-            type="text"
-            maxlength="30"
-            :disabled="saving"
-            class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none disabled:opacity-50"
-          />
+          <FormField label="Código" input-id="new-neighborhood-code">
+            <BaseInput
+              id="new-neighborhood-code"
+              placeholder="Obligatorio"
+              v-model="code"
+              type="text"
+              maxlength="30"
+              :disabled="saving"
+            />
+          </FormField>
         </div>
         <div>
-          <label
-            class="text-brand-text mb-1 block text-sm font-medium"
-            for="new-neighborhood-postal-code"
+          <FormField
+            label="Código postal"
+            input-id="new-neighborhood-postal-code"
           >
-            Código postal
-          </label>
-          <input
-            id="new-neighborhood-postal-code"
-            v-model="postalCode"
-            type="text"
-            maxlength="20"
-            placeholder="Opcional"
-            :disabled="saving"
-            class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none disabled:opacity-50"
-          />
+            <BaseInput
+              id="new-neighborhood-postal-code"
+              v-model="postalCode"
+              type="text"
+              maxlength="20"
+              placeholder="Opcional"
+              :disabled="saving"
+            />
+          </FormField>
         </div>
       </div>
 
       <div>
-        <label
-          class="text-brand-text mb-1 block text-sm font-medium"
-          for="new-neighborhood-name"
-        >
-          Nombre
-        </label>
-        <input
-          id="new-neighborhood-name"
-          placeholder="Obligatorio"
-          v-model="name"
-          type="text"
-          maxlength="150"
-          :disabled="saving"
-          class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none disabled:opacity-50"
-        />
+        <FormField label="Nombre" input-id="new-neighborhood-name">
+          <BaseInput
+            id="new-neighborhood-name"
+            placeholder="Obligatorio"
+            v-model="name"
+            type="text"
+            maxlength="150"
+            :disabled="saving"
+          />
+        </FormField>
       </div>
 
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label
-            class="text-brand-text mb-1 block text-sm font-medium"
-            for="new-neighborhood-latitude"
-          >
-            Latitud
-          </label>
-          <input
-            id="new-neighborhood-latitude"
-            placeholder="Obligatoria, entre -90 y 90"
-            v-model.number="latitude"
-            type="number"
-            step="any"
-            min="-90"
-            max="90"
-            :disabled="saving"
-            class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm tabular-nums transition-colors focus:outline-none disabled:opacity-50"
-          />
+          <FormField label="Latitud" input-id="new-neighborhood-latitude">
+            <BaseInput
+              id="new-neighborhood-latitude"
+              placeholder="Obligatoria, entre -90 y 90"
+              v-model.number="latitude"
+              type="number"
+              step="any"
+              min="-90"
+              max="90"
+              :disabled="saving"
+              class="tabular-nums"
+            />
+          </FormField>
         </div>
         <div>
-          <label
-            class="text-brand-text mb-1 block text-sm font-medium"
-            for="new-neighborhood-longitude"
-          >
-            Longitud
-          </label>
-          <input
-            id="new-neighborhood-longitude"
-            placeholder="Obligatoria, entre -180 y 180"
-            v-model.number="longitude"
-            type="number"
-            step="any"
-            min="-180"
-            max="180"
-            :disabled="saving"
-            class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm tabular-nums transition-colors focus:outline-none disabled:opacity-50"
-          />
+          <FormField label="Longitud" input-id="new-neighborhood-longitude">
+            <BaseInput
+              id="new-neighborhood-longitude"
+              placeholder="Obligatoria, entre -180 y 180"
+              v-model.number="longitude"
+              type="number"
+              step="any"
+              min="-180"
+              max="180"
+              :disabled="saving"
+              class="tabular-nums"
+            />
+          </FormField>
         </div>
       </div>
     </div>
@@ -120,6 +100,8 @@
 </template>
 
 <script lang="ts" setup>
+import FormField from "@/components/shared/form/FormField.vue";
+import BaseInput from "@/components/shared/form/BaseInput.vue";
 import { computed, ref, watch } from "vue";
 import { Plus } from "@lucide/vue";
 import AdminFormModal from "@/components/admin/shared/AdminFormModal.vue";

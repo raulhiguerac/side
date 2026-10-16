@@ -9,10 +9,12 @@
     </div>
 
     <!-- Danger Zone -->
-    <div class="bg-white rounded-2xl border border-red-200 p-6 md:p-8">
+    <div
+      class="bg-white rounded-2xl border border-brand-danger-border p-6 md:p-8"
+    >
       <div class="flex items-start gap-4 mb-6">
         <div
-          class="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0"
+          class="w-12 h-12 bg-brand-danger-light rounded-xl flex items-center justify-center flex-shrink-0"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -24,7 +26,7 @@
             stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
-            class="text-red-500"
+            class="text-brand-danger"
           >
             <path
               d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
@@ -34,7 +36,7 @@
           </svg>
         </div>
         <div>
-          <h3 class="text-red-600 font-semibold">Zona de peligro</h3>
+          <h3 class="text-brand-danger font-semibold">Zona de peligro</h3>
           <p class="text-brand-muted text-sm">
             Estas acciones son irreversibles. Procede con cuidado.
           </p>
@@ -64,12 +66,12 @@
       </div>
 
       <!-- Delete Account: deshabilitado, el backend no implementa el borrado de cuentas.
-      <div class="border border-red-200 rounded-xl p-5 bg-red-50/50">
+      <div class="border border-brand-danger-border rounded-xl p-5 bg-brand-danger-light/50">
         <div
           class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
         >
           <div>
-            <h4 class="text-red-600 font-semibold">
+            <h4 class="text-brand-danger font-semibold">
               Eliminar cuenta permanentemente
             </h4>
             <p class="text-brand-muted text-sm">
@@ -98,7 +100,7 @@
       <div class="bg-white rounded-2xl max-w-md w-full p-6">
         <div class="flex items-center gap-4 mb-4">
           <div
-            class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center"
+            class="w-12 h-12 bg-brand-warning-light rounded-xl flex items-center justify-center"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -108,7 +110,7 @@
               fill="none"
               stroke="currentColor"
               stroke-width="2"
-              class="text-yellow-600"
+              class="text-brand-warning"
             >
               <circle cx="12" cy="12" r="10" />
               <line x1="12" x2="12" y1="8" y2="12" />
@@ -129,11 +131,11 @@
           <label class="text-brand-text text-sm font-semibold">
             Escribe "DESACTIVAR" para confirmar
           </label>
-          <input
+          <BaseInput
+            size="lg"
             v-model="deactivateConfirm"
             type="text"
             placeholder="DESACTIVAR"
-            class="w-full h-12 px-4 bg-white border-[1.5px] border-brand-border rounded-xl text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-yellow-500 transition-colors"
           />
         </div>
 
@@ -172,7 +174,7 @@
       <div class="bg-white rounded-2xl max-w-md w-full p-6">
         <div class="flex items-center gap-4 mb-4">
           <div
-            class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center"
+            class="w-12 h-12 bg-brand-danger-light rounded-xl flex items-center justify-center"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -182,7 +184,7 @@
               fill="none"
               stroke="currentColor"
               stroke-width="2"
-              class="text-red-600"
+              class="text-brand-danger"
             >
               <path d="M3 6h18" />
               <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
@@ -192,25 +194,25 @@
             </svg>
           </div>
           <div>
-            <h3 class="text-red-600 font-bold text-lg">Eliminar cuenta</h3>
+            <h3 class="text-brand-danger font-bold text-lg">Eliminar cuenta</h3>
           </div>
         </div>
 
         <p class="text-brand-muted text-sm mb-4">
           Esta acción es
-          <strong class="text-red-600">permanente e irreversible</strong>. Se
+          <strong class="text-brand-danger">permanente e irreversible</strong>. Se
           eliminarán:
         </p>
 
         <ul class="text-brand-muted text-sm mb-6 space-y-1">
           <li class="flex items-center gap-2">
-            <span class="text-red-500">•</span> Tu perfil y datos personales
+            <span class="text-brand-danger">•</span> Tu perfil y datos personales
           </li>
           <li class="flex items-center gap-2">
-            <span class="text-red-500">•</span> Todas tus propiedades publicadas
+            <span class="text-brand-danger">•</span> Todas tus propiedades publicadas
           </li>
           <li class="flex items-center gap-2">
-            <span class="text-red-500">•</span> Tu historial de actividad
+            <span class="text-brand-danger">•</span> Tu historial de actividad
           </li>
         </ul>
 
@@ -218,12 +220,12 @@
           <label class="text-brand-text text-sm font-semibold">
             Escribe "ELIMINAR MI CUENTA" para confirmar
           </label>
-          <input
-            v-model="deleteConfirm"
-            type="text"
-            placeholder="ELIMINAR MI CUENTA"
-            class="w-full h-12 px-4 bg-white border-[1.5px] border-red-300 rounded-xl text-sm text-brand-text placeholder:text-brand-placeholder focus:outline-none focus:border-red-500 transition-colors"
-          />
+          <BaseInput
+  size="lg"
+  v-model="deleteConfirm"
+  type="text"
+  placeholder="ELIMINAR MI CUENTA"
+/>
         </div>
 
         <div class="flex gap-3">
@@ -252,6 +254,7 @@
 </template>
 
 <script lang="ts" setup>
+import BaseInput from "@/components/shared/form/BaseInput.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref } from "vue";
 import FormMessage from "@/components/shared/FormMessage.vue";

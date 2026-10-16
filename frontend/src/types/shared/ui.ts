@@ -10,6 +10,8 @@ export type ButtonVariant =
   | "danger-soft"
   | "link";
 
+export type FieldSize = "md" | "lg";
+
 export type IconButtonSize = "xs" | "sm" | "md" | "lg";
 
 /** `surface`: círculo blanco sobre fotos; `plain`: sin fondo hasta el hover. */

@@ -11,7 +11,7 @@
         files.length ? 'py-6' : 'py-16',
         isDragging
           ? 'border-brand-primary bg-brand-primary-light'
-          : 'border-brand-border hover:border-brand-primary hover:bg-green-50',
+          : 'border-brand-border hover:border-brand-primary hover:bg-brand-success-light',
       ]"
     >
       <div class="flex flex-col items-center gap-2 pointer-events-none">

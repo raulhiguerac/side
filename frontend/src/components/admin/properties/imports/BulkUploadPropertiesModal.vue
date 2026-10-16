@@ -16,7 +16,7 @@
       class="block w-full text-sm text-brand-muted mb-4"
     />
 
-    <p v-if="error" class="text-red-500 text-sm mb-4">{{ error }}</p>
+    <p v-if="error" class="text-brand-danger text-sm mb-4">{{ error }}</p>
 
     <div class="flex justify-end gap-3">
       <BaseButton variant="ghost" :disabled="uploading" @click="close">

@@ -20,21 +20,16 @@
       />
 
       <div>
-        <label
-          class="text-brand-text mb-1 block text-sm font-medium"
-          for="new-division-code"
-        >
-          Código
-        </label>
-        <input
-          id="new-division-code"
-          v-model="code"
-          type="text"
-          maxlength="20"
-          placeholder="Obligatorio, p. ej. el código DANE"
-          :disabled="saving"
-          class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none disabled:opacity-50"
-        />
+        <FormField label="Código" input-id="new-division-code">
+          <BaseInput
+            id="new-division-code"
+            v-model="code"
+            type="text"
+            maxlength="20"
+            placeholder="Obligatorio, p. ej. el código DANE"
+            :disabled="saving"
+          />
+        </FormField>
       </div>
 
       <DivisionFormFields
@@ -49,6 +44,8 @@
 </template>
 
 <script lang="ts" setup>
+import FormField from "@/components/shared/form/FormField.vue";
+import BaseInput from "@/components/shared/form/BaseInput.vue";
 import { computed, reactive, ref, watch } from "vue";
 import { Plus } from "@lucide/vue";
 import DivisionFormFields from "@/components/admin/catalog/divisions/widgets/DivisionFormFields.vue";

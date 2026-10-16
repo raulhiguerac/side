@@ -8,7 +8,7 @@
       :has-existing-photos="hasExistingPhotos"
     />
 
-    <p v-if="error" class="text-sm text-red-600 mt-3">{{ error }}</p>
+    <p v-if="error" class="text-sm text-brand-danger mt-3">{{ error }}</p>
 
     <div class="flex gap-3 mt-6">
       <BaseButton variant="ghost" size="lg" @click="close" class="flex-1">

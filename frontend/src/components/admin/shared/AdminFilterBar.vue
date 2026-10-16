@@ -10,22 +10,20 @@
       >
         {{ filter.label }}
       </label>
-      <input
+      <BaseInput
         v-if="filter.type === 'search'"
         :id="`admin-filter-${filter.key}`"
         v-model="draft[filter.key]"
         type="search"
         :placeholder="filter.placeholder"
         :disabled="loading"
-        class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none disabled:opacity-50"
         @keydown.enter.prevent="apply"
       />
-      <select
+      <BaseSelect
         v-else
         :id="`admin-filter-${filter.key}`"
         v-model="draft[filter.key]"
         :disabled="loading || isBlocked(filter)"
-        class="border-brand-border text-brand-text focus:border-brand-primary w-full rounded-xl border px-3 py-2 text-sm transition-colors focus:outline-none disabled:opacity-50"
         @change="resetDependents(filter.key)"
       >
         <!-- Sin la opción vacía, filtrar una vez esconde el resto para siempre. -->
@@ -37,7 +35,7 @@
         >
           {{ label }}
         </option>
-      </select>
+      </BaseSelect>
     </div>
 
     <BaseButton
@@ -52,6 +50,8 @@
 </template>
 
 <script lang="ts" setup>
+import BaseInput from "@/components/shared/form/BaseInput.vue";
+import BaseSelect from "@/components/shared/form/BaseSelect.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 import { computed, ref, watch } from "vue";
 import type {

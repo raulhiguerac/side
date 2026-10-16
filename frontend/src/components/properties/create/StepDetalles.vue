@@ -23,7 +23,8 @@
             <DollarSign
               class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted"
             />
-            <input
+            <BaseInput
+              :invalid="attempted && !form.price"
               :value="displayPrice"
               @focus="displayPrice = form.price ? String(form.price) : ''"
               @blur="displayPrice = formatMoney(form.price)"
@@ -36,12 +37,7 @@
               type="text"
               inputmode="numeric"
               placeholder="320.000.000"
-              :class="[
-                'w-full border-2 rounded-xl pl-9 pr-3 py-2.5 text-sm text-brand-text focus:outline-none focus:ring-4 transition-all',
-                attempted && !form.price
-                  ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
-                  : 'border-brand-border focus:border-brand-primary focus:ring-brand-primary/10',
-              ]"
+              class="pl-9"
             />
           </div>
         </div>
@@ -54,7 +50,7 @@
             <DollarSign
               class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted"
             />
-            <input
+            <BaseInput
               :value="displayAdminFee"
               @focus="
                 displayAdminFee = form.admin_fee ? String(form.admin_fee) : ''
@@ -71,7 +67,7 @@
               type="text"
               inputmode="numeric"
               placeholder="250.000"
-              class="w-full border-2 border-brand-border rounded-xl pl-9 pr-3 py-2.5 text-sm text-brand-text focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
+              class="pl-9"
             />
           </div>
         </div>
@@ -93,7 +89,7 @@
             <Car
               class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted"
             />
-            <input
+            <BaseInput
               :value="form.parking_spots"
               @input="
                 emit('update:form', {
@@ -105,7 +101,7 @@
               min="0"
               step="1"
               placeholder="0"
-              class="w-full border-2 border-brand-border rounded-xl pl-9 pr-3 py-2.5 text-sm text-brand-text focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
+              class="pl-9"
             />
           </div>
         </div>
@@ -116,7 +112,7 @@
             class="block text-xs mb-1.5"
             :class="
               attempted && form.floor_number === null
-                ? 'text-red-500'
+                ? 'text-brand-danger'
                 : 'text-brand-muted'
             "
             >Número de piso</label
@@ -125,7 +121,8 @@
             <Layers
               class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted"
             />
-            <input
+            <BaseInput
+              :invalid="attempted && form.floor_number === null"
               :value="form.floor_number"
               @input="
                 emit('update:form', {
@@ -138,12 +135,7 @@
               min="0"
               step="1"
               placeholder="5"
-              :class="[
-                'w-full border-2 rounded-xl pl-9 pr-3 py-2.5 text-sm text-brand-text focus:outline-none focus:ring-4 transition-all',
-                attempted && form.floor_number === null
-                  ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
-                  : 'border-brand-border focus:border-brand-primary focus:ring-brand-primary/10',
-              ]"
+              class="pl-9"
             />
           </div>
         </div>
@@ -152,7 +144,7 @@
             class="block text-xs mb-1.5"
             :class="
               attempted && form.total_floors === null
-                ? 'text-red-500'
+                ? 'text-brand-danger'
                 : 'text-brand-muted'
             "
             >Total de pisos</label
@@ -161,7 +153,8 @@
             <Layers
               class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted"
             />
-            <input
+            <BaseInput
+              :invalid="attempted && form.total_floors === null"
               :value="form.total_floors"
               @input="
                 emit('update:form', {
@@ -174,12 +167,7 @@
               min="1"
               step="1"
               placeholder="2"
-              :class="[
-                'w-full border-2 rounded-xl pl-9 pr-3 py-2.5 text-sm text-brand-text focus:outline-none focus:ring-4 transition-all',
-                attempted && form.total_floors === null
-                  ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
-                  : 'border-brand-border focus:border-brand-primary focus:ring-brand-primary/10',
-              ]"
+              class="pl-9"
             />
           </div>
         </div>
@@ -216,7 +204,7 @@
             <Calendar
               class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted"
             />
-            <input
+            <BaseInput
               :value="form.year_built"
               @input="
                 emit('update:form', {
@@ -229,7 +217,7 @@
               min="1800"
               :max="new Date().getFullYear()"
               placeholder="2010"
-              class="w-full border-2 border-brand-border rounded-xl pl-9 pr-3 py-2.5 text-sm text-brand-text focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
+              class="pl-9"
             />
           </div>
         </div>
@@ -243,7 +231,7 @@
       >
         Descripción <span class="normal-case font-normal">(opcional)</span>
       </label>
-      <textarea
+      <BaseTextarea
         :value="form.description"
         @input="
           emit('update:form', {
@@ -254,7 +242,6 @@
         rows="4"
         maxlength="2000"
         placeholder="Describe la propiedad: materiales, vista, acabados, puntos de interés cercanos..."
-        class="w-full border-2 border-brand-border rounded-xl px-4 py-3 text-sm text-brand-text resize-none focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
       />
       <div class="text-right text-xs text-brand-muted mt-1">
         {{ form.description.length }} / 2000
@@ -264,6 +251,8 @@
 </template>
 
 <script setup lang="ts">
+import BaseInput from "@/components/shared/form/BaseInput.vue";
+import BaseTextarea from "@/components/shared/form/BaseTextarea.vue";
 import ChoiceChip from "@/components/shared/ChoiceChip.vue";
 import { ref, watch } from "vue";
 import { DollarSign, Car, Layers, Calendar } from "@lucide/vue";

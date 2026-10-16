@@ -10,5 +10,17 @@
   "placeholder": "#9CA3AF",
   "bg": "#F7F9F8",
   "border": "#D1D5DB",
-  "divider": "#E5E7EB"
+  "divider": "#E5E7EB",
+  "primary-strong": "#15803D",
+  "primary-strong-hover": "#166534",
+  "danger": "#DC2626",
+  "danger-hover": "#B91C1C",
+  "danger-light": "#FEF2F2",
+  "danger-border": "#FECACA",
+  "success": "#15803D",
+  "success-light": "#F0FDF4",
+  "success-border": "#BBF7D0",
+  "warning": "#D97706",
+  "warning-light": "#FFFBEB",
+  "warning-border": "#FDE68A"
 }
