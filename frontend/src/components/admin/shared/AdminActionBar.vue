@@ -4,6 +4,7 @@
       v-for="action in actions"
       :key="action.key"
       :variant="BUTTON_VARIANTS[action.variant ?? 'default']"
+      size="sm"
       :title="action.label"
       @click="$emit('action', action.key)"
       class="min-w-0"
