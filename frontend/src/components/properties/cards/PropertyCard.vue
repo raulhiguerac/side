@@ -21,6 +21,7 @@
 
       <!-- Favorito -->
       <button
+        aria-label="Guardar en favoritos"
         v-if="showFavorite"
         @click.stop="$emit('toggle-favorite', property.id)"
         class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"
@@ -155,6 +156,7 @@
           {{ property.status === "active" ? "Activa" : "Borrador" }}
         </span>
         <button
+          aria-label="Visible en el feed"
           type="button"
           role="switch"
           :aria-checked="property.status === 'active'"
@@ -187,6 +189,7 @@
           Editar
         </button>
         <button
+          aria-label="Eliminar propiedad"
           @click.stop="$emit('delete', property.id)"
           class="py-2 px-3 text-red-500 text-sm font-medium rounded-lg hover:bg-red-50 transition-colors"
         >
