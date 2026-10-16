@@ -14,22 +14,14 @@
     </template>
 
     <template #is_active="{ row }">
-      <span
-        :class="[
-          'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
-          row.is_active
-            ? 'bg-brand-primary-light text-green-700'
-            : 'bg-gray-100 text-brand-muted',
-        ]"
-      >
-        {{ row.is_active ? "Activo" : "Inactivo" }}
-      </span>
+      <AdminStatusBadge :active="row.is_active" />
     </template>
   </BaseTable>
 </template>
 
 <script setup lang="ts">
 import type { ColumnDef } from "@tanstack/vue-table";
+import AdminStatusBadge from "@/components/admin/shared/AdminStatusBadge.vue";
 import BaseTable from "@/components/shared/BaseTable.vue";
 import NeighborhoodSilhouette from "@/components/admin/catalog/neighborhoods/widgets/NeighborhoodSilhouette.vue";
 import type { NeighborhoodAdminRow } from "@/types/admin/catalog";

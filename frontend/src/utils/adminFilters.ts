@@ -31,3 +31,15 @@ export function sanitizeFilterQuery(
 
 export const toFilterOptions = (items: CatalogItem[]): AdminFilterOptions =>
   Object.fromEntries(items.map((item) => [item.id, item.name]));
+
+// Lo que el endpoint acepta de la URL; el resto (p. ej. el país de la cascada) no viaja.
+export function pickFilters<K extends string>(
+  source: Record<string, string>,
+  keys: readonly K[]
+): Partial<Record<K, string>> {
+  const picked: Partial<Record<K, string>> = {};
+  for (const key of keys) {
+    if (source[key]) picked[key] = source[key];
+  }
+  return picked;
+}
