@@ -53,28 +53,28 @@
         class="inline-flex items-center gap-1 bg-brand-primary-light text-brand-primary text-xs font-semibold px-3 py-1.5 rounded-full"
       >
         {{ cities.get(id) }}
-        <button
+        <IconButton
+          label="Quitar ciudad"
+          size="xs"
+          danger
           @click="removeCity(id)"
-          type="button"
-          class="ml-1 hover:text-red-500 font-bold"
+          class="ml-1"
         >
           ×
-        </button>
+        </IconButton>
       </span>
     </div>
     <div class="flex justify-center mt-6">
-      <button
-        @click="handleNext"
-        type="button"
-        class="w-3/5 bg-brand-primary text-white text-sm font-semibold py-2.5 rounded-full hover:bg-green-500 hover:shadow-md transition-all duration-200"
-      >
+      <BaseButton size="lg" @click="handleNext" class="w-3/5">
         Continuar
-      </button>
+      </BaseButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import BaseButton from "@/components/shared/BaseButton.vue";
+import IconButton from "@/components/shared/IconButton.vue";
 import { onMounted } from "vue";
 import Multiselect from "@vueform/multiselect";
 import { load, cities } from "@/composables/catalog/useCities";

@@ -16,37 +16,41 @@
           :alt="`Foto ${i + 1}`"
           class="w-full h-full object-cover rounded-xl border border-brand-divider"
         />
-        <button
-          aria-label="Marcar foto para eliminar"
+        <IconButton
+          label="Marcar foto para eliminar"
+          variant="surface"
+          size="sm"
+          danger
           @click="selectImage(image.id)"
-          class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white shadow border border-brand-border flex items-center justify-center hover:bg-red-50 transition-colors"
+          class="absolute right-1.5 top-1.5"
         >
           <Trash2 class="w-3.5 h-3.5 text-red-600" />
-        </button>
+        </IconButton>
       </div>
     </div>
 
     <p v-if="error" class="text-sm text-red-600 mt-3">{{ error }}</p>
 
     <div class="flex gap-3 mt-6">
-      <button
-        @click="close"
-        class="flex-1 py-3 rounded-xl text-sm font-semibold text-brand-text hover:bg-brand-bg transition-colors"
-      >
+      <BaseButton variant="ghost" size="lg" @click="close" class="flex-1">
         Cancelar
-      </button>
-      <button
+      </BaseButton>
+      <BaseButton
+        variant="danger"
+        size="lg"
         @click="handleDelete"
         :disabled="selectedIds.length === 0 || loading"
-        class="flex-1 py-3 bg-red-500 text-white rounded-xl text-sm font-semibold hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        class="flex-1"
       >
         {{ loading ? "Eliminando..." : `Eliminar (${selectedIds.length})` }}
-      </button>
+      </BaseButton>
     </div>
   </BaseModal>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
+import IconButton from "@/components/shared/IconButton.vue";
 import { ref, watch } from "vue";
 import { Trash2 } from "@lucide/vue";
 import BaseModal from "@/components/shared/BaseModal.vue";

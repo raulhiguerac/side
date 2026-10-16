@@ -10,20 +10,15 @@
     <div class="space-y-1.5">
       <div class="flex flex-col md:flex-row gap-3 md:gap-6">
         <div class="w-full md:w-1/2 flex gap-2 flex-wrap">
-          <button
+          <ChoiceChip
             v-for="p in profiles"
             :key="p.key"
-            :class="[
-              'flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors',
-              activeProfile === p.key
-                ? 'bg-brand-primary text-white border-brand-primary'
-                : 'bg-white text-brand-muted border-brand-border hover:border-brand-primary hover:text-brand-text',
-            ]"
+            :selected="activeProfile === p.key"
             @click="activeProfile = p.key"
           >
             <component :is="p.icon" :size="16" />
             <span>{{ p.label }}</span>
-          </button>
+          </ChoiceChip>
         </div>
         <div class="w-full md:w-1/2 flex justify-center">
           <MapLegend />
@@ -136,6 +131,7 @@
 </template>
 
 <script setup lang="ts">
+import ChoiceChip from "@/components/shared/ChoiceChip.vue";
 import { ref, onMounted, computed, watch, nextTick } from "vue";
 import { LPolygon } from "@vue-leaflet/vue-leaflet";
 import { ChevronDown } from "@lucide/vue";

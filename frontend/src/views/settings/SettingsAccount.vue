@@ -53,12 +53,13 @@
               iniciando sesión.
             </p>
           </div>
-          <button
+          <BaseButton
+            variant="danger-soft"
             @click="showDeactivateModal = true"
-            class="px-5 py-2.5 bg-white border-2 border-red-500 text-red-500 rounded-xl text-sm font-semibold hover:bg-red-50 transition-colors flex-shrink-0"
+            class="shrink-0"
           >
             Desactivar
-          </button>
+          </BaseButton>
         </div>
       </div>
 
@@ -76,12 +77,13 @@
               deshacer.
             </p>
           </div>
-          <button
-            @click="showDeleteModal = true"
-            class="px-5 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold hover:bg-red-600 transition-colors flex-shrink-0"
-          >
+          <BaseButton
+  variant="danger"
+  @click="showDeleteModal = true"
+  class="shrink-0"
+>
             Eliminar cuenta
-          </button>
+          </BaseButton>
         </div>
       </div>
       -->
@@ -140,24 +142,23 @@
         </FormMessage>
 
         <div class="flex gap-3">
-          <button
+          <BaseButton
+            variant="ghost"
+            size="lg"
             @click="closeDeactivateModal"
-            class="flex-1 py-3 rounded-xl text-sm font-semibold text-brand-text hover:bg-brand-bg transition-colors"
+            class="flex-1"
           >
             Cancelar
-          </button>
-          <button
+          </BaseButton>
+          <BaseButton
+            variant="danger"
+            size="lg"
             @click="deactivate"
             :disabled="deactivateConfirm !== 'DESACTIVAR' || deactivating"
-            class="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
-            :class="
-              deactivateConfirm === 'DESACTIVAR' && !deactivating
-                ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            "
+            class="flex-1"
           >
             {{ deactivating ? "Procesando..." : "Desactivar" }}
-          </button>
+          </BaseButton>
         </div>
       </div>
     </div>
@@ -226,24 +227,23 @@
         </div>
 
         <div class="flex gap-3">
-          <button
-            @click="showDeleteModal = false"
-            class="flex-1 py-3 rounded-xl text-sm font-semibold text-brand-text hover:bg-brand-bg transition-colors"
-          >
+          <BaseButton
+  variant="ghost"
+  size="lg"
+  @click="showDeleteModal = false"
+  class="flex-1"
+>
             Cancelar
-          </button>
-          <button
-            @click="deleteAccount"
-            :disabled="deleteConfirm !== 'ELIMINAR MI CUENTA' || isLoading"
-            class="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
-            :class="
-              deleteConfirm === 'ELIMINAR MI CUENTA' && !isLoading
-                ? 'bg-red-500 hover:bg-red-600 text-white'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            "
-          >
+          </BaseButton>
+          <BaseButton
+  variant="danger"
+  size="lg"
+  @click="deleteAccount"
+  :disabled="deleteConfirm !== 'ELIMINAR MI CUENTA' || isLoading"
+  class="flex-1"
+>
             {{ isLoading ? "Eliminando..." : "Eliminar cuenta" }}
-          </button>
+          </BaseButton>
         </div>
       </div>
     </div>
@@ -252,6 +252,7 @@
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref } from "vue";
 import FormMessage from "@/components/shared/FormMessage.vue";
 import { useAccountSettings } from "@/composables/users/useAccountSettings";

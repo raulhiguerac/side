@@ -22,16 +22,14 @@
       </span>
       <span class="text-xs text-brand-placeholder">bogota-avm · v1</span>
     </div>
-    <button
-      @click="emit('reset')"
-      class="mt-2 text-sm text-brand-primary font-semibold hover:underline transition-colors"
-    >
+    <BaseButton variant="link" @click="emit('reset')" class="mt-2">
       ← Calcular de nuevo
-    </button>
+    </BaseButton>
   </div>
 </template>
 
 <script setup lang="ts">
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { reactive, onMounted } from "vue";
 import gsap from "gsap";
 import { formatCurrency } from "@/utils/money";

@@ -242,15 +242,15 @@
           </p>
 
           <!-- Submit -->
-          <PrimaryButton
+          <BaseButton
             type="submit"
-            size="lg"
+            size="xl"
             :disabled="!canSubmit"
             :loading="isLoading"
-            class="w-full"
+            block
           >
             {{ isLoading ? "Actualizando..." : "Actualizar contraseña" }}
-          </PrimaryButton>
+          </BaseButton>
         </form>
       </div>
       <!-- Panel derecho - solo en pantallas grandes -->
@@ -284,10 +284,10 @@
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref, computed } from "vue";
 import axios from "axios";
 import * as usersApi from "@/api/users";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 const isLoading = ref(false);
 const errorMessage = ref("");

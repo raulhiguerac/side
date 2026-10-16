@@ -19,25 +19,18 @@
     <p v-if="error" class="text-red-500 text-sm mb-4">{{ error }}</p>
 
     <div class="flex justify-end gap-3">
-      <button
-        :disabled="uploading"
-        @click="close"
-        class="px-4 py-2 rounded-xl text-sm font-medium text-brand-muted hover:bg-brand-bg transition-colors disabled:opacity-50"
-      >
+      <BaseButton variant="ghost" :disabled="uploading" @click="close">
         Cancelar
-      </button>
-      <button
-        :disabled="!file || uploading"
-        @click="upload"
-        class="px-4 py-2 rounded-xl bg-brand-primary text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-      >
+      </BaseButton>
+      <BaseButton :disabled="!file || uploading" @click="upload">
         {{ uploading ? "Subiendo..." : "Subir" }}
-      </button>
+      </BaseButton>
     </div>
   </BaseModal>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref } from "vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
 import * as adminPropertiesApi from "@/api/admin/properties";

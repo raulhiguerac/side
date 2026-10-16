@@ -104,27 +104,27 @@
       <div
         class="flex justify-between items-center px-8 py-5 border-t border-brand-divider"
       >
-        <button
+        <BaseButton
           v-if="currentStep > 0"
+          variant="secondary"
           @click="currentStep--"
           :disabled="currentStep === 3 && !error"
-          class="px-5 py-2 rounded-xl border border-brand-border text-sm font-medium text-brand-text hover:bg-brand-bg transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
           ← Volver a editar
-        </button>
+        </BaseButton>
         <div v-else />
         <!-- Botón paso 3 sin error: Publicar con upload -->
-        <PrimaryButton
+        <BaseButton
           v-if="currentStep === 3 && !error"
           @click="upload()"
           :disabled="selectedFiles.length === 0"
           :loading="uploadLoading"
         >
           {{ uploadLoading ? "Publicando..." : "Publicar" }}
-        </PrimaryButton>
+        </BaseButton>
 
         <!-- Botón resto de pasos -->
-        <PrimaryButton v-else @click="handleNext()" :disabled="loading">
+        <BaseButton v-else @click="handleNext()" :disabled="loading">
           {{
             loading
               ? "Publicando..."
@@ -134,18 +134,18 @@
               ? "Publicar →"
               : "Siguiente →"
           }}
-        </PrimaryButton>
+        </BaseButton>
       </div>
     </div>
   </PageContainer>
 </template>
 
 <script setup lang="ts">
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { AlertTriangle } from "@lucide/vue";
 import PageContainer from "@/components/shared/PageContainer.vue";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import StepIndicator from "@/components/properties/create/StepIndicator.vue";
 import StepTipo from "@/components/properties/create/StepTipo.vue";
 import StepDetalles from "@/components/properties/create/StepDetalles.vue";

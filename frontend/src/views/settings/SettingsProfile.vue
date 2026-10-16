@@ -103,21 +103,17 @@
 
             <!-- Actions -->
             <div class="flex justify-end gap-2 flex-shrink-0">
-              <button
-                type="button"
-                @click="reset"
-                class="px-4 py-1.5 rounded-lg text-sm font-medium text-brand-text border border-brand-border hover:bg-brand-bg"
-              >
+              <BaseButton variant="secondary" size="sm" @click="reset">
                 Cancelar
-              </button>
-              <PrimaryButton
+              </BaseButton>
+              <BaseButton
                 type="submit"
                 size="sm"
                 :disabled="!hasChanges"
                 :loading="saving"
               >
                 Guardar
-              </PrimaryButton>
+              </BaseButton>
             </div>
           </fieldset>
         </form>
@@ -132,11 +128,11 @@
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref, onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import IntentSelector from "@/components/onboarding/IntentSelector.vue";
 import FormMessage from "@/components/shared/FormMessage.vue";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { useProfileSettings } from "@/composables/users/useProfileSettings";
 import { LIMITS } from "@/config";
 import type { AccountIntent } from "@/types/users/base";

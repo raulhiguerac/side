@@ -167,15 +167,15 @@
             <!-- Botones -->
             <div class="flex flex-col gap-3 mt-6">
               <!-- Botón iniciar sesión -->
-              <PrimaryButton
+              <BaseButton
                 type="submit"
-                size="lg"
+                size="xl"
                 :disabled="!user.email || !user.password"
                 :loading="isLoading"
-                class="w-full"
+                block
               >
                 Iniciar sesión
-              </PrimaryButton>
+              </BaseButton>
 
               <!-- Login con Google: vuelve con Keycloak (ADR-0004). -->
             </div>
@@ -198,11 +198,11 @@
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 /** Pantalla de login: delega en `store.login()` y redirige, o muestra el error. */
 import { ref } from "vue";
 import router from "@/router";
 import { useAuthStore } from "@/stores/auth";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 // 🔌 Conectamos con el store de autenticación
 const authStore = useAuthStore();

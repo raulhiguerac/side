@@ -34,17 +34,12 @@
 
       <!-- Opciones de tipo de propiedad -->
       <div class="grid grid-cols-2 gap-3 px-2 mb-4">
-        <button
+        <OptionCard
           v-for="type in propertyTypes"
           :key="type.value"
-          type="button"
+          :selected="isSelected(type.value)"
           @click="toggleType(type.value)"
-          class="flex flex-col items-center gap-1.5 p-5 rounded-lg border transition-all"
-          :class="
-            isSelected(type.value)
-              ? 'bg-brand-primary-light border-brand-primary'
-              : 'bg-white border-brand-border hover:border-brand-muted'
-          "
+          class="flex flex-col items-center gap-1.5 p-5"
         >
           <div
             class="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -60,25 +55,27 @@
           >
             {{ type.label }}
           </span>
-        </button>
+        </OptionCard>
       </div>
 
       <div class="flex justify-center mt-4">
-        <button
+        <BaseButton
+          size="lg"
+          :loading="saving"
           @click="handleNext"
-          type="button"
           :disabled="saving"
-          class="w-3/5 bg-brand-primary text-white text-sm font-semibold py-2.5 rounded-full hover:bg-green-500 hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+          class="w-3/5"
         >
-          <BaseSpinner v-if="saving" class="h-4 w-4" />
           {{ saving ? "Guardando..." : "Continuar" }}
-        </button>
+        </BaseButton>
       </div>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import BaseButton from "@/components/shared/BaseButton.vue";
+import OptionCard from "@/components/shared/OptionCard.vue";
 import { ref, onMounted } from "vue";
 import houseIcon from "@/assets/house.svg";
 import apartmentIcon from "@/assets/apartment.svg";

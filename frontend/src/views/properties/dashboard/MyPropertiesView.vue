@@ -11,10 +11,10 @@
             Gestiona tus propiedades publicadas
           </p>
         </div>
-        <PrimaryButton size="lg" @click="router.push('/properties/create')">
+        <BaseButton size="xl" @click="router.push('/properties/create')">
           <Plus class="w-5 h-5" />
           Nueva propiedad
-        </PrimaryButton>
+        </BaseButton>
       </div>
 
       <FilterTabs v-model="activeTab" :tabs="tabs" :get-count="getTabCount" />
@@ -47,14 +47,14 @@
             />
           </svg>
         </template>
-        <PrimaryButton
+        <BaseButton
           v-if="activeTab === 'all'"
-          size="lg"
+          size="xl"
           @click="router.push('/properties/create')"
         >
           <Plus class="w-5 h-5" />
           Publicar mi primera propiedad
-        </PrimaryButton>
+        </BaseButton>
       </EmptyState>
 
       <!-- Grid -->
@@ -96,6 +96,7 @@
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { Plus } from "@lucide/vue";
@@ -114,7 +115,6 @@ import { usePropertyMapper } from "@/composables/properties/usePropertyMapper";
 import { usePropertyVisibility } from "@/composables/properties/usePropertyVisibility";
 import { useMyProperties } from "@/composables/properties/useMyProperties";
 import { PAGE_SIZE } from "@/constants/pagination";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 const router = useRouter();
 const { properties, isLoading, fetchProperties } = useMyProperties();

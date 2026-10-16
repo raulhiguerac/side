@@ -1,15 +1,6 @@
 <template>
   <div class="flex items-center justify-center gap-3">
-    <button
-      :disabled="!hasPrev"
-      @click="$emit('prev')"
-      class="flex items-center gap-1 px-4 py-2 rounded-xl border border-brand-border text-sm font-medium transition"
-      :class="
-        hasPrev
-          ? 'bg-brand-primary text-white hover:bg-green-600 cursor-pointer'
-          : 'opacity-40 cursor-not-allowed'
-      "
-    >
+    <BaseButton :disabled="!hasPrev" @click="$emit('prev')">
       <svg
         class="w-4 h-4"
         fill="none"
@@ -24,17 +15,8 @@
         />
       </svg>
       Anterior
-    </button>
-    <button
-      :disabled="!hasNext"
-      @click="$emit('next')"
-      class="flex items-center gap-1 px-4 py-2 rounded-xl border border-brand-border text-sm font-medium transition"
-      :class="
-        hasNext
-          ? 'bg-brand-primary text-white hover:bg-green-600 cursor-pointer'
-          : 'opacity-40 cursor-not-allowed'
-      "
-    >
+    </BaseButton>
+    <BaseButton :disabled="!hasNext" @click="$emit('next')">
       Siguiente
       <svg
         class="w-4 h-4"
@@ -45,11 +27,12 @@
       >
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
       </svg>
-    </button>
+    </BaseButton>
   </div>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 defineProps<{
   hasPrev: boolean;
   hasNext: boolean;

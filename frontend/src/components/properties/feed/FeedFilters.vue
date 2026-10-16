@@ -35,13 +35,15 @@
               class="inline-flex items-center gap-1 bg-brand-primary-light text-brand-primary text-xs font-semibold px-3 py-1.5 rounded-full"
             >
               {{ cities.get(id) }}
-              <button
+              <IconButton
+                label="Quitar ciudad"
+                size="xs"
+                danger
                 @click="removeCity(id)"
-                type="button"
-                class="ml-1 hover:text-red-500 font-bold"
+                class="ml-1"
               >
                 ×
-              </button>
+              </IconButton>
             </span>
           </div>
         </div>
@@ -73,17 +75,19 @@
               class="inline-flex items-center gap-1 bg-brand-primary-light text-brand-primary text-xs font-semibold px-3 py-1.5 rounded-full"
             >
               {{ allNeighborhoodOptions.find((o) => o.value === id)?.label }}
-              <button
-                type="button"
+              <IconButton
+                label="Quitar barrio"
+                size="xs"
+                danger
                 @click="
                   selectedNeighborhoods = selectedNeighborhoods.filter(
                     (n) => n !== id
                   )
                 "
-                class="ml-1 hover:text-red-500 font-bold"
+                class="ml-1"
               >
                 ×
-              </button>
+              </IconButton>
             </span>
           </div>
         </div>
@@ -96,28 +100,20 @@
             Tipo de propiedad
           </label>
           <div class="flex gap-2">
-            <button
+            <ChoiceChip
+              :selected="selectedTypes.includes('house')"
               @click="toggleType('house')"
-              :class="
-                selectedTypes.includes('house')
-                  ? 'bg-brand-primary border-brand-primary text-white'
-                  : 'border-brand-border text-brand-text hover:border-brand-primary'
-              "
-              class="flex-1 py-2 rounded-xl border text-sm transition-colors"
+              class="flex-1"
             >
               Casa
-            </button>
-            <button
+            </ChoiceChip>
+            <ChoiceChip
+              :selected="selectedTypes.includes('apartment')"
               @click="toggleType('apartment')"
-              :class="
-                selectedTypes.includes('apartment')
-                  ? 'bg-brand-primary border-brand-primary text-white'
-                  : 'border-brand-border text-brand-text hover:border-brand-primary'
-              "
-              class="flex-1 py-2 rounded-xl border text-sm transition-colors"
+              class="flex-1"
             >
               Apartamento
-            </button>
+            </ChoiceChip>
           </div>
         </div>
       </div>
@@ -207,15 +203,18 @@
         </div>
 
         <!-- apply button -->
-        <PrimaryButton @click="onSubmit" class="mt-2 w-full">
+        <BaseButton @click="onSubmit" block class="mt-2">
           Aplicar filtros
-        </PrimaryButton>
+        </BaseButton>
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
+import ChoiceChip from "@/components/shared/ChoiceChip.vue";
+import IconButton from "@/components/shared/IconButton.vue";
 import { onMounted, ref, watch } from "vue";
 import Multiselect from "@vueform/multiselect";
 import { load, cities } from "@/composables/catalog/useCities";
@@ -224,7 +223,6 @@ import {
   useNeighborhoodMultiselect,
 } from "@/composables/shared/useMultiselect";
 import type { FeedPreferences, FeedFilters } from "@/types/feed/filters";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 const { selected, removeCity } = useCityMultiselect();
 const { allNeighborhoodOptions, load: loadNeighborhoods } =

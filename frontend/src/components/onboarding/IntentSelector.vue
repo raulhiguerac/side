@@ -5,17 +5,12 @@
     </div>
 
     <div class="grid grid-cols-2 gap-2">
-      <button
+      <OptionCard
         v-for="option in options"
         :key="option.value"
-        type="button"
+        :selected="modelValue === option.value"
         @click="selectIntent(option.value)"
-        class="flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all"
-        :class="
-          modelValue === option.value
-            ? 'bg-brand-primary-light border-brand-primary'
-            : 'bg-white border-brand-border hover:border-brand-muted'
-        "
+        class="flex flex-col items-center gap-1.5 p-3"
       >
         <div
           class="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -40,7 +35,7 @@
         >
           {{ option.label }}
         </span>
-      </button>
+      </OptionCard>
     </div>
 
     <!-- Descripción de la intención seleccionada -->
@@ -51,24 +46,26 @@
     </div>
 
     <!-- Botón guardar -->
-    <PrimaryButton
+    <BaseButton
       @click="saveIntent"
       :disabled="!hasChanges"
       :loading="isLoading"
-      class="mt-3 w-full"
+      block
+      class="mt-3"
     >
       {{ isLoading ? "Guardando..." : "Guardar" }}
-    </PrimaryButton>
+    </BaseButton>
   </div>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
+import OptionCard from "@/components/shared/OptionCard.vue";
 import { ref, computed, h, watch } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import * as usersApi from "@/api/users";
 import type { AccountIntent } from "@/types/users/base";
 import type { ChoiceOption } from "@/types/shared/ui";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 import { logger } from "@/utils/logger";
 
 const props = defineProps<{

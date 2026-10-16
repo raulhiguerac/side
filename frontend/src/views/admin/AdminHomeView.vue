@@ -49,12 +49,9 @@
           <p class="text-brand-muted text-sm mt-1">
             Moderación, precios estimados, promociones y carga masiva.
           </p>
-          <router-link
-            to="/admin/properties"
-            class="inline-block mt-4 px-4 py-2 rounded-xl bg-brand-primary text-white text-sm font-medium hover:opacity-90 transition-opacity"
-          >
+          <BaseButton to="/admin/properties" class="mt-4">
             Administrar propiedades
-          </router-link>
+          </BaseButton>
         </div>
 
         <div
@@ -69,12 +66,9 @@
           <p class="text-brand-muted text-sm mt-1">
             Países, localidades, barrios y enriquecimiento de geometría.
           </p>
-          <router-link
-            to="/admin/catalog"
-            class="inline-block mt-4 px-4 py-2 rounded-xl bg-brand-primary text-white text-sm font-medium hover:opacity-90 transition-opacity"
-          >
+          <BaseButton to="/admin/catalog" class="mt-4">
             Administrar catálogo
-          </router-link>
+          </BaseButton>
         </div>
       </div>
     </div>
@@ -82,6 +76,7 @@
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { Home, Globe } from "@lucide/vue";
 import PageContainer from "@/components/shared/PageContainer.vue";
 

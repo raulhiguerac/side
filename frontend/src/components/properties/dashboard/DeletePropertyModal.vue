@@ -30,24 +30,29 @@
     </p>
 
     <div class="flex gap-3">
-      <button
+      <BaseButton
+        variant="ghost"
+        size="lg"
         @click="$emit('close')"
-        class="flex-1 py-3 rounded-xl text-sm font-semibold text-brand-text hover:bg-brand-bg transition-colors"
+        class="flex-1"
       >
         Cancelar
-      </button>
-      <button
+      </BaseButton>
+      <BaseButton
+        variant="danger"
+        size="lg"
         @click="handleDelete"
         :disabled="isDeleting"
-        class="flex-1 py-3 bg-red-500 text-white rounded-xl text-sm font-semibold hover:bg-red-600 transition-colors"
+        class="flex-1"
       >
         {{ isDeleting ? "Eliminando..." : "Eliminar" }}
-      </button>
+      </BaseButton>
     </div>
   </BaseModal>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref, computed } from "vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
 import * as propertiesApi from "@/api/properties";

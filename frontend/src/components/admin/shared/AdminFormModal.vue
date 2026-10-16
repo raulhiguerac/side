@@ -29,33 +29,31 @@
       </FormMessage>
 
       <div class="flex gap-3">
-        <button
-          type="button"
+        <BaseButton
+          variant="ghost"
+          size="lg"
           :disabled="saving"
-          class="text-brand-text hover:bg-brand-bg flex-1 rounded-xl py-3 text-sm font-semibold transition-colors disabled:opacity-50"
           @click="$emit('close')"
+          class="flex-1"
         >
           Cancelar
-        </button>
-        <button
-          type="button"
+        </BaseButton>
+        <BaseButton
+          :variant="danger ? 'danger' : 'primary'"
+          size="lg"
           :disabled="saving || !canSubmit"
-          :class="[
-            'flex-1 rounded-xl py-3 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-            danger
-              ? 'bg-red-500 hover:bg-red-600'
-              : 'bg-brand-primary hover:opacity-90',
-          ]"
           @click="$emit('submit')"
+          class="flex-1"
         >
           {{ saving ? savingLabel : submitLabel }}
-        </button>
+        </BaseButton>
       </div>
     </slot>
   </BaseModal>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import type { Component } from "vue";
 import BaseModal from "@/components/shared/BaseModal.vue";
 import FormMessage from "@/components/shared/FormMessage.vue";

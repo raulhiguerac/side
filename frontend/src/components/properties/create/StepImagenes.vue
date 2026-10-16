@@ -52,13 +52,16 @@
           class="w-full h-full object-cover rounded-xl border border-brand-divider"
         />
 
-        <button
-          aria-label="Quitar foto"
+        <IconButton
+          label="Quitar foto"
+          variant="surface"
+          size="sm"
+          danger
           @click.stop="removeFile(i)"
-          class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white shadow border border-brand-border flex items-center justify-center hover:bg-red-50 transition-colors"
+          class="absolute right-1.5 top-1.5"
         >
           <X class="w-3.5 h-3.5 text-brand-muted" />
-        </button>
+        </IconButton>
 
         <span
           v-if="i === 0 && !hasExistingPhotos"
@@ -82,6 +85,7 @@
 </template>
 
 <script setup lang="ts">
+import IconButton from "@/components/shared/IconButton.vue";
 import { ref, watch, onUnmounted } from "vue";
 import { Camera, X } from "@lucide/vue";
 

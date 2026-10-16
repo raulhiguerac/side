@@ -57,20 +57,15 @@
           >Condición</label
         >
         <div class="flex gap-2">
-          <button
+          <ChoiceChip
             v-for="opt in conditions"
             :key="opt.value"
-            type="button"
+            :selected="form.condition === opt.value"
             @click="emit('update:form', { ...form, condition: opt.value })"
-            :class="[
-              'flex-1 py-2.5 rounded-xl border-2 text-sm font-medium transition-all duration-200',
-              form.condition === opt.value
-                ? 'border-brand-primary bg-brand-primary-light text-brand-primary'
-                : 'border-brand-border text-brand-text hover:border-brand-primary/40',
-            ]"
+            class="flex-1"
           >
             {{ opt.label }}
-          </button>
+          </ChoiceChip>
         </div>
       </div>
 
@@ -80,20 +75,15 @@
           >Moneda</label
         >
         <div class="flex flex-wrap justify-center gap-2">
-          <button
+          <ChoiceChip
             v-for="c in currencies"
             :key="c"
-            type="button"
+            :selected="form.currency === c"
             @click="emit('update:form', { ...form, currency: c })"
-            :class="[
-              'flex items-center justify-center px-3 py-3 rounded-xl border-2 text-xs font-semibold transition-all duration-200 w-[calc(25%-0.375rem)]',
-              form.currency === c
-                ? 'border-brand-primary bg-brand-primary text-white shadow-sm'
-                : 'border-brand-border text-brand-muted hover:border-brand-primary/40 hover:text-brand-primary',
-            ]"
+            class="w-[calc(25%-0.375rem)]"
           >
             {{ c }}
-          </button>
+          </ChoiceChip>
         </div>
       </div>
     </div>
@@ -122,6 +112,7 @@
 </template>
 
 <script lang="ts" setup>
+import ChoiceChip from "@/components/shared/ChoiceChip.vue";
 import { ref, watch } from "vue";
 import { DollarSign } from "@lucide/vue";
 import { formatMoney, parseMoney } from "@/utils/money";

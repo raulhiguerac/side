@@ -2,22 +2,17 @@
   <div
     class="flex justify-between items-center bg-white rounded-2xl border border-brand-divider p-6"
   >
-    <button
-      @click="emit('back')"
-      class="px-3 py-2 text-sm font-medium text-brand-muted hover:text-brand-text transition"
-    >
-      ← Volver
-    </button>
-    <PrimaryButton @click="emit('save')">
+    <BaseButton variant="ghost" @click="emit('back')"> ← Volver </BaseButton>
+    <BaseButton @click="emit('save')">
       <Save class="w-4 h-4" />
       Guardar cambios
-    </PrimaryButton>
+    </BaseButton>
   </div>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 import { Save } from "@lucide/vue";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 const emit = defineEmits<{
   (e: "back"): void;

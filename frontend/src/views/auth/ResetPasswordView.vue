@@ -70,15 +70,15 @@
             <!-- Botones -->
             <div class="flex flex-col gap-3 mt-6">
               <!-- Botón iniciar sesión -->
-              <PrimaryButton
+              <BaseButton
                 type="submit"
-                size="lg"
+                size="xl"
                 :disabled="!user.email"
                 :loading="isLoading"
-                class="w-full"
+                block
               >
                 Recupera las llaves
-              </PrimaryButton>
+              </BaseButton>
             </div>
           </form>
         </div>
@@ -95,12 +95,12 @@
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
 /** Pantalla de recuperación de contraseña. */
 import { ref } from "vue";
 import axios from "axios";
 import * as usersApi from "@/api/users";
 import router from "@/router";
-import PrimaryButton from "@/components/shared/PrimaryButton.vue";
 
 // 📝 Datos del formulario (locales, no van al store)
 const user = ref({

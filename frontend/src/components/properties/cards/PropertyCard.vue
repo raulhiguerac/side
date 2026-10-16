@@ -20,11 +20,12 @@
       </div>
 
       <!-- Favorito -->
-      <button
-        aria-label="Guardar en favoritos"
+      <IconButton
         v-if="showFavorite"
+        label="Guardar en favoritos"
+        variant="surface"
         @click.stop="$emit('toggle-favorite', property.id)"
-        class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"
+        class="absolute right-3 top-3"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -42,7 +43,7 @@
             d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"
           />
         </svg>
-      </button>
+      </IconButton>
 
       <!-- Status badge (para propiedades del usuario) -->
       <div
@@ -182,16 +183,18 @@
         v-if="showActions"
         class="flex gap-2 mt-4 pt-4 border-t border-brand-divider"
       >
-        <button
+        <BaseButton
+          variant="secondary"
           @click.stop="$emit('edit', property.id)"
-          class="flex-1 py-2 px-3 bg-brand-bg text-brand-text text-sm font-medium rounded-lg hover:bg-brand-divider transition-colors"
+          class="flex-1"
         >
           Editar
-        </button>
-        <button
-          aria-label="Eliminar propiedad"
+        </BaseButton>
+        <IconButton
+          label="Eliminar propiedad"
+          size="lg"
+          danger
           @click.stop="$emit('delete', property.id)"
-          class="py-2 px-3 text-red-500 text-sm font-medium rounded-lg hover:bg-red-50 transition-colors"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -206,13 +209,15 @@
             <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
             <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
           </svg>
-        </button>
+        </IconButton>
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import BaseButton from "@/components/shared/BaseButton.vue";
+import IconButton from "@/components/shared/IconButton.vue";
 import { computed } from "vue";
 import type { PropertyCardUI } from "@/types/feed/cards";
 import {

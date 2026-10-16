@@ -1,6 +1,19 @@
 import type { Component } from "vue";
 
-export type ButtonSize = "sm" | "md" | "lg";
+export type ButtonSize = "sm" | "md" | "lg" | "xl";
+
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "danger"
+  | "danger-soft"
+  | "link";
+
+export type IconButtonSize = "xs" | "sm" | "md" | "lg";
+
+/** `surface`: círculo blanco sobre fotos; `plain`: sin fondo hasta el hover. */
+export type IconButtonVariant = "surface" | "plain";
 
 export interface TabOption<V extends string = string> {
   label: string;
