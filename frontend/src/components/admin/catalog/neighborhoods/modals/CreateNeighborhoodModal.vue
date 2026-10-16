@@ -1,27 +1,23 @@
 <template>
-  <BaseModal :model-value="isOpen" @update:model-value="$emit('close')">
-    <div class="mb-4 flex items-center gap-4">
-      <div
-        class="bg-brand-primary-light flex h-12 w-12 items-center justify-center rounded-xl"
-      >
-        <Plus class="text-brand-primary h-6 w-6" />
-      </div>
-      <div class="min-w-0">
-        <h3 class="text-brand-text text-lg font-bold">Crear barrio</h3>
-        <p class="text-brand-muted text-sm">Sin geometría: se sube después</p>
-      </div>
-    </div>
-
+  <AdminFormModal
+    :open="open"
+    :icon="Plus"
+    title="Crear barrio"
+    subtitle="Sin geometría: se sube después"
+    submit-label="Crear"
+    saving-label="Creando…"
+    :saving="saving"
+    :can-submit="canSubmit"
+    :error="error"
+    @close="$emit('close')"
+    @submit="onSave"
+  >
     <div class="mb-6 space-y-3">
-      <LocalitySelectFields
-        v-model:country-id="countryId"
-        v-model:locality-id="localityId"
+      <CascadeSelectFields
+        v-model="place"
         id-prefix="new-neighborhood"
-        :country-options="countryOptions"
-        :locality-options="localityOptions"
-        :loading-localities="loadingLocalities"
+        :fields="CASCADE"
         :disabled="saving"
-        @country-change="onCountryChange"
       />
 
       <div class="grid grid-cols-2 gap-3">
@@ -120,53 +116,22 @@
         </div>
       </div>
     </div>
-
-    <FormMessage v-if="error || optionsError" variant="error" class="mb-4">
-      {{ error ?? optionsError }}
-    </FormMessage>
-
-    <div class="flex gap-3">
-      <button
-        type="button"
-        :disabled="saving"
-        class="text-brand-text hover:bg-brand-bg flex-1 rounded-xl py-3 text-sm font-semibold transition-colors disabled:opacity-50"
-        @click="$emit('close')"
-      >
-        Cancelar
-      </button>
-      <button
-        type="button"
-        :disabled="!submittable"
-        class="bg-brand-primary flex-1 rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-        @click="onSave"
-      >
-        {{ saving ? "Creando…" : "Crear" }}
-      </button>
-    </div>
-  </BaseModal>
+  </AdminFormModal>
 </template>
 
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
 import { Plus } from "@lucide/vue";
-import BaseModal from "@/components/shared/BaseModal.vue";
-import FormMessage from "@/components/shared/FormMessage.vue";
-import LocalitySelectFields from "@/components/admin/catalog/neighborhoods/widgets/LocalitySelectFields.vue";
+import AdminFormModal from "@/components/admin/shared/AdminFormModal.vue";
+import CascadeSelectFields from "@/components/admin/shared/CascadeSelectFields.vue";
+import { COUNTRY_SELECT, LOCALITY_SELECT } from "@/constants/catalogFilters";
 import { useCreateNeighborhood } from "@/composables/admin/useCreateNeighborhood";
-import { useLocalityPicker } from "@/composables/admin/useLocalityPicker";
 import type { NeighborhoodCreatePayload } from "@/types/admin/catalog";
 
 const { saving, error, create, reset } = useCreateNeighborhood();
-const {
-  countryId,
-  localityId,
-  countryOptions,
-  localityOptions,
-  loadingLocalities,
-  error: optionsError,
-  prefill,
-  onCountryChange,
-} = useLocalityPicker();
+const CASCADE = [COUNTRY_SELECT, LOCALITY_SELECT];
+const place = ref<Record<string, string>>({});
+const localityId = computed(() => place.value.locality_id ?? "");
 
 // País y localidad arrancan con los del filtro aplicado, si hay.
 const props = defineProps<{
@@ -176,8 +141,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ close: []; confirm: [] }>();
-
-const isOpen = computed(() => props.open);
 
 const code = ref("");
 const name = ref("");
@@ -199,8 +162,6 @@ const canSubmit = computed(
     inRange(longitude.value, 180)
 );
 
-const submittable = computed(() => canSubmit.value && !saving.value);
-
 // Cada apertura arranca con el formulario vacío.
 watch(
   () => props.open,
@@ -212,7 +173,10 @@ watch(
     latitude.value = "";
     longitude.value = "";
     reset();
-    prefill(props.initialCountryId, props.initialLocalityId);
+    place.value = {
+      country_id: props.initialCountryId ?? "",
+      locality_id: props.initialLocalityId ?? "",
+    };
   }
 );
 

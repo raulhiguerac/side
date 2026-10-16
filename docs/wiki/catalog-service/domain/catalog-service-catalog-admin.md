@@ -1,7 +1,7 @@
 ---
 title: Dominio catalog_admin (catalog-service)
 status: stable
-last-verified: 2026-10-14
+last-verified: 2026-10-16
 owners: [catalog-service]
 related:
   - "[[catalog-service]]"
@@ -9,7 +9,7 @@ related:
   - "[[catalog-service-geo-catalog]]"
   - "[[catalog-service-poi-lifecycle]]"
   - "[[frontend-admin-panel]]"
-sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md, ../../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md, ../../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md, ../../../sources/frontend/2026-09-28-admin-catalog-geometry-design.md, ../../../sources/catalog-service/2026-10-10-admin-localities-list-endpoint.md, ../../../sources/catalog-service/2026-10-14-admin-pagination-standard.md, ../../../sources/catalog-service/2026-10-14-admin-divisions-countries-list-endpoints.md]
+sources: [../../../sources/catalog-service/2026-05-21-foundational-qa.md, ../../../sources/catalog-service/2026-06-23-overpass-406-and-h3-chicken-egg-fix.md, ../../../sources/catalog-service/2026-07-18-h3-precompute-and-bulk-resolve.md, ../../../sources/catalog-service/2026-10-04-admin-neighborhoods-read-endpoints.md, ../../../sources/frontend/2026-09-28-admin-catalog-geometry-design.md, ../../../sources/catalog-service/2026-10-10-admin-localities-list-endpoint.md, ../../../sources/catalog-service/2026-10-14-admin-pagination-standard.md, ../../../sources/catalog-service/2026-10-14-admin-divisions-countries-list-endpoints.md, ../../../sources/frontend/2026-10-16-admin-localities-tab-and-shared-pieces.md]
 ---
 
 ## TL;DR
@@ -152,6 +152,8 @@ Alimentan las tabs de localidades, divisiones y países del panel ([[frontend-ad
 - `Locality` guarda `latitude`/`longitude` como columnas planas, así que `model_validate` no arma el `point` anidado: el UC mapea con una list comprehension. El `point` queda listo para un mapa.
 - El `try/except → translate_db_error` envuelve solo las llamadas al repo; el mapeo queda afuera para que un bug de mapeo no salga como error de DB.
 
+**Cache de crear y editar localidad.** Los dos UCs borran bien las listas públicas (`cache_key_localities` y `cache_key_localities_by_admin_division`), pero en `cache_key_locality(id)` hacen `set_json` del modelo completo. `GetLocalityByIdUseCase` lee esa key como `LocalityListItem`, que es `extra="forbid"` y exige `admin_division`: la validación falla, cae al `except` y va a la DB, que filtra `is_active`. Hoy invalida de casualidad; el fix es un `delete` ([[open-items]]).
+
 **Listado — `GET /admin-divisions`.** `GetAllAdminDivisionsRequest(PageRequest)` con `country_id` e `is_active` opcionales. Responde `GetAllAdminDivisionsPage(Page[AdminDivisionResponse])`: reusa el schema del POST/PATCH porque ya trae todos los campos editables (`country_id`, `code`, `iso_code`, `name`, `type_name`, `is_active`). Desbloquea crear una localidad desde el panel, que exige `admin_division_id`.
 
 **Listado — `GET /countries`.** `GetAllCountriesRequest(PageRequest)` con `is_active` e `is_supported` opcionales. Responde `GetAllCountriesPage(Page[GetAllCountriesResponse])`, con un item propio que trae todos los campos del modelo (`iso_alpha2/3`, `iso_numeric`, `official_name`, `native_name`, `phone_code`, `currency_code`, `default_locale`, `default_timezone`, flags). No extiende `CountryResponse` para no cambiar la respuesta de POST/PATCH ni sus tests.
@@ -252,3 +254,4 @@ Llamadas a `cache_client.*` siempre wrapeadas en `try/except pass` — cache bes
 - El parser de archivos acepta `.csv`, `.json`, `.txt`; cualquier otra extensión lanza `ValueError` ([file_parser.py:8-14](backend/catalog-service/src/app/services/catalog_admin/helpers/file_parser.py#L8-L14)).
 - La normalización NFKD+lowercase+strip de `search_name` está copiada en `neighborhood/bulk_create.py`, `neighborhood/bulk_enrich_geometries.py`, `neighborhood/create.py`, `neighborhood/update.py`, `locality/create.py`, `locality/update.py`, `sql_neighborhood_repository.py` y `geo_resolution/adapters/poi/overpass.py`.
 - `NeighborhoodAdminResponse` devuelve el centroide (`latitude`/`longitude`) pero no `geom`; la geometría solo sale en `NeighborhoodAdminDetail` ([neighborhood.py:32-40](backend/catalog-service/src/app/services/catalog_admin/schemas/neighborhood.py#L32-L40)).
+- `UpdateLocalityUseCase` y `CreateLocalityUseCase` hacen `set_json` de `model_dump()` del modelo en `cache_key_locality(id)`, en el mismo `try` que los `delete` de las listas ([locality/update.py:52](backend/catalog-service/src/app/services/catalog_admin/use_cases/locality/update.py#L52), [locality/create.py:48](backend/catalog-service/src/app/services/catalog_admin/use_cases/locality/create.py#L48)).

@@ -1,7 +1,7 @@
 ---
 title: Panel admin (frontend)
 status: draft
-last-verified: 2026-10-14
+last-verified: 2026-10-16
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -43,11 +43,13 @@ sources:
   - ../../../sources/frontend/2026-10-05-admin-actions-and-front-smell-audit.md
   - ../../../sources/frontend/2026-10-09-api-layer-map-cluster-and-typecheck.md
   - ../../../sources/catalog-service/2026-10-14-admin-divisions-countries-list-endpoints.md
+  - ../../../sources/frontend/2026-10-16-admin-localities-tab-and-shared-pieces.md
+  - ../../../sources/frontend/2026-10-16-admin-divisions-countries-tabs.md
 ---
 
 ## TL;DR
 
-Panel admin embebido en la app existente (no un subdominio separado): un link condicional en el nav, rutas gateadas por rol, y una vista hub que orquesta hacia propiedades y catálogo. Desde el 2026-08-01 la sección de propiedades es un layout con tres tabs como rutas hijas (moderación, promociones, importaciones), y la de moderación combina tabla paginada + panel de vista previa. Desde el 2026-08-02 el panel lleva además el **formulario de moderación**, y desde el 2026-08-09 ese guardado **llega a la API**: moderar funciona punta a punta. Promociones quedó cableada el mismo día en dos sub-tabs: activas (listar y quitar) y promocionar (elegir y crear). Desde el 2026-08-24 los filtros de la cola viven en la URL y la tab de importaciones lista las corridas contra su endpoint nuevo. Lo que sigue faltando es el relanzar de un import y toda la sección de catálogo.
+Panel admin embebido en la app existente (no un subdominio separado): un link condicional en el nav, rutas gateadas por rol, y una vista hub que orquesta hacia propiedades y catálogo. Desde el 2026-08-01 la sección de propiedades es un layout con tres tabs como rutas hijas (moderación, promociones, importaciones), y la de moderación combina tabla paginada + panel de vista previa. Desde el 2026-08-02 el panel lleva además el **formulario de moderación**, y desde el 2026-08-09 ese guardado **llega a la API**: moderar funciona punta a punta. Promociones quedó cableada el mismo día en dos sub-tabs: activas (listar y quitar) y promocionar (elegir y crear). Desde el 2026-08-24 los filtros de la cola viven en la URL y la tab de importaciones lista las corridas contra su endpoint nuevo. Lo que sigue faltando es el relanzar de un import. En catálogo, las cuatro tabs (Barrios, Localidades, Divisiones y Países) están cableadas desde el 2026-10-16, sobre las piezas compartidas de la sección; falta probarlas en el navegador.
 
 ## Por qué embebido, no subdominio
 
@@ -366,7 +368,7 @@ Pendiente: las acciones del panel (editar, reemplazar geometría, desactivar). *
 
 ## Acciones del panel de barrios y layout de filtros (2026-10-05)
 
-**Cobertura de catalog.** De los 14 endpoints `/v1/admin/*` de catalog-service, el front consume 3: las tres lecturas de barrios. Faltan las 11 escrituras (crear/editar países, divisiones, localidades y barrios, más los tres uploads de barrios). Localidades y países solo tienen los `GET` públicos, que traen activos; las divisiones no tienen ningún listado. **Update 2026-10-14:** el back ya tiene los listados admin de localidades, divisiones y países (17 endpoints admin en total), los cuatro con el mismo contrato de página (`items`, `total_items`, `total_pages`, `current_page`, `items_per_page`), así que un solo `AdminPage<T>` sirve para las cuatro tabs. Tras el CRUD de barrios (#27) el front consume 8, todos de barrios (listado, detalle, vecinos, crear, editar, geometría y los dos bulk); los listados y escrituras de localidades, divisiones y países siguen sin cablear, con sus tipos ya generados ([[catalog-service-catalog-admin]]).
+**Cobertura de catalog.** De los 14 endpoints `/v1/admin/*` de catalog-service, el front consume 3: las tres lecturas de barrios. Faltan las 11 escrituras (crear/editar países, divisiones, localidades y barrios, más los tres uploads de barrios). Localidades y países solo tienen los `GET` públicos, que traen activos; las divisiones no tienen ningún listado. **Update 2026-10-14:** el back ya tiene los listados admin de localidades, divisiones y países (17 endpoints admin en total), los cuatro con el mismo contrato de página (`items`, `total_items`, `total_pages`, `current_page`, `items_per_page`), así que un solo `AdminPage<T>` sirve para las cuatro tabs. Tras el CRUD de barrios (#27) el front consume 8, todos de barrios (listado, detalle, vecinos, crear, editar, geometría y los dos bulk); los listados y escrituras de localidades, divisiones y países siguen sin cablear, con sus tipos ya generados ([[catalog-service-catalog-admin]]). **Update 2026-10-16:** consume 12 de 17: los 8 de barrios, el listado, `POST` y `PATCH` de localidades y el listado de divisiones. Ese mismo día, con Divisiones y Países, llega a 17 de 17.
 
 **El mapa no edita.** `POST /admin/neighborhoods/{id}/geometry` recibe un **archivo** GeoJSON, no una geometría dibujada, así que "reemplazar geometría" es un modal de subida y `NeighborhoodMap` sigue siendo de solo lectura ([[frontend-map-component]]). Editar vértices sobre el mapa sería otro proyecto: leaflet-geoman y un endpoint que acepte JSON.
 
@@ -379,6 +381,39 @@ Pendiente: las acciones del panel (editar, reemplazar geometría, desactivar). *
 - **mínimo 3 columnas**: con 2 filtros, en la caja angosta de moderación, quedaban flotando con huecos a los lados;
 - **reparto 80/20** filtros/botón: con 3 + 2 dejaba una "L" vacía a la derecha;
 - **botón centrado en vertical**: quedaba entre la etiqueta y el input, o entre las dos filas.
+
+## La tab de localidades (2026-10-16)
+
+Sigue el molde de barrios, con tres diferencias:
+
+- **Sin GET de detalle.** El listado admin ya trae todo lo que muestra el panel, así que la vista le pasa la fila seleccionada de `rows`. `LocalityMap` es un mapa fijo (zoom 11) con un marcador en `point`: no hay geometría de localidad. La división no se muestra porque la fila solo trae `admin_division_id`.
+- **Filtros País → División → Estado.** Las opciones de División salen de `GET /v1/admin/admin-divisions` con `page_size: 100`, el tope del back, así que incluyen divisiones inactivas; País sigue con el `GET` público, que solo trae activos.
+- **La acción Barrios no abre modal.** Navega con `router.push({ name: "admin-catalog", query: { country_id, locality_id } })` y la tab de barrios se filtra sola por [[adr-admin-filters-in-query-params]]. El `country_id` no lo usa el back: hace falta porque el select de localidad tiene `dependsOn: "country_id"`. Al ser `push`, el botón atrás vuelve a Localidades.
+
+Editar no toca código, país ni división (`UpdateLocalityRequest` no los acepta); crear lleva la cascada País → División, precargada con el filtro aplicado. El cliente exige lat/lng en rango y una zona horaria IANA (`Intl.DateTimeFormat`), porque el back no lo valida. Desactivar una localidad no desactiva sus barrios. Los UCs de crear y editar dejan en `cache_key_locality(id)` un valor que el by-id público no puede leer ([[open-items]], [[catalog-service-catalog-admin]]).
+
+## Piezas compartidas del admin de catálogo (2026-10-16)
+
+Antes de Divisiones y Países se sacó lo que Localidades había copiado de barrios. La forma acordada el 2026-10-10 se mantiene: un marco común más los campos de cada entidad, no un formulario armado por configuración.
+
+- **Filtros.** `COUNTRY_SELECT`, `DIVISION_SELECT`, `LOCALITY_SELECT` y `STATUS_FILTER` son piezas sueltas; las barras de filtros y las cascadas de los modales usan las mismas definiciones.
+- **Listado.** `useAdminPage` hace el fetch paginado sobre `AdminPage<T>` (el `Page[T]` del back), con `range`, `hasPrev`/`hasNext` y `load`/`reload`/`next`/`prev`. `useAdminNeighborhoods` es `useAdminPage` más `coverage`; `pickFilters(source, keys)` decide qué parte de la URL viaja, sin casts.
+- **Modales.** `AdminFormModal` es el cascarón: encabezado con icono, error, Cancelar / acción, modo `danger` y un slot `#footer` que reemplaza el pie (el "Listo" de los bulk). `AdminStatusModal` lleva el texto de activar/desactivar; el modal de estado de cada entidad solo conecta su PATCH. `BulkUploadPropertiesModal` no se migró: su flujo de 3 pasos no encaja en el cascarón.
+- **Cascadas.** `useCascadeOptions` carga las opciones de los `async-select` encadenados por `dependsOn`, descarta respuestas viejas y lista los dependientes de una key. Lo usan `AdminFilterBar` y `CascadeSelectFields`, la cascada obligatoria de los modales, que reemplazó a `useLocalityPicker`, `useDivisionPicker` y `LocalitySelectFields`.
+- **Badge.** `AdminStatusBadge` reemplaza las tres copias del Activo / Inactivo.
+
+Efectos visibles: las cascadas de los modales muestran "Elige una opción" en vez de un placeholder por entidad, y su error va debajo de los selects. Nada de esto se probó todavía en el navegador.
+
+## Divisiones y países (2026-10-16)
+
+Las dos salieron como plantilla de Localidades, sobre las piezas compartidas, con sus campos editables en `DivisionFormFields` y `CountryFormFields`.
+
+- **Divisiones.** Filtros País y Estado; tabla con nombre, código, tipo, ISO y estado. Editar cambia nombre, tipo e ISO 3166-2 (`UpdateAdminDivisionRequest` no acepta código ni país); crear lleva la cascada solo de País. La acción Localidades salta a esa tab con `country_id` y `admin_division_id`.
+- **Países.** Filtros Estado y Soporte (`is_supported`); tabla con nombre, ISO alfa-2, moneda, soporte y estado; el panel muestra el resto del modelo. Editar cambia todo salvo los códigos ISO; crear los pide y el cliente exige 2 letras, 3 letras y 3 dígitos, más moneda de 3 letras y zona horaria IANA. La acción Divisiones salta a esa tab con `country_id`.
+- Los tres saltos encadenan País → Divisiones → Localidades → Barrios sin código en la tab de destino, por [[adr-admin-filters-in-query-params]].
+- Ningún estado cascadea: desactivar un país no toca sus divisiones ni localidades, y los modales lo aclaran.
+
+Dos huecos conocidos: el select de País usa el `GET` público, así que tras saltar desde un país inactivo la tabla se filtra pero el select se ve vacío; y desactivar un país no lo saca de la lista pública hasta que expire la cache, porque el back no la invalida ([[open-items]]).
 
 ## Decisiones diferidas
 
@@ -445,20 +480,35 @@ Pendiente: las acciones del panel (editar, reemplazar geometría, desactivar). *
 - Los paths del bulk (`adminBulkUploadUrl`, `adminBulkJobs`) viven en `PROPERTIES_ENDPOINTS`; `BulkUploadPropertiesModal.vue` no escribe rutas a mano ([propertiesEndpoints.ts](frontend/src/constants/propertiesEndpoints.ts)).
 - `/admin/catalog` es una ruta padre sin `name` con cuatro hijos (`""`, `localities`, `admin-divisions`, `countries`), el `name` `admin-catalog` vive en el hijo por defecto, y solo el padre declara `meta: { requiresAuth: true, requiresAdmin: true }` ([router/routes/admin/catalog.ts](frontend/src/router/routes/admin/catalog.ts)).
 - `AdminCatalogView.vue` monta `AdminTabsNav` con las tabs Barrios, Localidades, Divisiones y Países, y un `RouterView` ([AdminCatalogView.vue](frontend/src/views/admin/catalog/AdminCatalogView.vue)).
-- Localidades, Divisiones y Países solo renderizan `EmptyState`; Barrios es la única tab de catálogo que llama a la API ([views/admin/catalog/](frontend/src/views/admin/catalog)).
+- Ninguna tab de catálogo renderiza `EmptyState` como vista: las cuatro listan contra su `GET` admin ([views/admin/catalog/](frontend/src/views/admin/catalog)).
 - `AdminNeighborhoodsView` monta `AdminFilterBar` fuera de `AdminSplitView` y recarga con `useUrlFilters(NEIGHBORHOOD_FILTERS, load)` ([AdminNeighborhoodsView.vue](frontend/src/views/admin/catalog/neighborhoods/AdminNeighborhoodsView.vue)).
 - `useUrlFilters` sanea `route.query` contra las definiciones, navega con `router.push` y llama `onChange` con `immediate: true` ([useUrlFilters.ts](frontend/src/composables/admin/useUrlFilters.ts)).
 - `NEIGHBORHOOD_FILTERS` vive en `constants/catalogFilters.ts` y sus `loadOptions` son `loadCountryOptions` / `loadLocalityOptions` de `api/admin/catalog.ts`; `MODERATION_FILTERS` y `BULK_JOB_FILTERS` viven en `constants/propertiesFilters.ts` ([catalogFilters.ts](frontend/src/constants/catalogFilters.ts), [api/admin/catalog.ts](frontend/src/api/admin/catalog.ts)).
 - `AdminActionBar` es genérico sobre la key (`generic="K extends string"`), recibe `AdminAction<K>[]` y emite `action(key)` ([AdminActionBar.vue](frontend/src/components/admin/shared/AdminActionBar.vue), [types/admin/actions.ts](frontend/src/types/admin/actions.ts)).
-- `AdminNeighborhoodPanel` reemite `action` con un `NeighborhoodAction` (`edit`|`geometry`|`deactivate`) y `AdminNeighborhoodsView` abre un `BaseModal` mock con `activeAction` ([AdminNeighborhoodPanel.vue](frontend/src/components/admin/catalog/neighborhoods/AdminNeighborhoodPanel.vue), [AdminNeighborhoodsView.vue](frontend/src/views/admin/catalog/neighborhoods/AdminNeighborhoodsView.vue)).
+- `AdminNeighborhoodPanel` reemite `action` con un `NeighborhoodAction` (`edit`|`geometry`|`status`) y `AdminNeighborhoodsView` abre el modal real que corresponde según `activeAction` ([AdminNeighborhoodPanel.vue](frontend/src/components/admin/catalog/neighborhoods/AdminNeighborhoodPanel.vue), [AdminNeighborhoodsView.vue](frontend/src/views/admin/catalog/neighborhoods/AdminNeighborhoodsView.vue)).
 - `AdminFilterBar` calcula `--cols` contando el botón como una celda: `n + 1` hasta 4, `ceil((n + 1) / 2)` desde 5 ([AdminFilterBar.vue](frontend/src/components/admin/shared/AdminFilterBar.vue)).
 - Las cinco vistas admin con paginación usan `AdminPaginationFooter`, y los cuatro composables de listado calculan `range` con `pageRange` ([AdminPaginationFooter.vue](frontend/src/components/admin/shared/AdminPaginationFooter.vue), [utils/pagination.ts](frontend/src/utils/pagination.ts)).
 - `AdminFilterDefinition` es la unión de `AdminStaticSelectFilter`, `AdminAsyncSelectFilter` y `AdminSearchFilter`, y el select estático lleva `type` opcional ([filters.ts:12](frontend/src/types/admin/filters.ts#L12), [:29](frontend/src/types/admin/filters.ts#L29)).
-- `AdminFilterBar` vacía y recarga los `async-select` dependientes desde `resetDependents`, llamado en el `@change` del select ([AdminFilterBar.vue:131](frontend/src/components/admin/shared/AdminFilterBar.vue#L131)).
+- `AdminFilterBar` vacía y recarga los `async-select` dependientes desde `resetDependents`, llamado en el `@change` del select, con los dependientes que da `useCascadeOptions.dependentsOf` ([AdminFilterBar.vue:108](frontend/src/components/admin/shared/AdminFilterBar.vue#L108), [useCascadeOptions.ts:60](frontend/src/composables/admin/useCascadeOptions.ts#L60)).
 - `sanitizeFilterQuery` deja pasar sin validar los valores de `async-select` y `search` ([adminFilters.ts:21](frontend/src/utils/adminFilters.ts#L21)).
-- `useAdminNeighborhoods` solo manda al backend `locality_id`, `is_active`, `has_geometry` y `search_term` ([useAdminNeighborhoods.ts:12-17](frontend/src/composables/admin/useAdminNeighborhoods.ts#L12-L17)).
+- `useAdminNeighborhoods` solo manda al backend `locality_id`, `is_active`, `has_geometry` y `search_term` ([useAdminNeighborhoods.ts:9-14](frontend/src/composables/admin/useAdminNeighborhoods.ts#L9-L14)).
 - `useNeighborhoodNeighbors` serializa el bbox con `paramsSerializer: { indexes: null }` ([useNeighborhoodNeighbors.ts:22](frontend/src/composables/admin/useNeighborhoodNeighbors.ts#L22)).
 - Los tipos admin viven en `types/admin/{properties,moderation,promotions,bulk,filters,catalog}.ts`, sin `index.ts` que los reexporte ([types/admin/](frontend/src/types/admin)).
 - `package.json` del frontend no declara `d3` ni `d3-geo` ([package.json](frontend/package.json)).
 - `useUrlFilters<T>` es genérico y hace el único cast de los filtros, después de `sanitizeFilterQuery`; `AdminModerationView` lo usa como `useUrlFilters<AdminPropertiesFilters>(MODERATION_FILTERS, load)` ([useUrlFilters.ts](frontend/src/composables/admin/useUrlFilters.ts), [AdminModerationView.vue](frontend/src/views/admin/properties/moderation/AdminModerationView.vue)).
 - `types/shared/table.ts` aumenta `ColumnMeta` de `@tanstack/vue-table` con `align?: ColumnAlign`, y `BaseTable` lee `columnDef.meta?.align` sin cast ([types/shared/table.ts](frontend/src/types/shared/table.ts), [BaseTable.vue](frontend/src/components/shared/BaseTable.vue)).
+- `useAdminNeighborhoods` y `useAdminLocalities` delegan en `useAdminPage`, genérico sobre `AdminPage<T>` ([useAdminPage.ts:13](frontend/src/composables/admin/useAdminPage.ts#L13), [types/shared/pagination.ts](frontend/src/types/shared/pagination.ts)).
+- `NEIGHBORHOOD_FILTERS` y `LOCALITY_FILTERS` se arman con `COUNTRY_SELECT` y `STATUS_FILTER`, más `LOCALITY_SELECT` o `DIVISION_SELECT` respectivamente ([catalogFilters.ts](frontend/src/constants/catalogFilters.ts)).
+- `loadDivisionOptions` pide `GET /v1/admin/admin-divisions` con `page_size: 100` ([api/admin/catalog.ts:245](frontend/src/api/admin/catalog.ts#L245)).
+- `AdminLocalitiesView` le pasa al panel la fila seleccionada de `rows`, sin GET de detalle ([AdminLocalitiesView.vue:107](frontend/src/views/admin/catalog/localities/AdminLocalitiesView.vue#L107)).
+- La acción `neighborhoods` de Localidades hace `router.push` a `admin-catalog` con `country_id` y `locality_id` en el query ([AdminLocalitiesView.vue:124](frontend/src/views/admin/catalog/localities/AdminLocalitiesView.vue#L124)).
+- Los modales de barrios, los de localidades y `RemovePromotionModal` se montan sobre `AdminFormModal`; `BulkUploadPropertiesModal` no ([components/admin/](frontend/src/components/admin)).
+- `NeighborhoodStatusModal` y `LocalityStatusModal` renderizan `AdminStatusModal` y solo hacen el PATCH de `is_active` ([AdminStatusModal.vue](frontend/src/components/admin/shared/AdminStatusModal.vue)).
+- `CascadeSelectFields` recarga todas las opciones solo cuando el padre le pasa un objeto nuevo, comparando con `toRaw` contra el último que emitió ([CascadeSelectFields.vue:84](frontend/src/components/admin/shared/CascadeSelectFields.vue#L84)).
+- No existen `useLocalityPicker`, `useDivisionPicker` ni `LocalitySelectFields` ([composables/admin/](frontend/src/composables/admin)).
+- `AdminStatusBadge` es el único que pinta "Activo"/"Inactivo" en `components/admin` ([AdminStatusBadge.vue](frontend/src/components/admin/shared/AdminStatusBadge.vue)).
+- La acción `localities` de Divisiones hace `router.push` a `admin-catalog-localities` con `country_id` y `admin_division_id`, y la `divisions` de Países a `admin-catalog-admin-divisions` con `country_id` ([AdminDivisionsView.vue:123](frontend/src/views/admin/catalog/divisions/AdminDivisionsView.vue#L123), [AdminCountriesView.vue:121](frontend/src/views/admin/catalog/countries/AdminCountriesView.vue#L121)).
+- `DIVISION_FILTERS` es `COUNTRY_SELECT` + `STATUS_FILTER`, y `COUNTRY_FILTERS` es `STATUS_FILTER` + un select estático de `is_supported` ([catalogFilters.ts:68](frontend/src/constants/catalogFilters.ts#L68), [:73](frontend/src/constants/catalogFilters.ts#L73)).
+- `isIsoCodeValid` exige alfa-2 de 2 letras, alfa-3 de 3 letras y numérico de 3 dígitos; `toCountryFields` arma el body común de crear y editar país, con la moneda en mayúsculas ([catalogForms.ts:36](frontend/src/utils/catalogForms.ts#L36), [:49](frontend/src/utils/catalogForms.ts#L49)).
+- Las validaciones de formulario de catálogo viven en `utils/catalogForms.ts`; `utils/localityForm.ts` no existe ([utils/](frontend/src/utils)).
+- `getAdminDivisions` recibe `PageParams & DivisionAdminFilters`, no los tipos `ListAdminDivisionsData` generados ([api/admin/catalog.ts](frontend/src/api/admin/catalog.ts)).
