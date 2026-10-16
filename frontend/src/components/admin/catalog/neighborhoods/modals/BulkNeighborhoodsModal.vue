@@ -1,24 +1,45 @@
 <template>
-  <BaseModal :model-value="open" @update:model-value="onDismiss">
-    <div class="mb-4 flex items-center gap-4">
-      <div
-        class="bg-brand-primary-light flex h-12 w-12 items-center justify-center rounded-xl"
-      >
-        <FileUp class="text-brand-primary h-6 w-6" />
-      </div>
-      <h3 class="text-brand-text text-lg font-bold">Subir barrios</h3>
+  <AdminFormModal
+    :open="open"
+    :icon="FileUp"
+    title="Subir barrios"
+    submit-label="Subir"
+    saving-label="Subiendo…"
+    :saving="saving"
+    :can-submit="canSubmit"
+    :error="error"
+    @close="onDismiss"
+    @submit="onSave"
+  >
+    <BulkResultSummary
+      v-if="result"
+      class="mb-6"
+      :stats="[
+        { label: 'Barrios guardados', value: result.created },
+        { label: 'Con error', value: result.errors.length },
+      ]"
+      issues-title="No se guardaron"
+      :issues="result.errors"
+    />
+    <div v-else class="mb-6 space-y-4">
+      <CascadeSelectFields
+        v-model="place"
+        id-prefix="bulk-neighborhoods"
+        :fields="CASCADE"
+        :disabled="saving"
+      />
+
+      <FileUploadField
+        v-model="file"
+        :extensions="BULK_NEIGHBORHOODS_UPLOAD.extensions"
+        :max-size-mb="BULK_NEIGHBORHOODS_UPLOAD.maxSizeMb"
+        :requirements="BULK_NEIGHBORHOODS_UPLOAD.requirements"
+        :disabled="saving"
+        @update:model-value="reset"
+      />
     </div>
 
-    <template v-if="result">
-      <BulkResultSummary
-        class="mb-6"
-        :stats="[
-          { label: 'Barrios guardados', value: result.created },
-          { label: 'Con error', value: result.errors.length },
-        ]"
-        issues-title="No se guardaron"
-        :issues="result.errors"
-      />
+    <template v-if="result" #footer>
       <button
         type="button"
         class="bg-brand-primary w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
@@ -27,66 +48,18 @@
         Listo
       </button>
     </template>
-
-    <template v-else>
-      <div class="mb-6 space-y-4">
-        <LocalitySelectFields
-          v-model:country-id="countryId"
-          v-model:locality-id="localityId"
-          id-prefix="bulk-neighborhoods"
-          :country-options="countryOptions"
-          :locality-options="localityOptions"
-          :loading-localities="loadingLocalities"
-          :disabled="saving"
-          @country-change="onCountryChange"
-        />
-
-        <FileUploadField
-          v-model="file"
-          :extensions="BULK_NEIGHBORHOODS_UPLOAD.extensions"
-          :max-size-mb="BULK_NEIGHBORHOODS_UPLOAD.maxSizeMb"
-          :requirements="BULK_NEIGHBORHOODS_UPLOAD.requirements"
-          :disabled="saving"
-          @update:model-value="reset"
-        />
-      </div>
-
-      <FormMessage v-if="error || optionsError" variant="error" class="mb-4">
-        {{ error ?? optionsError }}
-      </FormMessage>
-
-      <div class="flex gap-3">
-        <button
-          type="button"
-          :disabled="saving"
-          class="text-brand-text flex-1 rounded-xl py-3 text-sm font-semibold transition-colors hover:bg-brand-bg disabled:opacity-50"
-          @click="$emit('close')"
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          :disabled="!submittable"
-          class="bg-brand-primary flex-1 rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-          @click="onSave"
-        >
-          {{ saving ? "Subiendo…" : "Subir" }}
-        </button>
-      </div>
-    </template>
-  </BaseModal>
+  </AdminFormModal>
 </template>
 
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
 import { FileUp } from "@lucide/vue";
-import BaseModal from "@/components/shared/BaseModal.vue";
-import FormMessage from "@/components/shared/FormMessage.vue";
+import AdminFormModal from "@/components/admin/shared/AdminFormModal.vue";
+import CascadeSelectFields from "@/components/admin/shared/CascadeSelectFields.vue";
+import { COUNTRY_SELECT, LOCALITY_SELECT } from "@/constants/catalogFilters";
 import FileUploadField from "@/components/admin/shared/FileUploadField.vue";
 import BulkResultSummary from "@/components/admin/catalog/neighborhoods/widgets/BulkResultSummary.vue";
-import LocalitySelectFields from "@/components/admin/catalog/neighborhoods/widgets/LocalitySelectFields.vue";
 import { useBulkCreateNeighborhoods } from "@/composables/admin/useBulkCreateNeighborhoods";
-import { useLocalityPicker } from "@/composables/admin/useLocalityPicker";
 import { BULK_NEIGHBORHOODS_UPLOAD } from "@/constants/catalogUploads";
 import type { BulkNeighborhoodsResult } from "@/types/admin/catalog";
 
@@ -99,22 +72,15 @@ const props = defineProps<{
 const emit = defineEmits<{ close: []; confirm: [] }>();
 
 const { saving, error, upload, reset } = useBulkCreateNeighborhoods();
-const {
-  countryId,
-  localityId,
-  countryOptions,
-  localityOptions,
-  loadingLocalities,
-  error: optionsError,
-  prefill,
-  onCountryChange,
-} = useLocalityPicker();
+const CASCADE = [COUNTRY_SELECT, LOCALITY_SELECT];
+const place = ref<Record<string, string>>({});
+const localityId = computed(() => place.value.locality_id ?? "");
 
 const file = ref<File | null>(null);
 const result = ref<BulkNeighborhoodsResult | null>(null);
 
-const submittable = computed(
-  () => localityId.value !== "" && file.value !== null && !saving.value
+const canSubmit = computed(
+  () => localityId.value !== "" && file.value !== null
 );
 
 watch(
@@ -124,7 +90,10 @@ watch(
     file.value = null;
     result.value = null;
     reset();
-    prefill(props.initialCountryId, props.initialLocalityId);
+    place.value = {
+      country_id: props.initialCountryId ?? "",
+      locality_id: props.initialLocalityId ?? "",
+    };
   }
 );
 
@@ -136,7 +105,7 @@ function onDismiss() {
 }
 
 const onSave = async () => {
-  if (!submittable.value || !file.value) return;
+  if (!canSubmit.value || !file.value) return;
   result.value = await upload(localityId.value, file.value);
 };
 </script>

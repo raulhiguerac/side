@@ -20,16 +20,7 @@
           </h2>
           <p class="text-sm text-brand-muted">Código {{ detail.code }}</p>
         </div>
-        <span
-          :class="[
-            'inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium',
-            detail.is_active
-              ? 'bg-brand-primary-light text-green-700'
-              : 'bg-gray-100 text-brand-muted',
-          ]"
-        >
-          {{ detail.is_active ? "Activo" : "Inactivo" }}
-        </span>
+        <AdminStatusBadge class="shrink-0" :active="detail.is_active" />
       </div>
 
       <NeighborhoodMap
@@ -84,6 +75,7 @@ import { computed, watch } from "vue";
 import { Ban, Pencil, RotateCcw, Upload } from "@lucide/vue";
 import NeighborhoodMap from "@/components/admin/catalog/neighborhoods/widgets/NeighborhoodMap.vue";
 import AdminActionBar from "@/components/admin/shared/AdminActionBar.vue";
+import AdminStatusBadge from "@/components/admin/shared/AdminStatusBadge.vue";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
 import EmptyState from "@/components/shared/EmptyState.vue";
 import { useNeighborhoodNeighbors } from "@/composables/admin/useNeighborhoodNeighbors";

@@ -1,19 +1,16 @@
 <template>
-  <BaseModal :model-value="isOpen" @update:model-value="$emit('close')">
-    <div class="mb-4 flex items-center gap-4">
-      <div
-        class="bg-brand-primary-light flex h-12 w-12 items-center justify-center rounded-xl"
-      >
-        <Pencil class="text-brand-primary h-6 w-6" />
-      </div>
-      <div class="min-w-0">
-        <h3 class="text-brand-text text-lg font-bold">Editar barrio</h3>
-        <p v-if="neighborhood" class="text-brand-muted text-sm">
-          Código {{ neighborhood.code }}
-        </p>
-      </div>
-    </div>
-
+  <AdminFormModal
+    :open="isOpen"
+    :icon="Pencil"
+    title="Editar barrio"
+    :subtitle="neighborhood ? `Código ${neighborhood.code}` : undefined"
+    submit-label="Guardar"
+    saving-label="Guardando…"
+    :saving="saving"
+    :error="error"
+    @close="$emit('close')"
+    @submit="onSave"
+  >
     <div v-if="neighborhood" class="mb-6 space-y-3">
       <div>
         <label
@@ -78,37 +75,13 @@
         </div>
       </div>
     </div>
-
-    <FormMessage v-if="error" variant="error" class="mb-4">
-      {{ error }}
-    </FormMessage>
-
-    <div class="flex gap-3">
-      <button
-        type="button"
-        :disabled="saving"
-        class="text-brand-text hover:bg-brand-bg flex-1 rounded-xl py-3 text-sm font-semibold transition-colors disabled:opacity-50"
-        @click="$emit('close')"
-      >
-        Cancelar
-      </button>
-      <button
-        type="button"
-        :disabled="saving"
-        class="bg-brand-primary flex-1 rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-        @click="onSave"
-      >
-        {{ saving ? "Guardando…" : "Guardar" }}
-      </button>
-    </div>
-  </BaseModal>
+  </AdminFormModal>
 </template>
 
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
 import { Pencil } from "@lucide/vue";
-import BaseModal from "@/components/shared/BaseModal.vue";
-import FormMessage from "@/components/shared/FormMessage.vue";
+import AdminFormModal from "@/components/admin/shared/AdminFormModal.vue";
 import type { NeighborhoodAdminDetail } from "@/types/admin/catalog";
 import { useUpdateNeighborhood } from "@/composables/admin/useUpdateNeighborhood";
 import type { NeighborhoodUpdatePayload } from "@/types/admin/catalog";

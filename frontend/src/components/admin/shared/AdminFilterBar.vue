@@ -54,11 +54,11 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
 import type {
-  AdminAsyncSelectFilter,
   AdminFilterDefinition,
   AdminFilterOptions,
 } from "@/types/admin/filters";
 import PrimaryButton from "@/components/shared/PrimaryButton.vue";
+import { useCascadeOptions } from "@/composables/admin/useCascadeOptions";
 
 // Filtros genéricos: devuelve los valores elegidos sin saber qué filtran.
 const props = withDefaults(
@@ -85,6 +85,8 @@ const gridVars = computed(() => {
 /** El borrador no sale hasta el click: elegir el segundo select no refetchea con el primero a medias. */
 const draft = ref<Record<string, string>>({});
 
+const cascade = useCascadeOptions(() => props.filters);
+
 function syncFromInitial() {
   // Todas las keys, también vacías: si no, `<option value="">` no queda marcado.
   draft.value = Object.fromEntries(
@@ -92,49 +94,21 @@ function syncFromInitial() {
   );
 }
 
-const asyncOptions = ref<Record<string, AdminFilterOptions>>({});
-/** Por key: si el padre cambia dos veces rápido, la respuesta vieja no pisa a la nueva. */
-const latestRequest: Record<string, number> = {};
-
 function optionsFor(filter: AdminFilterDefinition): AdminFilterOptions {
   if (filter.type === "async-select")
-    return asyncOptions.value[filter.key] ?? {};
+    return cascade.options.value[filter.key] ?? {};
   if (filter.type === "search") return {};
   return filter.options;
 }
 
-function isBlocked(filter: AdminFilterDefinition): boolean {
-  return (
-    filter.type === "async-select" &&
-    !!filter.dependsOn &&
-    !draft.value[filter.dependsOn]
-  );
-}
-
-async function loadOptions(filter: AdminAsyncSelectFilter) {
-  const request = (latestRequest[filter.key] ?? 0) + 1;
-  latestRequest[filter.key] = request;
-
-  let options: AdminFilterOptions = {};
-  if (!isBlocked(filter)) {
-    try {
-      options = await filter.loadOptions({ ...draft.value });
-    } catch {
-      options = {};
-    }
-  }
-  if (latestRequest[filter.key] === request)
-    asyncOptions.value[filter.key] = options;
-}
+const isBlocked = (filter: AdminFilterDefinition) =>
+  cascade.isBlocked(filter, draft.value);
 
 // En @change y no en watch: sembrar desde la URL no debe vaciar los hijos.
 function resetDependents(key: string) {
-  for (const filter of props.filters) {
-    if (filter.type !== "async-select" || filter.dependsOn !== key) continue;
-    draft.value[filter.key] = "";
-    loadOptions(filter);
-    resetDependents(filter.key);
-  }
+  const dependents = cascade.dependentsOf(key);
+  for (const filter of dependents) draft.value[filter.key] = "";
+  for (const filter of dependents) cascade.load(filter, draft.value);
 }
 
 function apply() {
@@ -150,9 +124,7 @@ watch(
   () => [props.filters, props.initial],
   () => {
     syncFromInitial();
-    for (const filter of props.filters) {
-      if (filter.type === "async-select") loadOptions(filter);
-    }
+    cascade.loadAll(draft.value);
   },
   { immediate: true }
 );
