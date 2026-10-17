@@ -1,7 +1,7 @@
 ---
 title: ADR-0004 — Impresiones y clicks vía beacon de cliente + collector + Kafka
 status: draft
-last-verified: 2026-07-15
+last-verified: 2026-10-16
 owners: [_shared, frontend, properties-service, analytics-service]
 related:
   - "[[open-items]]"
@@ -9,7 +9,7 @@ related:
   - "[[frontend-architecture]]"
   - "[[analytics-service]]"
   - "[[architecture]]"
-sources: []
+sources: [../../../sources/_shared/2026-10-16-telemetry-status-and-collector-options.md]
 decision-date: 2026-06-04
 decision-status: accepted
 ---
@@ -61,9 +61,22 @@ Pipeline de cuatro tramos, fire-and-forget de punta a punta:
 - ❌ Suma infra nueva: un endpoint collector, dos topics y un consumer en analytics-ms que hoy no existen.
 - ❌ Trae carga de cumplimiento (consentimiento, anonimización) que hay que resolver antes de asociar eventos a usuarios identificados.
 
+## Estado al 2026-10-16
+
+**Nada de este pipeline está implementado.** No hay collector, ni topics `listing.impressed`/`listing.clicked`, ni captura en el front, y `PropertyCardSchema` sigue sin ID de correlación ni posición por resultado. Kafka sí corre en el compose: analytics-service consume `listing-created` y produce `price-predicted`; properties-service no produce a Kafka.
+
+Para dónde vive el collector hay dos opciones, **sin decidir**:
+
+- **A — ruta en properties-service.** Es quien sirve el feed y puede emitir el ID de correlación, y no suma un servicio al cluster de la demo. Costo: la carga de eventos comparte proceso con el feed. Se puede extraer después sin cambiar el contrato (endpoint + topic).
+- **B — servicio de ingestión dedicado.** Escala aparte, pero es otro deployment desde el día uno.
+
+Orden propuesto, tampoco aprobado: (1) ID de correlación y posición en las cards del feed; (2) collector con `session_id` anónimo; (3) consumer en analytics que cuente impresiones y clicks por listing, que ya habilita el "alcance de tu listing" para el dueño; el ranking personalizado después, con datos acumulados.
+
+Una herramienta de product analytics (p. ej. PostHog) da embudos y retención rápido, pero no reemplaza este pipeline: la señal para rankear el feed tiene que vivir en el sistema propio.
+
 ## Open items
 
-- Decidir **dónde vive el collector**: ruta en properties-service vs. servicio de ingestión dedicado. El `workers/` de properties hoy está vacío y es candidato natural al consumer.
+- Decidir **dónde vive el collector**: ruta en properties-service (opción A) vs. servicio de ingestión dedicado (opción B); trade-offs en "Estado al 2026-10-16". `workers/` de properties no tiene consumer Kafka, solo el worker del bulk import.
 - Definir el **schema del evento** (`listing_id`, `correlation_id`, `position`, `session_id`, `event_type`, `ts`, `dwell_ms`).
 - Resolver consentimiento/anonimización antes de cruzar de `session_id` a `user_id`.
 - Atar con el correlation ID que hoy **no** emite `PropertyCardSchema` — habría que agregarlo al feed primero.
@@ -71,6 +84,7 @@ Pipeline de cuatro tramos, fire-and-forget de punta a punta:
 ## Claims
 
 - No existe endpoint collector de impresiones ni topics `listing.impressed`/`listing.clicked`; el ítem está registrado como pendiente en [[open-items]] ([open-items.md](../open-items.md)).
-- El directorio `workers/` de properties-service solo contiene `__init__.py` — no hay consumer Kafka todavía ([workers/](backend/properties-service/src/app/workers)).
+- `workers/` de properties-service no tiene consumer Kafka: contiene el worker del bulk import (`bulk_create_properties_worker.py`), sus `helpers/` y `schemas/` ([workers/](backend/properties-service/src/app/workers)).
 - analytics-service es el consumer designado para la señal de comportamiento, en línea con la frontera async properties↔analytics marcada "en definición" en la arquitectura ([architecture.md](../architecture.md)).
 - `PropertyCardSchema` no incluye hoy un correlation/logging ID por resultado ([property_card.py](backend/properties-service/src/app/services/shared/schemas/property_card.py)).
+- analytics-service consume el topic `listing-created` y produce `price-predicted` ([.env.dev:24-25](backend/analytics-service/.env.dev#L24-L25)).

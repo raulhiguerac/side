@@ -1,7 +1,7 @@
 ---
 title: ADR-0011 — Cluster sin estado para la demo pública; datos en Neon y R2, Redis efímero adentro
 status: draft
-last-verified: 2026-10-05
+last-verified: 2026-10-14
 owners: [_shared]
 related:
   - "[[project-roadmap-2026]]"
@@ -13,6 +13,7 @@ related:
 sources:
   - ../../../sources/_shared/2026-10-05-stateless-cluster-external-data.md
   - ../../../sources/_shared/2026-10-05-public-demo-deploy-gke-cloudflare.md
+  - ../../../sources/_shared/2026-10-14-mvp-close-and-demo-infra-costs.md
 decision-date: 2026-10-05
 decision-status: accepted
 ---
@@ -48,7 +49,7 @@ INTERNET → CLOUDFLARE (DNS · CDN · WAF · DDoS · rate limit)
                               └─→ R2 privado (CSV, modelo) vía S3
 ```
 
-- **Neon:** 5 proyectos gratuitos (catalog, properties, users, analytics, Keycloak), con PostGIS, en la región más cercana a GKE. Cada proyecto gratuito da 0,5 GB y 100 CU-horas al mes.
+- **Neon:** 5 proyectos gratuitos (catalog, properties, users, analytics, Keycloak), con PostGIS, en la región más cercana a GKE. Cada proyecto gratuito da 0,5 GB y 100 CU-horas al mes. Neon solo tiene regiones de AWS (las de Azure quedaron deprecadas en abril de 2026 y no hay GCP), así que "misma región" significa **misma ciudad**: `aws-sa-east-1` con `southamerica-east1` (São Paulo) o `aws-us-east-1` con `us-east4` (Virginia).
 - **R2:**
   - Bucket **público** detrás de `cdn.<dominio>` para fotos y avatares.
   - Buckets **privados** sin dominio para los CSV de imports y los artefactos del modelo.
@@ -72,10 +73,26 @@ INTERNET → CLOUDFLARE (DNS · CDN · WAF · DDoS · rate limit)
 - ✅ El cluster es desechable: el día 91 Argo despliega en otro destino (VPS, Oracle, local) con las mismas connection strings.
 - ✅ Se conserva el aislamiento de hoy, con una base por servicio.
 - ❌ **El cómputo gratis de Neon se suspende a los 5 minutos sin uso.** La primera request tarda más y las conexiones del pool mueren. Hace falta `pool_pre_ping` en el engine de SQLAlchemy de cada servicio; hoy ninguno lo usa.
-- ❌ La latencia entre GKE y Neon depende de la región. Hay que elegir las dos en la misma zona geográfica.
+- ❌ La latencia entre GKE y Neon depende de la región. Hay que elegir las dos en la misma ciudad, porque viven en nubes distintas.
+- ❌ **El plan Free de Neon da 5 GB de egress por proyecto al mes y, al pasarse, suspende el cómputo** hasta el siguiente ciclo (no cobra excedente; los planes pagos dan 500 GB y cobran $0.10/GB después, según la doc de Neon de 2026). Solo cuenta lo que sale de Neon: la navegación de la demo entra con margen, pero un `pg_dump`, un reproceso o un job que recorra tablas puede tumbar la base de un servicio.
+- ❌ **En el plan Free la base queda abierta a internet**, protegida solo por contraseña y TLS. IP Allow (por IP/CIDR, no por dominio) es del plan Scale según la doc actual, y para usarlo GKE necesitaría Cloud NAT con IP estática; PrivateLink solo sirve desde AWS. Mitigación en Free: un rol por servicio con mínimos privilegios, contraseñas aleatorias en Secrets de Kubernetes, `sslmode=require` y nunca el rol owner desde las apps.
+- ➖ El egress de GCP lo genera sobre todo la respuesta de la API saliendo por el Tunnel; las fotos salen de R2, que no cobra egress. A volúmenes de demo son centavos (Premium Norteamérica ~$0.12/GiB, Sudamérica ~$0.19/GiB, cifras de terceros de 2026). Entre zonas de una región GCP cobra $0.01/GiB por dirección, así que un cluster zonal deja el tráfico interno en 0.
 - ❌ Separar buckets por visibilidad choca con `build_public_url`, que asume `{base}/{bucket}/{key}` con un único `base`.
 - ❌ Más proveedores y más cuentas. Los free tiers cambian sin aviso (Oracle recortó el suyo a la mitad en junio de 2026); la regla de "solo connection strings" es lo que hace el cambio barato.
 - ➖ Kafka sigue teniendo estado. Al mudarse se pierden solo los eventos en tránsito.
+
+## De demo a producción
+
+La forma ya es de producción (cluster desechable, Cloudflare delante, sin IP pública, GitOps); la operación no. Lo que faltaría para llamarla production grade a escala MVP:
+
+- **Tiers gratis fuera del camino crítico:** Neon pago o Cloud SQL, y Keycloak en una base que no se suspenda (hoy el primer login tras la inactividad tarda o falla), con `pool_pre_ping` en todos los engines.
+- **CI por PR** (lint, typecheck, tests) antes de que Argo despliegue.
+- **Observabilidad mínima:** chequeo de uptime y captura de errores.
+- **Restore probado** al menos una vez.
+- **Secrets fuera de los values de Helm.**
+- **Redundancia** donde importe: Kafka de un broker y Redis efímero son aceptables solo para la demo.
+
+El proyecto es un side para mostrar y discutir infra; esta lista es la respuesta a "¿qué cambiarías para producción?".
 
 ## Claims
 
