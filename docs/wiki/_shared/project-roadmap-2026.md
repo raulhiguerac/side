@@ -1,7 +1,7 @@
 ---
 title: Project roadmap 2026
 status: stable
-last-verified: 2026-10-05
+last-verified: 2026-10-14
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -10,14 +10,14 @@ related:
   - "[[properties-service]]"
   - "[[frontend]]"
   - "[[avm-training]]"
-sources: [../../sources/_shared/2026-05-29-project-roadmap.md, ../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md, ../../sources/_shared/2026-10-05-stacked-prs-and-roadmap.md, ../../sources/_shared/2026-10-05-public-demo-deploy-gke-cloudflare.md, ../../sources/_shared/2026-10-05-stateless-cluster-external-data.md]
+sources: [../../sources/_shared/2026-05-29-project-roadmap.md, ../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md, ../../sources/_shared/2026-10-05-stacked-prs-and-roadmap.md, ../../sources/_shared/2026-10-05-public-demo-deploy-gke-cloudflare.md, ../../sources/_shared/2026-10-05-stateless-cluster-external-data.md, ../../sources/_shared/2026-10-14-mvp-close-and-demo-infra-costs.md]
 ---
 
 ## TL;DR
 
 Monorepo `side` — plataforma inmobiliaria colombiana. Backend hexagonal (Python/FastAPI), frontend Vue 3, ML con LightGBM + MLflow. Roadmap en 4 fases: catálogo ✅ → propiedades 🔄 → AVM online ✅ → forms básicos → infra → diferenciadores.
 
-> Para el detalle accionable de cada ítem (bugs, deuda, gaps de mercado) ver [[open-items]] — los ítems están etiquetados por fase para que ambos documentos hablen entre sí.
+> Para el detalle accionable de cada ítem (bugs, deuda, gaps de mercado) ver [[open-items]] — los ítems están etiquetados por fase para que ambos documentos hablen entre sí. Lo que falta para cerrar el MVP antes de la infra está ordenado en su sección "MVP — cierre antes de la infra" (2026-10-14).
 
 ## Fase 1 — Catálogo + Onboarding ✅
 
@@ -40,7 +40,7 @@ Monorepo `side` — plataforma inmobiliaria colombiana. Backend hexagonal (Pytho
 | Frontend: vista detalle de propiedad (`/listing/:id`) — galería, info completa, mapa ✅; precio estimado ⏳ | 🔄 |
 | Frontend: form publicar propiedad + subir imágenes + gestionar mis listings (`/properties`) | ✅ |
 | Frontend: MapView con Leaflet + bbox + paginación de resultados | ✅ |
-| Frontend: panel de moderación admin — aprobar/rechazar listings que infringen políticas | ⏳ |
+| Frontend: panel de moderación admin — aprobar/rechazar listings que infringen políticas (de punta a punta desde 2026-08-09, ver [[frontend-admin-panel]]) | ✅ |
 
 Ver [[properties-service]], [[properties-service-listing]], [[properties-service-search]].
 
