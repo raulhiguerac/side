@@ -1,7 +1,7 @@
 ---
 title: Dev workflow — reglas de trabajo del monorepo
 status: stable
-last-verified: 2026-10-09
+last-verified: 2026-10-16
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -13,6 +13,9 @@ sources:
   - ../../sources/_shared/2026-10-05-stacked-prs-and-roadmap.md
   - ../../sources/_shared/2026-09-07-entorno-dev-migrable.md
   - ../../sources/_shared/2026-09-27-minio-a-seaweedfs-y-rclone.md
+  - ../../sources/_shared/2026-10-16-backend-ci-reusable-and-test-deps.md
+  - ../../sources/_shared/2026-10-16-backend-ruff-lint-green.md
+  - ../../sources/_shared/2026-10-16-backend-ci-caller-and-gitignore.md
 ---
 
 ## TL;DR
@@ -121,6 +124,7 @@ Un **harness** es el conjunto de controles que rodean el trabajo para que un err
 | Hook `Stop` | Cuando Claude termina el turno, si hay `.vue`/`.ts` cambiados | `npm run typecheck` (vue-tsc) | Sí: no deja cerrar el turno con errores de tipos | `.claude/hooks/stop-typecheck.sh` |
 | `make audit` | A mano | ruff + pytest por servicio, eslint, vue-tsc, links de la wiki → `audit-report.txt` | No (es un reporte) | `scripts/audit.sh` |
 | Pre-commit | En cada commit (desde el devcontainer) | Wiki staleness | No (solo avisa) | `.pre-commit-config.yaml` |
+| CI backend | En cada PR (`opened`, `synchronize`, `reopened`) | `changes` detecta los servicios tocados; por cada uno, el reusable corre `lint` (ruff 0.17.1 sobre todo el servicio) y `test` (Python 3.10, `uv sync --locked`, `pytest tests/unit`); `ci-ok` resume | Cuando la protección de rama exija `ci-ok` (aún no configurada) | `.github/workflows/backend-ci.yml` → `_backend-lint-unit-tests.yml` |
 
 Detalles del hook `Stop`:
 - Guarda en `.claude/.cache/` (ignorado por git) la huella de los cambios de `frontend/src`; si no cambió desde la última corrida verde, no repite vue-tsc (~6 s).
@@ -132,7 +136,25 @@ Si el devcontainer está apagado, los dos hooks avisan y no bloquean: nunca caen
 
 **Saltarlo en una emergencia:** `/hooks` en Claude Code para desactivarlos en la sesión, o `"disableAllHooks": true` en `.claude/settings.local.json` (personal, no se commitea).
 
-**Pendiente:** CI en GitHub (`.github/workflows`), tests del front (Vitest), lint y typecheck en el pre-commit, y un typechecker para el backend (ningún servicio tiene mypy/pyright). Ver [[open-items]].
+**CI backend (2026-10-16).** El reusable recibe `path` (un servicio por llamada) y `python-version` (por defecto `3.10`, la de los Dockerfiles). GitHub solo acepta reusables directamente en `.github/workflows/`, sin subcarpetas; el prefijo `_` los distingue de los callers. Las deps de test de los 4 servicios viven en `[dependency-groups] dev`: `uv sync` las instala y el `--no-dev` de los Dockerfiles las deja fuera de la imagen. Los unit tests pasan en entorno limpio y el lint está en verde.
+
+**Config de ruff (2026-10-16).** `ruff==0.17.1` está fijado en el grupo `dev` de cada servicio, así que `uv run ruff check .` coincide con el CI. La config es común en `backend/ruff.toml`: analytics, properties y users la toman por descubrimiento, y catalog la extiende (`extend = "../ruff.toml"`) y conserva su `E712`. Lleva:
+- `target-version = "py310"` y `known-first-party = ["app"]`: con la config en `backend/`, ruff ya no lee el `requires-python` de cada servicio y deja de reconocer `app` como código propio;
+- `extend-immutable-calls` para `fastapi.Depends`/`Query`, el falso positivo de `B008`;
+- `BLE001` y `S110` ignorados por el cache-aside fail-open (ver [[adr-cache-optional-layer]]).
+
+El hook `post-edit-lint.sh` y `scripts/audit.sh` todavía usan `uvx ruff` sin versión.
+
+**Caller `backend-ci.yml` (2026-10-16).** No tiene filtro `paths` en el `on`: arranca en todos los PRs y decide qué correr en tres jobs.
+- `changes`: `dorny/paths-filter` (permiso `pull-requests: read`) arma la lista de servicios con cambios bajo `backend/<servicio>/**`. Si cambia algo compartido (`backend/ruff.toml` o cualquiera de los dos workflows), la lista son los 4 servicios.
+- `lint_and_test`: matriz sobre esa lista (`fail-fast: false`) que llama al reusable con `path: backend/<servicio>`. Se salta si la lista está vacía.
+- `ci-ok`: corre siempre y falla si algún job anterior terminó en `failure` o `cancelled`.
+
+`ci-ok` es el único check que debe ser obligatorio en la protección de rama. Los nombres de la matriz cambian según el PR (`lint_and_test (<servicio>) / lint`), y un filtro `paths` en el `on` dejaría los checks obligatorios esperando para siempre en los PRs que no tocan backend. La `concurrency` agrupa por workflow y número de PR, con `cancel-in-progress`: un push nuevo cancela la ejecución anterior del mismo PR. Hasta ahora solo está validado con actionlint; todavía no ha corrido en GitHub.
+
+**`.gitignore` (2026-10-16).** El de la raíz cubre las cachés y artefactos de las herramientas (`.venv/`, `.ruff_cache/`, `.pytest_cache/`, `.mypy_cache/`, `htmlcov/`, `coverage.xml`, `dist/`, `build/`) y los archivos de editor y sistema (`.idea/`, `.vscode/`, `*.swp`, `.DS_Store`). Los servicios backend ya no tienen `.gitignore` propio; `frontend/` conserva el suyo.
+
+**Pendiente:** protección de rama exigiendo `ci-ok` y la primera ejecución real del CI backend, CI del front, tests del front (Vitest), lint y typecheck en el pre-commit, y un typechecker para el backend (ningún servicio tiene mypy/pyright). Ver [[open-items]].
 
 ## Claims
 
@@ -148,3 +170,11 @@ Si el devcontainer está apagado, los dos hooks avisan y no bloquean: nunca caen
 - Los dos hooks ejecutan las herramientas con `docker compose exec -T develop` y salen con código 0 y un aviso si el contenedor `develop` no está corriendo ([.claude/hooks/](.claude/hooks)).
 - `frontend/package.json` define `lint:check` y `typecheck`, y `scripts/audit.sh` los invoca ([frontend/package.json](frontend/package.json), [scripts/audit.sh](scripts/audit.sh)).
 - `.claude/.cache/` está en `.gitignore` ([.gitignore](.gitignore)).
+- `.gitignore` de la raíz ignora `.venv/`, `.ruff_cache/`, `.pytest_cache/`, `htmlcov/` y `.DS_Store`; ningún `backend/*-service` tiene `.gitignore` propio ([.gitignore](.gitignore)).
+- `.github/workflows/backend-ci.yml` corre en `pull_request` (`opened`, `synchronize`, `reopened`) sin filtro `paths`, con `concurrency` por número de PR y `cancel-in-progress: true` ([backend-ci.yml](.github/workflows/backend-ci.yml)).
+- En `backend-ci.yml`, el job `changes` usa `dorny/paths-filter` con un filtro por servicio más uno `shared` (`backend/ruff.toml` y los dos workflows) que expande la salida `services` a los 4 servicios ([backend-ci.yml](.github/workflows/backend-ci.yml)).
+- En `backend-ci.yml`, `lint_and_test` es una matriz sobre `services` que llama a `./.github/workflows/_backend-lint-unit-tests.yml` con `path: backend/<servicio>`, y `ci-ok` corre con `if: always()` y falla si algún job previo terminó en `failure` o `cancelled` ([backend-ci.yml](.github/workflows/backend-ci.yml)).
+- `.github/workflows/_backend-lint-unit-tests.yml` es un reusable (`on: workflow_call`) con inputs `path` y `python-version` (por defecto `"3.10"`) y dos jobs: `lint` (ruff-action con `version: "0.17.1"`) y `test` (`uv sync --locked` + `uv run pytest tests/unit`) ([_backend-lint-unit-tests.yml](.github/workflows/_backend-lint-unit-tests.yml)).
+- `backend/ruff.toml` fija `target-version = "py310"`, ignora `BLE001` y `S110`, declara `fastapi.Depends`/`fastapi.Query` como llamadas inmutables para `B008` y `app` como first-party; `catalog-service/pyproject.toml` la extiende ([backend/ruff.toml](backend/ruff.toml)).
+- Los 4 servicios fijan `ruff==0.17.1` en `[dependency-groups] dev`, la misma versión que usa el job `lint` del reusable ([users-service/pyproject.toml](backend/users-service/pyproject.toml)).
+- Los 4 servicios backend declaran sus deps de test en `[dependency-groups] dev`, y sus Dockerfiles instalan con `uv sync --frozen --no-dev` ([users-service/pyproject.toml](backend/users-service/pyproject.toml), [users-service/Dockerfile](backend/users-service/Dockerfile)).

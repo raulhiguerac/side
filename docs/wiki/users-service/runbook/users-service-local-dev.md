@@ -1,14 +1,14 @@
 ---
 title: Runbook — users-service local dev
 status: draft
-last-verified: 2026-09-27
+last-verified: 2026-10-16
 owners: [users-service]
 related:
   - "[[users-service]]"
   - "[[users-service-architecture]]"
   - "[[users-service-keycloak]]"
   - "[[catalog-service-local-dev]]"
-sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md]
+sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md, ../../../sources/_shared/2026-10-16-backend-ci-reusable-and-test-deps.md]
 ---
 
 ## TL;DR
@@ -155,7 +155,7 @@ psql -h users-ms-db -U admin -d identity_service_db \
 ## Comandos útiles
 
 ```bash
-uv run pytest                          # 40 archivos de test
+uv run pytest tests/unit               # sin .env: tests/unit/conftest.py pone env ficticias
 uv run alembic current                 # 6 migraciones disponibles
 psql -h users-ms-db -U admin -d identity_service_db
 docker exec -it $(docker ps -qf name=redis) redis-cli
@@ -170,4 +170,6 @@ docker logs $(docker ps -qf name=keycloak) -f
 - `FRONT_BASE_URL` es obligatorio: el settings lanza `RuntimeError` si falta ([settings.py:9-11](backend/users-service/src/app/core/config/settings.py#L9-L11)).
 - La app monta el router bajo `/v1` y no incluye el health router ([main.py:33](backend/users-service/src/app/main.py#L33), [api/main.py:3-8](backend/users-service/src/app/api/main.py#L3-L8)).
 - Hay 6 migraciones y 40 archivos de test al 2026-05-28 ([migrations/versions/](backend/users-service/src/app/migrations/versions), [tests/](backend/users-service/tests)).
-- Las dependencias clave: `apscheduler`, `python-keycloak`, `brevo-python`, `boto3`, `redis[hiredis]` ([pyproject.toml:7-31](backend/users-service/pyproject.toml#L7-L31)).
+- Las dependencias clave: `apscheduler`, `python-keycloak`, `brevo-python`, `boto3`, `redis[hiredis]` ([pyproject.toml:7-27](backend/users-service/pyproject.toml#L7-L27)).
+- `api/deps/auth.py`, `api/deps/db.py` y `core/config/settings.py` leen `KC_JWKS_URL`, `KC_ISSUER`, `OIDC_AUDIENCE`, `DATABASE_URL` y `FRONT_BASE_URL` al importarse; `tests/unit/conftest.py` les da valores ficticios con `os.environ.setdefault` para que los unit tests corran sin entorno ([tests/unit/conftest.py](backend/users-service/tests/unit/conftest.py)).
+- pytest, pytest-asyncio, pytest-cov, pytest-mock y `ruff==0.17.1` están en `[dependency-groups] dev`, fuera de las dependencias de runtime ([pyproject.toml](backend/users-service/pyproject.toml)).

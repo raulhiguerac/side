@@ -1,7 +1,7 @@
 ---
 title: ADR-0005 — Cache como capa opcional; degradación silenciosa a DB
 status: stable
-last-verified: 2026-06-20
+last-verified: 2026-10-16
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -12,6 +12,7 @@ related:
 sources:
   - ../../sources/_shared/2026-06-09-mvp-audit-scores.md
   - ../../sources/catalog-service/2026-06-20-isochrone-cache-aside.md
+  - ../../sources/_shared/2026-10-16-backend-ruff-lint-green.md
 ---
 
 ## TL;DR
@@ -66,6 +67,7 @@ Pendiente: confirmar si las copias de `CacheClient` en properties-service y user
 - **Negativo**: si Redis cae, la DB absorbe toda la carga. El sistema degrada en rendimiento, no en disponibilidad — aceptable si la DB tiene capacidad.
 - **Negativo**: un fallo silencioso de Redis en cache invalidation puede dejar datos stale. Los TTLs de cada servicio (1 día para geo_catalog, 30 días para entidades admin) son la red de seguridad.
 - **A futuro**: migrar a circuit breaker cuando haya observabilidad — sin métricas de hit rate de cache, el circuit breaker no añade valor.
+- **Lint (2026-10-16)**: por este patrón, `BLE001` y `S110` están desactivados en `backend/ruff.toml`. Se reactivan cuando se resuelva la redundancia de los wrappers (ver [[open-items]]), dejando `# noqa` solo donde el fail-open sea intencional.
 
 ## Claims
 
