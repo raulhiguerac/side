@@ -3,12 +3,20 @@ from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
 
-from app.core.exceptions.listing import InvalidStatusTransitionError, PropertyNotFoundError, SetVisibilityError
+from app.core.exceptions.listing import (
+    InvalidStatusTransitionError,
+    PropertyNotFoundError,
+    SetVisibilityError,
+)
 from app.models.listing import VerificationStatus
 from app.schemas.principal import Principal
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork
 from app.services.admin.schemas.admin_schemas import VerifyPropertyRequest
-from app.services.shared.helpers.cache_keys import cache_property, client_properties, map_h3_cell
+from app.services.shared.helpers.cache_keys import (
+    cache_property,
+    client_properties,
+    map_h3_cell,
+)
 from app.services.shared.helpers.status_transitions import VERIFICATION_TRANSITIONS
 from app.services.shared.ports.cache import CachePort
 

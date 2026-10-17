@@ -93,8 +93,8 @@ class CompleteNeighborhoodInterestUseCase:
 
         try:
             await self.uow.commit()
-        except Exception as exc:
+        except Exception:
             await self.uow.rollback()
-            raise exc
+            raise
 
         await invalidate_current_user_cache(self.cache, account_id)

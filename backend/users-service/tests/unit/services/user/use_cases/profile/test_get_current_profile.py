@@ -1,12 +1,14 @@
 import uuid
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 from pydantic import TypeAdapter
 
 from app.models.account import AccountIntent
 from app.services.user.schemas.current import CurrentUserProfileOut
-from app.services.user.use_cases.profile.get_current_profile import GetCurrentProfileUseCase
-
+from app.services.user.use_cases.profile.get_current_profile import (
+    GetCurrentProfileUseCase,
+)
 
 PROFILE_DATA = {
     "first_name": "pepito",

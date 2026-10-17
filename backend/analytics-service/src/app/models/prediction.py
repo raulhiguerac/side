@@ -1,7 +1,6 @@
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
 
 
 def _utcnow() -> datetime:
@@ -10,6 +9,7 @@ def _utcnow() -> datetime:
 from sqlalchemy import DateTime, Index
 from sqlalchemy.sql import func
 from sqlmodel import Field, SQLModel
+
 
 class AuditMixin(SQLModel):
     """Campos de auditoría para todas las entidades."""
@@ -24,8 +24,8 @@ class AuditMixin(SQLModel):
         sa_type=DateTime(timezone=True),
         sa_column_kwargs={"server_default": func.now(), "onupdate": func.now(), "nullable": False},
     )
-    created_by: Optional[uuid.UUID] = Field(default=None)
-    updated_by: Optional[uuid.UUID] = Field(default=None)
+    created_by: uuid.UUID | None = Field(default=None)
+    updated_by: uuid.UUID | None = Field(default=None)
 
 class PropertyType(str, Enum):
     apartment = "apartment"
@@ -59,16 +59,16 @@ class Prediction(AuditMixin, table=True):
     parking_spots: int
     stratum: int
     property_type: PropertyType
-    year_built: Optional[int] = Field(default=None)
+    year_built: int | None = Field(default=None)
     lat: float
     lon: float
     barrio_ideca: str
 
-    property_id: Optional[uuid.UUID] = Field(default=None)
+    property_id: uuid.UUID | None = Field(default=None)
 
     predicted_price: float
     model_version: str
 
     source: SourceType
-    feedback: Optional[PredictionFeedback] = Field(default=None)
-    feedback_comment: Optional[str] = Field(default=None)
+    feedback: PredictionFeedback | None = Field(default=None)
+    feedback_comment: str | None = Field(default=None)

@@ -1,7 +1,5 @@
 import uuid
 
-import pytest
-
 from app.models.prediction import PropertyType, SourceType
 from app.services.prediction.helpers.record_builder import build_prediction_record
 from app.services.prediction.schemas.prediction import PredictionRequest
@@ -23,13 +21,13 @@ BASE_REQ = PredictionRequest(
 
 
 def _build(**overrides):
-    defaults = dict(
-        req=BASE_REQ,
-        predicted_price=500_000_000.0,
-        model_version="v1",
-        created_by=PRINCIPAL,
-        source=SourceType.online,
-    )
+    defaults = {
+        "req": BASE_REQ,
+        "predicted_price": 500_000_000.0,
+        "model_version": "v1",
+        "created_by": PRINCIPAL,
+        "source": SourceType.online,
+    }
     return build_prediction_record(**{**defaults, **overrides})
 
 

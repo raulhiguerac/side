@@ -1,4 +1,3 @@
-from typing import Dict, List, Optional
 
 from fastapi.concurrency import run_in_threadpool
 
@@ -14,11 +13,11 @@ class BrevoSenderAdapter(EmailSenderPort):
         self,
         *,
         sender: str,
-        to: List[EmailRecipient],
+        to: list[EmailRecipient],
         subject: str,
         html_content: str,
-        text_content: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        text_content: str | None = None,
+        tags: list[str] | None = None,
     ) -> None:
         return await run_in_threadpool(
             self._client.send_email,
@@ -34,11 +33,11 @@ class BrevoSenderAdapter(EmailSenderPort):
         self,
         *,
         template_id: int,
-        to: List[EmailRecipient],
-        params: Optional[Dict[str, object]] = None,
-        sender: Optional[str] = None,
-        subject: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        to: list[EmailRecipient],
+        params: dict[str, object] | None = None,
+        sender: str | None = None,
+        subject: str | None = None,
+        tags: list[str] | None = None,
     ) -> None:
         return await run_in_threadpool(
             self._client.send_email_template,

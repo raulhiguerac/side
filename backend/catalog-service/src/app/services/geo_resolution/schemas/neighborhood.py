@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from app.schemas.base import StrictBase
 
@@ -8,7 +7,7 @@ class NeighborhoodInfo(StrictBase):
     id: uuid.UUID
     locality_id: uuid.UUID
     name: str
-    h3_cells: Optional[list[str]]
+    h3_cells: list[str] | None
 
 
 class ResolvedNeighborhood(StrictBase):
@@ -35,7 +34,7 @@ class PointToResolve(PointToResolveBase):
 
 class ResolvedPoint(StrictBase):
     id: str
-    location: Optional[LocationByCoordinates]
+    location: LocationByCoordinates | None
 
 
 class BulkResolveLocationsRequest(StrictBase):

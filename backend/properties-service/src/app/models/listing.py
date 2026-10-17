@@ -1,8 +1,8 @@
 import uuid
-from decimal import Decimal
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from geoalchemy2 import Geometry
 from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, Numeric
@@ -11,6 +11,9 @@ from sqlmodel import Field, Relationship
 from app.models.mixins import AuditMixin
 from app.models.promotion import ACTIVE_PROMOTION_PRIMARYJOIN
 
+if TYPE_CHECKING:
+    from app.models.image import PropertyImage
+    from app.models.promotion import PromotedListing
 
 # =============================================================================
 # ENUMS
@@ -95,12 +98,12 @@ class Property(AuditMixin, table=True):
     status: ListingStatus = Field(nullable=False, default=ListingStatus.draft)
     currency: Currency = Field(nullable=False)
     verification_status: VerificationStatus = Field(nullable=False, default=VerificationStatus.unverified)
-    verified_by: Optional[uuid.UUID] = Field(default=None)
-    rejection_reason: Optional[str] = Field(default=None)
+    verified_by: uuid.UUID | None = Field(default=None)
+    rejection_reason: str | None = Field(default=None)
 
     # Floors — floor_number: which floor the apt is on; total_floors: how many floors a house has
-    floor_number: Optional[int] = Field(default=None)
-    total_floors: Optional[int] = Field(default=None)
+    floor_number: int | None = Field(default=None)
+    total_floors: int | None = Field(default=None)
 
     area_m2: Decimal = Field(sa_column=Column(Numeric(10, 2), nullable=False))
     bedrooms: int = Field(nullable=False)
@@ -109,24 +112,24 @@ class Property(AuditMixin, table=True):
 
     # H3 spatial index — populated on create/update from location coordinates
     # r9 ~300m cells (detail view), r7 ~5km cells (zoomed-out map)
-    h3_r9: Optional[str] = Field(default=None, max_length=16, index=True)
-    h3_r7: Optional[str] = Field(default=None, max_length=16, index=True)
+    h3_r9: str | None = Field(default=None, max_length=16, index=True)
+    h3_r7: str | None = Field(default=None, max_length=16, index=True)
 
-    description: Optional[str] = Field(default=None)
-    year_built: Optional[int] = Field(default=None)
-    admin_fee: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(14, 2), nullable=True))
-    stratum: Optional[int] = Field(default=None)
+    description: str | None = Field(default=None)
+    year_built: int | None = Field(default=None)
+    admin_fee: Decimal | None = Field(default=None, sa_column=Column(Numeric(14, 2), nullable=True))
+    stratum: int | None = Field(default=None)
     price: Decimal = Field(sa_column=Column(Numeric(14, 2), nullable=False))
 
     # Estimated prices — kept separate to preserve both signals for ML training
-    admin_estimated_price: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(14, 2), nullable=True))
-    admin_estimated_price_at: Optional[datetime] = Field(
+    admin_estimated_price: Decimal | None = Field(default=None, sa_column=Column(Numeric(14, 2), nullable=True))
+    admin_estimated_price_at: datetime | None = Field(
         default=None,
         sa_type=DateTime(timezone=True),
         sa_column_kwargs={"nullable": True},
     )
-    ml_estimated_price: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric(14, 2), nullable=True))
-    ml_estimated_price_at: Optional[datetime] = Field(
+    ml_estimated_price: Decimal | None = Field(default=None, sa_column=Column(Numeric(14, 2), nullable=True))
+    ml_estimated_price_at: datetime | None = Field(
         default=None,
         sa_type=DateTime(timezone=True),
         sa_column_kwargs={"nullable": True},

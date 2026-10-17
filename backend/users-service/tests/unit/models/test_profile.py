@@ -1,9 +1,9 @@
 import uuid
 
 from app.models.account import (
-    UserProfile,
-    CompanyProfile,
     AccountIntent,
+    CompanyProfile,
+    UserProfile,
 )
 
 

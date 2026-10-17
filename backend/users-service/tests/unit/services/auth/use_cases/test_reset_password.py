@@ -1,13 +1,20 @@
 import uuid
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
+from app.core.exceptions.auth import (
+    PasswordsDoNotMatchError,
+    TokenInvalidOrExpiredError,
+)
 from app.models.account import Account
-from app.services.auth.use_cases.request_reset_password import RequestResetPasswordUseCase
-from app.services.auth.use_cases.confirm_reset_password import ConfirmResetPasswordUseCase
 from app.services.auth.schemas.passwords import ResetPassword
-from app.core.exceptions.auth import TokenInvalidOrExpiredError, PasswordsDoNotMatchError
-
+from app.services.auth.use_cases.confirm_reset_password import (
+    ConfirmResetPasswordUseCase,
+)
+from app.services.auth.use_cases.request_reset_password import (
+    RequestResetPasswordUseCase,
+)
 
 # =============================================================================
 # RequestResetPasswordUseCase

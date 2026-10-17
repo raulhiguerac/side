@@ -21,13 +21,15 @@ from app.services.geo_resolution.ports.unit_of_work import GeoResolutionUnitOfWo
 from app.services.geo_resolution.use_cases.bulk_resolve_locations_by_coordinates import (
     BulkResolveLocationsByCoordinatesUseCase,
 )
+from app.services.geo_resolution.use_cases.resolve_isochrone import (
+    ResolveIsochroneUseCase,
+)
 from app.services.geo_resolution.use_cases.resolve_location_by_coordinates import (
     ResolveLocationByCoordinatesUseCase,
 )
 from app.services.geo_resolution.use_cases.resolve_neighborhood import (
     ResolveNeighborhoodUseCase,
 )
-from app.services.geo_resolution.use_cases.resolve_isochrone import ResolveIsochroneUseCase
 from app.services.geo_resolution.use_cases.resolve_poi import ResolvePoiUseCase
 from app.services.shared.ports.cache import CachePort
 

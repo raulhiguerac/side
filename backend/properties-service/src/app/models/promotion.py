@@ -1,11 +1,14 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Index, and_, func
 from sqlmodel import Field, Relationship
 
 from app.models.mixins import AuditMixin
+
+if TYPE_CHECKING:
+    from app.models.listing import Property
 
 
 class PromotedListing(AuditMixin, table=True):
@@ -54,7 +57,7 @@ class PromotedListing(AuditMixin, table=True):
 # en ningún otro.
 def active_promotion_clause():
     return and_(
-        PromotedListing.is_active == True,  # noqa: E712
+        PromotedListing.is_active == True,
         PromotedListing.ends_at > func.now(),
     )
 

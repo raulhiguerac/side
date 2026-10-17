@@ -3,7 +3,10 @@ from fastapi import APIRouter, Depends, status
 from app.api.deps.auth import get_current_principal
 from app.api.deps.prediction import get_online_prediction_uc
 from app.schemas.principal import Principal
-from app.services.prediction.schemas.prediction import PredictionRequest, PredictionResponse
+from app.services.prediction.schemas.prediction import (
+    PredictionRequest,
+    PredictionResponse,
+)
 from app.services.prediction.use_cases.online import OnlinePrediction
 
 router = APIRouter(prefix="/predict", tags=["prediction"])

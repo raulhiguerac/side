@@ -1,6 +1,6 @@
 import asyncio
+from collections.abc import AsyncIterator
 from functools import partial
-from typing import AsyncIterator
 
 from fastapi.concurrency import run_in_threadpool
 

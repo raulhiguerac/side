@@ -1,10 +1,9 @@
 import uuid
 from decimal import Decimal
-from typing import Optional
 
-from app.core.config.settings import settings
 from pydantic import Field, field_validator
 
+from app.core.config.settings import settings
 from app.models.listing import Currency, ListingType, PropertyCondition, PropertyType
 from app.schemas.base import StrictBase
 
@@ -24,8 +23,8 @@ class CreatePropertyRequest(StrictBase):
     currency: Currency
 
     # Floors
-    floor_number: Optional[int] = Field(default=None, ge=0)
-    total_floors: Optional[int] = Field(default=None, ge=1)
+    floor_number: int | None = Field(default=None, ge=0)
+    total_floors: int | None = Field(default=None, ge=1)
 
     area_m2: Decimal = Field(gt=0, decimal_places=2)
     bedrooms: int = Field(ge=1)
@@ -33,36 +32,35 @@ class CreatePropertyRequest(StrictBase):
     parking_spots: int = Field(default=0, ge=0)
 
     price: Decimal = Field(gt=0, decimal_places=2)
-    currency: Currency
-    admin_fee: Optional[Decimal] = Field(default=None, ge=0, decimal_places=2)
+    admin_fee: Decimal | None = Field(default=None, ge=0, decimal_places=2)
 
-    description: Optional[str] = Field(default=None, max_length=2000)
-    year_built: Optional[int] = Field(default=None, ge=1800)
-    stratum: Optional[int] = Field(default=None, ge=1, le=6)
+    description: str | None = Field(default=None, max_length=2000)
+    year_built: int | None = Field(default=None, ge=1800)
+    stratum: int | None = Field(default=None, ge=1, le=6)
 
     location: LocationField
 
     @field_validator("floor_number")
     @classmethod
-    def validate_apartment_floor(cls, v: Optional[int], info) -> Optional[int]:
+    def validate_apartment_floor(cls, v: int | None, info) -> int | None:
         if info.data.get("property_type") == PropertyType.apartment and v is None:
             raise ValueError("floor_number is required for apartments")
         return v
 
     @field_validator("total_floors")
     @classmethod
-    def validate_house_floors(cls, v: Optional[int], info) -> Optional[int]:
+    def validate_house_floors(cls, v: int | None, info) -> int | None:
         if info.data.get("property_type") == PropertyType.house and v is None:
             raise ValueError("total_floors is required for houses")
         return v
 
 
 class UpdatePropertyRequest(StrictBase):
-    condition: Optional[PropertyCondition] = None
-    currency: Optional[Currency] = None
-    price: Optional[Decimal] = Field(default=None, gt=0, decimal_places=2)
-    admin_fee: Optional[Decimal] = Field(default=None, ge=0, decimal_places=2)
-    description: Optional[str] = Field(default=None, max_length=2000)
+    condition: PropertyCondition | None = None
+    currency: Currency | None = None
+    price: Decimal | None = Field(default=None, gt=0, decimal_places=2)
+    admin_fee: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    description: str | None = Field(default=None, max_length=2000)
 
 
 class PresignedUrlItem(StrictBase):

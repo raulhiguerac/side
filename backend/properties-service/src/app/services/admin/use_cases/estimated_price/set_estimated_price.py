@@ -2,7 +2,6 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 from functools import partial
-from typing import Optional
 
 from fastapi.concurrency import run_in_threadpool
 
@@ -15,7 +14,7 @@ class SetEstimatedPriceUseCase:
     def __init__(self, *, uow: AdminUnitOfWork) -> None:
         self.uow = uow
 
-    async def execute(self, principal: Optional[Principal], property_id: uuid.UUID, estimated_price: Decimal) -> None:
+    async def execute(self, principal: Principal | None, property_id: uuid.UUID, estimated_price: Decimal) -> None:
         prop = await run_in_threadpool(
             partial(self.uow.properties.get_by_id, property_id=property_id)
         )

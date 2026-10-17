@@ -1,8 +1,8 @@
 from typing import Protocol
 
-from app.services.admin.ports.property_repository import AdminPropertyRepository
-from app.services.admin.ports.promotion_repository import PromotionRepository
 from app.services.admin.ports.bulk_job_repository import BulkJobRepository
+from app.services.admin.ports.promotion_repository import PromotionRepository
+from app.services.admin.ports.property_repository import AdminPropertyRepository
 
 
 class AdminUnitOfWork(Protocol):

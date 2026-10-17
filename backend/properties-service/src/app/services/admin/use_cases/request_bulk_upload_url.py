@@ -5,7 +5,10 @@ from app.core.exceptions.storage import StorageMisconfiguredError
 from app.core.files.policies import PROPERTIES_BULK_UPLOAD_POLICY
 from app.core.files.validators import validate_file_extension
 from app.schemas.principal import Principal
-from app.services.admin.schemas.admin_schemas import BulkUploadUrlRequest, BulkUploadUrlResponse
+from app.services.admin.schemas.admin_schemas import (
+    BulkUploadUrlRequest,
+    BulkUploadUrlResponse,
+)
 from app.services.shared.ports.storage import StoragePort
 
 

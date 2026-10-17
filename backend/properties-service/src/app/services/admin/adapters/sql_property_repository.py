@@ -1,12 +1,16 @@
 import uuid
-from typing import Optional
 
-from sqlmodel import Session, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import noload
+from sqlmodel import Session, func, select
 
-from app.models.listing import ListingStatus, Property, PropertyLocation, VerificationStatus
 from app.models.image import PropertyImage
+from app.models.listing import (
+    ListingStatus,
+    Property,
+    PropertyLocation,
+    VerificationStatus,
+)
 from app.models.promotion import PromotedListing, active_promotion_clause
 from app.services.admin.ports.property_repository import AdminPropertyRepository
 
@@ -102,10 +106,10 @@ class SqlAdminPropertyRepository(AdminPropertyRepository):
     def _apply_filters(
         stmt,
         *,
-        status: Optional[ListingStatus],
-        verification_status: Optional[VerificationStatus],
-        owner_id: Optional[uuid.UUID],
-        is_promoted: Optional[bool],
+        status: ListingStatus | None,
+        verification_status: VerificationStatus | None,
+        owner_id: uuid.UUID | None,
+        is_promoted: bool | None,
     ):
         """Shared by get_all and count_all on purpose: a filter added to one and
         not the other would make the reported total disagree with the rows."""
@@ -135,10 +139,10 @@ class SqlAdminPropertyRepository(AdminPropertyRepository):
     def get_all(
         self,
         *,
-        status: Optional[ListingStatus] = None,
-        verification_status: Optional[VerificationStatus] = None,
-        owner_id: Optional[uuid.UUID] = None,
-        is_promoted: Optional[bool] = None,
+        status: ListingStatus | None = None,
+        verification_status: VerificationStatus | None = None,
+        owner_id: uuid.UUID | None = None,
+        is_promoted: bool | None = None,
         offset: int = 0,
         limit: int = 20,
     ) -> list[Property]:
@@ -165,10 +169,10 @@ class SqlAdminPropertyRepository(AdminPropertyRepository):
     def count_all(
         self,
         *,
-        status: Optional[ListingStatus] = None,
-        verification_status: Optional[VerificationStatus] = None,
-        owner_id: Optional[uuid.UUID] = None,
-        is_promoted: Optional[bool] = None,
+        status: ListingStatus | None = None,
+        verification_status: VerificationStatus | None = None,
+        owner_id: uuid.UUID | None = None,
+        is_promoted: bool | None = None,
     ) -> int:
         stmt = self._apply_filters(
             select(func.count()).select_from(Property),

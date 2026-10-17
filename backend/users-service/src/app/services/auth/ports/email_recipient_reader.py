@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional, Protocol
+from typing import Protocol
 
 from app.models.account import AccountType
 
@@ -10,4 +10,4 @@ class EmailRecipientReaderPort(Protocol):
         *,
         account_id: uuid.UUID,
         account_type: AccountType
-    ) -> Optional[str]: ...
+    ) -> str | None: ...

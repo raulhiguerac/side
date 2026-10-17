@@ -1,9 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock
 
+import pytest
+
 from app.services.auth.services.reset_password_mailer import (
-    ResetPasswordMailer,
     RESET_PASSWORD_TEMPLATE_ID,
+    ResetPasswordMailer,
 )
 
 

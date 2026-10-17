@@ -7,23 +7,21 @@ from fastapi import Response, UploadFile
 from pydantic import TypeAdapter
 
 from app.api.routes.user import (
+    confirm_account_reactivation,
+    deactivate_user_account,
     get_current_user,
     get_current_user_profile,
+    request_account_reactivation,
     update_user_profile,
     upload_user_profile_photo,
-    deactivate_user_account,
-    request_account_reactivation,
-    confirm_account_reactivation,
 )
-
 from app.models.account import AccountIntent
-
 from app.schemas.common import Principal
+from app.services.auth.schemas.tokens import RefreshToken
 from app.services.user.schemas.current import CurrentUserOut, CurrentUserProfileOut
 from app.services.user.schemas.photo import PhotoUploadOut
 from app.services.user.schemas.reactivation import RequestReactivationIn
 from app.services.user.schemas.update import UpdateRequest
-from app.services.auth.schemas.tokens import RefreshToken
 
 ACCOUNT_ID = uuid.UUID("c42b2c19-efda-4f42-a7e5-1e69190f51e0")
 

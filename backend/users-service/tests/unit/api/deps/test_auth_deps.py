@@ -1,7 +1,6 @@
-import uuid
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
+import pytest
 from fastapi import Request
 
 from app.api.deps.auth import (

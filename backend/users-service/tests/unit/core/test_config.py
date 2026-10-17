@@ -1,10 +1,8 @@
-import pytest
 from unittest.mock import patch
+
 
 def test_settings_loads_front_base_url():
     with patch.dict("os.environ", {"FRONT_BASE_URL": "https://example.com"}, clear=False):
-        from importlib import reload
-        import app.core.config.settings as settings_module
         # Note: Settings is instantiated at import time, so we test the class directly
         from app.core.config.settings import Settings
 

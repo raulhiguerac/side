@@ -1,7 +1,5 @@
 import uuid
-from datetime import datetime
 from decimal import Decimal
-from typing import Optional
 
 from fastapi import Depends, Query
 from sqlmodel import Session
@@ -11,11 +9,13 @@ from app.api.deps.listing import get_cache_port
 from app.models.listing import PropertyType
 from app.services.search.adapters.sql_unit_of_work import SqlSearchUnitOfWork
 from app.services.search.ports.unit_of_work import SearchUnitOfWork
-from app.services.search.schemas.feed_schemas import FeedCursor, FeedFilters, FeedPreferences
+from app.services.search.schemas.feed_schemas import (
+    FeedFilters,
+    FeedPreferences,
+)
 from app.services.search.use_cases.get_feed import GetFeedUseCase
 from app.services.search.use_cases.get_feed_map import GetFeedMapUseCase
 from app.services.shared.ports.cache import CachePort
-
 
 # -------------------------------------------------------------------------
 # Unit of Work (request-scoped)
@@ -33,7 +33,7 @@ def parse_feed_preferences(
     city_ids: list[uuid.UUID] = Query(default=[]),
     neighborhood_ids: list[uuid.UUID] = Query(default=[]),
     property_types: list[PropertyType] = Query(default=[]),
-) -> Optional[FeedPreferences]:
+) -> FeedPreferences | None:
     if not city_ids and not neighborhood_ids and not property_types:
         return None
     return FeedPreferences(
@@ -44,13 +44,13 @@ def parse_feed_preferences(
 
 
 def parse_feed_filters(
-    min_price: Optional[Decimal] = None,
-    max_price: Optional[Decimal] = None,
-    min_area_m2: Optional[Decimal] = None,
-    max_area_m2: Optional[Decimal] = None,
-    min_bathrooms: Optional[Decimal] = None,
-    bedrooms: Optional[int] = Query(default=None, ge=1),
-) -> Optional[FeedFilters]:
+    min_price: Decimal | None = None,
+    max_price: Decimal | None = None,
+    min_area_m2: Decimal | None = None,
+    max_area_m2: Decimal | None = None,
+    min_bathrooms: Decimal | None = None,
+    bedrooms: int | None = Query(default=None, ge=1),
+) -> FeedFilters | None:
     filters = FeedFilters(
         min_price=min_price,
         max_price=max_price,

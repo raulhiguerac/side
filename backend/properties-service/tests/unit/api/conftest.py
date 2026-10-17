@@ -10,15 +10,15 @@ import os
 
 os.environ.setdefault("DATABASE_PROPERTIES_URL", "postgresql://test:test@localhost:5432/test")
 
-import uuid  # noqa: E402
-from unittest.mock import AsyncMock  # noqa: E402
+import uuid
+from unittest.mock import AsyncMock
 
-import pytest  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
+import pytest
+from fastapi.testclient import TestClient
 
-from app.api.deps.auth import require_admin  # noqa: E402
-from app.main import app  # noqa: E402
-from app.schemas.principal import Principal  # noqa: E402
+from app.api.deps.auth import require_admin
+from app.main import app
+from app.schemas.principal import Principal
 
 ADMIN_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")
 ADMIN = Principal(sub=ADMIN_ID, roles=["admin"])

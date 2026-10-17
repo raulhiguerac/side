@@ -1,10 +1,10 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 from app.core.exceptions.base import BaseError
 
 
 class GeoResolutionMisconfiguredError(BaseError):
-    def __init__(self, *, cause: Exception | None = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, *, cause: Exception | None = None, context: dict[str, Any] | None = None):
         super().__init__(
             message="Georeferentiation provider is misconfigured",
             code="GEO_RESOLUTION_MISCONFIGURED",
@@ -14,7 +14,7 @@ class GeoResolutionMisconfiguredError(BaseError):
 
 
 class GeoResolutionUnavailableError(BaseError):
-    def __init__(self, *, cause: Exception | None = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, *, cause: Exception | None = None, context: dict[str, Any] | None = None):
         super().__init__(
             message="Georeferentiation provider is unreachable",
             code="GEO_RESOLUTION_UNAVAILABLE",
@@ -24,7 +24,7 @@ class GeoResolutionUnavailableError(BaseError):
 
 
 class GeoResolutionBadRequestError(BaseError):
-    def __init__(self, *, cause: Exception | None = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, *, cause: Exception | None = None, context: dict[str, Any] | None = None):
         super().__init__(
             message="Invalid geocoding request",
             code="GEO_RESOLUTION_BAD_REQUEST",
@@ -34,7 +34,7 @@ class GeoResolutionBadRequestError(BaseError):
 
 
 class GeoResolutionNotFoundError(BaseError):
-    def __init__(self, *, address: str, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, *, address: str, context: dict[str, Any] | None = None):
         super().__init__(
             message=f"No results found for address '{address}'",
             code="GEO_RESOLUTION_NOT_FOUND",
@@ -43,7 +43,7 @@ class GeoResolutionNotFoundError(BaseError):
 
 
 class NeighborhoodResolutionError(BaseError):
-    def __init__(self, *, latitude: float, longitude: float, locality_id: str, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, *, latitude: float, longitude: float, locality_id: str, context: dict[str, Any] | None = None):
         super().__init__(
             message=f"No neighborhood found for coordinates ({latitude}, {longitude})",
             code="NEIGHBORHOOD_RESOLUTION_NOT_FOUND",

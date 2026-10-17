@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
@@ -18,8 +17,8 @@ class DbErrorTranslator:
         self,
         exc: IntegrityError,
         *,
-        email: Optional[str] = None,
-        kc_user_id: Optional[uuid.UUID] = None,
+        email: str | None = None,
+        kc_user_id: uuid.UUID | None = None,
     ) -> BaseError:
         pgcode, constraint_name, column_name = self._extract_pg_details(exc)
 
@@ -86,8 +85,8 @@ class DbErrorTranslator:
         self,
         exc: SQLAlchemyError,
         *,
-        email: Optional[str] = None,
-        kc_user_id: Optional[uuid.UUID] = None,
+        email: str | None = None,
+        kc_user_id: uuid.UUID | None = None,
         message: str = "Database error",
         code: str = "DATABASE_ERROR",
     ) -> BaseError:
@@ -104,7 +103,7 @@ class DbErrorTranslator:
             cause=exc,
         )
 
-    def _extract_pg_details(self, exc: IntegrityError) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    def _extract_pg_details(self, exc: IntegrityError) -> tuple[str | None, str | None, str | None]:
         orig = getattr(exc, "orig", None)
         pgcode = getattr(orig, "pgcode", None)
 

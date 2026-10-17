@@ -51,10 +51,9 @@ async def get_current_principal(request: Request) -> Principal:
             jwks_client.get_signing_key_from_jwt, access_token
         )
     except PyJWKClientConnectionError as e:
-        logger.error(
+        logger.exception(
             "jwks_connection_error",
             extra={"extra": {"detail": str(e)}},
-            exc_info=True,
         )
         raise IdentityProviderUnavailableError(detail=str(e), cause=e)
     except PyJWKClientError as e:

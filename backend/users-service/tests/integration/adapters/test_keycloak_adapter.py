@@ -52,26 +52,25 @@ Usar testcontainers con Keycloak:
             yield kc
 """
 
-import uuid
-import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
-
 # Agregar src al path
 import sys
+import uuid
 from pathlib import Path
+from unittest.mock import MagicMock
+
+import pytest
+
 src_path = Path(__file__).parent.parent.parent.parent / "src"
 sys.path.insert(0, str(src_path))
 
-from app.services.auth.adapters.keycloak_idp import KeycloakIdentityProvider
-from app.services.auth.adapters.keycloak_auth_provider import KeycloakAuthenticationProvider
-from app.services.auth.schemas.tokens import AuthTokens
 from app.core.exceptions.identity_provider import (
-    KeycloakDeleteAccountError,
-    KeycloakRegisterError,
     KeycloakSetPasswordError,
-    IdentityProviderUnavailableError,
 )
-
+from app.services.auth.adapters.keycloak_auth_provider import (
+    KeycloakAuthenticationProvider,
+)
+from app.services.auth.adapters.keycloak_idp import KeycloakIdentityProvider
+from app.services.auth.schemas.tokens import AuthTokens
 
 # =============================================================================
 # FIXTURES

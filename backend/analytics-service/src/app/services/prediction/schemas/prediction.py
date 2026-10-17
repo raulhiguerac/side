@@ -1,11 +1,10 @@
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from pydantic import Field
 
-from app.schemas.base import StrictBase
 from app.models.prediction import PropertyType
+from app.schemas.base import StrictBase
 
 
 class PredictionRequest(StrictBase):
@@ -15,11 +14,11 @@ class PredictionRequest(StrictBase):
     parking_spots: int = Field(ge=0, le=20)
     stratum: int = Field(ge=1, le=6)
     property_type: PropertyType
-    year_built: Optional[int] = Field(default=None, ge=1900, le=2100)
+    year_built: int | None = Field(default=None, ge=1900, le=2100)
     lat: float = Field(ge=-90, le=90)
     lon: float = Field(ge=-180, le=180)
     barrio_ideca: str = Field(min_length=1)
-    property_id: Optional[uuid.UUID] = None
+    property_id: uuid.UUID | None = None
 
 
 class PredictionResponse(StrictBase):

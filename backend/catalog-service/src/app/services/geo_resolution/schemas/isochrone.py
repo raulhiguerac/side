@@ -12,7 +12,7 @@ class IsochroneRequest(StrictBase):
     lat: float = Field(ge=-90, le=90)
     lon: float = Field(ge=-180, le=180)
     range_seconds: list[int] = Field(min_length=1)
-    profile: list[OrsProfile] = ["foot-walking"]
+    profile: list[OrsProfile] = Field(default_factory=lambda: ["foot-walking"])
     property_id: uuid.UUID | None = None
 
 
@@ -47,5 +47,5 @@ class ReachablePoisResult(StrictBase):
     profile: OrsProfile
     range: float | None = None
     isochrone: GeoJsonPolygon | None = None
-    pois: list[ReachablePoiItem] = []
+    pois: list[ReachablePoiItem] = Field(default_factory=list)
     error: str | None = None

@@ -12,7 +12,11 @@ from app.services.listing.helpers.db_error_translator import translate_db_error
 from app.services.listing.helpers.image_count_guard import check_image_count
 from app.services.listing.helpers.property_guard import get_owned_property_for_update
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork
-from app.services.listing.schemas.listing_schemas import PresignedUrlItem, PresignedUrlsRequest, PresignedUrlsResponse
+from app.services.listing.schemas.listing_schemas import (
+    PresignedUrlItem,
+    PresignedUrlsRequest,
+    PresignedUrlsResponse,
+)
 from app.services.shared.ports.cache import CachePort
 from app.services.shared.ports.storage import StoragePort
 
@@ -71,13 +75,13 @@ class RequestPresignedUrlsUseCase:
                 keys=keys,
                 ttl=settings.PRESIGNED_URL_TTL_SECONDS,
             )
-        except Exception as exc:
+        except Exception:
             batch.status = BatchStatus.failed
             try:
                 await self.uow.commit()
             except Exception:
                 pass
-            raise exc
+            raise
 
         batch.status = BatchStatus.ready
         try:

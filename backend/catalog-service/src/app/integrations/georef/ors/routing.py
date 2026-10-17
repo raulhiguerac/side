@@ -5,7 +5,10 @@ import httpx
 from app.core.config.settings import settings
 from app.core.exceptions.geo_resolution import GeoResolutionUnavailableError
 from app.core.logging.logger import get_logger
-from app.services.geo_resolution.schemas.isochrone import IsochroneProfileResult, IsochroneRequest
+from app.services.geo_resolution.schemas.isochrone import (
+    IsochroneProfileResult,
+    IsochroneRequest,
+)
 
 logger = get_logger(__name__)
 

@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class BaseError(Exception):
@@ -6,8 +6,8 @@ class BaseError(Exception):
         self,
         message: str = "An unexpected error occurred",
         code: str = "INTERNAL_ERROR",
-        context: Optional[Dict[str, Any]] = None,
-        cause: Optional[Exception] = None,
+        context: dict[str, Any] | None = None,
+        cause: Exception | None = None,
     ):
         self.message = message
         self.code = code

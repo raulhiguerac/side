@@ -1,5 +1,5 @@
 import os
-from typing import Any, BinaryIO, Dict, Optional
+from typing import Any, BinaryIO
 
 import boto3
 from botocore.client import Config
@@ -45,7 +45,7 @@ class StorageClient:
         fileobj: BinaryIO,
         bucket: str,
         key: str,
-        extra_args: Optional[Dict[str, Any]] = None,
+        extra_args: dict[str, Any] | None = None,
     ) -> UploadResult:
         try:
             if hasattr(fileobj, "seek"):

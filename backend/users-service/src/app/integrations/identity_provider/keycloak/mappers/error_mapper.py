@@ -1,4 +1,4 @@
-from typing import Literal, NoReturn
+from typing import Literal
 
 from keycloak.exceptions import (
     KeycloakAuthenticationError,
@@ -26,7 +26,7 @@ def translate_keycloak_error(
     *,
     error: Exception,
     operation: Literal["login", "refresh", "revoke"],
-) -> NoReturn | None:
+) -> None:
 
     if isinstance(error, KeycloakAuthenticationError):
         text = str(error).lower()
@@ -41,7 +41,7 @@ def translate_keycloak_error(
                     raise InvalidRefreshTokenError(cause=error) from error
                 case "revoke":
                     logger.info("keycloak_revoke_token_already_invalid")
-                    return None
+                    return
 
         if "invalid_client" in text or "unauthorized_client" in text:
             logger.error("keycloak_client_misconfigured", extra={"extra": {"kc_error": text[:200]}})
@@ -64,7 +64,7 @@ def translate_keycloak_error(
                     raise InvalidRefreshTokenError(cause=error) from error
                 case "revoke":
                     logger.info("keycloak_revoke_token_already_invalid")
-                    return None
+                    return
 
         if status in (400, 401) and ("invalid_client" in text or "unauthorized_client" in text):
             logger.error("keycloak_client_misconfigured", extra={"extra": {"kc_status": status, "kc_error": text[:200]}})

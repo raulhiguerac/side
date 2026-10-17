@@ -1,12 +1,14 @@
 import enum
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import Column, DateTime
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlmodel import Field
+
 from app.models.mixins import AuditMixin
+
 
 class JobStatus(str, enum.Enum):
     pending = "pending"
@@ -27,13 +29,13 @@ class BulkJob(AuditMixin, table=True):
     # plus len(errors) is the total the run read.
     inserted: int = Field(nullable=False, default=0)
     errors: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(ARRAY(JSONB), nullable=False))
-    retry_of_job_id: Optional[uuid.UUID] = Field(default=None, foreign_key="bulk_jobs.id")
+    retry_of_job_id: uuid.UUID | None = Field(default=None, foreign_key="bulk_jobs.id")
     storage_key: str = Field(nullable=False)
     expires_at: datetime = Field(
         sa_type=DateTime(timezone=True),
         sa_column_kwargs={"nullable": False},
     )
-    confirmed_at: Optional[datetime] = Field(
+    confirmed_at: datetime | None = Field(
         default=None,
         sa_type=DateTime(timezone=True),
         sa_column_kwargs={"nullable": True},

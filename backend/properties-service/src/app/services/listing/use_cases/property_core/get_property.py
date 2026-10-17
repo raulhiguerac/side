@@ -3,11 +3,9 @@ from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
 
-from typing import Optional
-
 from app.core.config.settings import settings
-from app.models.listing import ListingStatus
 from app.core.exceptions.listing import PropertyNotFoundError
+from app.models.listing import ListingStatus
 from app.schemas.principal import Principal
 from app.services.listing.helpers.db_error_translator import translate_db_error
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork
@@ -24,7 +22,7 @@ class GetPropertyUseCase:
     async def execute(
         self,
         property_id: uuid.UUID,
-        principal: Optional[Principal] = None,
+        principal: Principal | None = None,
     ) -> PropertyDetailSchema:
         cache_key = cache_property(property_id=property_id)
 

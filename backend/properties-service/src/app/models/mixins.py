@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import DateTime
 from sqlalchemy.sql import func
@@ -18,11 +17,11 @@ class AuditMixin(SQLModel):
         sa_type=DateTime(timezone=True),
         sa_column_kwargs={"server_default": func.now(), "onupdate": func.now(), "nullable": False},
     )
-    created_by: Optional[uuid.UUID] = Field(default=None)
-    updated_by: Optional[uuid.UUID] = Field(default=None)
-    deleted_at: Optional[datetime] = Field(
+    created_by: uuid.UUID | None = Field(default=None)
+    updated_by: uuid.UUID | None = Field(default=None)
+    deleted_at: datetime | None = Field(
         default=None,
         sa_type=DateTime(timezone=True),
         sa_column_kwargs={"nullable": True},
     )
-    deleted_by: Optional[uuid.UUID] = Field(default=None)
+    deleted_by: uuid.UUID | None = Field(default=None)

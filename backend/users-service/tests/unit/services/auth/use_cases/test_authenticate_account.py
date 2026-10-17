@@ -1,14 +1,13 @@
 from unittest.mock import AsyncMock
+
 import pytest
 
+from app.core.exceptions.auth import InvalidCredentialsError
+from app.services.auth.ports.authentication_provider import AuthenticationProvider
 from app.services.auth.schemas.login import AccountLogin
 from app.services.auth.schemas.tokens import AuthTokens
 from app.services.auth.use_cases.authenticate_account import AuthenticateAccountUseCase
-
-from app.services.auth.ports.authentication_provider import AuthenticationProvider
 from app.services.shared.policies.active_account_policy import AccountActivePolicy
-
-from app.core.exceptions.auth import InvalidCredentialsError
 
 ACCOUNT_LOGIN_DATA = {
     "email": "pepito@micasaenminutos.com",

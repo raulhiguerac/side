@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 from pydantic import ConfigDict, EmailStr, Field
 
@@ -22,7 +22,7 @@ class OrganizationRegisterIn(StrictBase):
     account_type: Literal["organization"] = "organization"
 
 RegisterRequest = Annotated[
-    Union[PersonRegisterIn, OrganizationRegisterIn],
+    PersonRegisterIn | OrganizationRegisterIn,
     Field(discriminator="account_type")
 ]
 

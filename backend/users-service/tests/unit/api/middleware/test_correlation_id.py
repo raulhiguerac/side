@@ -1,8 +1,7 @@
 import uuid
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
-from fastapi import FastAPI, Request
+import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.middleware.correlation_id import add_correlation_id

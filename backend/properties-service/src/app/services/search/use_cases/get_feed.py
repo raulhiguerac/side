@@ -1,15 +1,19 @@
-from typing import Optional
 
 from app.core.config.settings import settings
 from app.services.search.helpers.feed.ads import get_ads
+from app.services.search.helpers.feed.encoding import decode_cursor, encode_cursor
 from app.services.search.helpers.feed.organic import get_organic
 from app.services.search.ports.unit_of_work import SearchUnitOfWork
-from app.services.search.schemas.feed_schemas import FeedCursor, FeedFilters, FeedPreferences, FeedPage
+from app.services.search.schemas.feed_schemas import (
+    FeedCursor,
+    FeedFilters,
+    FeedPage,
+    FeedPreferences,
+)
+from app.services.shared.helpers.cache_keys import feed_page
 from app.services.shared.ports.cache import CachePort
 from app.services.shared.schemas.property_card import PropertyCardSchema
 
-from app.services.search.helpers.feed.encoding import encode_cursor, decode_cursor
-from app.services.shared.helpers.cache_keys import feed_page
 
 class GetFeedUseCase:
     def __init__(self, *, uow: SearchUnitOfWork, cache: CachePort) -> None:
@@ -19,9 +23,9 @@ class GetFeedUseCase:
     async def execute(
         self,
         *,
-        preferences: Optional[FeedPreferences],
-        filters: Optional[FeedFilters],
-        cursor_str: Optional[str],
+        preferences: FeedPreferences | None,
+        filters: FeedFilters | None,
+        cursor_str: str | None,
     ) -> FeedPage:
         
         cursor = None

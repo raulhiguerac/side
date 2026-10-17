@@ -1,6 +1,7 @@
 import uuid
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from app.services.geo_catalog.schemas.country import CountryListItem
 from app.services.geo_catalog.use_cases.get_countries import GetCountriesUseCase

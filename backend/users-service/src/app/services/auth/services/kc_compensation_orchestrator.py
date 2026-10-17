@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from app.core.logging.logger import get_logger
 from app.core.logging.utils import email_hash
@@ -16,7 +15,7 @@ class IdentityCompensationOrchestrator:
     async def delete_user_or_create_compensation(
             self, 
             *,
-            kc_user_id: Optional[uuid.UUID],
+            kc_user_id: uuid.UUID | None,
             email: str,
         ) -> CreateKcCompensationTask | None:
 
@@ -32,7 +31,7 @@ class IdentityCompensationOrchestrator:
             return
 
         except Exception as e:
-            logger.error("idp_user_delete_failed", extra={"extra": extra}, exc_info=True)
+            logger.exception("idp_user_delete_failed", extra={"extra": extra})
 
             task = CreateKcCompensationTask(
                 kc_user_id=kc_user_id,

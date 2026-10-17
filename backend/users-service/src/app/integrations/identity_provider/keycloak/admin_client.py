@@ -1,6 +1,6 @@
 import os
 import uuid
-from typing import Any, Dict
+from typing import Any
 
 from keycloak import KeycloakAdmin
 from keycloak.exceptions import KeycloakGetError
@@ -50,7 +50,7 @@ class KeycloakAdminClient:
         Crea un usuario en Keycloak y extrae el UUID generado.
         """
         try:
-            user_data: Dict[str, Any] = {
+            user_data: dict[str, Any] = {
                 "email": email,
                 "username": email,
                 "enabled": True

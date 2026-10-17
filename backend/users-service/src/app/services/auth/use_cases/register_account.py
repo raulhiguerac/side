@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from sqlalchemy.exc import IntegrityError
 
@@ -40,7 +39,7 @@ class RegisterAccountUseCase:
     async def _enqueue_delete_kc_user_task(
         self,
         *,
-        kc_user_id: Optional[uuid.UUID],
+        kc_user_id: uuid.UUID | None,
         email: str,
         error: Exception,
     ) -> None:
@@ -71,7 +70,7 @@ class RegisterAccountUseCase:
             extra={"extra": {"email_hash": email_h}},
         )
 
-        kc_user_id: Optional[uuid.UUID] = None
+        kc_user_id: uuid.UUID | None = None
 
         try:
             kc_user_id = await self.idp.create_account(email=req.email, password=req.password)

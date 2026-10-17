@@ -1,6 +1,9 @@
 import httpx
 
-from app.integrations.catalog.exceptions import CatalogClientError, NeighborhoodNotFoundError
+from app.integrations.catalog.exceptions import (
+    CatalogClientError,
+    NeighborhoodNotFoundError,
+)
 
 _MAX_BODY_CHARS = 500
 

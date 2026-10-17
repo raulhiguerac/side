@@ -1,0 +1,11 @@
+target-version = "py310"
+
+[lint]
+# Cache-aside fail-open (adr-cache-optional-layer); se revisa con el open-item de redundancia.
+ignore = ["BLE001", "S110"]
+
+[lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
+
+[lint.isort]
+known-first-party = ["app"]

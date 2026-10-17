@@ -13,7 +13,11 @@ from app.models.listing import VerificationStatus
 from app.schemas.principal import Principal
 from app.services.admin.schemas.admin_schemas import VerifyPropertyRequest
 from app.services.admin.use_cases.moderation.verify import VerifyPropertyUseCase
-from app.services.shared.helpers.cache_keys import cache_property, client_properties, map_h3_cell
+from app.services.shared.helpers.cache_keys import (
+    cache_property,
+    client_properties,
+    map_h3_cell,
+)
 
 PROP_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 OWNER_ID = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")

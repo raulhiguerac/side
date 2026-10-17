@@ -1,10 +1,11 @@
 import uuid
 from decimal import Decimal, InvalidOperation
-from typing import Optional
 
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 
+from app.core.config.settings import settings
+from app.models.image import ImageStatus, PropertyImage
 from app.models.listing import (
     ListingStatus,
     ListingType,
@@ -14,8 +15,6 @@ from app.models.listing import (
     PropertyType,
     VerificationStatus,
 )
-from app.core.config.settings import settings
-from app.models.image import ImageStatus, PropertyImage
 from app.services.shared.helpers.geometry import compute_h3
 from app.workers.schemas.bulk_schemas import BulkCreatePropertyItem
 
@@ -60,11 +59,11 @@ _ANTIGUEDAD_TO_CONDITION: dict[str, PropertyCondition] = {
 # Field parsers
 # =============================================================================
 
-def parse_property_type(value: str) -> Optional[PropertyType]:
+def parse_property_type(value: str) -> PropertyType | None:
     return _TIPO_TO_PROPERTY_TYPE.get(value.strip().lower())
 
 
-def parse_listing_type(value: str) -> Optional[ListingType]:
+def parse_listing_type(value: str) -> ListingType | None:
     return _TIPO_TO_LISTING_TYPE.get(value.strip().lower())
 
 
@@ -72,7 +71,7 @@ def parse_condition(antiguedad: str) -> PropertyCondition:
     return _ANTIGUEDAD_TO_CONDITION.get(antiguedad.strip().lower(), PropertyCondition.used)
 
 
-def parse_floor_number(piso: str) -> Optional[int]:
+def parse_floor_number(piso: str) -> int | None:
     """'2°' → 2 | 'Sin especificar' | 'Otro' → None"""
     cleaned = piso.strip()
     if cleaned.lower() in ("sin especificar", "otro", ""):
@@ -103,14 +102,14 @@ def parse_bathrooms(value: str) -> Decimal:
     """'Sin especificar' → Decimal('1') | else Decimal"""
     cleaned = value.strip()
     if cleaned.lower() in ("sin especificar", ""):
-        return Decimal("1")
+        return Decimal(1)
     try:
         return Decimal(cleaned)
     except InvalidOperation:
-        return Decimal("1")
+        return Decimal(1)
 
 
-def parse_stratum(value: str) -> Optional[int]:
+def parse_stratum(value: str) -> int | None:
     """'0' | 'especificar' → None | '1'-'6' → int"""
     cleaned = value.strip()
     if cleaned.lower() in ("sin especificar", "especificar", "0", ""):
@@ -122,7 +121,7 @@ def parse_stratum(value: str) -> Optional[int]:
         return None
 
 
-def parse_admin_fee(value: str) -> Optional[Decimal]:
+def parse_admin_fee(value: str) -> Decimal | None:
     try:
         d = Decimal(value.strip())
         return d if d > 0 else None
@@ -141,7 +140,7 @@ def row_to_item(
     city_id: uuid.UUID,
     country_id: uuid.UUID,
     image_urls: list[str],
-) -> Optional[BulkCreatePropertyItem]:
+) -> BulkCreatePropertyItem | None:
     """
     Map a raw CSV row (enriched with catalog IDs) to BulkCreatePropertyItem.
     Returns None for rows that can't be mapped (unknown property_type, bad numbers).

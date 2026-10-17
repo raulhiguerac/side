@@ -1,4 +1,10 @@
-from app.models.mixins import AuditMixin  # noqa: F401
+from app.models.bulk_job import BulkJob  # noqa: F401
+from app.models.image import (  # noqa: F401
+    BatchStatus,
+    ImageStatus,
+    PropertyImage,
+    PropertyImageUploadBatch,
+)
 from app.models.listing import (  # noqa: F401
     Currency,
     ListingStatus,
@@ -8,11 +14,5 @@ from app.models.listing import (  # noqa: F401
     PropertyLocation,
     VerificationStatus,
 )
-from app.models.image import (  # noqa: F401
-    BatchStatus,
-    ImageStatus,
-    PropertyImage,
-    PropertyImageUploadBatch,
-)
+from app.models.mixins import AuditMixin  # noqa: F401
 from app.models.promotion import PromotedListing  # noqa: F401
-from app.models.bulk_job import BulkJob  # noqa: F401

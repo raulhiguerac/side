@@ -14,7 +14,9 @@ from sqlmodel import func, select
 
 from app.models.listing import Property
 from app.models.promotion import PromotedListing, active_promotion_clause
-from app.services.admin.adapters.sql_property_repository import SqlAdminPropertyRepository
+from app.services.admin.adapters.sql_property_repository import (
+    SqlAdminPropertyRepository,
+)
 
 PROP_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 

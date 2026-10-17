@@ -11,7 +11,9 @@ from app.core.exceptions.listing import (
     RetryOfRetryNotAllowedError,
 )
 from app.schemas.principal import Principal
-from app.services.admin.use_cases.bulk_create_properties import BulkCreatePropertiesUseCase
+from app.services.admin.use_cases.bulk_create_properties import (
+    BulkCreatePropertiesUseCase,
+)
 
 PRINCIPAL = Principal(sub=uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"))
 ORIGINAL_JOB_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")

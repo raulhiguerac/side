@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from fastapi.concurrency import run_in_threadpool
 from sqlmodel import Session, select
@@ -23,7 +22,7 @@ class SqlEmailRecipientReader(EmailRecipientReaderPort):
         *,
         account_id: uuid.UUID,
         account_type: AccountType,
-    ) -> Optional[str]:
+    ) -> str | None:
         if account_type == AccountType.person:
             return await self._get_person_name(account_id)
 
@@ -32,8 +31,8 @@ class SqlEmailRecipientReader(EmailRecipientReaderPort):
 
         return None
 
-    async def _get_person_name(self, account_id: uuid.UUID) -> Optional[str]:
-        def query() -> Optional[str]:
+    async def _get_person_name(self, account_id: uuid.UUID) -> str | None:
+        def query() -> str | None:
             stmt = (
                 select(UserProfile.first_name)
                 .where(UserProfile.account_id == account_id)
@@ -42,8 +41,8 @@ class SqlEmailRecipientReader(EmailRecipientReaderPort):
 
         return await run_in_threadpool(query)
 
-    async def _get_organization_name(self, account_id: uuid.UUID) -> Optional[str]:
-        def query() -> Optional[str]:
+    async def _get_organization_name(self, account_id: uuid.UUID) -> str | None:
+        def query() -> str | None:
             stmt = (
                 select(CompanyProfile.display_name)
                 .where(CompanyProfile.account_id == account_id)

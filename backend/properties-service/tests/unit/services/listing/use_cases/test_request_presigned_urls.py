@@ -7,7 +7,9 @@ from app.core.exceptions.listing import ImageCountExceededError
 from app.core.exceptions.storage import StorageMisconfiguredError
 from app.schemas.principal import Principal
 from app.services.listing.schemas.listing_schemas import PresignedUrlsRequest
-from app.services.listing.use_cases.images.request_presigned_urls import RequestPresignedUrlsUseCase
+from app.services.listing.use_cases.images.request_presigned_urls import (
+    RequestPresignedUrlsUseCase,
+)
 
 PROP_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 OWNER_ID = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
@@ -107,7 +109,10 @@ async def test_marks_batch_failed_on_storage_error(
 # Misconfigured settings raises at init time
 # ---------------------------------------------------------------------------
 
-def test_raises_storage_misconfigured_when_bucket_missing():
+def test_raises_storage_misconfigured_when_bucket_missing(monkeypatch):
+    from app.core.config.settings import settings
+    monkeypatch.setattr(settings, "BUCKET_PHOTOS_PROPERTIES", "")
+
     with pytest.raises(StorageMisconfiguredError):
         RequestPresignedUrlsUseCase(
             uow=MagicMock(),

@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated, Optional
+from typing import Annotated
 
 from pydantic import Field, model_validator
 
@@ -16,17 +16,17 @@ class CreateNeighborhoodRequest(StrictBase):
     locality_id: uuid.UUID
     code: str
     name: str
-    postal_code: Optional[str] = None
+    postal_code: str | None = None
     latitude: float
     longitude: float
 
 
 class UpdateNeighborhoodRequest(StrictBase):
-    name: Optional[str] = None
-    postal_code: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    is_active: Optional[bool] = None
+    name: str | None = None
+    postal_code: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    is_active: bool | None = None
 
 
 class NeighborhoodAdminResponse(StrictBase):
@@ -34,22 +34,22 @@ class NeighborhoodAdminResponse(StrictBase):
     locality_id: uuid.UUID
     code: str
     name: str
-    postal_code: Optional[str]
+    postal_code: str | None
     latitude: float
     longitude: float
     is_active: bool
 
 
 class NeighborhoodAdminDetail(NeighborhoodAdminResponse):
-    geometry: Optional[dict] = None
-    area_m2: Optional[float] = None
+    geometry: dict | None = None
+    area_m2: float | None = None
 
 
 class ListNeighborhoodsAdminRequest(PageRequest):
-    locality_id: Optional[uuid.UUID] = None
-    is_active: Optional[bool] = None
-    has_geometry: Optional[bool] = None
-    search_term: Optional[str] = None
+    locality_id: uuid.UUID | None = None
+    is_active: bool | None = None
+    has_geometry: bool | None = None
+    search_term: str | None = None
 
 
 class NeighborhoodAdminListItem(StrictBase):
@@ -59,8 +59,8 @@ class NeighborhoodAdminListItem(StrictBase):
     name: str
     is_active: bool
     has_geometry: bool
-    svg_path: Optional[str] = None
-    bbox: Optional[tuple[float, float, float, float]] = None
+    svg_path: str | None = None
+    bbox: tuple[float, float, float, float] | None = None
 
 
 class NeighborhoodCoverage(StrictBase):

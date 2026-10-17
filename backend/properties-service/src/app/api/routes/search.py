@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
 
@@ -8,7 +8,12 @@ from app.api.deps.search import (
     parse_feed_filters,
     parse_feed_preferences,
 )
-from app.services.search.schemas.feed_schemas import BoundingBox, FeedPage, FeedFilters, FeedPreferences
+from app.services.search.schemas.feed_schemas import (
+    BoundingBox,
+    FeedFilters,
+    FeedPage,
+    FeedPreferences,
+)
 from app.services.search.use_cases.get_feed import GetFeedUseCase
 from app.services.search.use_cases.get_feed_map import GetFeedMapUseCase
 from app.services.shared.schemas.property_card import PropertyCardSchema
@@ -22,10 +27,10 @@ router = APIRouter(prefix="/search", tags=["search"])
     status_code=status.HTTP_200_OK,
 )
 async def get_feed(
-    preferences: Annotated[Optional[FeedPreferences], Depends(parse_feed_preferences)],
-    filters: Annotated[Optional[FeedFilters], Depends(parse_feed_filters)],
+    preferences: Annotated[FeedPreferences | None, Depends(parse_feed_preferences)],
+    filters: Annotated[FeedFilters | None, Depends(parse_feed_filters)],
     uc: Annotated[GetFeedUseCase, Depends(get_feed_uc)],
-    cursor: Optional[str] = Query(default=None)
+    cursor: str | None = Query(default=None)
 ) -> FeedPage:
     return await uc.execute(preferences=preferences, filters=filters, cursor_str=cursor)
 

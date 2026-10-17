@@ -1,7 +1,9 @@
 from fastapi.concurrency import run_in_threadpool
 from sqlmodel import Session
 
-from app.services.prediction.adapters.sql_prediction_repository import SqlPredictionRepository
+from app.services.prediction.adapters.sql_prediction_repository import (
+    SqlPredictionRepository,
+)
 
 
 class SqlPredictionUnitOfWork:

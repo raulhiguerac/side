@@ -9,7 +9,10 @@ from app.api.deps.geo_resolution import (
     resolve_neighborhood_uc,
     resolve_poi_uc,
 )
-from app.services.geo_resolution.schemas.isochrone import IsochroneRequest, ReachablePoisResult
+from app.services.geo_resolution.schemas.isochrone import (
+    IsochroneRequest,
+    ReachablePoisResult,
+)
 from app.services.geo_resolution.schemas.neighborhood import (
     BulkResolveLocationsRequest,
     LocationByCoordinates,
@@ -19,7 +22,9 @@ from app.services.geo_resolution.schemas.neighborhood import (
 from app.services.geo_resolution.use_cases.bulk_resolve_locations_by_coordinates import (
     BulkResolveLocationsByCoordinatesUseCase,
 )
-from app.services.geo_resolution.use_cases.resolve_isochrone import ResolveIsochroneUseCase
+from app.services.geo_resolution.use_cases.resolve_isochrone import (
+    ResolveIsochroneUseCase,
+)
 from app.services.geo_resolution.use_cases.resolve_location_by_coordinates import (
     ResolveLocationByCoordinatesUseCase,
 )

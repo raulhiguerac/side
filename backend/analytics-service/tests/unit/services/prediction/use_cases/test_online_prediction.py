@@ -43,7 +43,7 @@ def make_uc():
 
 @pytest.mark.asyncio
 async def test_happy_path_returns_response():
-    uc, uow, _ = make_uc()
+    uc, _uow, _ = make_uc()
     with patch("app.services.prediction.use_cases.online.run_in_threadpool", new=_fake_threadpool):
         response = await uc.execute(principal=PRINCIPAL, req=REQ)
 
@@ -68,9 +68,11 @@ async def test_persistence_error_triggers_rollback():
     uc, uow, _ = make_uc()
     uow.commit.side_effect = Exception("db down")
 
-    with patch("app.services.prediction.use_cases.online.run_in_threadpool", new=_fake_threadpool):
-        with pytest.raises(PredictionPersistenceError):
-            await uc.execute(principal=PRINCIPAL, req=REQ)
+    with (
+        patch("app.services.prediction.use_cases.online.run_in_threadpool", new=_fake_threadpool),
+        pytest.raises(PredictionPersistenceError),
+    ):
+        await uc.execute(principal=PRINCIPAL, req=REQ)
 
     uow.rollback.assert_awaited_once()
 
@@ -81,9 +83,11 @@ async def test_persistence_error_wraps_cause():
     cause = Exception("constraint")
     uow.commit.side_effect = cause
 
-    with patch("app.services.prediction.use_cases.online.run_in_threadpool", new=_fake_threadpool):
-        with pytest.raises(PredictionPersistenceError) as exc_info:
-            await uc.execute(principal=PRINCIPAL, req=REQ)
+    with (
+        patch("app.services.prediction.use_cases.online.run_in_threadpool", new=_fake_threadpool),
+        pytest.raises(PredictionPersistenceError) as exc_info,
+    ):
+        await uc.execute(principal=PRINCIPAL, req=REQ)
 
     assert exc_info.value.cause is cause
 
@@ -93,10 +97,12 @@ async def test_persistence_error_logs():
     uc, uow, _ = make_uc()
     uow.commit.side_effect = Exception("db down")
 
-    with patch("app.services.prediction.use_cases.online.run_in_threadpool", new=_fake_threadpool):
-        with patch("app.services.prediction.use_cases.online.logger") as mock_logger:
-            with pytest.raises(PredictionPersistenceError):
-                await uc.execute(principal=PRINCIPAL, req=REQ)
+    with (
+        patch("app.services.prediction.use_cases.online.run_in_threadpool", new=_fake_threadpool),
+        patch("app.services.prediction.use_cases.online.logger") as mock_logger,
+        pytest.raises(PredictionPersistenceError),
+    ):
+        await uc.execute(principal=PRINCIPAL, req=REQ)
 
     mock_logger.error.assert_called_once()
 

@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from sqlalchemy import Select, func
 from sqlmodel import Session, select
@@ -34,7 +33,7 @@ class SqlCountryRepository(CountryAdminRepository):
         stmt = _apply_filters(select(func.count()).select_from(Country), filters)
         return self.session.exec(stmt).one()
 
-    def get_by_id(self, *, country_id: uuid.UUID) -> Optional[Country]:
+    def get_by_id(self, *, country_id: uuid.UUID) -> Country | None:
         stmt = select(Country).where(Country.id == country_id)
         return self.session.exec(stmt).first()
 

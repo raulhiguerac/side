@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 from app.core.exceptions.base import BaseError
 
@@ -12,7 +12,7 @@ class BadRequestError(BaseError):
         )
 
 class UnsupportedFileTypeError(BaseError):
-    def __init__(self, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, context: dict[str, Any] | None = None):
         super().__init__(
             message="Unsupported file type",
             code="UNSUPPORTED_FILE_TYPE",
@@ -20,7 +20,7 @@ class UnsupportedFileTypeError(BaseError):
         )
 
 class FileTooLargeError(BaseError):
-    def __init__(self, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, context: dict[str, Any] | None = None):
         super().__init__(
             message="File too large",
             code="FILE_TOO_LARGE",

@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 
 class BaseError(Exception):
@@ -8,8 +8,8 @@ class BaseError(Exception):
         self,
         message: str,
         code: str,
-        context: Optional[dict[str, Any]] = None,
-        cause: Optional[Exception] = None,
+        context: dict[str, Any] | None = None,
+        cause: Exception | None = None,
         http_status: int = 500,
     ):
         super().__init__(message)

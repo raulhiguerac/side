@@ -1,10 +1,14 @@
 import uuid
-import pytest
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.services.geo_resolution.use_cases.resolve_poi import ResolvePoiUseCase, STALE_THRESHOLD_DAYS
+import pytest
+
 from app.models.location import FetchZone
+from app.services.geo_resolution.use_cases.resolve_poi import (
+    STALE_THRESHOLD_DAYS,
+    ResolvePoiUseCase,
+)
 
 LOCALITY_ID = uuid.UUID("86f1f356-e83a-47f4-b50b-0cf7bb5d9ac5")
 NEIGHBORHOOD_ID = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")

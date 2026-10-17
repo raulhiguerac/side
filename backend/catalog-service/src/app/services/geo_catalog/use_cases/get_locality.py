@@ -1,6 +1,5 @@
 import uuid
 from functools import partial
-from typing import List
 
 from fastapi.concurrency import run_in_threadpool
 
@@ -30,7 +29,7 @@ class GetLocalitiesUseCase:
         *,
         country_id: uuid.UUID | None = None,
         admin_division_id: uuid.UUID | None = None,
-    ) -> List[LocalityListItem]:
+    ) -> list[LocalityListItem]:
         
         if country_id is None and admin_division_id is None:
             raise LocalityFilterRequiredError()

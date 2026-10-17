@@ -1,10 +1,9 @@
 import uuid
-import pytest
 from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
 
-from app.models.account import Account, UserProfile, OnboardingStep, AccountType
+from app.models.account import Account, AccountType, OnboardingStep, UserProfile
 
 
 def _get_set_cookie_headers(response):

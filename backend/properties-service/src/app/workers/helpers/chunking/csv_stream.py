@@ -1,5 +1,5 @@
 import csv
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 from app.services.shared.ports.storage import StoragePort
 

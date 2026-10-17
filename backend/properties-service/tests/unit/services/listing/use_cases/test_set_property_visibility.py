@@ -11,7 +11,9 @@ from app.core.exceptions.listing import (
 )
 from app.models.listing import ListingStatus
 from app.schemas.principal import Principal
-from app.services.listing.use_cases.property_core.set_property_visibility import SetPropertyVisibilityUseCase
+from app.services.listing.use_cases.property_core.set_property_visibility import (
+    SetPropertyVisibilityUseCase,
+)
 
 PROP_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 OWNER_ID = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")

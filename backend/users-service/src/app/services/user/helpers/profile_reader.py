@@ -1,6 +1,5 @@
 import uuid
 from functools import partial
-from typing import Union
 
 from fastapi.concurrency import run_in_threadpool
 
@@ -8,7 +7,7 @@ from app.core.exceptions.user import ProfileNotFoundError
 from app.models.account import AccountType, CompanyProfile, UserProfile
 from app.services.user.ports.unit_of_work import UserUnitOfWork
 
-ProfileDB = Union[UserProfile, CompanyProfile]
+ProfileDB = UserProfile | CompanyProfile
 
 
 async def get_profile_db(

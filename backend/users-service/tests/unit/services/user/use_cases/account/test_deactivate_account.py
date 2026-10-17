@@ -1,10 +1,13 @@
 import uuid
-import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
-from app.schemas.common import Principal
+import pytest
+
 from app.models.account import Account, AccountActionActor, AccountDeactivationReason
-from app.services.user.use_cases.account.deactivate_current_account import DeactivateCurrentAccountUseCase
+from app.schemas.common import Principal
+from app.services.user.use_cases.account.deactivate_current_account import (
+    DeactivateCurrentAccountUseCase,
+)
 
 
 @pytest.fixture

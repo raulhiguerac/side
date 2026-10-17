@@ -6,7 +6,10 @@ from app.api.deps.geo_catalog import (
     get_neighborhood_by_id_uc,
     get_neighborhoods_by_locality_uc,
 )
-from app.services.geo_catalog.schemas.neighborhood import NeighborhoodListItem, NeighborhoodsByLocalityResponse
+from app.services.geo_catalog.schemas.neighborhood import (
+    NeighborhoodListItem,
+    NeighborhoodsByLocalityResponse,
+)
 from app.services.geo_catalog.use_cases.get_neighborhood_by_id import (
     GetNeighborhoodByIdUseCase,
 )

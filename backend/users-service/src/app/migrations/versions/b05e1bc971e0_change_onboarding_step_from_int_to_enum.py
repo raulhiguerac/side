@@ -5,7 +5,7 @@ Revises: 45b16114b3c6
 Create Date: 2026-02-03 14:22:31.863344
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
@@ -16,9 +16,9 @@ ENUM_VALUES = ("intent", "city", "neighborhood", "done")
 
 # revision identifiers, used by Alembic.
 revision: str = 'b05e1bc971e0'
-down_revision: Union[str, Sequence[str], None] = '45b16114b3c6'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = '45b16114b3c6'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

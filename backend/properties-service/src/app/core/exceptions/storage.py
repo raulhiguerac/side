@@ -1,10 +1,10 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 from app.core.exceptions.base import BaseError
 
 
 class BucketNotFoundError(BaseError):
-    def __init__(self, *, cause: Exception | None = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, *, cause: Exception | None = None, context: dict[str, Any] | None = None):
         super().__init__(
             message="Storage bucket not found or inaccessible",
             code="BUCKET_NOT_FOUND",
@@ -14,7 +14,7 @@ class BucketNotFoundError(BaseError):
 
 
 class StorageUnavailableError(BaseError):
-    def __init__(self, *, cause: Exception | None = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, *, cause: Exception | None = None, context: dict[str, Any] | None = None):
         super().__init__(
             message="Storage provider unavailable",
             code="STORAGE_PROVIDER_UNAVAILABLE",
@@ -24,7 +24,7 @@ class StorageUnavailableError(BaseError):
 
 
 class StorageAccessDeniedError(BaseError):
-    def __init__(self, *, cause: Exception | None = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, *, cause: Exception | None = None, context: dict[str, Any] | None = None):
         super().__init__(
             message="Access denied to storage resource",
             code="STORAGE_ACCESS_DENIED",
@@ -34,7 +34,7 @@ class StorageAccessDeniedError(BaseError):
 
 
 class StorageMisconfiguredError(BaseError):
-    def __init__(self, *, cause: Exception | None = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, *, cause: Exception | None = None, context: dict[str, Any] | None = None):
         super().__init__(
             message="Storage provider is misconfigured",
             code="STORAGE_MISCONFIGURED",
@@ -44,7 +44,7 @@ class StorageMisconfiguredError(BaseError):
 
 
 class StorageInvalidRequestError(BaseError):
-    def __init__(self, *, cause: Exception | None = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, *, cause: Exception | None = None, context: dict[str, Any] | None = None):
         super().__init__(
             message="Invalid request to storage client",
             code="STORAGE_INVALID_REQUEST",
@@ -54,7 +54,7 @@ class StorageInvalidRequestError(BaseError):
 
 
 class StoragePresignFailedError(BaseError):
-    def __init__(self, *, cause: Exception | None = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, *, cause: Exception | None = None, context: dict[str, Any] | None = None):
         super().__init__(
             message="Failed to generate presigned URL",
             code="STORAGE_PRESIGN_FAILED",

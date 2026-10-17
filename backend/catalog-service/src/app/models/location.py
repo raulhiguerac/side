@@ -53,8 +53,8 @@ class AuditMixin(SQLModel):
                 "nullable": False,                                                                                                            
             }                                                                                                                                 
         )
-    created_by: Optional[uuid.UUID] = Field(default=None)
-    updated_by: Optional[uuid.UUID] = Field(default=None)
+    created_by: uuid.UUID | None = Field(default=None)
+    updated_by: uuid.UUID | None = Field(default=None)
 
 
 # =============================================================================
@@ -82,10 +82,10 @@ class Country(AuditMixin, SQLModel, table=True):
 
     # Names
     name: str = Field(max_length=100, nullable=False)  # "Colombia"
-    official_name: Optional[str] = Field(
+    official_name: str | None = Field(
         max_length=200, default=None
     )  # "Republic of Colombia"
-    native_name: Optional[str] = Field(max_length=100, default=None)  # "Colombia"
+    native_name: str | None = Field(max_length=100, default=None)  # "Colombia"
 
     # Metadata
     phone_code: str = Field(max_length=8, nullable=False)  # "+57"
@@ -135,7 +135,7 @@ class AdminDivision(AuditMixin, SQLModel, table=True):
     code: str = Field(
         max_length=20, nullable=False, index=True
     )  # Código local (DANE, FIPS, INSEE)
-    iso_code: Optional[str] = Field(
+    iso_code: str | None = Field(
         max_length=10, default=None
     )  # ISO 3166-2: "CO-CUN", "US-CA"
 
@@ -216,7 +216,7 @@ class Locality(AuditMixin, SQLModel, table=True):
 
     # Nombres
     name: str = Field(max_length=150, nullable=False)
-    local_name: Optional[str] = Field(max_length=150, default=None)
+    local_name: str | None = Field(max_length=150, default=None)
     search_name: str = Field(
         max_length=150, nullable=False, index=True
     )  # Normalizado: "medellin"
@@ -268,7 +268,7 @@ class Neighborhood(AuditMixin, SQLModel, table=True):
 
     # Identificadores
     code: str = Field(max_length=30, nullable=False, index=True)
-    postal_code: Optional[str] = Field(max_length=20, default=None, index=True)
+    postal_code: str | None = Field(max_length=20, default=None, index=True)
 
     # Nombres
     name: str = Field(max_length=150, nullable=False)
@@ -277,14 +277,14 @@ class Neighborhood(AuditMixin, SQLModel, table=True):
     # Geografía
     latitude: float = Field(nullable=False)  # Centroide
     longitude: float = Field(nullable=False)  # Centroide
-    geom: Optional[bytes] = Field(
+    geom: bytes | None = Field(
         sa_column=Column(
             Geometry(geometry_type="MULTIPOLYGON", srid=4326),
             nullable=True,  # Algunos barrios no tienen polígono definido
         ),
         default=None,
     )
-    h3_cells: Optional[list[str]] = Field(
+    h3_cells: list[str] | None = Field(
         sa_column=Column(ARRAY(VARCHAR(16)), nullable=True),
         default=None,
     )  # Celdas H3 resolution 9 (~300m) que cubren el polígono. Poblado gradualmente con tráfico.
@@ -334,7 +334,7 @@ class PointOfInterest(AuditMixin, SQLModel, table=True):
             index=True,
         )
     )
-    neighborhood_id: Optional[uuid.UUID] = Field(
+    neighborhood_id: uuid.UUID | None = Field(
         sa_column=Column(
             ForeignKey("neighborhoods.id", ondelete="SET NULL"),
             nullable=True,
@@ -347,13 +347,13 @@ class PointOfInterest(AuditMixin, SQLModel, table=True):
     neighborhood: Optional["Neighborhood"] = Relationship()
 
     # Provider / cache-aside
-    external_id: Optional[str] = Field(max_length=255, default=None, index=True)
+    external_id: str | None = Field(max_length=255, default=None, index=True)
     source: PoiSource = Field(default=PoiSource.osm, nullable=False)
-    raw_response: Optional[dict] = Field(
+    raw_response: dict | None = Field(
         sa_column=Column(JSON, nullable=True),
         default=None,
     )
-    fetched_at: Optional[datetime] = Field(
+    fetched_at: datetime | None = Field(
         sa_type=DateTime(timezone=True),
         default=None,
     )
@@ -362,9 +362,9 @@ class PointOfInterest(AuditMixin, SQLModel, table=True):
     # Datos del POI
     name: str = Field(max_length=255, nullable=False)
     search_name: str = Field(max_length=255, nullable=False, index=True)
-    full_address: Optional[str] = Field(max_length=500, default=None)
-    category: Optional[str] = Field(max_length=100, default=None, index=True)
-    subcategories: Optional[list[str]] = Field(
+    full_address: str | None = Field(max_length=500, default=None)
+    category: str | None = Field(max_length=100, default=None, index=True)
+    subcategories: list[str] | None = Field(
         sa_column=Column(ARRAY(VARCHAR(100)), nullable=True),
         default=None,
     )
@@ -373,7 +373,7 @@ class PointOfInterest(AuditMixin, SQLModel, table=True):
     latitude: float = Field(nullable=False)
     longitude: float = Field(nullable=False)
     h3_index: str = Field(max_length=16, nullable=False, index=True)  # Precomputado: h3.latlng_to_cell(lat, lon, res=9)
-    geom: Optional[bytes] = Field(
+    geom: bytes | None = Field(
         sa_column=Column(
             Geometry(geometry_type="POINT", srid=4326),
             nullable=True,
@@ -382,8 +382,8 @@ class PointOfInterest(AuditMixin, SQLModel, table=True):
     )
 
     # Contacto
-    phone: Optional[str] = Field(max_length=50, default=None)
-    website: Optional[str] = Field(max_length=500, default=None)
+    phone: str | None = Field(max_length=50, default=None)
+    website: str | None = Field(max_length=500, default=None)
 
     # Control
     is_active: bool = Field(default=True, nullable=False)
