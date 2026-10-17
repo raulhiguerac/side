@@ -7,7 +7,9 @@ from sqlmodel import Session, select
 
 from app.models.listing import ListingStatus, Property, PropertyLocation, PropertyType
 from app.models.promotion import PromotedListing, active_promotion_clause
-from app.services.search.ports.property_search_repository import PropertySearchRepository
+from app.services.search.ports.property_search_repository import (
+    PropertySearchRepository,
+)
 
 
 class SqlPropertySearchRepository(PropertySearchRepository):

@@ -2,7 +2,6 @@
 # They are better tested via integration tests since they rely on FastAPI's Depends system.
 # This file is intentionally minimal - the actual use case logic is tested in use_cases tests.
 
-import pytest
 
 
 def test_placeholder():

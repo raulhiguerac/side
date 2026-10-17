@@ -7,8 +7,13 @@ import pytest
 from app.core.exceptions.listing import CreatePropertyError, InconsistentLocationError
 from app.models.listing import Currency, ListingType, PropertyCondition, PropertyType
 from app.schemas.principal import Principal
-from app.services.listing.schemas.listing_schemas import CreatePropertyRequest, LocationField
-from app.services.listing.use_cases.property_core.create_property import CreatePropertyUseCase
+from app.services.listing.schemas.listing_schemas import (
+    CreatePropertyRequest,
+    LocationField,
+)
+from app.services.listing.use_cases.property_core.create_property import (
+    CreatePropertyUseCase,
+)
 
 OWNER_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 NEIGHBORHOOD_ID = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")

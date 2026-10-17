@@ -1,6 +1,6 @@
-import h3
 from functools import partial
 
+import h3
 from fastapi.concurrency import run_in_threadpool
 
 from app.core.config.settings import settings

@@ -1,8 +1,9 @@
 import uuid
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from app.services.geo_catalog.schemas.locality import LocalityListItem, AdminDivisionRef
+import pytest
+
+from app.services.geo_catalog.schemas.locality import AdminDivisionRef, LocalityListItem
 from app.services.geo_catalog.use_cases.get_locality import GetLocalitiesUseCase
 
 COUNTRY_ID = uuid.UUID('8b37f57c-ed32-434b-98fd-2afa4caed634')

@@ -1,7 +1,7 @@
 import io
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
 from fastapi import UploadFile
 
 from app.api.deps.upload_validation import validate_profile_photo_upload

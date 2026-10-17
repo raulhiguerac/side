@@ -1,5 +1,4 @@
 import uuid
-from typing import List
 
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
@@ -16,7 +15,7 @@ class SqlLocalityRepository(LocalityRepository):
             self, 
             *, 
             country_id: uuid.UUID, 
-        ) -> List[Locality]:
+        ) -> list[Locality]:
 
         stmt = (
             select(Locality)
@@ -32,7 +31,7 @@ class SqlLocalityRepository(LocalityRepository):
             self,
             *,
             admin_division_id: uuid.UUID,
-        ) -> List[Locality]:
+        ) -> list[Locality]:
 
         stmt = (
             select(Locality)

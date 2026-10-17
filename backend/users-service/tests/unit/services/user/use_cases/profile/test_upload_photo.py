@@ -1,12 +1,15 @@
 import io
 import uuid
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from app.schemas.common import Principal
 from app.services.user.schemas.current import CurrentUserOut
 from app.services.user.schemas.photo import PhotoUploadOut
-from app.services.user.use_cases.profile.upload_profile_photo import UpdateCurrentProfilePhotoUseCase
+from app.services.user.use_cases.profile.upload_profile_photo import (
+    UpdateCurrentProfilePhotoUseCase,
+)
 
 
 @pytest.fixture

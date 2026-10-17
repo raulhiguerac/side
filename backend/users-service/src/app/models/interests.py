@@ -1,7 +1,6 @@
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, UniqueConstraint
@@ -23,9 +22,9 @@ class UserInterest(SQLModel, table=True):
     )
     city_id: uuid.UUID = Field(index=True)
     is_active: bool = Field(default=True)
-    deactivated_at: Optional[datetime] = Field(default=None)
-    created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
-    updated_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now(),onupdate=func.now()))
+    deactivated_at: datetime | None = Field(default=None)
+    created_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
+    updated_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now(),onupdate=func.now()))
 
     __table_args__ = (
         UniqueConstraint(
@@ -53,8 +52,8 @@ class UserNeighborhoodInterest(SQLModel, table=True):
         )
     )
     interest_rank: int = Field(nullable=False)
-    created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
-    updated_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now(),onupdate=func.now()))
+    created_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
+    updated_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now(),onupdate=func.now()))
 
     __table_args__ = (
         UniqueConstraint(
@@ -82,5 +81,5 @@ class UserPropertyTypeInterest(SQLModel, table=True):
         )
     )
     property_type: PropertyType = Field(primary_key=True)
-    created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
-    updated_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now(),onupdate=func.now()))
+    created_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
+    updated_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now(),onupdate=func.now()))

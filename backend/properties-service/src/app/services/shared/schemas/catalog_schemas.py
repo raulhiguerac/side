@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,4 +27,4 @@ class PointToResolve(_ExternalSchema):
 
 class ResolvedPoint(_ExternalSchema):
     id: str
-    location: Optional[LocationInfo] = None
+    location: LocationInfo | None = None

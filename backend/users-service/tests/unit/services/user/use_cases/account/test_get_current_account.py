@@ -1,10 +1,13 @@
 import uuid
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 
 from app.schemas.common import Principal
 from app.services.user.schemas.current import CurrentUserOut
-from app.services.user.use_cases.account.get_current_account import GetCurrentAccountUseCase
+from app.services.user.use_cases.account.get_current_account import (
+    GetCurrentAccountUseCase,
+)
 
 
 @pytest.fixture

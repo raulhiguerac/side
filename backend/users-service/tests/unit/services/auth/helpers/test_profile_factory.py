@@ -1,12 +1,11 @@
 import uuid
+
 import pytest
-from unittest.mock import MagicMock
 from pydantic import TypeAdapter
 
-from app.models.account import AccountType, UserProfile, CompanyProfile
+from app.models.account import CompanyProfile, UserProfile
 from app.services.auth.helpers.profile_factory import ProfileFactory
 from app.services.auth.schemas.registration import RegisterRequest
-
 
 PERSON_DATA = {
     "first_name": "Pepito",

@@ -115,7 +115,7 @@ async def test_mark_failed_never_stamps_confirmed_at_or_wipes_errors(uow):
 async def test_mark_failed_swallows_its_own_failure(uow):
     """The job already blew up — this must not mask the original exception."""
     async def _boom(fn):
-        raise Exception("db is gone")
+        raise RuntimeError("db is gone")
 
     with patch(
         "app.workers.helpers.persistence.job_status.run_in_threadpool",

@@ -1,12 +1,12 @@
+import base64
+import json
 import os
 import uuid
-import json
-import base64
+from collections.abc import Callable
 from functools import partial
-from typing import Callable
 
-from pydantic import ValidationError
 from confluent_kafka import Consumer, Producer
+from pydantic import ValidationError
 
 from app.core.exceptions.worker import WorkerConfigurationError, WorkerDeliveryError
 from app.core.logging.logger import get_logger

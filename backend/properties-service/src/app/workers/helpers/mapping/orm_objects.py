@@ -1,8 +1,8 @@
 import uuid
 
 from app.services.shared.schemas.users_schemas import ResolvedAccount
-from app.workers.helpers.row_ref import row_ref
 from app.workers.helpers.mapping.seed_mapper import build_models, row_to_item
+from app.workers.helpers.row_ref import row_ref
 from app.workers.schemas.bulk_schemas import BulkRowError
 
 

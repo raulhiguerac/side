@@ -1,7 +1,7 @@
-import pytest
-from unittest.mock import MagicMock
 
+import pytest
 from fastapi.security import HTTPAuthorizationCredentials
+
 from app.api.deps.action_token import get_action_token_from_bearer
 
 

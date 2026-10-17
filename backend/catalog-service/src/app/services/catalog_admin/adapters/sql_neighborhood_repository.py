@@ -1,6 +1,5 @@
 import unicodedata
 import uuid
-from typing import Optional
 
 from geoalchemy2 import Geography
 from geoalchemy2.functions import (
@@ -35,7 +34,7 @@ from app.services.catalog_admin.schemas.neighborhood import (
 
 _EXCLUDED_FROM_UPSERT = {"id", "created_at", "updated_at", "geom", "h3_cells"}
 _UPSERT_FIELDS = [
-    c for c in inspect(Neighborhood).columns.keys() if c not in _EXCLUDED_FROM_UPSERT
+    c for c in inspect(Neighborhood).columns.keys() if c not in _EXCLUDED_FROM_UPSERT  # noqa: SIM118 (.columns itera Column, no keys)
 ]
 
 _SIMPLIFY_TOLERANCE = 0.00001
@@ -96,11 +95,11 @@ class SqlNeighborhoodAdminRepository(NeighborhoodAdminRepository):
         with_geometry, total = self.session.exec(stmt).one()
         return NeighborhoodCoverage(with_geometry=with_geometry, total=total)
 
-    def get_by_id(self, *, neighborhood_id: uuid.UUID) -> Optional[Neighborhood]:
+    def get_by_id(self, *, neighborhood_id: uuid.UUID) -> Neighborhood | None:
         stmt = select(Neighborhood).where(Neighborhood.id == neighborhood_id)
         return self.session.exec(stmt).first()
 
-    def get_detail(self, *, neighborhood_id: uuid.UUID) -> Optional[NeighborhoodAdminDetail]:
+    def get_detail(self, *, neighborhood_id: uuid.UUID) -> NeighborhoodAdminDetail | None:
         geom = Neighborhood.geom
         simplified = ST_SimplifyPreserveTopology(geom, _SIMPLIFY_TOLERANCE)
         stmt = select(

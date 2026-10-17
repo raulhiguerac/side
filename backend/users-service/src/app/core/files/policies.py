@@ -1,6 +1,5 @@
 import os
 from dataclasses import dataclass
-from typing import Set
 
 
 @dataclass(frozen=True)
@@ -8,10 +7,10 @@ class UploadPolicy:
     """
     Describe las reglas que debe cumplir un archivo subido.
     """
-    allowed_mime_types: Set[str]
+    allowed_mime_types: set[str]
     max_size_bytes: int
 
-def _parse_mime_types(env_var: str) -> Set[str]:
+def _parse_mime_types(env_var: str) -> set[str]:
     if not env_var:
         return set()
 

@@ -1,15 +1,14 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
 
 import h3
 from pydantic import Field
 
 from app.models.listing import PropertyType
 from app.schemas.base import StrictBase
-
 from app.services.shared.schemas.property_card import PropertyCardSchema
+
 
 class FeedCursor(StrictBase):
     created_at: datetime
@@ -46,9 +45,9 @@ class BoundingBox(StrictBase):
 
 
 class FeedFilters(StrictBase):
-    min_price: Optional[Decimal] = None
-    max_price: Optional[Decimal] = None
-    min_area_m2: Optional[Decimal] = None
-    max_area_m2: Optional[Decimal] = None
-    min_bathrooms: Optional[Decimal] = None
-    bedrooms: Optional[int] = Field(default=None, ge=1)
+    min_price: Decimal | None = None
+    max_price: Decimal | None = None
+    min_area_m2: Decimal | None = None
+    max_area_m2: Decimal | None = None
+    min_bathrooms: Decimal | None = None
+    bedrooms: int | None = Field(default=None, ge=1)

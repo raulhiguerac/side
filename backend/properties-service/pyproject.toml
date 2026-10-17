@@ -22,12 +22,13 @@ dependencies = [
     "cryptography>=46.0.5",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=6.0.0",
     "httpx>=0.28.0",
+    "ruff==0.17.1",
 ]
 
 [tool.pytest.ini_options]

@@ -41,11 +41,10 @@ sys.path.insert(0, str(src_path))
 
 import os
 import uuid
-from typing import Generator
-from unittest.mock import AsyncMock, MagicMock
+from collections.abc import Generator
+from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
@@ -63,22 +62,27 @@ os.environ.setdefault("OIDC_AUDIENCE", "test-audience")
 os.environ.setdefault("FRONT_BASE_URL", "http://localhost:3000")
 
 # Ahora si podemos importar la app y sus dependencias
-from app.main import create_app
-from app.api.deps.db import get_session
 from app.api.deps.auth import get_current_principal
 from app.api.deps.auth_use_cases import (
-    get_identity_provider,
     get_auth_provider,
+    get_identity_provider,
+)
+from app.api.deps.auth_use_cases import (
     get_cache_port as get_auth_cache_port,
+)
+from app.api.deps.auth_use_cases import (
     get_email_sender as get_auth_email_sender,
 )
+from app.api.deps.db import get_session
 from app.api.deps.user_use_cases import (
     get_cache_port as get_user_cache_port,
+)
+from app.api.deps.user_use_cases import (
     get_email_sender as get_user_email_sender,
 )
+from app.main import create_app
 from app.schemas.common import Principal
 from app.services.auth.schemas.tokens import AuthTokens
-
 
 # =============================================================================
 # FIXTURES DE BASE DE DATOS
@@ -109,7 +113,6 @@ def test_engine():
     Para tests de integracion REALES en produccion, usar PostgreSQL
     con testcontainers. SQLite es solo para demos/desarrollo rapido.
     """
-    from sqlalchemy import event
     import uuid as uuid_module
 
     engine = create_engine(

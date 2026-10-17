@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
 
@@ -25,17 +25,38 @@ from app.services.listing.schemas.listing_schemas import (
     PresignedUrlsResponse,
     UpdatePropertyRequest,
 )
-from app.services.listing.use_cases.images.confirm_image_uploads import ConfirmImageUploadsUseCase
-from app.services.listing.use_cases.images.delete_property_images import DeletePropertyImagesUseCase
-from app.services.listing.use_cases.images.request_presigned_urls import RequestPresignedUrlsUseCase
-from app.services.listing.use_cases.property_core.create_property import CreatePropertyUseCase
-from app.services.listing.use_cases.property_core.delete_property import DeletePropertyUseCase
-from app.services.listing.use_cases.property_core.get_my_properties import GetMyPropertiesUseCase
+from app.services.listing.use_cases.images.confirm_image_uploads import (
+    ConfirmImageUploadsUseCase,
+)
+from app.services.listing.use_cases.images.delete_property_images import (
+    DeletePropertyImagesUseCase,
+)
+from app.services.listing.use_cases.images.request_presigned_urls import (
+    RequestPresignedUrlsUseCase,
+)
+from app.services.listing.use_cases.property_core.create_property import (
+    CreatePropertyUseCase,
+)
+from app.services.listing.use_cases.property_core.delete_property import (
+    DeletePropertyUseCase,
+)
+from app.services.listing.use_cases.property_core.get_my_properties import (
+    GetMyPropertiesUseCase,
+)
 from app.services.listing.use_cases.property_core.get_property import GetPropertyUseCase
-from app.services.listing.use_cases.property_core.get_public_user_properties import GetPublicUserPropertiesUseCase
-from app.services.listing.use_cases.property_core.set_property_visibility import SetPropertyVisibilityUseCase
-from app.services.listing.use_cases.property_core.update_property import UpdatePropertyUseCase
-from app.services.shared.schemas.property_card import PropertyCardSchema, PublicUserPropertiesResponse
+from app.services.listing.use_cases.property_core.get_public_user_properties import (
+    GetPublicUserPropertiesUseCase,
+)
+from app.services.listing.use_cases.property_core.set_property_visibility import (
+    SetPropertyVisibilityUseCase,
+)
+from app.services.listing.use_cases.property_core.update_property import (
+    UpdatePropertyUseCase,
+)
+from app.services.shared.schemas.property_card import (
+    PropertyCardSchema,
+    PublicUserPropertiesResponse,
+)
 from app.services.shared.schemas.property_detail import PropertyDetailSchema
 
 router = APIRouter(prefix="/properties", tags=["properties"])
@@ -114,7 +135,7 @@ async def create_property(
 )
 async def get_property(
     property_id: uuid.UUID,
-    principal: Annotated[Optional[Principal], Depends(get_current_principal_optional)],
+    principal: Annotated[Principal | None, Depends(get_current_principal_optional)],
     uc: Annotated[GetPropertyUseCase, Depends(get_property_uc)],
 ) -> PropertyDetailSchema:
     return await uc.execute(property_id=property_id, principal=principal)

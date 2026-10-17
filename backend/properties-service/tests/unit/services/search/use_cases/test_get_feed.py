@@ -6,7 +6,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.models.listing import Currency, ListingStatus, ListingType, PropertyType
-from app.services.search.schemas.feed_schemas import FeedCursor, FeedFilters, FeedPage, FeedPreferences
+from app.services.search.schemas.feed_schemas import (
+    FeedCursor,
+    FeedFilters,
+    FeedPage,
+    FeedPreferences,
+)
 from app.services.search.use_cases.get_feed import GetFeedUseCase
 from app.services.shared.schemas.property_card import PropertyCardSchema
 

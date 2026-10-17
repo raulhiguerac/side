@@ -1,7 +1,7 @@
 ---
 title: Testing — analytics-service unit suite
 status: stable
-last-verified: 2026-07-13
+last-verified: 2026-10-16
 owners: [analytics-service]
 related:
   - "[[analytics-service-local-dev]]"
@@ -9,6 +9,7 @@ related:
   - "[[analytics-service-prediction]]"
 sources:
   - ../../../sources/analytics-service/2026-05-25-unit-test-suite.md
+  - ../../../sources/_shared/2026-10-16-backend-ci-reusable-and-test-deps.md
 ---
 
 ## TL;DR
@@ -17,10 +18,10 @@ sources:
 
 ## Setup
 
-Pytest vive bajo `[project.optional-dependencies] dev` — no se instala con `uv sync` por defecto:
+Pytest vive en `[dependency-groups] dev`, que `uv sync` instala por defecto (y que el `--no-dev` del Dockerfile deja fuera de la imagen):
 
 ```bash
-uv sync --extra dev
+uv sync
 uv run python -m pytest tests/unit/
 ```
 
@@ -140,7 +141,7 @@ with patch.object(c, "_poll_batch", return_value=([VALID_MSG], [])):
 ## Claims
 
 - Tests unitarios se encuentran en `tests/unit/` — 63 tests, todos pasan con `uv run python -m pytest tests/unit/` ([pyproject.toml](backend/analytics-service/pyproject.toml)).
-- `pytest` y `pytest-asyncio` están bajo `[project.optional-dependencies] dev` en `pyproject.toml` — requieren `uv sync --extra dev` para instalarse ([pyproject.toml](backend/analytics-service/pyproject.toml)).
+- `pytest` y `pytest-asyncio` están en `[dependency-groups] dev` de `pyproject.toml` — `uv sync` los instala sin flags extra ([pyproject.toml](backend/analytics-service/pyproject.toml)).
 - `asyncio_mode = "auto"` está configurado en `[tool.pytest.ini_options]` — `@pytest.mark.asyncio` no es obligatorio ([pyproject.toml](backend/analytics-service/pyproject.toml)).
 - `pythonpath = ["src"]` está en `[tool.pytest.ini_options]` — no hace falta `PYTHONPATH=src` al correr pytest ([pyproject.toml](backend/analytics-service/pyproject.toml)).
 - Los métodos de repo del UoW (`add`, `batch_add`) son síncronos (SQLModel session) — se mockean con `MagicMock`, no `AsyncMock` ([ports/unit_of_work.py](backend/analytics-service/src/app/services/prediction/ports/unit_of_work.py)).

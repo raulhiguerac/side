@@ -1,6 +1,6 @@
 import asyncio
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlmodel import Session, select
 
@@ -29,7 +29,7 @@ def retry_keycloak_deletions(session: Session):
         select(KcCompensationTask)
         .where(KcCompensationTask.status == KcTaskStatus.pending)
         .where(KcCompensationTask.attempts < MAX_ATTEMPTS)
-        .where(KcCompensationTask.next_retry_at <= datetime.utcnow())
+        .where(KcCompensationTask.next_retry_at <= datetime.now(timezone.utc))
         .limit(BATCH_SIZE)
     ).all()
 
@@ -59,7 +59,7 @@ def retry_keycloak_deletions(session: Session):
 
             delay_min = min(MAX_DELAY_MIN, 2 ** task.attempts)
             jitter_sec = random.randint(0, 30)
-            task.next_retry_at = datetime.utcnow() + timedelta(minutes=delay_min, seconds=jitter_sec)
+            task.next_retry_at = datetime.now(timezone.utc) + timedelta(minutes=delay_min, seconds=jitter_sec)
 
             if task.attempts >= MAX_ATTEMPTS:
                 task.status = KcTaskStatus.failed

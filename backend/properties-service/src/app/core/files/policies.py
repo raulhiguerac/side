@@ -1,10 +1,9 @@
 from dataclasses import dataclass
-from typing import Set
 
 
 @dataclass(frozen=True)
 class UploadPolicy:
-    allowed_extensions: Set[str]
+    allowed_extensions: set[str]
     max_size_bytes: int
 
 

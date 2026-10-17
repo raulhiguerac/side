@@ -1,14 +1,18 @@
 import uuid
-from datetime import datetime
-import pytest
-from unittest.mock import AsyncMock, MagicMock, PropertyMock
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock
 
-from app.models.account import Account, AccountActionActor, AccountType
-from app.services.user.use_cases.account.request_account_reactivation import RequestReactivationUseCase
-from app.services.user.use_cases.account.reactivate_current_account import ConfirmReactivationUseCase
+import pytest
+
 from app.core.exceptions.account import AccountNotFoundError
 from app.core.exceptions.auth import TokenInvalidOrExpiredError
-
+from app.models.account import Account, AccountActionActor, AccountType
+from app.services.user.use_cases.account.reactivate_current_account import (
+    ConfirmReactivationUseCase,
+)
+from app.services.user.use_cases.account.request_account_reactivation import (
+    RequestReactivationUseCase,
+)
 
 # =============================================================================
 # RequestReactivationUseCase
@@ -54,7 +58,7 @@ def eligible_account():
         account_type="person",
         onboarding_step=1,
         is_active=False,
-        deactivated_at=datetime.utcnow(),
+        deactivated_at=datetime.now(timezone.utc),
         deactivated_by=AccountActionActor.user,
     )
 
@@ -80,7 +84,7 @@ def ineligible_account_admin_deactivated():
         account_type="person",
         onboarding_step=1,
         is_active=False,
-        deactivated_at=datetime.utcnow(),
+        deactivated_at=datetime.now(timezone.utc),
         deactivated_by=AccountActionActor.admin,
     )
 
@@ -177,7 +181,7 @@ def inactive_account():
         account_type="person",
         onboarding_step=1,
         is_active=False,
-        deactivated_at=datetime.utcnow(),
+        deactivated_at=datetime.now(timezone.utc),
         deactivated_by=AccountActionActor.user,
     )
 

@@ -1,4 +1,4 @@
-from typing import IO, Any, Dict, Optional, Protocol
+from typing import IO, Any, Protocol
 
 from app.services.shared.schemas.storage import UploadResult
 
@@ -10,5 +10,5 @@ class StoragePort(Protocol):
         fileobj: IO[bytes],
         bucket: str,
         key: str,
-        extra_args: Optional[Dict[str, Any]] = None,
+        extra_args: dict[str, Any] | None = None,
     ) -> UploadResult: ...

@@ -1,10 +1,11 @@
 import uuid
-import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
-from app.models.account import AccountType, UserProfile, CompanyProfile
-from app.services.user.helpers.profile_reader import get_profile_db
+import pytest
+
 from app.core.exceptions.user import ProfileNotFoundError
+from app.models.account import AccountType, CompanyProfile, UserProfile
+from app.services.user.helpers.profile_reader import get_profile_db
 
 
 @pytest.fixture

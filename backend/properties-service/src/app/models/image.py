@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import sqlalchemy as sa
 from sqlalchemy import Column, DateTime, ForeignKey, Index
@@ -9,6 +9,8 @@ from sqlmodel import Field, Relationship
 
 from app.models.mixins import AuditMixin
 
+if TYPE_CHECKING:
+    from app.models.listing import Property
 
 # =============================================================================
 # ENUMS
@@ -89,7 +91,7 @@ class PropertyImageUploadBatch(AuditMixin, table=True):
         sa_type=DateTime(timezone=True),
         sa_column_kwargs={"nullable": False},
     )
-    confirmed_at: Optional[datetime] = Field(
+    confirmed_at: datetime | None = Field(
         default=None,
         sa_type=DateTime(timezone=True),
         sa_column_kwargs={"nullable": True},

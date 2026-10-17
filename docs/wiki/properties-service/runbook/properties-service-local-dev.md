@@ -1,14 +1,14 @@
 ---
 title: Runbook — properties-service local dev
 status: draft
-last-verified: 2026-10-05
+last-verified: 2026-10-16
 owners: [properties-service]
 related:
   - "[[properties-service]]"
   - "[[properties-service-architecture]]"
   - "[[catalog-service-local-dev]]"
   - "[[analytics-service-local-dev]]"
-sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md, ../../../sources/_shared/2026-10-05-stacked-prs-and-roadmap.md]
+sources: [../../../sources/properties-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md, ../../../sources/_shared/2026-10-05-stacked-prs-and-roadmap.md, ../../../sources/_shared/2026-10-16-backend-ci-reusable-and-test-deps.md]
 ---
 
 ## TL;DR
@@ -165,11 +165,11 @@ docker exec -it $(docker ps -qf name=redis) redis-cli
 
 ```bash
 export UV_PROJECT_ENVIRONMENT=/tmp/props-venv
-uv sync --frozen --all-extras        # pytest vive en los extras de dev
+uv sync --frozen                     # incluye pytest (grupo dev)
 uv run --no-sync pytest -q tests -p no:cacheprovider
 ```
 
-En `main` fallan 2 tests desde antes del 2026-10-05: `test_raises_storage_misconfigured_when_bucket_missing`, en `test_confirm_image_uploads.py` y `test_request_presigned_urls.py`. Son de configuración del bucket de storage y no de un cambio reciente; no hay que tomarlos como regresión.
+Hasta el 2026-10-16 fallaban 2 tests dentro del devcontainer: `test_raises_storage_misconfigured_when_bucket_missing`, en `test_confirm_image_uploads.py` y `test_request_presigned_urls.py`. Asumían que `BUCKET_PHOTOS_PROPERTIES` no estaba definida, y el devcontainer sí la define. Ahora la vacían con `monkeypatch.setattr(settings, ...)` y pasan con o sin entorno.
 
 ## Claims
 

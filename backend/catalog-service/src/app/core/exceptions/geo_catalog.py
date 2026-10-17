@@ -1,11 +1,11 @@
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any
 
 from app.core.exceptions.base import BaseError
 
 
 class LocalityNotFoundError(BaseError):
-    def __init__(self, *, locality_id: uuid.UUID, cause: Exception | None = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, *, locality_id: uuid.UUID, cause: Exception | None = None, context: dict[str, Any] | None = None):
         super().__init__(
             message=f"Locality '{locality_id}' not found",
             code="LOCALITY_NOT_FOUND",
@@ -14,7 +14,7 @@ class LocalityNotFoundError(BaseError):
         )
 
 class NeighborhoodNotFoundError(BaseError):
-    def __init__(self, *, neighborhood_id: uuid.UUID, cause: Exception | None = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, *, neighborhood_id: uuid.UUID, cause: Exception | None = None, context: dict[str, Any] | None = None):
         super().__init__(
             message=f"Neighborhood '{neighborhood_id}' not found",
             code="NEIGHBORHOOD_NOT_FOUND",

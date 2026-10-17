@@ -1,4 +1,3 @@
-from typing import Optional
 from uuid import UUID
 
 from app.models.kc_tasks import KcTaskType
@@ -9,5 +8,5 @@ class CreateKcCompensationTask(StrictBase):
     kc_user_id: UUID
     email: str
     task_type: KcTaskType
-    last_error: Optional[str]
+    last_error: str | None
     attempts: int

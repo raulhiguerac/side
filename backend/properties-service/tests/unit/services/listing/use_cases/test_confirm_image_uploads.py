@@ -14,7 +14,9 @@ from app.core.exceptions.storage import StorageMisconfiguredError
 from app.models.image import BatchStatus
 from app.models.listing import VerificationStatus
 from app.schemas.principal import Principal
-from app.services.listing.use_cases.images.confirm_image_uploads import ConfirmImageUploadsUseCase
+from app.services.listing.use_cases.images.confirm_image_uploads import (
+    ConfirmImageUploadsUseCase,
+)
 
 PROP_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 BATCH_ID = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
@@ -264,6 +266,9 @@ async def test_raises_batch_not_consistent_when_keys_not_subset(mock_get_prop, m
 # Misconfigured settings at init
 # ---------------------------------------------------------------------------
 
-def test_raises_storage_misconfigured_when_bucket_missing():
+def test_raises_storage_misconfigured_when_bucket_missing(monkeypatch):
+    from app.core.config.settings import settings
+    monkeypatch.setattr(settings, "BUCKET_PHOTOS_PROPERTIES", "")
+
     with pytest.raises(StorageMisconfiguredError):
         ConfirmImageUploadsUseCase(uow=MagicMock(), cache_client=AsyncMock())

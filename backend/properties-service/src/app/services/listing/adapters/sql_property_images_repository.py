@@ -1,11 +1,17 @@
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from sqlmodel import Session, select
 
-from app.models.image import BatchStatus, ImageStatus, PropertyImage, PropertyImageUploadBatch
-from app.services.listing.ports.property_images_repository import PropertyImageRepository
+from app.models.image import (
+    BatchStatus,
+    ImageStatus,
+    PropertyImage,
+    PropertyImageUploadBatch,
+)
+from app.services.listing.ports.property_images_repository import (
+    PropertyImageRepository,
+)
 
 
 class SqlPropertyImageRepository(PropertyImageRepository):
@@ -41,7 +47,7 @@ class SqlPropertyImageRepository(PropertyImageRepository):
             stmt = stmt.where(PropertyImage.id.in_(image_ids))
         return list(self.session.exec(stmt).all())
 
-    def get_batch(self, *, batch_id: uuid.UUID) -> Optional[PropertyImageUploadBatch]:
+    def get_batch(self, *, batch_id: uuid.UUID) -> PropertyImageUploadBatch | None:
         return self.session.get(PropertyImageUploadBatch, batch_id)
 
     def get_open_batches(

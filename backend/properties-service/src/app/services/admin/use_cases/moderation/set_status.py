@@ -3,7 +3,11 @@ from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
 
-from app.core.exceptions.listing import InvalidStatusTransitionError, PropertyNotFoundError, SetVisibilityError
+from app.core.exceptions.listing import (
+    InvalidStatusTransitionError,
+    PropertyNotFoundError,
+    SetVisibilityError,
+)
 from app.models.listing import ListingStatus
 from app.schemas.principal import Principal
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork

@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import health
-from app.api.routes import admin, properties, search
+from app.api.routes import admin, health, properties, search
 
 api_router = APIRouter()
 api_router.include_router(health.router)

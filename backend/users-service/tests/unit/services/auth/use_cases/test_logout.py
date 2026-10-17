@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 
 from app.services.auth.use_cases.logout import LogoutUseCase
 

@@ -1,11 +1,11 @@
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any
 
 from app.core.exceptions.base import BaseError
 
 
 class CatalogAdminDbUnavailableError(BaseError):
-    def __init__(self, *, cause: Exception | None = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(self, *, cause: Exception | None = None, context: dict[str, Any] | None = None):
         super().__init__(
             message="Database is unavailable or timed out",
             code="CATALOG_ADMIN_DB_UNAVAILABLE",

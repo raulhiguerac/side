@@ -3,7 +3,9 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Session, select
 
 from app.models.location import FetchZone
-from app.services.geo_resolution.ports.sql.fetch_zone_repository import FetchZoneRepository
+from app.services.geo_resolution.ports.sql.fetch_zone_repository import (
+    FetchZoneRepository,
+)
 
 
 class SqlFetchZoneRepository(FetchZoneRepository):
@@ -21,7 +23,7 @@ class SqlFetchZoneRepository(FetchZoneRepository):
             index_elements=["h3_index"],
             set_={
                     k: stmt.excluded[k] for k in inspect(FetchZone) \
-                    .columns.keys() if k not in {"id", "created_at", "h3_index"}
+                    .columns.keys() if k not in {"id", "created_at", "h3_index"}  # noqa: SIM118 (.columns itera Column, no keys)
                 },
         )
         self.session.execute(stmt)

@@ -1,13 +1,8 @@
 import os
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
 from alembic import context
-from models.prediction import (  # noqa: F401
-    Prediction
-)
+from models.prediction import Prediction  # noqa: F401
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 

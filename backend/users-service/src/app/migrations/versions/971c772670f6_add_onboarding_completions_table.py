@@ -5,7 +5,7 @@ Revises: 207cdac5e649
 Create Date: 2026-03-16 19:19:21.329674
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
@@ -13,9 +13,9 @@ from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 
 # revision identifiers, used by Alembic.
 revision: str = '971c772670f6'
-down_revision: Union[str, Sequence[str], None] = '207cdac5e649'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = '207cdac5e649'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

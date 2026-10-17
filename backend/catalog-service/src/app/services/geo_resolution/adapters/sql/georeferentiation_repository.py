@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from geoalchemy2.functions import ST_Point
 from sqlalchemy import case, cast, func, literal, select, true, update
@@ -65,7 +64,7 @@ class SqlGeoreferentiationRepository(GeoreferentiationRepository):
             return None
         return row.latitude, row.longitude
 
-    def get_location_by_point(self, *, lat: float, lon: float, cell: str) -> Optional[LocationByCoordinates]:
+    def get_location_by_point(self, *, lat: float, lon: float, cell: str) -> LocationByCoordinates | None:
         pnt = func.ST_SetSRID(ST_Point(lon, lat), 4326)
 
         # Prefiltro por h3_cells (índice GIN) para acotar candidatos antes del
@@ -106,7 +105,7 @@ class SqlGeoreferentiationRepository(GeoreferentiationRepository):
         if not points:
             return []
 
-        results: dict[str, Optional[LocationByCoordinates]] = {p.id: None for p in points}
+        results: dict[str, LocationByCoordinates | None] = {p.id: None for p in points}
 
         for point_id, neighborhood_id, locality_id, country_id in self._match_points(points, use_h3_prefilter=True):
             if neighborhood_id is not None:

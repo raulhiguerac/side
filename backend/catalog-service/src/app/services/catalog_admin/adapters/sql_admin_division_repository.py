@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from sqlalchemy import Select, func
 from sqlmodel import Session, select
@@ -38,7 +37,7 @@ class SqlAdminDivisionRepository(AdminDivisionAdminRepository):
         stmt = _apply_filters(select(func.count()).select_from(AdminDivision), filters)
         return self.session.exec(stmt).one()
 
-    def get_by_id(self, *, admin_division_id: uuid.UUID) -> Optional[AdminDivision]:
+    def get_by_id(self, *, admin_division_id: uuid.UUID) -> AdminDivision | None:
         stmt = select(AdminDivision).where(AdminDivision.id == admin_division_id)
         return self.session.exec(stmt).first()
 

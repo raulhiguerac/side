@@ -1,7 +1,10 @@
 from app.integrations.georef.ors.routing import OrsRoutingClient
 from app.services.geo_resolution.ports.routing.gateway import RoutingGateway
-
-from app.services.geo_resolution.schemas.isochrone import IsochroneRequest, IsochroneEntry, GeoJsonPolygon
+from app.services.geo_resolution.schemas.isochrone import (
+    GeoJsonPolygon,
+    IsochroneEntry,
+    IsochroneRequest,
+)
 
 
 class OrsRoutingAdapter(RoutingGateway):

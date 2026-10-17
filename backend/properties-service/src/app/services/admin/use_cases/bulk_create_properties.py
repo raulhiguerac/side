@@ -1,7 +1,6 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 from functools import partial
-from typing import Optional
 
 from fastapi.concurrency import run_in_threadpool
 
@@ -27,7 +26,7 @@ class BulkCreatePropertiesUseCase:
         *,
         principal: Principal,
         storage_key: str,
-        retry_job_id: Optional[uuid.UUID] = None,
+        retry_job_id: uuid.UUID | None = None,
     ) -> uuid.UUID:
         if retry_job_id is not None:
             target_job = await run_in_threadpool(

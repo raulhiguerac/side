@@ -5,7 +5,7 @@ Revises: 58398520fda2
 Create Date: 2026-01-21 19:17:03.685760
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 import sqlmodel
@@ -13,9 +13,9 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '45b16114b3c6'
-down_revision: Union[str, Sequence[str], None] = '58398520fda2'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = '58398520fda2'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

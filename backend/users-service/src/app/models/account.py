@@ -1,7 +1,6 @@
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 import sqlalchemy as sa
 from sqlalchemy import Column, ForeignKey
@@ -43,14 +42,14 @@ class Account(SQLModel, table=True):
     account_type :AccountType = Field(nullable=False)
     onboarding_step: OnboardingStep = Field(nullable=False, default= OnboardingStep.intent)
     is_active: bool = Field(nullable=False, default=True)
-    deactivated_at: Optional[datetime] = Field(default=None)
-    deactivated_by: Optional[AccountActionActor] = Field(default=None)
-    deactivation_reason: Optional[AccountDeactivationReason] = Field(default=None)
-    deactivation_note : Optional[str] = Field(default=None)
-    reactivated_at: Optional[datetime] = Field(default=None)
-    reactivated_by: Optional[AccountActionActor] = Field(default=None)
-    created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
-    updated_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now(),onupdate=func.now()))
+    deactivated_at: datetime | None = Field(default=None)
+    deactivated_by: AccountActionActor | None = Field(default=None)
+    deactivation_reason: AccountDeactivationReason | None = Field(default=None)
+    deactivation_note : str | None = Field(default=None)
+    reactivated_at: datetime | None = Field(default=None)
+    reactivated_by: AccountActionActor | None = Field(default=None)
+    created_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
+    updated_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now(),onupdate=func.now()))
 
 class AccountIntent(str,Enum):
     buyer = "buyer"
@@ -69,14 +68,14 @@ class UserProfile(SQLModel, table=True):
     )
     first_name: str = Field(nullable=False)
     last_name: str = Field(nullable=False)
-    phone: Optional[str] = Field(default=None)
-    intent: Optional[AccountIntent] = Field(default=None)
-    photo_url: Optional[str] = Field(default=None)
-    photo_key: Optional[str] = Field(default=None)
-    description: Optional[str] = Field(default=None)
+    phone: str | None = Field(default=None)
+    intent: AccountIntent | None = Field(default=None)
+    photo_url: str | None = Field(default=None)
+    photo_key: str | None = Field(default=None)
+    description: str | None = Field(default=None)
     profile_score: int = Field(nullable=False, default=0)
-    created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(), server_default=func.now()))
-    updated_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(), server_default=func.now(), onupdate=func.now()))
+    created_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime(), server_default=func.now()))
+    updated_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime(), server_default=func.now(), onupdate=func.now()))
 
 class CompanyProfile(SQLModel, table=True):
     __tablename__ = "company_profile"
@@ -88,14 +87,14 @@ class CompanyProfile(SQLModel, table=True):
         )
     )
     display_name: str = Field(nullable=False)
-    phone: Optional[str] = Field(default=None)
-    intent: Optional[AccountIntent] = Field(default=None)
-    photo_url: Optional[str] = Field(default=None)
-    photo_key: Optional[str] = Field(default=None)
-    description: Optional[str] = Field(default=None)
+    phone: str | None = Field(default=None)
+    intent: AccountIntent | None = Field(default=None)
+    photo_url: str | None = Field(default=None)
+    photo_key: str | None = Field(default=None)
+    description: str | None = Field(default=None)
     profile_score: int = Field(nullable=False, default=0)
-    created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(), server_default=func.now()))
-    updated_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(), server_default=func.now(), onupdate=func.now()))
+    created_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime(), server_default=func.now()))
+    updated_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime(), server_default=func.now(), onupdate=func.now()))
 
 class AccountConsents(SQLModel, table=True):
 
@@ -109,5 +108,5 @@ class AccountConsents(SQLModel, table=True):
     )
     terms: bool = Field(nullable=False)
     marketing: bool = Field(nullable=False)
-    created_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
-    updated_at: Optional[datetime] = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now(),onupdate=func.now()))
+    created_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now()))
+    updated_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime(),server_default=func.now(),onupdate=func.now()))

@@ -4,11 +4,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.exceptions.listing import CreatePropertyError, PropertyForbiddenError, PropertyNotFoundError
-from app.models.listing import Currency, ListingStatus, ListingType, PropertyCondition, PropertyType, VerificationStatus
+from app.core.exceptions.listing import (
+    CreatePropertyError,
+    PropertyForbiddenError,
+    PropertyNotFoundError,
+)
+from app.models.listing import (
+    ListingStatus,
+)
 from app.schemas.principal import Principal
 from app.services.listing.schemas.listing_schemas import UpdatePropertyRequest
-from app.services.listing.use_cases.property_core.update_property import UpdatePropertyUseCase
+from app.services.listing.use_cases.property_core.update_property import (
+    UpdatePropertyUseCase,
+)
 
 PROP_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 OWNER_ID = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")

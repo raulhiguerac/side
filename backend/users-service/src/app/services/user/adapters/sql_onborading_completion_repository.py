@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import inspect
+from sqlalchemy import func, inspect
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import Session, select
@@ -19,7 +19,7 @@ from app.services.user.ports.onboarding_completion_repository import (
 
 _EXCLUDED_FROM_UPSERT = {"user_interest_id", "created_at", "updated_at"}
 _UPSERT_FIELDS = [
-    c for c in inspect(UserNeighborhoodInterest).columns.keys() if c not in _EXCLUDED_FROM_UPSERT
+    c for c in inspect(UserNeighborhoodInterest).columns.keys() if c not in _EXCLUDED_FROM_UPSERT  # noqa: SIM118 (.columns itera Column, no keys)
 ]
 
 class SqlOnboardingCompletionRepository(OnboardingCompletionRepository):

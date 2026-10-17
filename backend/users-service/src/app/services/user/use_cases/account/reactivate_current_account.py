@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from app.core.exceptions.auth import TokenInvalidOrExpiredError
@@ -70,5 +70,5 @@ class ConfirmReactivationUseCase:
         account.deactivated_at = None
         account.deactivated_by = None
         account.deactivation_reason = None
-        account.reactivated_at = datetime.utcnow()
+        account.reactivated_at = datetime.now(timezone.utc)
         account.reactivated_by = AccountActionActor.user

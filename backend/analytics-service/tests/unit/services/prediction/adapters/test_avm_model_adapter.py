@@ -2,7 +2,6 @@ import uuid
 from unittest.mock import MagicMock
 
 import numpy as np
-import pytest
 
 from app.models.prediction import PropertyType
 from app.services.prediction.adapters.avm_model_adapter import AVMModelAdapter

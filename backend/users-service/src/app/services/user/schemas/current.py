@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Annotated, Literal, Optional, Union
+from typing import Annotated, Literal
 
 from pydantic import EmailStr, Field
 
@@ -11,25 +11,25 @@ from app.schemas.base import StrictBase
 class CurrentUserPerson(StrictBase):
     first_name: str
     last_name: str
-    phone: Optional[str]
-    photo_url: Optional[str]
-    description: Optional[str]
-    intent: Optional[AccountIntent]
+    phone: str | None
+    photo_url: str | None
+    description: str | None
+    intent: AccountIntent | None
     account_type: Literal['person']
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
 class CurrentUserOrganization(StrictBase):
     display_name: str
-    phone: Optional[str]
-    photo_url: Optional[str]
-    description: Optional[str]
-    intent: Optional[AccountIntent]
+    phone: str | None
+    photo_url: str | None
+    description: str | None
+    intent: AccountIntent | None
     account_type: Literal["organization"]
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
 class CurrentUserProfileOut(StrictBase):
     profile: Annotated[
-        Union[CurrentUserPerson,CurrentUserOrganization],
+        CurrentUserPerson | CurrentUserOrganization,
         Field(discriminator="account_type")
     ]
 

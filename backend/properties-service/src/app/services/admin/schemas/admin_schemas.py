@@ -1,19 +1,26 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import ConfigDict, Field, model_validator
 
 from app.models.bulk_job import JobStatus, JobType
-from app.models.listing import Currency, ListingStatus, ListingType, PropertyType, VerificationStatus
+from app.models.listing import (
+    Currency,
+    ListingStatus,
+    ListingType,
+    PropertyType,
+    VerificationStatus,
+)
 from app.schemas.base import StrictBase
 from app.services.shared.schemas.property_card import PropertyCardSchema
 from app.services.shared.schemas.property_detail import PropertyDetailSchema
 
+
 class VerifyPropertyRequest(StrictBase):
     verification_status: VerificationStatus
-    rejection_reason: Optional[str] = Field(default=None, max_length=500)
+    rejection_reason: str | None = Field(default=None, max_length=500)
 
     @model_validator(mode="after")
     def validate_rejection_reason(self) -> "VerifyPropertyRequest":
@@ -45,12 +52,12 @@ class CreatePromotionRequest(StrictBase):
 
 
 class GetPropertiesAdminRequest(StrictBase):
-    status: Optional[ListingStatus] = None
-    verification_status: Optional[VerificationStatus] = None
-    owner_id: Optional[uuid.UUID] = None
+    status: ListingStatus | None = None
+    verification_status: VerificationStatus | None = None
+    owner_id: uuid.UUID | None = None
     # Filtra por promoción activa, que es la condición del
     # DuplicateActivePromotionError: `false` da las promocionables.
-    is_promoted: Optional[bool] = None
+    is_promoted: bool | None = None
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=20, ge=1, le=100)
 
@@ -71,7 +78,7 @@ class AdminPropertyCardSchema(StrictBase):
     listing_type: ListingType
     status: ListingStatus
     verification_status: VerificationStatus
-    rejection_reason: Optional[str] = None
+    rejection_reason: str | None = None
     price: Decimal
     currency: Currency
     area_m2: Decimal
@@ -113,7 +120,7 @@ class AdminPromotionSchema(StrictBase):
     starts_at: datetime
     ends_at: datetime
     is_active: bool
-    property: Optional[PropertyCardSchema] = None
+    property: PropertyCardSchema | None = None
 
 
 class AdminPromotionsPage(StrictBase):
@@ -144,7 +151,7 @@ class SetEstimatedPriceRequest(StrictBase):
 class BulkJobCreate(StrictBase):
     batch_id: uuid.UUID
     storage_key: str
-    retry_of_job_id: Optional[uuid.UUID] = None
+    retry_of_job_id: uuid.UUID | None = None
     expiration: datetime
     created_by: uuid.UUID
 
@@ -168,7 +175,7 @@ class BulkCreatePropertiesRequest(StrictBase):
     endpoint only receives the resulting key — never the file itself."""
 
     storage_key: str
-    retry_of_job_id: Optional[uuid.UUID] = None
+    retry_of_job_id: uuid.UUID | None = None
 
 
 class BulkJobAccepted(StrictBase):
@@ -188,11 +195,11 @@ class GetBulkJobsAdminRequest(StrictBase):
     """Filters for the import history. No sort field: a history is always read
     newest first, and a second order would only ever be a curiosity."""
 
-    status: Optional[JobStatus] = None
+    status: JobStatus | None = None
     # Runs that dropped rows, which is the only reason to go looking.
-    has_errors: Optional[bool] = None
-    created_from: Optional[datetime] = None
-    created_to: Optional[datetime] = None
+    has_errors: bool | None = None
+    created_from: datetime | None = None
+    created_to: datetime | None = None
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=20, ge=1, le=100)
 
@@ -208,12 +215,12 @@ class AdminBulkJobSchema(StrictBase):
     status: JobStatus
     inserted: int
     error_count: int
-    retry_of_job_id: Optional[uuid.UUID] = None
+    retry_of_job_id: uuid.UUID | None = None
     storage_key: str
     # Past this the CSV is gone from storage, so the run can no longer be replayed.
     expires_at: datetime
     created_at: datetime
-    created_by: Optional[uuid.UUID] = None
+    created_by: uuid.UUID | None = None
 
 
 class AdminBulkJobsPage(StrictBase):

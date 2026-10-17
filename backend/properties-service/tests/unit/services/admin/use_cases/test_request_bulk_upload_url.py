@@ -7,7 +7,9 @@ from app.core.exceptions.storage import StorageMisconfiguredError
 from app.core.exceptions.validation import UnsupportedFileTypeError
 from app.schemas.principal import Principal
 from app.services.admin.schemas.admin_schemas import BulkUploadUrlRequest
-from app.services.admin.use_cases.request_bulk_upload_url import RequestBulkUploadUrlUseCase
+from app.services.admin.use_cases.request_bulk_upload_url import (
+    RequestBulkUploadUrlUseCase,
+)
 
 PRINCIPAL = Principal(sub=uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"))
 

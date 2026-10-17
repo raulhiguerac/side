@@ -1,11 +1,12 @@
 import uuid
-import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
+import pytest
+
+from app.core.exceptions.auth import SamePasswordNotAllowedError
 from app.schemas.common import Principal
 from app.services.auth.schemas.passwords import ChangePassword
 from app.services.auth.use_cases.change_password import ChangeAccountPasswordUseCase
-from app.core.exceptions.auth import SamePasswordNotAllowedError
 
 
 @pytest.fixture

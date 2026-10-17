@@ -1,5 +1,4 @@
 import uuid
-from typing import List
 
 from sqlmodel import Session, select
 
@@ -17,7 +16,7 @@ class SqlNeighborhoodRepository(NeighborhoodRepository):
             self, 
             *, 
             locality_ids: list[uuid.UUID]
-        ) -> List[Neighborhood]:
+        ) -> list[Neighborhood]:
 
         stmt = (
             select(Neighborhood)

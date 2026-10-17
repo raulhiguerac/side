@@ -3,7 +3,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.services.user.use_cases.account.resolve_accounts_bulk import ResolveAccountsBulkUseCase
+from app.services.user.use_cases.account.resolve_accounts_bulk import (
+    ResolveAccountsBulkUseCase,
+)
 
 
 @pytest.fixture

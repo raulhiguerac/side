@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional, Protocol
+from typing import Protocol
 
 from app.models.location import Neighborhood
 from app.services.geo_resolution.schemas.neighborhood import (
@@ -24,7 +24,7 @@ class GeoreferentiationRepository(Protocol):
             lat: float,
             lon: float,
             cell: str
-        ) -> Optional[LocationByCoordinates]: ...
+        ) -> LocationByCoordinates | None: ...
 
     def get_location_by_points(
             self,

@@ -9,7 +9,9 @@ import pytest
 from app.core.exceptions.listing import PropertyNotFoundError
 from app.models.listing import ListingStatus, VerificationStatus
 from app.services.admin.schemas.admin_schemas import AdminPropertyDetailSchema
-from app.services.admin.use_cases.get_property_detail import GetPropertyDetailAdminUseCase
+from app.services.admin.use_cases.get_property_detail import (
+    GetPropertyDetailAdminUseCase,
+)
 from app.services.shared.helpers.cache_keys import cache_property
 
 PROP_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
@@ -55,12 +57,12 @@ def _make_mock_prop(
         condition = "used",
         status = status,
         verification_status = verification_status,
-        price = Decimal("100"),
+        price = Decimal(100),
         currency = "COP",
         admin_fee = None,
-        area_m2 = Decimal("50"),
+        area_m2 = Decimal(50),
         bedrooms = 2,
-        bathrooms = Decimal("1"),
+        bathrooms = Decimal(1),
         parking_spots = 0,
         floor_number = None,
         total_floors = None,

@@ -1,9 +1,9 @@
-import json
 import base64
-
-from app.services.search.schemas.feed_schemas import FeedCursor
+import json
 
 from app.core.exceptions.validation import InvalidCursorError
+from app.services.search.schemas.feed_schemas import FeedCursor
+
 
 def encode_cursor(cursor: FeedCursor) -> str:
     next_cursor = json.dumps(cursor.model_dump(mode="json")).encode("utf-8")
@@ -17,5 +17,5 @@ def decode_cursor(cursor: str) -> FeedCursor:
         model = json.loads(cursor_encode.decode("utf-8"))
 
         return FeedCursor.model_validate(model)
-    except Exception as e:
+    except Exception:
         raise InvalidCursorError()

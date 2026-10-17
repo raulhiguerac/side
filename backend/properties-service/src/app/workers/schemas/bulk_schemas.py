@@ -1,6 +1,5 @@
 import uuid
 from decimal import Decimal
-from typing import Optional
 
 from pydantic import Field
 
@@ -57,14 +56,14 @@ class BulkCreatePropertyItem(StrictBase):
     bedrooms: int = Field(ge=1)
     bathrooms: Decimal = Field(ge=1, decimal_places=1)
     parking_spots: int = Field(default=0, ge=0)
-    floor_number: Optional[int] = Field(default=None, ge=0)   # required for apartments
-    total_floors: Optional[int] = Field(default=None, ge=1)   # required for houses
-    stratum: Optional[int] = Field(default=None, ge=1, le=6)
+    floor_number: int | None = Field(default=None, ge=0)   # required for apartments
+    total_floors: int | None = Field(default=None, ge=1)   # required for houses
+    stratum: int | None = Field(default=None, ge=1, le=6)
 
     price: Decimal = Field(gt=0, decimal_places=2)
-    admin_fee: Optional[Decimal] = Field(default=None, ge=0, decimal_places=2)
-    description: Optional[str] = Field(default=None, max_length=2000)
-    year_built: Optional[int] = Field(default=None, ge=1800)
+    admin_fee: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    description: str | None = Field(default=None, max_length=2000)
+    year_built: int | None = Field(default=None, ge=1800)
 
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)

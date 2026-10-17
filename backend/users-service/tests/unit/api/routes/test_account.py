@@ -24,7 +24,6 @@ from app.services.auth.schemas.registration import RegisterRequest
 from app.services.auth.schemas.reset import RequestResetPasswordIn
 from app.services.auth.schemas.tokens import AuthTokens, RefreshToken
 
-
 # ----------------------------
 # Constants
 # ----------------------------
@@ -171,7 +170,7 @@ async def test_login_does_not_set_cookies_if_uc_fails(mocker, response):
         autospec=True,
     )
 
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match="boom"):
         await login(payload=payload, response=response, uc=uc)
 
     uc.login.assert_awaited_once_with(req=payload)
@@ -212,7 +211,7 @@ async def test_refresh_does_not_set_cookies_if_uc_fails(mocker, response):
 
     refresh_obj = RefreshToken(refresh_token="abc")
 
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match="boom"):
         await refresh(response=response, uc=uc, refresh=refresh_obj)
 
     uc.refresh_token.assert_awaited_once_with(refresh_token="abc")
@@ -263,7 +262,7 @@ async def test_change_password_does_not_delete_cookies_if_uc_fails(
         autospec=True,
     )
 
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match="boom"):
         await change_password(response=response, uc=uc, principal=principal, payload=payload)
 
     delete_cookies.assert_not_called()

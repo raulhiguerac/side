@@ -3,7 +3,9 @@ import uuid
 import pytest
 from pydantic import ValidationError
 
-from app.services.catalog_admin.schemas.neighborhood import ListNeighborhoodGeometriesRequest
+from app.services.catalog_admin.schemas.neighborhood import (
+    ListNeighborhoodGeometriesRequest,
+)
 
 NEIGHBORHOOD_ID = uuid.UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
 

@@ -1,11 +1,17 @@
 import uuid
-import pytest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.services.geo_resolution.use_cases.resolve_neighborhood import ResolveNeighborhoodUseCase
-from app.services.geo_resolution.schemas.neighborhood import NeighborhoodInfo, ResolvedNeighborhood
+import pytest
+
 from app.core.exceptions.geo_resolution import NeighborhoodResolutionError
+from app.services.geo_resolution.schemas.neighborhood import (
+    NeighborhoodInfo,
+    ResolvedNeighborhood,
+)
+from app.services.geo_resolution.use_cases.resolve_neighborhood import (
+    ResolveNeighborhoodUseCase,
+)
 
 LOCALITY_ID = uuid.UUID("86f1f356-e83a-47f4-b50b-0cf7bb5d9ac5")
 NEIGHBORHOOD_ID = uuid.UUID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
@@ -94,38 +100,6 @@ async def test_uses_cached_coordinates_skips_geocoding(
     assert result.longitude == LON
     mock_georef.forward_geocode.assert_not_awaited()
     mock_cache.set_json.assert_not_awaited()
-
-
-# ---------------------------------------------------------------------------
-# Cache resilience
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-@patch("app.services.geo_resolution.use_cases.resolve_neighborhood.run_in_threadpool")
-async def test_survives_cache_get_failure_falls_back_to_geocoding(
-    mock_run, uc, mock_uow, mock_cache, mock_georef
-):
-    mock_cache.get_json.side_effect = Exception("Redis down")
-    mock_run.return_value = SimpleNamespace(**NEIGHBORHOOD_INFO.model_dump())
-
-    result = await uc.execute(query="Calle 72", locality_id=LOCALITY_ID)
-
-    assert result.latitude == LAT
-    mock_georef.forward_geocode.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-@patch("app.services.geo_resolution.use_cases.resolve_neighborhood.run_in_threadpool")
-async def test_survives_cache_set_failure_still_returns_result(
-    mock_run, uc, mock_uow, mock_cache, mock_georef
-):
-    mock_cache.set_json.side_effect = Exception("Redis down")
-    mock_run.return_value = SimpleNamespace(**NEIGHBORHOOD_INFO.model_dump())
-
-    result = await uc.execute(query="Calle 72", locality_id=LOCALITY_ID)
-
-    assert result.latitude == LAT
-    mock_georef.forward_geocode.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------

@@ -1,14 +1,13 @@
 import uuid
-from typing import List, Optional
 
-from pydantic import EmailStr
+from pydantic import EmailStr, Field
 
 from app.schemas.base import StrictBase
 
 
 class Principal(StrictBase):
     sub: uuid.UUID
-    email: Optional[EmailStr]
+    email: EmailStr | None
     email_verified: bool = False
-    scope: List[str] = []
-    roles: List[str] = []
+    scope: list[str] = Field(default_factory=list)
+    roles: list[str] = Field(default_factory=list)

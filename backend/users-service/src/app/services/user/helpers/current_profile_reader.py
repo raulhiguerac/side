@@ -1,6 +1,5 @@
 import os
 import uuid
-from typing import Optional
 
 from pydantic import ValidationError
 
@@ -36,7 +35,7 @@ class CurrentProfileReader:
         self.uow = uow
         self.cache = cache_client
 
-    async def get_from_cache(self, *, account_id: uuid.UUID) -> Optional[CurrentUserProfileOut]:
+    async def get_from_cache(self, *, account_id: uuid.UUID) -> CurrentUserProfileOut | None:
         profile_key = profile_cache_key(account_id)
         cached = await self.cache.get(key=profile_key)
         if cached:

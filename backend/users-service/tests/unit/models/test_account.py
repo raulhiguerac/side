@@ -1,13 +1,13 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.models.account import (
     Account,
-    AccountType,
     AccountActionActor,
     AccountDeactivationReason,
-    OnboardingStep,
     AccountIntent,
+    AccountType,
+    OnboardingStep,
 )
 
 
@@ -63,7 +63,7 @@ def test_account_model_creation():
 
 def test_account_model_with_deactivation():
     account_id = uuid.uuid4()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     account = Account(
         account_id=account_id,

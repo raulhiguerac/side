@@ -1,12 +1,11 @@
 from collections import defaultdict
 from functools import partial
-from typing import Optional
 
 import h3
 from fastapi.concurrency import run_in_threadpool
 
 from app.services.search.ports.unit_of_work import SearchUnitOfWork
-from app.services.search.schemas.feed_schemas import BoundingBox, FeedFilters
+from app.services.search.schemas.feed_schemas import BoundingBox
 from app.services.shared.helpers.cache_keys import map_h3_cell
 from app.services.shared.ports.cache import CachePort
 from app.services.shared.schemas.property_card import PropertyCardSchema

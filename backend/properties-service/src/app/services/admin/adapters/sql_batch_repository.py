@@ -9,6 +9,7 @@ from app.models.bulk_job import BulkJob, JobStatus, JobType
 from app.services.admin.ports.bulk_job_repository import BulkJobRepository
 from app.services.admin.schemas.admin_schemas import BulkJobCreate
 
+
 class SqlBatchRepository(BulkJobRepository):
     def __init__(self, session: Session) -> None:
         self.session = session

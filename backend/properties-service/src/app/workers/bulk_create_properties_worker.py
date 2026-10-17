@@ -1,10 +1,9 @@
-import uuid
 import logging
 import time
+import uuid
 from functools import partial
 
 from fastapi.concurrency import run_in_threadpool
-
 from pydantic import ValidationError
 
 from app.core.config.settings import settings
@@ -13,15 +12,18 @@ from app.core.exceptions.storage import StorageMisconfiguredError
 from app.schemas.principal import Principal
 from app.services.admin.ports.unit_of_work import AdminUnitOfWork
 from app.services.shared.ports.catalog_gateway import CatalogGateway
-from app.services.shared.ports.users_gateway import UsersGateway
 from app.services.shared.ports.storage import StoragePort
+from app.services.shared.ports.users_gateway import UsersGateway
 from app.services.shared.schemas.users_schemas import ResolvedAccount
 from app.workers.helpers.chunking.chunk_runner import process_chunk
 from app.workers.helpers.chunking.csv_stream import iter_csv_rows
 from app.workers.helpers.persistence.job_status import finalize_job, mark_job_failed
 from app.workers.helpers.row_ref import row_ref
-from app.workers.schemas.bulk_schemas import BulkCreatePropertiesResult, BulkPropertyCsvRow, BulkRowError
-
+from app.workers.schemas.bulk_schemas import (
+    BulkCreatePropertiesResult,
+    BulkPropertyCsvRow,
+    BulkRowError,
+)
 
 logger = logging.getLogger(__name__)
 

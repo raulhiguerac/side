@@ -1,8 +1,12 @@
 from fastapi.concurrency import run_in_threadpool
 from sqlmodel import Session
 
-from app.services.listing.adapters.sql_property_images_repository import SqlPropertyImageRepository
-from app.services.listing.adapters.sql_location_repository import SqlPropertyLocationRepository
+from app.services.listing.adapters.sql_location_repository import (
+    SqlPropertyLocationRepository,
+)
+from app.services.listing.adapters.sql_property_images_repository import (
+    SqlPropertyImageRepository,
+)
 from app.services.listing.adapters.sql_property_repository import SqlPropertyRepository
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork
 

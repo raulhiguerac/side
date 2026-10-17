@@ -13,10 +13,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 from sqlmodel import SQLModel
 
-from app.models.listing import Property, PropertyLocation  # noqa: F401,E402
-from app.models.image import PropertyImage, PropertyImageUploadBatch  # noqa: F401,E402
-from app.models.promotion import PromotedListing  # noqa: F401,E402
-from app.models.bulk_job import BulkJob  # noqa: F401,E402
+from app.models.bulk_job import BulkJob  # noqa: F401
+from app.models.image import PropertyImage, PropertyImageUploadBatch  # noqa: F401
+from app.models.listing import Property, PropertyLocation  # noqa: F401
+from app.models.promotion import PromotedListing  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -49,9 +49,7 @@ def include_object(object, name, type_, reflected, compare_to):
     4326 lookup in property_locations. Ignoring reflected tables we do not map
     keeps the diff to our own schema.
     """
-    if type_ == "table" and reflected and name not in target_metadata.tables:
-        return False
-    return True
+    return not (type_ == "table" and reflected and name not in target_metadata.tables)
 
 
 # other values from the config, defined by the needs of env.py,

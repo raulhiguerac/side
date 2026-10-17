@@ -9,7 +9,10 @@ from app.models.prediction import SourceType
 from app.services.prediction.helpers.record_builder import build_prediction_record
 from app.services.prediction.ports.model_gateway import ModelGateway
 from app.services.prediction.ports.unit_of_work import PredictionUnitOfWork
-from app.services.prediction.schemas.prediction import PredictionRequest, PredictionResponse
+from app.services.prediction.schemas.prediction import (
+    PredictionRequest,
+    PredictionResponse,
+)
 
 logger = get_logger(__name__)
 

@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 from app.core.exceptions.base import BaseError
 
@@ -36,8 +36,8 @@ class PromotionError(BaseError):
     def __init__(
         self,
         *,
-        cause: Optional[Exception] = None,
-        context: Optional[dict[str, Any]] = None,
+        cause: Exception | None = None,
+        context: dict[str, Any] | None = None,
     ):
         super().__init__(
             message="Error while creating promotion",
@@ -51,8 +51,8 @@ class SetEstimatedPriceError(BaseError):
     def __init__(
         self,
         *,
-        cause: Optional[Exception] = None,
-        context: Optional[dict[str, Any]] = None,
+        cause: Exception | None = None,
+        context: dict[str, Any] | None = None,
     ):
         super().__init__(
             message="Error while setting estimated price",
@@ -66,8 +66,8 @@ class SetVisibilityError(BaseError):
     def __init__(
         self,
         *,
-        cause: Optional[Exception] = None,
-        context: Optional[dict[str, Any]] = None,
+        cause: Exception | None = None,
+        context: dict[str, Any] | None = None,
     ):
         super().__init__(
             message="Error while updating property visibility",
@@ -81,8 +81,8 @@ class DeletePropertyError(BaseError):
     def __init__(
         self,
         *,
-        cause: Optional[Exception] = None,
-        context: Optional[dict[str, Any]] = None,
+        cause: Exception | None = None,
+        context: dict[str, Any] | None = None,
     ):
         super().__init__(
             message="Error while deleting property",
@@ -96,8 +96,8 @@ class CreatePropertyError(BaseError):
     def __init__(
         self,
         *,
-        cause: Optional[Exception] = None,
-        context: Optional[dict[str, Any]] = None,
+        cause: Exception | None = None,
+        context: dict[str, Any] | None = None,
     ):
         super().__init__(
             message="Error while creating property",
@@ -108,7 +108,7 @@ class CreatePropertyError(BaseError):
 
 
 class PropertyDbUnavailableError(BaseError):
-    def __init__(self, *, cause: Optional[Exception] = None):
+    def __init__(self, *, cause: Exception | None = None):
         super().__init__(
             message="Property database is unavailable",
             code="PROPERTY_DB_UNAVAILABLE",
@@ -126,7 +126,7 @@ class LocationNotResolvedError(BaseError):
 
 
 class InvalidLocationError(BaseError):
-    def __init__(self, *, neighborhood_id: Any = None, cause: Optional[Exception] = None):
+    def __init__(self, *, neighborhood_id: Any = None, cause: Exception | None = None):
         super().__init__(
             message="The provided location is invalid or does not exist",
             code="INVALID_LOCATION",
@@ -175,7 +175,7 @@ class PropertyNotFoundError(BaseError):
 
 
 class CatalogServiceUnavailableError(BaseError):
-    def __init__(self, *, cause: Optional[Exception] = None):
+    def __init__(self, *, cause: Exception | None = None):
         super().__init__(
             message="Catalog service is unavailable",
             code="CATALOG_SERVICE_UNAVAILABLE",
@@ -184,7 +184,7 @@ class CatalogServiceUnavailableError(BaseError):
 
 
 class UsersServiceUnavailableError(BaseError):
-    def __init__(self, *, cause: Optional[Exception] = None):
+    def __init__(self, *, cause: Exception | None = None):
         super().__init__(
             message="Users service is unavailable",
             code="USERS_SERVICE_UNAVAILABLE",
@@ -278,7 +278,7 @@ class RetryOfRetryNotAllowedError(BaseError):
 
 
 class BulkJobCreationError(BaseError):
-    def __init__(self, *, cause: Optional[Exception] = None, context: Optional[dict[str, Any]] = None):
+    def __init__(self, *, cause: Exception | None = None, context: dict[str, Any] | None = None):
         super().__init__(
             message="Error while creating bulk job",
             code="BULK_JOB_CREATION_ERROR",

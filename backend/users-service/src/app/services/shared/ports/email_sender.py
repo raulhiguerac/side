@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Protocol, TypedDict
+from typing import Protocol, TypedDict
 
 
 class EmailRecipient(TypedDict, total=False):
@@ -10,11 +10,11 @@ class EmailSenderPort(Protocol):
         self,
         *,
         sender: str,
-        to: List[EmailRecipient],
+        to: list[EmailRecipient],
         subject: str,
         html_content: str,
-        text_content: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        text_content: str | None = None,
+        tags: list[str] | None = None,
     ) -> None:
         ...
 
@@ -22,10 +22,10 @@ class EmailSenderPort(Protocol):
         self,
         *,
         template_id: int,
-        to: List[EmailRecipient],
-        params: Optional[Dict[str, object]],
-        sender: Optional[str] = None,
-        subject: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        to: list[EmailRecipient],
+        params: dict[str, object] | None,
+        sender: str | None = None,
+        subject: str | None = None,
+        tags: list[str] | None = None,
     ) -> None:
         ...

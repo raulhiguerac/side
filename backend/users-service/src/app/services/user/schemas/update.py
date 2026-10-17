@@ -1,4 +1,4 @@
-from typing import Annotated, Literal, Optional, Union
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -7,18 +7,18 @@ from app.schemas.base import StrictBase
 
 
 class UserPersonUpdate(StrictBase):
-    phone: Optional[str] = None
-    description: Optional[str] = None
-    intent: Optional[AccountIntent] = None
+    phone: str | None = None
+    description: str | None = None
+    intent: AccountIntent | None = None
     account_type: Literal["person"]
 
 class UserOrganizationUpdate(StrictBase):
-    phone: Optional[str] = None
-    description: Optional[str] = None
-    intent: Optional[AccountIntent] = None
+    phone: str | None = None
+    description: str | None = None
+    intent: AccountIntent | None = None
     account_type: Literal["organization"]
 
 UpdateRequest = Annotated[
-    Union[UserPersonUpdate, UserOrganizationUpdate],
+    UserPersonUpdate | UserOrganizationUpdate,
     Field(discriminator="account_type")
 ]

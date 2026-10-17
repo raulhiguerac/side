@@ -1,6 +1,5 @@
 import uuid
 from functools import partial
-from typing import Optional
 
 import jwt
 from fastapi import Depends, Request
@@ -102,7 +101,7 @@ async def get_current_principal(request: Request) -> Principal:
     return principal
 
 
-async def get_current_principal_optional(request: Request) -> Optional[Principal]:
+async def get_current_principal_optional(request: Request) -> Principal | None:
     token = request.cookies.get("access_token")
     if not token:
         return None

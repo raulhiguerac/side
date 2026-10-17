@@ -6,16 +6,18 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.core.exceptions.worker import WorkerConfigurationError, WorkerDeliveryError
-from app.models.prediction import PropertyType
-from app.services.prediction.schemas.prediction import BatchPredictionResult, PredictionRequest
+from app.services.prediction.schemas.prediction import (
+    BatchPredictionResult,
+    PredictionRequest,
+)
 from app.workers.listing_created.consumer import ListingConsumer
 
 from .conftest import (
+    _ENV,
     PRINCIPAL,
     PROP_ID,
     VALID_MODEL_DICT,
     VALID_MSG,
-    _ENV,
     bad_utf8_msg,
     error_msg,
     good_msg,
@@ -101,7 +103,7 @@ class TestPollBatch:
     def test_multiple_messages_collected(self, monkeypatch):
         c, _ = make_consumer(monkeypatch)
         poll_seq(c, good_msg(VALID_MSG), good_msg(VALID_MSG))
-        raw, rejected = c._poll_batch()
+        raw, _rejected = c._poll_batch()
         assert len(raw) == 2
 
     def test_bad_utf8_goes_to_rejected_with_base64(self, monkeypatch):

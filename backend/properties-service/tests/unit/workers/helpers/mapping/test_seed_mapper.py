@@ -2,6 +2,7 @@ import uuid
 
 import pytest
 
+from app.models.listing import ListingStatus, PropertyCondition, PropertyType
 from app.workers.helpers.mapping.seed_mapper import (
     build_models,
     derive_property_id,
@@ -12,7 +13,6 @@ from app.workers.helpers.mapping.seed_mapper import (
     parse_stratum,
     row_to_item,
 )
-from app.models.listing import ListingStatus, PropertyCondition, PropertyType
 
 NEIGHBORHOOD_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")
 CITY_ID = uuid.UUID("22222222-2222-2222-2222-222222222222")

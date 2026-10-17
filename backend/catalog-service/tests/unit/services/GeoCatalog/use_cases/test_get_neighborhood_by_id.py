@@ -1,9 +1,12 @@
 import uuid
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.services.geo_catalog.use_cases.get_neighborhood_by_id import GetNeighborhoodByIdUseCase
+import pytest
+
 from app.core.exceptions.geo_catalog import NeighborhoodNotFoundError
+from app.services.geo_catalog.use_cases.get_neighborhood_by_id import (
+    GetNeighborhoodByIdUseCase,
+)
 
 NEIGHBORHOOD_ID = uuid.UUID('a1b2c3d4-e5f6-7890-abcd-ef1234567890')
 

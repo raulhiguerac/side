@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import ConfigDict, Field, model_validator
 
@@ -51,20 +51,20 @@ class PropertyDetailSchema(StrictBase):
 
     price: Decimal
     currency: Currency
-    admin_fee: Optional[Decimal] = None
+    admin_fee: Decimal | None = None
 
     area_m2: Decimal
     bedrooms: int
     bathrooms: Decimal
     parking_spots: int
-    floor_number: Optional[int] = None
-    total_floors: Optional[int] = None
+    floor_number: int | None = None
+    total_floors: int | None = None
 
-    stratum: Optional[int] = None
-    description: Optional[str] = None
-    year_built: Optional[int] = None
+    stratum: int | None = None
+    description: str | None = None
+    year_built: int | None = None
 
     created_at: datetime
 
-    location: Optional[PropertyLocationDetail] = None
+    location: PropertyLocationDetail | None = None
     images: list[PropertyImageCard] = Field(default_factory=list)

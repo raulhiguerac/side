@@ -1,5 +1,4 @@
 import uuid
-from typing import List
 
 from sqlmodel import Session, select
 
@@ -26,7 +25,7 @@ class SqlPropertyRepository(PropertyRepository):
             self,
             *,
             user_id: uuid.UUID,
-    ) -> List[Property]:
+    ) -> list[Property]:
         stmt = (
             select(Property)
             .where(Property.owner_id == user_id)
@@ -41,7 +40,7 @@ class SqlPropertyRepository(PropertyRepository):
             *,
             user_id: uuid.UUID,
             offset: int
-    ) -> List[Property]:
+    ) -> list[Property]:
         stmt = (
             select(Property)
             .where(Property.owner_id == user_id)

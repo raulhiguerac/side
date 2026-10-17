@@ -3,7 +3,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.workers.helpers.persistence.property_writer import collapse_duplicate_ids, persist_chunk
+from app.workers.helpers.persistence.property_writer import (
+    collapse_duplicate_ids,
+    persist_chunk,
+)
 
 
 def _built_row(line: int, property_id: uuid.UUID | None = None) -> dict:
@@ -159,7 +162,7 @@ async def test_a_failing_row_is_rolled_back_and_reported_with_its_line(uow):
     def fail_second(fn):
         # the partial for row line=3 carries that row's tuple
         if fn.keywords.get("property") is rows[1]["value"]:
-            raise Exception("duplicate key")
+            raise RuntimeError("duplicate key")
         return fn()
 
     with _patch_threadpool(side_effect=fail_second):
@@ -179,7 +182,7 @@ async def test_no_commit_when_every_row_fails(uow):
     uow.properties.bulk_insert.side_effect = Exception("boom")
 
     def fail_all(fn):
-        raise Exception("nope")
+        raise RuntimeError("nope")
 
     with _patch_threadpool(side_effect=fail_all):
         inserted, errors = await persist_chunk(rows, uow=uow)

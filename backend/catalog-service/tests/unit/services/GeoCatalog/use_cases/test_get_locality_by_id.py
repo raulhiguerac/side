@@ -1,10 +1,11 @@
 import uuid
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from app.services.geo_catalog.schemas.locality import LocalityListItem, AdminDivisionRef
-from app.services.geo_catalog.use_cases.get_locality_by_id import GetLocalityByIdUseCase
+import pytest
+
 from app.core.exceptions.geo_catalog import LocalityNotFoundError
+from app.services.geo_catalog.schemas.locality import AdminDivisionRef, LocalityListItem
+from app.services.geo_catalog.use_cases.get_locality_by_id import GetLocalityByIdUseCase
 
 LOCALITY_ID = uuid.UUID('86f1f356-e83a-47f4-b50b-0cf7bb5d9ac5')
 ADMIN_DIV_ID = uuid.UUID('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')

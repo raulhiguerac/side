@@ -1,5 +1,4 @@
 import os
-from typing import Dict, List, Optional
 
 import brevo_python
 from brevo_python.rest import ApiException
@@ -28,10 +27,10 @@ class EmailClient:
         self,
         *,
         sender: str,
-        to: List[Dict[str, str]],
+        to: list[dict[str, str]],
         subject: str,
         html_content: str,
-        tags: Optional[List[str]] = None,
+        tags: list[str] | None = None,
     ) -> None:
         email = brevo_python.SendSmtpEmail(
             sender={"email": sender},
@@ -57,11 +56,11 @@ class EmailClient:
         self,
         *,
         template_id: int,
-        to: List[Dict[str, str]],
-        params: Optional[Dict[str, object]] = None,
-        sender: Optional[str] = None,
-        subject: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        to: list[dict[str, str]],
+        params: dict[str, object] | None = None,
+        sender: str | None = None,
+        subject: str | None = None,
+        tags: list[str] | None = None,
     ) -> None:
         email = brevo_python.SendSmtpEmail(
             to=to,

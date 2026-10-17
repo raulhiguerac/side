@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.models.account import AccountActionActor, AccountDeactivationReason
 from app.schemas.common import Principal
@@ -25,7 +25,7 @@ class DeactivateCurrentAccountUseCase:
             return
 
         account.is_active = False
-        account.deactivated_at = datetime.utcnow()
+        account.deactivated_at = datetime.now(timezone.utc)
         account.deactivated_by = AccountActionActor.user
         account.deactivation_reason = AccountDeactivationReason.user_request
 

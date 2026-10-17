@@ -1,10 +1,10 @@
-from typing import Any, Optional
+from typing import Any
 
 from app.core.exceptions.base import BaseError
 
 
 class PredictionPersistenceError(BaseError):
-    def __init__(self, *, cause: Exception | None = None, context: Optional[dict[str, Any]] = None):
+    def __init__(self, *, cause: Exception | None = None, context: dict[str, Any] | None = None):
         super().__init__(
             message="Failed to persist prediction",
             code="PREDICTION_PERSISTENCE_ERROR",

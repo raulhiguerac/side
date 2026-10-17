@@ -1,6 +1,10 @@
 import uuid
 
-from app.core.exceptions.listing import CatalogServiceUnavailableError, InvalidLocationError, LocationNotResolvedError
+from app.core.exceptions.listing import (
+    CatalogServiceUnavailableError,
+    InvalidLocationError,
+    LocationNotResolvedError,
+)
 from app.integrations.catalog.catalog_client import CatalogClient
 from app.integrations.catalog.exceptions import NeighborhoodNotFoundError
 from app.services.shared.ports.catalog_gateway import CatalogGateway

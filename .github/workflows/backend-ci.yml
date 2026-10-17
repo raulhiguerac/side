@@ -1,0 +1,61 @@
+name: Backend CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      # Shared config changed → all services; otherwise only those touched.
+      services: ${{ steps.filter.outputs.shared == 'true' && '["analytics-service","catalog-service","properties-service","users-service"]' || steps.filter.outputs.changes }}
+    steps:
+      - name: Detect changed services
+        id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            shared:
+              - 'backend/ruff.toml'
+              - '.github/workflows/backend-ci.yml'
+              - '.github/workflows/_backend-lint-unit-tests.yml'
+            analytics-service:
+              - 'backend/analytics-service/**'
+            catalog-service:
+              - 'backend/catalog-service/**'
+            properties-service:
+              - 'backend/properties-service/**'
+            users-service:
+              - 'backend/users-service/**'
+
+  lint_and_test:
+    needs: changes
+    if: needs.changes.outputs.services != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    uses: ./.github/workflows/_backend-lint-unit-tests.yml
+    with:
+      path: backend/${{ matrix.service }}
+
+  ci-ok:
+    if: always()
+    needs: [changes, lint_and_test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Fail if any backend job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

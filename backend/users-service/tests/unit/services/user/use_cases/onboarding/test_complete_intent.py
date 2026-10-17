@@ -1,15 +1,25 @@
 import uuid
-import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, call
 
-from app.models.account import Account, OnboardingStep
+import pytest
+
+from app.models.account import Account, AccountIntent, OnboardingStep
+from app.services.user.helpers.cache_keys import (
+    account_cache_key,
+    interests_cache_key,
+    profile_cache_key,
+)
 from app.services.user.schemas.onboarding import OnboardingIntent
-from app.services.user.use_cases.onboarding.complete_intent import CompleteOnboardingIntentUseCase
+from app.services.user.use_cases.onboarding.complete_intent import (
+    CompleteOnboardingIntentUseCase,
+)
 
 
 @pytest.fixture
 def uow():
-    return AsyncMock()
+    uow = AsyncMock()
+    uow.onboarding.mark_completed = MagicMock()  # sync: runs in threadpool
+    return uow
 
 
 @pytest.fixture
@@ -56,7 +66,7 @@ def account_past_intent_step():
 @pytest.fixture
 def profile_db():
     profile = MagicMock()
-    profile.intent = OnboardingStep.intent
+    profile.intent = None
     profile.profile_score = 10
     return profile
 
@@ -66,7 +76,7 @@ def profile_db():
 async def test_complete_intent_first_time(
     uc, uow, cache, profile_reader, account_at_intent_step, profile_db
 ):
-    req = OnboardingIntent(intent=OnboardingStep.intent)
+    req = OnboardingIntent(intent=AccountIntent.buyer)
     account_id = account_at_intent_step.account_id
 
     uow.accounts.get_by_id.return_value = account_at_intent_step
@@ -79,16 +89,24 @@ async def test_complete_intent_first_time(
 
     uow.accounts.get_by_id.assert_awaited_once_with(account_id=account_id)
     profile_reader.get_model.assert_awaited_once()
-    uow.onboarding.mark_completed.assert_awaited_once()
+    uow.onboarding.mark_completed.assert_called_once_with(
+        account_id=account_id, key=OnboardingStep.intent
+    )
     uow.commit.assert_awaited_once()
 
     # First time: step advances and score increases
     assert account_at_intent_step.onboarding_step == OnboardingStep.city
     assert profile_db.profile_score == 20
-    assert profile_db.intent == OnboardingStep.intent
+    assert profile_db.intent == AccountIntent.buyer
 
     # Cache invalidated
-    assert cache.delete.await_count == 2
+    cache.delete.assert_has_awaits(
+        [
+            call(profile_cache_key(account_id)),
+            call(account_cache_key(account_id)),
+            call(interests_cache_key(account_id)),
+        ]
+    )
 
 
 # Not first time - only intent updated
@@ -96,7 +114,7 @@ async def test_complete_intent_first_time(
 async def test_complete_intent_not_first_time(
     uc, uow, cache, profile_reader, account_at_intent_step, profile_db
 ):
-    req = OnboardingIntent(intent=OnboardingStep.city)
+    req = OnboardingIntent(intent=AccountIntent.seller)
     account_id = account_at_intent_step.account_id
 
     uow.accounts.get_by_id.return_value = account_at_intent_step
@@ -110,7 +128,7 @@ async def test_complete_intent_not_first_time(
     # Not first time: step stays same, score not increased
     assert account_at_intent_step.onboarding_step == OnboardingStep.intent
     assert profile_db.profile_score == 10
-    assert profile_db.intent == OnboardingStep.city
+    assert profile_db.intent == AccountIntent.seller
 
 
 # Already past intent step - no-op
@@ -118,7 +136,7 @@ async def test_complete_intent_not_first_time(
 async def test_complete_intent_already_past(
     uc, uow, cache, profile_reader, account_past_intent_step
 ):
-    req = OnboardingIntent(intent=OnboardingStep.intent)
+    req = OnboardingIntent(intent=AccountIntent.buyer)
     account_id = account_past_intent_step.account_id
 
     uow.accounts.get_by_id.return_value = account_past_intent_step
@@ -136,7 +154,7 @@ async def test_complete_intent_already_past(
 async def test_complete_intent_commit_fails(
     uc, uow, cache, profile_reader, account_at_intent_step, profile_db
 ):
-    req = OnboardingIntent(intent=OnboardingStep.intent)
+    req = OnboardingIntent(intent=AccountIntent.buyer)
     account_id = account_at_intent_step.account_id
 
     uow.accounts.get_by_id.return_value = account_at_intent_step
@@ -156,7 +174,7 @@ async def test_complete_intent_commit_fails(
 async def test_complete_intent_cache_fails_silent(
     uc, uow, cache, profile_reader, account_at_intent_step, profile_db
 ):
-    req = OnboardingIntent(intent=OnboardingStep.intent)
+    req = OnboardingIntent(intent=AccountIntent.buyer)
     account_id = account_at_intent_step.account_id
 
     uow.accounts.get_by_id.return_value = account_at_intent_step

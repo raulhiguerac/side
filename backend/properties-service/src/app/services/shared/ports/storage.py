@@ -1,4 +1,6 @@
-from typing import Protocol, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Protocol
+
 
 class StoragePort(Protocol):
     async def generate_presigned_put_url(self, *, bucket: str, key: str, ttl: int) -> str: ...

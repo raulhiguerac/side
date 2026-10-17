@@ -1,7 +1,7 @@
 ---
 title: Runbook — analytics-service local dev
 status: stable
-last-verified: 2026-09-27
+last-verified: 2026-10-16
 owners: [analytics-service]
 related:
   - "[[analytics-service]]"
@@ -16,6 +16,7 @@ sources:
   - ../../../sources/analytics-service/2026-05-25-unit-test-suite.md
   - ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md
   - ../../../sources/_shared/2026-09-27-minio-a-seaweedfs-y-rclone.md
+  - ../../../sources/_shared/2026-10-16-backend-ci-reusable-and-test-deps.md
 ---
 
 ## TL;DR
@@ -151,11 +152,8 @@ Una collection pública para obtener token de Keycloak + llamar `/predict` se cr
 ## Comandos útiles dentro del devcontainer
 
 ```bash
-# Re-sync deps después de cambios en pyproject.toml
+# Re-sync deps después de cambios en pyproject.toml (incluye las de test, grupo dev)
 uv sync
-
-# Instalar deps de test (solo la primera vez, o si cambia pyproject.toml)
-uv sync --extra dev
 
 # Correr tests unitarios
 uv run python -m pytest tests/unit/

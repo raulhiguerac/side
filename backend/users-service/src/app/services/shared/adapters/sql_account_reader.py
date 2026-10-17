@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from fastapi.concurrency import run_in_threadpool
 from sqlmodel import Session, col, select
@@ -29,14 +28,14 @@ class SqlAccountReader(AccountReaderPort):
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    async def get_by_id(self, *, account_id: uuid.UUID) -> Optional[Account]:
+    async def get_by_id(self, *, account_id: uuid.UUID) -> Account | None:
         return await run_in_threadpool(
             get_account_by_id,
             self._session,
             account_id,
         )
 
-    async def get_by_email(self, *, email: str) -> Optional[Account]:
+    async def get_by_email(self, *, email: str) -> Account | None:
         return await run_in_threadpool(
             get_account_by_email,
             self._session,
@@ -57,7 +56,7 @@ class SqlAccountReader(AccountReaderPort):
             localities = self._session.exec(
                 select(UserInterest)
                 .where(UserInterest.account_id == account_id)
-                .where(UserInterest.is_active == True)  # noqa: E712
+                .where(UserInterest.is_active == True)
             ).all()
 
             if not localities:

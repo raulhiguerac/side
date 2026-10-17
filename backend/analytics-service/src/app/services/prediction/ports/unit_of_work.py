@@ -2,6 +2,7 @@ from typing import Protocol
 
 from app.services.prediction.ports.prediction_repository import PredictionRepository
 
+
 class PredictionUnitOfWork(Protocol):
     prediction: PredictionRepository
 

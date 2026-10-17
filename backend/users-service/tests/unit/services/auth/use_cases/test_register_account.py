@@ -11,7 +11,6 @@ from app.models.account import Account, OnboardingStep
 from app.services.auth.schemas.registration import RegisterRequest
 from app.services.auth.use_cases.register_account import RegisterAccountUseCase
 
-
 REGISTER_DATA = [
     {
         "first_name": "pepito",

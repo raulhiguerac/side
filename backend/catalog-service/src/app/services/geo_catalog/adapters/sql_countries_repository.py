@@ -1,4 +1,3 @@
-from typing import List
 
 from sqlmodel import Session, select
 
@@ -12,7 +11,7 @@ class SqlCountryRepository(CountryRepository):
     
     def get_active_countries(
             self, 
-        ) -> List[Country]:
+        ) -> list[Country]:
 
         stmt = (
             select(Country)

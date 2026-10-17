@@ -1,4 +1,4 @@
-from typing import IO, Any, Dict, Optional
+from typing import IO, Any
 
 from fastapi.concurrency import run_in_threadpool
 
@@ -22,7 +22,7 @@ class MinioStorageAdapter(StoragePort):
         fileobj: IO[bytes],
         bucket: str,
         key: str,
-        extra_args: Optional[Dict[str, Any]] = None,
+        extra_args: dict[str, Any] | None = None,
     ) -> UploadResult:
         return await run_in_threadpool(
             self._client.upload_file,

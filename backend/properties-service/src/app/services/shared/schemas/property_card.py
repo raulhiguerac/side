@@ -1,6 +1,6 @@
 import uuid
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import ConfigDict, Field, model_validator
 
@@ -23,8 +23,8 @@ class PropertyLocationCard(StrictBase):
 
     neighborhood_id: uuid.UUID
     city_id: uuid.UUID
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    latitude: float | None = None
+    longitude: float | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -59,7 +59,7 @@ class PropertyCardSchema(StrictBase):
 
     is_promoted: bool = False
 
-    location: Optional[PropertyLocationCard] = None
+    location: PropertyLocationCard | None = None
     images: list[PropertyImageCard] = Field(default_factory=list)
 
     @model_validator(mode="before")

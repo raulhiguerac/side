@@ -5,7 +5,7 @@ from functools import partial
 from fastapi.concurrency import run_in_threadpool
 
 from app.core.config.settings import settings
-from app.core.exceptions.listing import ImageCountExceededError, ImageNotOwnedError
+from app.core.exceptions.listing import ImageCountExceededError
 from app.services.listing.ports.unit_of_work import ListingUnitOfWork
 from app.services.shared.helpers.cache_keys import property_image_ids
 from app.services.shared.ports.cache import CachePort
