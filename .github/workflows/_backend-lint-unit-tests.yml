@@ -54,4 +54,4 @@ jobs:
         run: uv sync --locked
 
       - name: Run unit tests
-        run: uv run --no-sync pytest tests/unit
+        run: uv run --no-sync --no-build pytest tests/unit
