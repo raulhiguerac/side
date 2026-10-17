@@ -5,6 +5,23 @@ __pycache__/
 *$py.class
 *.egg-info/
 .coverage
+
+# Cachés y artefactos de herramientas (no depender de su autoignore)
+.venv/
+venv/
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+coverage.xml
+dist/
+build/
+
+# Editor y sistema
+.idea/
+.vscode/
+*.swp
+.DS_Store
 *.csv
 *.osm.pbf
 *.geojson
