@@ -5,11 +5,10 @@ from fastapi import Depends
 from sqlmodel import Session
 
 from app.api.deps.db import get_session
+from app.api.deps.email import get_email_sender
 from app.core.exceptions.storage import StorageMisconfiguredError
 from app.integrations.cache.redis.cache import CacheClient
-from app.integrations.email.brevo.client import EmailClient
 from app.integrations.storage.minio.storage import StorageClient
-from app.services.shared.adapters.brevo_email_sender_adapter import BrevoSenderAdapter
 from app.services.shared.adapters.minio_storage_adapter import MinioStorageAdapter
 from app.services.shared.adapters.redis_cache_adapter import RedisCacheAdapter
 from app.services.shared.adapters.sql_account_reader import SqlAccountReader
@@ -83,11 +82,6 @@ def get_public_base_url() -> str:
             context={"missing": "STORAGE_PUBLIC_BASE_URL"}
         )
     return base_url
-
-@lru_cache(maxsize=1)
-def get_email_sender() -> EmailSenderPort:
-    return BrevoSenderAdapter(EmailClient())
-
 
 # -------------------------------------------------------------------------
 # Unit of Work (request-scoped)

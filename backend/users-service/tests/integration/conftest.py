@@ -70,15 +70,10 @@ from app.api.deps.auth_use_cases import (
 from app.api.deps.auth_use_cases import (
     get_cache_port as get_auth_cache_port,
 )
-from app.api.deps.auth_use_cases import (
-    get_email_sender as get_auth_email_sender,
-)
 from app.api.deps.db import get_session
+from app.api.deps.email import get_email_sender
 from app.api.deps.user_use_cases import (
     get_cache_port as get_user_cache_port,
-)
-from app.api.deps.user_use_cases import (
-    get_email_sender as get_user_email_sender,
 )
 from app.main import create_app
 from app.schemas.common import Principal
@@ -241,7 +236,7 @@ def mock_cache():
 @pytest.fixture
 def mock_email_sender():
     """
-    Mock del servicio de email (Brevo/Sendinblue).
+    Mock del servicio de email (SMTP).
 
     Se usa para enviar emails de:
     - Reset de password
@@ -249,7 +244,7 @@ def mock_email_sender():
     - Verificacion de email
     """
     mock = AsyncMock()
-    mock.send_template_email.return_value = None
+    mock.send_email.return_value = None
     return mock
 
 
@@ -332,9 +327,8 @@ def client(
     app.dependency_overrides[get_auth_cache_port] = lambda: mock_cache
     app.dependency_overrides[get_user_cache_port] = lambda: mock_cache
 
-    # --- OVERRIDE 5: Email Sender (Brevo) - tambien hay dos! ---
-    app.dependency_overrides[get_auth_email_sender] = lambda: mock_email_sender
-    app.dependency_overrides[get_user_email_sender] = lambda: mock_email_sender
+    # --- OVERRIDE 5: Email Sender (SMTP) ---
+    app.dependency_overrides[get_email_sender] = lambda: mock_email_sender
 
     # Crear el cliente de prueba
     with TestClient(app) as test_client:
