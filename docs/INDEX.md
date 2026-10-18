@@ -158,7 +158,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 
 ### integrations/
 - [users-service-keycloak](wiki/users-service/integrations/users-service-keycloak.md) — dos clientes (admin + auth), identidad compartida, traducción de errores
-- [users-service-email-brevo](wiki/users-service/integrations/users-service-email-brevo.md) — emails transaccionales (reset, reactivación)
+- [users-service-email](wiki/users-service/integrations/users-service-email.md) — emails transaccionales (reset, reactivación) por SMTP con plantillas Jinja2 en el repo
 
 ### workers/
 - [users-service-kc-compensation](wiki/users-service/workers/users-service-kc-compensation.md) — job APScheduler que limpia usuarios Keycloak huérfanos

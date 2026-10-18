@@ -1,7 +1,7 @@
 ---
 title: Dominio user — users-service
 status: draft
-last-verified: 2026-07-27
+last-verified: 2026-10-18
 owners: [users-service]
 related:
   - "[[users-service]]"
@@ -12,7 +12,7 @@ related:
   - "[[properties-service-users]]"
   - "[[properties-service-bulk-create-worker]]"
   - "[[open-items]]"
-sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/users-service/2026-06-23-public-profile-endpoint.md, ../../../sources/users-service/2026-07-16-jwt-roles-is-admin.md, ../../../sources/users-service/2026-07-27-resolve-accounts-by-email.md]
+sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/users-service/2026-06-23-public-profile-endpoint.md, ../../../sources/users-service/2026-07-16-jwt-roles-is-admin.md, ../../../sources/users-service/2026-07-27-resolve-accounts-by-email.md, ../../../sources/frontend/2026-10-18-reset-and-reactivation-front-gaps.md]
 ---
 
 ## TL;DR
@@ -90,20 +90,22 @@ Estos intereses alimentan las `FeedPreferences` del feed de [[properties-service
 - **Deactivate** (`/users/me/deactivate`): soft — `is_active=False` + `deactivated_at/by/reason` (`user_request`). El usuario de Keycloak **no se borra**. Invalida cache de cuenta/perfil. El endpoint hace además un logout best-effort. Ver [[adr-soft-deactivation]].
 - **Reactivation request** (`/users/reactivation/request`): manda email con token (mismo patrón one-shot que reset).
 - **Reactivation confirm** (`/users/reactivation/confirm`, Bearer): valida el token y vuelve `is_active=True`.
+- **El login no avisa que la cuenta está desactivada.** `AccountActivePolicy` responde `INVALID_CREDENTIALS` (401) tanto si la cuenta no existe como si está inactiva, a propósito para no revelar cuentas. El usuario recibe lo mismo que con una password mala, así que el front necesita una entrada explícita a la reactivación ("¿Desactivaste tu cuenta?" en el login). Ver [[open-items]].
 
 ## Claims
 
+- El login exige cuenta activa y, si no lo está, lanza `InvalidCredentialsError`, igual que si no existe ([authenticate_account.py:16](backend/users-service/src/app/services/auth/use_cases/authenticate_account.py#L16), [active_account_policy.py:19-25](backend/users-service/src/app/services/shared/policies/active_account_policy.py#L19-L25)).
 - El tipo de cuenta (`person`/`organization`) determina si el perfil está en `user_profile` o `company_profile` ([account.py:61-98](backend/users-service/src/app/models/account.py#L61-L98)).
 - El orquestador de perfil expone `get_profile` (inactivas permitidas) y `get_active_profile` (solo activas), ambos con cache-aside ([get_profile_orchestrator.py:24-77](backend/users-service/src/app/services/user/services/get_profile_orchestrator.py#L24-L77)).
-- `GET /v1/users/profiles/{account_id}` no tiene `Depends(get_current_principal)` — es público, y usa `get_active_profile` (no `get_profile`) para que cuentas desactivadas no sean visibles ([user.py](backend/users-service/src/app/api/routes/user.py), [get_profile_by_id.py](backend/users-service/src/app/services/user/use_cases/profile/get_profile_by_id.py)).
+- `GET /v1/users/profiles/{account_id}` no tiene `Depends(get_current_principal)` — es público, y usa `get_active_profile` (no `get_profile`) para que cuentas desactivadas no sean visibles ([user/profile.py](backend/users-service/src/app/api/routes/user/profile.py), [get_profile_by_id.py](backend/users-service/src/app/services/user/use_cases/profile/get_profile_by_id.py)).
 - `CurrentUserPerson.created_at`/`CurrentUserOrganization.created_at` se mapean desde `profile_db.created_at` (la fila de `user_profile`/`company_profile`), no desde `Account.created_at` ([mapper.py](backend/users-service/src/app/services/user/helpers/mapper.py)).
 - La foto de perfil se sube a través del backend con `storage.upload_file`, no presigned ([upload_profile_photo.py:46-51](backend/users-service/src/app/services/user/use_cases/profile/upload_profile_photo.py#L46-L51)).
 - El onboarding tiene 4 pasos + `done` en el enum `OnboardingStep` ([account.py:30-35](backend/users-service/src/app/models/account.py#L30-L35)).
 - La deactivación es soft: `is_active=False` + metadata, sin borrar el usuario de Keycloak ([deactivate_current_account.py:27-30](backend/users-service/src/app/services/user/use_cases/account/deactivate_current_account.py#L27-L30)).
 - El interés por ciudad es único por `(account_id, city_id)` ([interests.py:30-36](backend/users-service/src/app/models/interests.py#L30-L36)).
-- La deactivación dispara un logout best-effort que nunca bloquea la operación ([user.py:177-183](backend/users-service/src/app/api/routes/user.py#L177-L183)).
+- La deactivación dispara un logout best-effort que nunca bloquea la operación ([user/account.py:105-111](backend/users-service/src/app/api/routes/user/account.py#L105-L111)).
 - `CurrentUserOut.is_admin` tiene default `False` y se recalcula post-cache en `GetCurrentAccountUseCase.execute` vía `model_copy`, nunca se cachea el flag en sí ([get_current_account.py](backend/users-service/src/app/services/user/use_cases/account/get_current_account.py)).
 - `CurrentUserProfileOut` (`/me/profile` y el perfil público) no incluye `is_admin` — solo `CurrentUserOut` (`/me/`) lo expone.
 - `ResolveAccountsBulkUseCase.execute(*, emails: list[str])` delega en `AccountReaderPort.get_accounts_bulk(emails=...)` y devuelve `list[tuple[uuid.UUID, str]]` ([resolve_accounts_bulk.py](backend/users-service/src/app/services/user/use_cases/account/resolve_accounts_bulk.py)).
 - `get_active_accounts_bulk` filtra por `Account.email.in_(emails)` y `Account.is_active.is_(True)`; los emails sin cuenta activa no aparecen en el resultado ([account_repository.py](backend/users-service/src/app/repositories/account_repository.py)).
-- `POST /v1/users/resolve` no declara ninguna dependencia de autenticación, ni en la ruta ni en el router `/users` ([user.py](backend/users-service/src/app/api/routes/user.py)).
+- `POST /v1/users/resolve` no declara ninguna dependencia de autenticación, ni en la ruta ni en el router `/users` ([user/account.py](backend/users-service/src/app/api/routes/user/account.py)).

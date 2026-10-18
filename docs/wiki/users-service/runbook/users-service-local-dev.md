@@ -1,14 +1,14 @@
 ---
 title: Runbook — users-service local dev
 status: draft
-last-verified: 2026-10-16
+last-verified: 2026-10-18
 owners: [users-service]
 related:
   - "[[users-service]]"
   - "[[users-service-architecture]]"
   - "[[users-service-keycloak]]"
   - "[[catalog-service-local-dev]]"
-sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md, ../../../sources/_shared/2026-10-16-backend-ci-reusable-and-test-deps.md]
+sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md, ../../../sources/_shared/2026-10-16-backend-ci-reusable-and-test-deps.md, ../../../sources/users-service/2026-10-17-brevo-account-deleted-and-email-templates.md, ../../../sources/users-service/2026-10-18-smtp-email-adapter-and-api-layout.md, ../../../sources/frontend/2026-10-18-reset-and-reactivation-front-gaps.md]
 ---
 
 ## TL;DR
@@ -18,7 +18,7 @@ sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md,
 > `docker-compose.yml`, y cada server se arranca dentro del devcontainer. Este runbook
 > sirve de referencia para eso; ante diferencias, manda el [`README.md`](README.md).
 
-Workflow devcontainer-first como el resto. La infra (Keycloak + `users-ms-db` + Redis + MinIO) la levanta el compose. A mano: `cd backend/users-service && uv sync && migraciones + uvicorn`. **Keycloak debe estar configurado** con los dos clients (admin + auth) y sus secrets. El `.env.example` está casi completo, con dos trampas: la API key de Brevo y los dos secrets de Keycloak.
+Workflow devcontainer-first como el resto. La infra (Keycloak + `users-ms-db` + Redis + MinIO) la levanta el compose. A mano: `cd backend/users-service && uv sync && migraciones + uvicorn`. **Keycloak debe estar configurado** con los dos clients (admin + auth) y sus secrets. El `.env.example` está casi completo, con dos trampas: las credenciales SMTP y los dos secrets de Keycloak.
 
 ## Prerequisites
 
@@ -26,7 +26,7 @@ Workflow devcontainer-first como el resto. La infra (Keycloak + `users-ms-db` + 
 - Repo clonado, `.env.local` completado y `make bootstrap` corrido.
 - **Keycloak corriendo** con realm + dos clients configurados (uno admin con service account, uno de auth con direct grant).
 - **MinIO** + bucket de fotos de perfil.
-- Una **API key de Brevo** para probar emails (reset / reactivación).
+- Un **servidor SMTP** para probar emails (reset / reactivación): un proveedor real o Mailpit en local.
 
 ## Servicios relevantes que levantan
 
@@ -48,7 +48,7 @@ uv run alembic upgrade head
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-La app monta todo bajo `/v1`. Nota: el health router **no está incluido** en el router, así que no hay `/v1/health` hoy.
+La app monta todo bajo `/v1`. `GET /v1/health` responde `{"status": "ok"}` sin autenticación.
 
 ## Env vars del servicio
 
@@ -80,8 +80,12 @@ MINIO_URL=http://minio:9000
 ACCEPTED_IMAGE_MAX_SIZE=5242880
 ACCEPTED_IMAGE_MIME_TYPES=image/jpeg,image/png
 
-# Email (Brevo) — OJO con el nombre
-BREVO_API_KEY=<brevo-key>             # el cliente lee BREVO_API_KEY, NO BREVO_SMTP_KEY
+# Email (SMTP) — usuario y password van en .env.local
+SMTP_HOST=<host>
+SMTP_PORT=587
+SMTP_USERNAME=<usuario>
+SMTP_PASSWORD=<password>
+SMTP_FROM=<remitente>
 
 # Frontend (para los links de los emails)
 FRONT_BASE_URL=http://localhost:8080
@@ -90,8 +94,11 @@ CACHE_REACTIVATION_TTL_SECONDS=900
 
 ### Trampas
 
-- **`BREVO_API_KEY` vs `BREVO_SMTP_KEY`**: el `.env.example` declara `BREVO_SMTP_KEY`, pero el cliente lee `BREVO_API_KEY` ([client.py:15](backend/users-service/src/app/integrations/email/brevo/client.py#L15)). Setear `BREVO_API_KEY`.
+- **Sin `SMTP_*` no hay correos.** `.env.dev` declara las `SMTP_*` pero, sin proveedor elegido, deja `SMTP_HOST` y `SMTP_FROM` vacíos (solo `SMTP_PORT=587`), y usuario y password van en `.env.local`. Si falta cualquiera de las cinco, `get_email_sender()` lanza `SmtpMisconfiguredError` y los endpoints de reset y reactivación responden 500, exista o no la cuenta ([[users-service-email]]).
+- **Mailpit para probar en local.** Es un SMTP falso con UI web donde se ven los correos. Como usuario y password son obligatorios, arráncalo con `MP_SMTP_AUTH_ACCEPT_ANY=1` y `MP_SMTP_AUTH_ALLOW_INSECURE=1` para que acepte cualquier credencial sin TLS. Todavía no está en el compose.
+- **`uv add` y `uv remove` sincronizan el `.venv` con el lock** y borran los paquetes instalados a mano que no estén en él.
 - **Dos clients de Keycloak distintos**: `KC_CLIENT_ID`/`KC_ADMIN_SECRET` (admin) y `KC_CLIENT_AUTH`/`KC_AUTH_SECRET` (auth). No reusar el mismo client para ambos.
+- **El `FRONT_BASE_URL` real de `.env.dev` no es el de arriba.** Vale `app.micasaenminutos`, sin esquema ni TLD, así que los links de reset y reactivación del correo salen rotos. Para probarlos en dev tiene que ser `http://localhost:8080` ([[open-items]]).
 - **`FRONT_BASE_URL` es obligatorio** — el settings hace `raise RuntimeError` si falta ([settings.py:9-11](backend/users-service/src/app/core/config/settings.py#L9-L11)).
 
 ## Configurar Keycloak (primera vez)
@@ -146,8 +153,8 @@ psql -h users-ms-db -U admin -d identity_service_db \
 
 ## Known gaps (2026-05-28)
 
-1. **Health router no montado** — `routes/health.py` existe pero `api_router` no lo incluye; no hay `/v1/health`.
-2. **`BREVO_SMTP_KEY` en `.env.example`** no coincide con `BREVO_API_KEY` que lee el código.
+1. ~~**Health router no montado**~~ Resuelto 2026-10-18: `api_router` incluye `health` y existe `/v1/health`.
+2. ~~**`BREVO_SMTP_KEY` en `.env.example`** no coincide con `BREVO_API_KEY` que lee el código.~~ Resuelto 2026-09-07: ya no hay `.env.example` y `.env.dev` declara `BREVO_API_KEY`.
 3. **Onboarding no valida IDs contra catalog** — confía en los `locality_id`/`neighborhood_id` que manda el frontend.
 4. **Sin limpieza de cuentas soft-deactivated** — quedan en DB indefinidamente.
 5. **Setup de Keycloak manual** — los dos clients y sus roles se configuran a mano la primera vez.
@@ -166,10 +173,10 @@ docker logs $(docker ps -qf name=keycloak) -f
 ## Claims
 
 - La DB es `postgres:17` (`identity_service_db`), sin PostGIS ([docker-compose.yml:19-24](docker-compose.yml#L19-L24)).
-- El `.env.example` declara `BREVO_SMTP_KEY` pero el cliente lee `BREVO_API_KEY` ([backend/users-service/.env.example](backend/users-service/.env.example), [client.py:15](backend/users-service/src/app/integrations/email/brevo/client.py#L15)).
+- La dep de email exige `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` y `SMTP_FROM`, y `.env.dev` las declara con host y remitente vacíos ([email.py:10](backend/users-service/src/app/api/deps/shared/email.py#L10), [.env.dev:43-48](backend/users-service/.env.dev#L43-L48)).
 - `FRONT_BASE_URL` es obligatorio: el settings lanza `RuntimeError` si falta ([settings.py:9-11](backend/users-service/src/app/core/config/settings.py#L9-L11)).
-- La app monta el router bajo `/v1` y no incluye el health router ([main.py:33](backend/users-service/src/app/main.py#L33), [api/main.py:3-8](backend/users-service/src/app/api/main.py#L3-L8)).
+- La app monta el router bajo `/v1` e incluye el health router ([main.py:33](backend/users-service/src/app/main.py#L33), [api/main.py:3-11](backend/users-service/src/app/api/main.py#L3-L11)).
 - Hay 6 migraciones y 40 archivos de test al 2026-05-28 ([migrations/versions/](backend/users-service/src/app/migrations/versions), [tests/](backend/users-service/tests)).
-- Las dependencias clave: `apscheduler`, `python-keycloak`, `brevo-python`, `boto3`, `redis[hiredis]` ([pyproject.toml:7-27](backend/users-service/pyproject.toml#L7-L27)).
-- `api/deps/auth.py`, `api/deps/db.py` y `core/config/settings.py` leen `KC_JWKS_URL`, `KC_ISSUER`, `OIDC_AUDIENCE`, `DATABASE_URL` y `FRONT_BASE_URL` al importarse; `tests/unit/conftest.py` les da valores ficticios con `os.environ.setdefault` para que los unit tests corran sin entorno ([tests/unit/conftest.py](backend/users-service/tests/unit/conftest.py)).
+- Las dependencias clave: `apscheduler`, `python-keycloak`, `aiosmtplib`, `jinja2`, `boto3`, `redis[hiredis]` ([pyproject.toml:7-28](backend/users-service/pyproject.toml#L7-L28)).
+- `api/deps/auth.py`, `api/deps/shared/db.py` y `core/config/settings.py` leen `KC_JWKS_URL`, `KC_ISSUER`, `OIDC_AUDIENCE`, `DATABASE_URL` y `FRONT_BASE_URL` al importarse; `tests/unit/conftest.py` les da valores ficticios con `os.environ.setdefault` para que los unit tests corran sin entorno ([tests/unit/conftest.py](backend/users-service/tests/unit/conftest.py)).
 - pytest, pytest-asyncio, pytest-cov, pytest-mock y `ruff==0.17.1` están en `[dependency-groups] dev`, fuera de las dependencias de runtime ([pyproject.toml](backend/users-service/pyproject.toml)).

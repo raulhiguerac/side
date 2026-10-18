@@ -45,6 +45,6 @@ Un usuario puede querer "borrar" su cuenta. Eliminar duro implicaría borrar el 
 
 - La deactivación setea `is_active=False` + `deactivated_at/by/reason`, sin borrar filas ([deactivate_current_account.py:27-30](backend/users-service/src/app/services/user/use_cases/account/deactivate_current_account.py#L27-L30)).
 - La deactivación **no** borra el usuario de Keycloak (solo el rollback de registro lo hace) ([deactivate_current_account.py:20-42](backend/users-service/src/app/services/user/use_cases/account/deactivate_current_account.py#L20-L42)).
-- El endpoint hace un logout best-effort que nunca bloquea la deactivación ([user.py:177-183](backend/users-service/src/app/api/routes/user.py#L177-L183)).
+- El endpoint hace un logout best-effort que nunca bloquea la deactivación ([user/account.py:105-111](backend/users-service/src/app/api/routes/user/account.py#L105-L111)).
 - El orquestador distingue `get_profile` (inactivas) de `get_active_profile` (solo activas) ([get_profile_orchestrator.py:24-53](backend/users-service/src/app/services/user/services/get_profile_orchestrator.py#L24-L53)).
 - El enum `AccountDeactivationReason` incluye `system_cleanup`, pero no hay job que lo use al 2026-05-28 ([account.py:21-28](backend/users-service/src/app/models/account.py#L21-L28)).
