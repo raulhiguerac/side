@@ -1,17 +1,13 @@
-from functools import lru_cache
-
 from fastapi import Depends
 from sqlmodel import Session
 
-from app.api.deps.db import get_session
-from app.api.deps.email import get_email_sender
-from app.integrations.cache.redis.cache import CacheClient
-from app.integrations.identity_provider.keycloak.admin_client import KeycloakAdminClient
-from app.integrations.identity_provider.keycloak.auth_client import KeycloakAuthClient
-from app.services.auth.adapters.keycloak_auth_provider import (
-    KeycloakAuthenticationProvider,
+from app.api.deps.shared.cache import get_cache_port
+from app.api.deps.shared.db import get_session
+from app.api.deps.shared.email import get_email_sender
+from app.api.deps.shared.identity_provider import (
+    get_auth_provider,
+    get_identity_provider,
 )
-from app.services.auth.adapters.keycloak_idp import KeycloakIdentityProvider
 from app.services.auth.adapters.sql_unit_of_work import SqlAuthUnitOfWork
 from app.services.auth.helpers.profile_factory import ProfileFactory
 from app.services.auth.ports.authentication_provider import AuthenticationProvider
@@ -28,7 +24,6 @@ from app.services.auth.use_cases.register_account import RegisterAccountUseCase
 from app.services.auth.use_cases.request_reset_password import (
     RequestResetPasswordUseCase,
 )
-from app.services.shared.adapters.redis_cache_adapter import RedisCacheAdapter
 from app.services.shared.db.db_error_translator import DbErrorTranslator
 from app.services.shared.policies.account_email_availability_policy import (
     AccountEmailAvailabilityPolicy,
@@ -36,27 +31,6 @@ from app.services.shared.policies.account_email_availability_policy import (
 from app.services.shared.policies.active_account_policy import AccountActivePolicy
 from app.services.shared.ports.cache import CachePort
 from app.services.shared.ports.email_sender import EmailSenderPort
-
-# -----------------------------------------------------------------------------
-# Providers (stateless -> safe to cache)
-# -----------------------------------------------------------------------------
-
-@lru_cache(maxsize=1)
-def get_cache_port() -> CachePort:
-    return RedisCacheAdapter(CacheClient())
-
-
-@lru_cache(maxsize=1)
-def get_identity_provider() -> IdentityProvider:
-    """Identity provider (Keycloak Admin API)."""
-    return KeycloakIdentityProvider(client=KeycloakAdminClient())
-
-
-@lru_cache(maxsize=1)
-def get_auth_provider() -> AuthenticationProvider:
-    """Authentication provider (Keycloak OIDC)."""
-    return KeycloakAuthenticationProvider(client=KeycloakAuthClient())
-
 
 # -----------------------------------------------------------------------------
 # Unit of Work (request-scoped)

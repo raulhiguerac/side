@@ -6,12 +6,14 @@ import pytest
 from fastapi import Response, UploadFile
 from pydantic import TypeAdapter
 
-from app.api.routes.user import (
+from app.api.routes.user.account import (
     confirm_account_reactivation,
     deactivate_user_account,
     get_current_user,
-    get_current_user_profile,
     request_account_reactivation,
+)
+from app.api.routes.user.profile import (
+    get_current_user_profile,
     update_user_profile,
     upload_user_profile_photo,
 )
