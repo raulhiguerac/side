@@ -1,7 +1,7 @@
 ---
 title: Flujo de creación de propiedad — form multi-step
 status: draft
-last-verified: 2026-07-15
+last-verified: 2026-10-17
 owners: [frontend]
 related:
   - "[[frontend-architecture]]"
@@ -83,7 +83,7 @@ Componente visual puro — selección y preview de imágenes. La lógica de uplo
 - Drop zone con drag-and-drop + click to select; preview grid con badge "Portada" en la primera imagen — el badge solo se muestra si `!hasExistingPhotos`.
 - `URL.createObjectURL` para previews locales; `onUnmounted` revoca los object URLs.
 - Botón "Publicar" en el footer deshabilitado si `selectedFiles.length === 0`.
-- Ruta dev: `/#/dev/imagenes` → `StepImagenesDevView.vue` para ver el componente sin pasar por el form completo (pasa `max`/`has-existing-photos` fijos también).
+- Ruta dev: `/dev/imagenes` → `StepImagenesDevView.vue` para ver el componente sin pasar por el form completo (pasa `max`/`has-existing-photos` fijos también).
 
 ### Flujo de upload — `useImageUpload()` (`composables/properties/useImageUpload.ts`)
 
@@ -113,4 +113,4 @@ POST /v1/properties/{id}/images/confirm  { batch_id, confirmed_keys: [keys de PU
 - `useImageUpload().uploadImages()` devuelve `boolean` (éxito/fallo) en vez de navegar internamente — `CreatePropertyView.vue` hace `router.push('/properties')` tras un resultado exitoso ([composables/properties/useImageUpload.ts](frontend/src/composables/properties/useImageUpload.ts)).
 - `StepUbicacion` monta `PlaceAutocompleteElement` en `onMounted` con `google.maps.importLibrary("places")` ([components/properties/create/StepUbicacion.vue](frontend/src/components/properties/create/StepUbicacion.vue)).
 - `previewId = crypto.randomUUID()` se genera una vez en el `setup` del componente y se reutiliza mientras el step esté montado ([components/properties/create/StepUbicacion.vue](frontend/src/components/properties/create/StepUbicacion.vue)).
-- Ruta dev `/#/dev/imagenes` → `StepImagenesDevView.vue` para preview del componente sin auth ni form ([router/routes/dev.ts](frontend/src/router/routes/dev.ts), [views/dev/StepImagenesDevView.vue](frontend/src/views/dev/StepImagenesDevView.vue)).
+- Ruta dev `/dev/imagenes` → `StepImagenesDevView.vue` para preview del componente sin auth ni form ([router/routes/dev.ts](frontend/src/router/routes/dev.ts), [views/dev/StepImagenesDevView.vue](frontend/src/views/dev/StepImagenesDevView.vue)).

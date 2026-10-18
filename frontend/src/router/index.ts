@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from "vue-router";
+import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { publicRoutes } from "./routes/public";
 import { authRoutes } from "./routes/auth";
@@ -10,7 +10,7 @@ import { adminRoutes } from "./routes/admin";
 import { logger } from "@/utils/logger";
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(process.env.BASE_URL),
   routes: [
     ...publicRoutes,
     ...authRoutes,

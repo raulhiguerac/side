@@ -101,7 +101,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 
 ### adrs/
 - [ADR-0001 — Vue CLI hoy, migración a Vite diferida](wiki/frontend/adrs/adr-vue-cli-deferred-vite-migration.md)
-- [ADR-0002 — Hash history para deployment en bucket estático](wiki/frontend/adrs/adr-hash-history-static-hosting.md)
+- [ADR-0002 — Hash history para deployment en bucket estático](wiki/frontend/adrs/adr-hash-history-static-hosting.md) — _reemplazado por ADR-0015_
 - [ADR-0003 — Mapbox solo para geocoding, Leaflet+D3 para render](wiki/frontend/adrs/adr-mapbox-geocoding-leaflet-rendering.md)
 - [ADR-0004 — Remover Firebase del frontend](wiki/frontend/adrs/adr-firebase-removal.md)
 - [ADR-0005 — Google Maps Places API (New) para geocoding](wiki/frontend/adrs/adr-gmaps-places-geocoding.md)
@@ -114,6 +114,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [ADR-0012 — Los filtros del panel admin viven en la URL, no en el composable](wiki/frontend/adrs/adr-admin-filters-in-query-params.md)
 - [ADR-0013 — Todo el HTTP del front pasa por funciones tipadas de api/, por dominio](wiki/frontend/adrs/adr-api-layer-by-domain.md)
 - [ADR-0014 — El feed en mapa pinta todo el bbox con cluster y la lista hace scroll infinito](wiki/frontend/adrs/adr-feed-map-whole-bbox-cluster.md)
+- [ADR-0015 — History mode y el front en Cloudflare Pages con dominio propio](wiki/frontend/adrs/adr-history-mode-cloudflare-pages.md)
 
 ## properties-service
 
