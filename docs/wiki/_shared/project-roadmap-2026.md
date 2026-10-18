@@ -1,7 +1,7 @@
 ---
 title: Project roadmap 2026
 status: stable
-last-verified: 2026-10-14
+last-verified: 2026-10-17
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -9,6 +9,7 @@ related:
   - "[[analytics-service]]"
   - "[[properties-service]]"
   - "[[frontend]]"
+  - "[[adr-history-mode-cloudflare-pages]]"
   - "[[avm-training]]"
 sources: [../../sources/_shared/2026-05-29-project-roadmap.md, ../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md, ../../sources/_shared/2026-10-05-stacked-prs-and-roadmap.md, ../../sources/_shared/2026-10-05-public-demo-deploy-gke-cloudflare.md, ../../sources/_shared/2026-10-05-stateless-cluster-external-data.md, ../../sources/_shared/2026-10-14-mvp-close-and-demo-infra-costs.md]
 ---
@@ -75,7 +76,7 @@ Prioridad: forms básicos de Fase 2 primero, luego infra, luego diferenciadores.
 **Destino de la demo:** GKE pagado con el crédito de GCP. Cloudflare va delante:
 - **Tunnel:** `cloudflared` como Deployment, sin Load Balancer ni IP pública.
 - **R2** como object storage en cloud; SeaweedFS sigue en local.
-- **El front** en Pages o R2 detrás del CDN.
+- **El front** en Cloudflare Pages con el dominio propio (`app.<dominio>`), en history mode, sin `#`. La zona DNS del dominio vive en Cloudflare; el registrador no cambia. **Decidido 2026-10-17**, ver [[adr-history-mode-cloudflare-pages]].
 
 El control plane entra en el crédito mensual de GKE para un cluster zonal o Autopilot. El crédito dura 90 días, así que el Helm + Argo ApplicationSet se arman con values por entorno para mudarse a un VPS (Hetzner, Oracle) o a local sin cambiar manifiestos. Los pendientes concretos están en [[open-items]], sección "Demo pública (GKE + Cloudflare)".
 
@@ -83,7 +84,7 @@ El cluster no guarda estado que importe: Postgres va en Neon, con un proyecto po
 
 ```
 INTERNET → CLOUDFLARE (DNS · CDN · WAF · DDoS · rate limit)
-  ├─ app.<dominio> → Pages / R2   (SPA estática)
+  ├─ app.<dominio> → Pages        (SPA estática, history mode)
   ├─ cdn.<dominio> → R2 público   (fotos)
   └─ api.<dominio> → Tunnel → GKE (sin IP pública)
                               ├─ 4 servicios + Keycloak (stateless)

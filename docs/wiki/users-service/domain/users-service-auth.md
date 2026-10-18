@@ -1,7 +1,7 @@
 ---
 title: Dominio auth — users-service
 status: draft
-last-verified: 2026-10-14
+last-verified: 2026-10-17
 owners: [users-service]
 related:
   - "[[users-service]]"
@@ -65,7 +65,7 @@ Dos pasos desacoplados por un token en Redis (ver [[adr-action-tokens-redis]]):
    - Carga la cuenta; si no está activa, retorna en silencio.
    - `idp.reset_password(account_id, new_password)` en Keycloak.
 
-**El link del correo no llega a ninguna vista (2026-10-14).** `build_redirect_url` arma `FRONT_BASE_URL + "/reset-password?token=…"` (y la reactivación, `/reactivate?token=…`), pero el front usa hash history ([[adr-hash-history-static-hosting]]) y espera `/#/reset-password?token=…`: la SPA carga en `/` y el token se pierde. El front tampoco tiene la vista de confirmar el reset ni la de reactivar. Ver [[open-items]] ("Flujos de cuenta incompletos en el front").
+**El link del correo no llega a ninguna vista (2026-10-14).** `build_redirect_url` arma `FRONT_BASE_URL + "/reset-password?token=…"` (y la reactivación, `/reactivate?token=…`), pero el front usa hash history ([[adr-hash-history-static-hosting]]) y espera `/#/reset-password?token=…`: la SPA carga en `/` y el token se pierde. El front tampoco tiene la vista de confirmar el reset ni la de reactivar. Ver [[open-items]] ("Flujos de cuenta incompletos en el front"). **Update 2026-10-17:** el front pasó a history mode ([[adr-history-mode-cloudflare-pages]]), así que el formato del link ya es el correcto; siguen faltando las vistas y corregir `FRONT_BASE_URL`.
 
 ## Privacidad
 

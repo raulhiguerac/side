@@ -1,18 +1,21 @@
 ---
 title: ADR-0002 — Hash history para deployment en bucket estático
 status: stable
-last-verified: 2026-07-15
+last-verified: 2026-10-17
 owners: [frontend]
 related:
   - "[[frontend]]"
   - "[[frontend-architecture]]"
   - "[[frontend-local-dev]]"
+  - "[[adr-history-mode-cloudflare-pages]]"
 sources: [../../../sources/frontend/2026-05-21-foundational-qa.md]
 decision-date: 2026-05-21
-decision-status: accepted
+decision-status: superseded
 ---
 
 # ADR-0002 — Hash history para deployment en bucket estático
+
+> **Reemplazado el 2026-10-17 por [[adr-history-mode-cloudflare-pages]].** El router pasó a `createWebHistory()` y el front se sirve desde Cloudflare Pages con dominio propio. Lo que sigue es el registro de la decisión original.
 
 ## Contexto
 
@@ -54,7 +57,4 @@ Triggers para revisar esta decisión:
 
 ## Claims
 
-- `vue-router` se crea con `createWebHashHistory()` ([router/index.ts:1](frontend/src/router/index.ts#L1) import, [router/index.ts:11](frontend/src/router/index.ts#L11) instanciación) — `index.ts` se achicó a ~46 líneas tras modularizar las rutas en `router/routes/*.ts`.
-- URLs visibles en el browser tienen el patrón `<base>/#/<path>` (ej. `http://localhost:8080/#/login`).
-- Deploy planificado: bucket público estático con build compilado (per autor, 2026-05-21).
-- SEO marcado como "no prioridad MVP" en este ADR; diferenciador futuro en [[project-roadmap-2026]] pero no en scope inmediato.
+- `vue-router` ya no usa `createWebHashHistory()`: se crea con `createWebHistory()` según [[adr-history-mode-cloudflare-pages]] ([router/index.ts:13](frontend/src/router/index.ts#L13)).

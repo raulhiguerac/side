@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-10-16
+last-verified: 2026-10-17
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -345,7 +345,7 @@ Funciones puras (no es composable Vue strictly hablando, son helpers que aceptan
 
 El paso 4 existe por una race real: `authStore.isAdmin` normalmente solo se llena vía el `watch` de `App.vue` **después** de que el guard ya resolvió la navegación — sin este paso, un admin real entrando por link directo a una ruta `requiresAdmin` sería rebotado a Home. Ver [[frontend-admin-panel]].
 
-Hash history (`createWebHashHistory`) — ver [[adr-hash-history-static-hosting]].
+History mode (`createWebHistory`), URLs sin `#` — ver [[adr-history-mode-cloudflare-pages]], que reemplaza a [[adr-hash-history-static-hosting]].
 
 ## API consumption pattern
 

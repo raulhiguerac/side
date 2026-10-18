@@ -1,7 +1,7 @@
 ---
 title: Runbook — frontend local dev
 status: draft
-last-verified: 2026-10-09
+last-verified: 2026-10-17
 owners: [frontend]
 related:
   - "[[frontend]]"
@@ -25,7 +25,7 @@ sources:
 > `docker-compose.yml`, y cada server se arranca dentro del devcontainer. Este runbook
 > sirve de referencia para eso; ante diferencias, manda el [`README.md`](README.md).
 
-Mismo patrón devcontainer-first que los backends. Dentro del devcontainer: `cd frontend && npm install && npm run serve` → SPA en **`http://localhost:8080/#/`**. Backend en `:8000` (users), `:8001` (catalog) — corren a mano desde el devcontainer en terminales separadas. CORS abierto temporalmente. Ningún tooling de tests/e2e configurado todavía.
+Mismo patrón devcontainer-first que los backends. Dentro del devcontainer: `cd frontend && npm install && npm run serve` → SPA en **`http://localhost:8080/`**. Backend en `:8000` (users), `:8001` (catalog) — corren a mano desde el devcontainer en terminales separadas. CORS abierto temporalmente. Ningún tooling de tests/e2e configurado todavía.
 
 ## Prerequisites
 
@@ -62,7 +62,7 @@ App running at:
 - Network: http://172.17.0.2:8080/
 ```
 
-Abrir **`http://localhost:8080/#/`** en el browser del host. El `#/` es necesario por el hash history (ver [[adr-hash-history-static-hosting]]).
+Abrir **`http://localhost:8080/`** en el browser del host. Las rutas van sin `#` ([[adr-history-mode-cloudflare-pages]]): el dev server devuelve `index.html` en cualquier ruta profunda, pero solo a peticiones con `Accept: text/html`, así que un `curl` pelado a `/settings/profile` da `404` y el navegador no.
 
 ## Env vars del frontend
 
@@ -113,9 +113,9 @@ Ver [[catalog-service-local-dev]] para el detalle de catalog (env vars, seed, co
 ## Probar end-to-end
 
 ### Login
-1. Abrir `http://localhost:8080/#/login`.
+1. Abrir `http://localhost:8080/login`.
 2. Email + password del user creado en Keycloak.
-3. Si funciona, redirige a `/#/`.
+3. Si funciona, redirige a `/`.
 
 Detalle del flujo cookie en [[catalog-service-architecture]] sección "Auth en el servicio".
 
@@ -147,7 +147,7 @@ cd /workspace/frontend
 npm run build
 ```
 
-Salida: `dist/` con assets estáticos. Deploy planeado en bucket público (ver [[adr-hash-history-static-hosting]]). **Update 2026-09-28:** el destino no está definido. La alternativa en exploración es servir `dist/` desde el clúster de `infra/k8s`, con `/api/*` en el Gateway; si se elige, ese ADR queda superseded.
+Salida: `dist/` con assets estáticos. **Update 2026-10-17:** el destino es Cloudflare Pages con dominio propio ([[adr-history-mode-cloudflare-pages]]). No agregar un `404.html` en `public/`: apaga el fallback de Pages y rompe toda ruta profunda.
 
 `npm run build` está verde (re-verificado el 2026-10-09). Ojo: **solo corre ESLint**, no typecheckea los `.vue` — ver "Typecheck" abajo.
 

@@ -42,7 +42,7 @@ Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con pro
 
 - **Vue 3.5.35** + **TypeScript 5**
 - **Vue CLI 5** + webpack (deuda técnica — migra a Vite post-backend, ver [[adr-vue-cli-deferred-vite-migration]])
-- **vue-router 4** en `createWebHashHistory` (`/#/`) — ver [[adr-hash-history-static-hosting]]
+- **vue-router 4** en `createWebHistory` (URLs sin `#`) — ver [[adr-history-mode-cloudflare-pages]], que reemplaza a [[adr-hash-history-static-hosting]]
 - **Pinia 3** — stores: `auth` (autenticación), `user` (onboarding + intereses)
 - **Tailwind 3** — sin librería de componentes ([[adr-no-component-library]]). Los forms son inputs nativos con validación a mano; `@vueform/multiselect` es lo único de Vueform en uso (ver [[frontend-architecture]] §Forms)
 - **`@tanstack/vue-table` 8** (headless) para la tabla admin — ver [[adr-tanstack-table]]
@@ -121,14 +121,14 @@ Detalle de cada patrón en [[frontend-architecture]].
 - [[frontend-architecture]] — layout interno, stores, composables, routing, axios
 - [[frontend-onboarding-flow]] — modal-based wizard, 4 pasos
 - [[frontend-local-dev]] — runbook
-- [[adr-vue-cli-deferred-vite-migration]], [[adr-hash-history-static-hosting]], [[adr-mapbox-geocoding-leaflet-rendering]], [[adr-gmaps-places-geocoding]], [[adr-firebase-removal]]
+- [[adr-vue-cli-deferred-vite-migration]], [[adr-history-mode-cloudflare-pages]], [[adr-hash-history-static-hosting]], [[adr-mapbox-geocoding-leaflet-rendering]], [[adr-gmaps-places-geocoding]], [[adr-firebase-removal]]
 - [[adr-mapbox-frontend-only]] (cross-service, vive en catalog-service)
 
 ## Claims
 
 - El router está modularizado en 5 archivos bajo `router/routes/` (public, auth, settings, properties, analytics) — `router/index.ts` solo instancia y aplica el guard ([router/routes/](frontend/src/router/routes/)).
 - `PropertyDetailView` existe en `views/properties/detail/`, refactorizada en 3 componentes hijos (`PropertyPhotoGrid`/`PropertyOverview`/`NearbyPlaces`) y con fetch real a `GET /v1/properties/{id}` ([views/properties/detail/PropertyDetailView.vue](frontend/src/views/properties/detail/PropertyDetailView.vue)).
-- `vue-router` corre en `createWebHashHistory` (URL pattern `/#/...`) ([router/index.ts:89](frontend/src/router/index.ts#L89)).
+- `vue-router` corre en `createWebHistory(process.env.BASE_URL)`, con URLs sin `#` ([router/index.ts:13](frontend/src/router/index.ts#L13)).
 - `auth.ts` no arma URLs: llama a funciones de `api/users.ts`, que toman las rutas de `USERS_ENDPOINTS` ([stores/auth.ts](frontend/src/stores/auth.ts), [constants/usersEndpoints.ts](frontend/src/constants/usersEndpoints.ts)).
 - `config/index.ts` define las `API.*_BASE_URL`; las usan los clientes de `api/clients/` y el refresh del interceptor ([config/index.ts](frontend/src/config/index.ts), [api/clients/](frontend/src/api/clients)).
 - `firebase` ya no está en `package.json` y `LoginView.vue` no define `loginWithGoogle` — removidos el 2026-07-28 ([package.json](frontend/package.json), [views/auth/LoginView.vue](frontend/src/views/auth/LoginView.vue)).

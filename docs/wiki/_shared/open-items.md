@@ -1,7 +1,7 @@
 ---
 title: Open items — gaps y deuda técnica cross-service
 status: draft
-last-verified: 2026-10-16
+last-verified: 2026-10-17
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -27,6 +27,7 @@ related:
   - "[[frontend-architecture]]"
   - "[[frontend-onboarding-flow]]"
   - "[[adr-stateless-cluster-external-data]]"
+  - "[[adr-history-mode-cloudflare-pages]]"
   - "[[adr-vue-cli-deferred-vite-migration]]"
   - "[[adr-firebase-removal]]"
   - "[[adr-seaweedfs-dev-object-storage]]"
@@ -45,7 +46,7 @@ Backlog vivo de gaps detectados al documentar la wiki (2026-05-28): cosas que el
 
 Lo que falta para dar el MVP por cerrado y pasar a la infra (semana 4 del plan en [[project-roadmap-2026]]). Los dos primeros ítems son nuevos; el resto ya vive más abajo y aquí solo se ordena.
 
-- [ ] **Flujos de cuenta incompletos en el front: confirmar el reset y reactivar.** users-service tiene `POST /v1/auth/reset-password/confirm` (token como Bearer) y `POST /v1/users/reactivation/{request,confirm}`, pero el front solo cubre pedir el correo de reset (`/forgot-password`): no hay vista, ruta ni entrada en `usersEndpoints.ts` para confirmar el reset ni para reactivar. Además el link del correo no llegaría a ninguna vista: `build_redirect_url` arma `FRONT_BASE_URL + "/reset-password?token=…"` (y `/reactivate?token=…`) y el router usa `createWebHashHistory`, que espera `/#/reset-password?token=…`; la SPA carga en `/` y el token se pierde. Falta: (1) acordar el formato del link —lo simple es que el back incluya `/#/`, coherente con [[adr-hash-history-static-hosting]]— y corregir `FRONT_BASE_URL` (ítem "`FRONT_BASE_URL` de users no tiene esquema ni TLD"); (2) vista `/reset-password` que lea el `token`, pida la contraseña dos veces y maneje token vencido/usado; (3) vista `/reactivate` y decidir desde dónde se pide (natural: el login ante una cuenta desactivada). La verificación de email al registrarse no existe en ningún lado (solo se lee el claim `email_verified`): decisión de producto, fuera del MVP salvo que se decida lo contrario. Detectado 2026-10-14. Ver [[users-service]], [[frontend-architecture]].
+- [ ] **Flujos de cuenta incompletos en el front: confirmar el reset y reactivar.** users-service tiene `POST /v1/auth/reset-password/confirm` (token como Bearer) y `POST /v1/users/reactivation/{request,confirm}`, pero el front solo cubre pedir el correo de reset (`/forgot-password`): no hay vista, ruta ni entrada en `usersEndpoints.ts` para confirmar el reset ni para reactivar. Además el link del correo no llegaría a ninguna vista: `build_redirect_url` arma `FRONT_BASE_URL + "/reset-password?token=…"` (y `/reactivate?token=…`) y el router usa `createWebHashHistory`, que espera `/#/reset-password?token=…`; la SPA carga en `/` y el token se pierde. Falta: (1) ~~acordar el formato del link —lo simple es que el back incluya `/#/`, coherente con [[adr-hash-history-static-hosting]]—~~ **resuelto 2026-10-17:** el router pasó a history mode ([[adr-history-mode-cloudflare-pages]]) y el link que ya arma el back es el correcto; queda corregir `FRONT_BASE_URL` (ítem "`FRONT_BASE_URL` de users no tiene esquema ni TLD"); (2) vista `/reset-password` que lea el `token`, pida la contraseña dos veces y maneje token vencido/usado; (3) vista `/reactivate` y decidir desde dónde se pide (natural: el login ante una cuenta desactivada). La verificación de email al registrarse no existe en ningún lado (solo se lee el claim `email_verified`): decisión de producto, fuera del MVP salvo que se decida lo contrario. Detectado 2026-10-14. Ver [[users-service]], [[frontend-architecture]].
 - [ ] **Tabs de localidades, divisiones y países del panel de catálogo.** Siguen en `EmptyState`, pero ya no tienen bloqueo de back: los tres `GET` admin existen con el contrato `PageRequest`/`Page[T]` y sus tipos están generados (#28). Falta listar con filtros, activar/desactivar y crear/editar con la cascada país → división; el CRUD de barrios (#27) sirve de molde. Detectado 2026-10-14. Ver [[frontend-admin-panel]], [[catalog-service-catalog-admin]]. **Update 2026-10-16:** Localidades está cableada (listado con filtros, panel, crear, editar, activar/desactivar y salto a Barrios). Antes de seguir se sacaron piezas compartidas (`useAdminPage`, `AdminFormModal`/`AdminStatusModal`, `CascadeSelectFields`, constantes de filtro), así que Divisiones y Países se arman sobre ellas. Falta probar todo en el navegador, incluidos los modales de barrios que pasaron al cascarón común. **Update 2026-10-16 (2):** Divisiones y Países también están cableadas; el front consume los 17 endpoints admin de catalog. Queda solo la prueba en navegador de las cuatro tabs, sus modales y los saltos País → Divisiones → Localidades → Barrios; se cierra tras esa prueba.
 - [ ] **Ya registrados, en el orden propuesto:**
   1. Triviales: "IMPORTANTE — `@vueform/multiselect` se usa en 4 archivos pero no está declarado en `package.json`" y "`App.vue` conserva el CSS de la plantilla de Vue CLI".
@@ -199,7 +200,7 @@ Auditoría de endpoints admin 2026-07-17 (motivada por la revisión de bulk crea
   3. **Vitest donde vive la lógica.** Composables (`usePagination`, `useModerateProperty`, `useRowSelection`) y utils (`sanitizeFilterQuery`), no vistas, que todavía se mueven.
   4. **CI mínimo por PR**: lint + `vue-tsc` + Vitest + build. Hoy no existe `.github/workflows`.
   5. **Tipos generados desde OpenAPI** (`openapi-typescript`). Cierra "El contrato front↔back se escribe a mano" de abajo.
-  6. **Entrega**, con el destino **sin definir**: el bucket estático de [[adr-hash-history-static-hosting]] o `dist/` servido desde el clúster de `infra/k8s` con `/api/*` en el Gateway, en exploración. En los dos casos hay que reemplazar el proxy de dev por routing real.
+  6. **Entrega**, con el destino **sin definir**: el bucket estático de [[adr-hash-history-static-hosting]] o `dist/` servido desde el clúster de `infra/k8s` con `/api/*` en el Gateway, en exploración. En los dos casos hay que reemplazar el proxy de dev por routing real. **Update 2026-10-17 — decidido:** Cloudflare Pages con dominio propio y history mode ([[adr-history-mode-cloudflare-pages]]); el front llama a `api.<dominio>` en vez del proxy.
   7. **Smoke tests con Playwright** (login, feed, moderar) cuando el panel admin se estabilice.
 
   Los pasos 1–4 dejan el front defendible sin tocar código de producto. Ver [[frontend-local-dev]], [[frontend]].
@@ -236,6 +237,8 @@ Auditoría de endpoints admin 2026-07-17 (motivada por la revisión de bulk crea
 
   **Update 2026-10-05 — extraído lo repetido sin flags.** Con barrios como tercera vista con filtros salieron `useUrlFilters`, `AdminPaginationFooter` (las cinco vistas) y `pageRange` (los cuatro composables de listado). Sigue abierto `useAdminList<T>`, por las mismas diferencias de arriba (memoria vs servidor, refresco del panel, fila entera vs id).
 
+- [ ] **El router no tiene ruta catch-all: una URL inexistente muestra una página vacía.** No hay `/:pathMatch(.*)*` en `router/routes/`, así que vue-router no pinta nada y el host responde `200` con la SPA. Con history mode ([[adr-history-mode-cloudflare-pages]]) cualquier link roto o viejo cae ahí. Falta una vista de "no encontrado" con vuelta al inicio. Detectado 2026-10-17.
+
 ### frontend — capas y abstracciones (auditoría 2026-10-05)
 
 Pendientes de la auditoría de smells del 2026-10-05. Ese mismo día se cerraron la duplicación del admin (`useUrlFilters`, `AdminPaginationFooter`, labels de property), `PrimaryButton`, el formateo de números, el logger, los `any`, el voseo y la paleta de marca.
@@ -271,11 +274,11 @@ Los tres pilares están ausentes hoy. Sin los tres juntos es imposible diagnosti
 
 ### Demo pública (GKE + Cloudflare)
 
-Dirección decidida el 2026-10-05: GKE pagado con el crédito de GCP; Cloudflare Tunnel, sin LB ni IP pública; R2 como object storage; el front en Pages o R2 detrás del CDN. Los manifiestos son portables a VPS o local con Argo + ApplicationSet. Ver [[project-roadmap-2026]]. **Update 2026-10-05:** el cluster va sin estado; Postgres en Neon y objetos en R2 ([[adr-stateless-cluster-external-data]]).
+Dirección decidida el 2026-10-05: GKE pagado con el crédito de GCP; Cloudflare Tunnel, sin LB ni IP pública; R2 como object storage; el front en Pages o R2 detrás del CDN (**update 2026-10-17:** Pages con dominio propio, [[adr-history-mode-cloudflare-pages]]). Los manifiestos son portables a VPS o local con Argo + ApplicationSet. Ver [[project-roadmap-2026]]. **Update 2026-10-05:** el cluster va sin estado; Postgres en Neon y objetos en R2 ([[adr-stateless-cluster-external-data]]).
 
 - [ ] **Presupuesto de RAM por servicio.** El stack completo pide unos 12–16 GB, y ORS con `-Xmx6g` es el que más pesa. Fijar los `requests`/`limits` reales en el Helm y decidir si se le baja el heap a ORS o se sirven isócronas precalculadas desde la caché.
 - [ ] **CORS del bucket de R2.** El navegador sube directo con la URL presignada, así que el bucket tiene que permitir `PUT` desde el origen del front.
-- [ ] **Cookies y CORS en el dominio público.** El auth va por cookie con `withCredentials`. Hay dos opciones: front en `app.` y API en `api.` (cookie `Domain=.<dominio>`, `SameSite=Lax`, CORS con origen exacto), o todo en un dominio con `/api/*` enrutado al tunnel por path, sin CORS.
+- [ ] **Cookies y CORS en el dominio público.** El auth va por cookie con `withCredentials`. Hay dos opciones: front en `app.` y API en `api.` (cookie `Domain=.<dominio>`, `SameSite=Lax`, CORS con origen exacto), o todo en un dominio con `/api/*` enrutado al tunnel por path, sin CORS. **Update 2026-10-17:** con el front en Pages ([[adr-history-mode-cloudflare-pages]]) queda la primera: Pages no enruta `/api/*` al tunnel. Falta configurarlo en users (cookie) y en los CORS de cada servicio.
 - [ ] **Crédito de GCP: elegibilidad y día 91.** El trial de $300 no aplica si ya se fue cliente de pago de Google Maps Platform. Dura 90 días sin extensión, y al vencer los recursos se detienen: alerta de presupuesto desde el día 1 y el destino de mudanza (Hetzner, Oracle o local) listo en el ApplicationSet. El egress de GKE hacia Cloudflare se cobra.
 - [ ] **Rate limit como segunda capa: middleware en la app con Redis.** ~~En el Gateway, por IP~~ — cambiado el 2026-10-14: va en un middleware (`slowapi` o `fastapi-limiter`) con contadores en Redis, porque permite limitar por usuario o por email y no depende del Gateway que se elija; el Gateway solo entraría con un rate limit global tipo Envoy. Endpoints: login, registro, `reset-password/request`, `/users/resolve` (ítem aparte), `/search/feed` (ítem aparte), `predict` del AVM y `reachable-pois` (dispara ORS y Overpass). Redis efímero sirve: perder contadores al reiniciar es tolerable. Decidir fail-open o fail-closed por endpoint (login y reset, discutible). La primera capa sigue siendo Cloudflare (DDoS, WAF y rate limit por IP en el edge); además, detección de fuerza bruta en Keycloak y registro cerrado o cuentas demo de solo lectura.
 - [ ] **`pool_pre_ping` en los engines de SQLAlchemy.** Neon suspende el cómputo gratis a los 5 minutos sin uso y las conexiones del pool mueren; sin `pool_pre_ping`, la primera request tras la suspensión falla. Hoy ningún servicio lo configura. Es cambio de código en los 4 servicios: discutirlo antes. Ver [[adr-stateless-cluster-external-data]].
