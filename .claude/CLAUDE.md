@@ -52,6 +52,7 @@ The project hooks (`.claude/settings.json`) lint each edited file and block fini
 1. Read the diff looking for bugs, smells and gaps (error handling the user can see, types without casts, no hand-written routes, layer violations).
 2. Fix what is in scope; for what isn't, say it and record it in `docs/wiki/_shared/open-items.md`.
 3. Repeat until the checks are green and the review finds nothing new.
+4. Before opening a PR, run `/structural-review` on the branch; a PreToolUse hook blocks `gh pr create` until it has run on HEAD.
 
 ### Before stating facts or acting on shared state
 
