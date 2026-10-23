@@ -7,7 +7,7 @@ import pytest
 from fastapi import Response
 from pydantic import TypeAdapter
 
-from app.api.routes.account import (
+from app.api.routes.auth import (
     change_password,
     confirm_reset_password,
     login,
@@ -147,7 +147,7 @@ async def test_login_calls_uc_sets_cookies_and_returns_ok(mocker, response, auth
     uc.login = AsyncMock(return_value=auth_tokens)
 
     set_cookies = mocker.patch(
-        "app.api.routes.account.set_auth_cookies",
+        "app.api.routes.auth.set_auth_cookies",
         autospec=True,
     )
 
@@ -166,7 +166,7 @@ async def test_login_does_not_set_cookies_if_uc_fails(mocker, response):
     uc.login = AsyncMock(side_effect=Exception("boom"))
 
     set_cookies = mocker.patch(
-        "app.api.routes.account.set_auth_cookies",
+        "app.api.routes.auth.set_auth_cookies",
         autospec=True,
     )
 
@@ -187,7 +187,7 @@ async def test_refresh_calls_uc_sets_cookies_and_returns_ok(mocker, response, au
     uc.refresh_token = AsyncMock(return_value=auth_tokens)
 
     set_cookies = mocker.patch(
-        "app.api.routes.account.set_auth_cookies",
+        "app.api.routes.auth.set_auth_cookies",
         autospec=True,
     )
 
@@ -205,7 +205,7 @@ async def test_refresh_does_not_set_cookies_if_uc_fails(mocker, response):
     uc.refresh_token = AsyncMock(side_effect=Exception("boom"))
 
     set_cookies = mocker.patch(
-        "app.api.routes.account.set_auth_cookies",
+        "app.api.routes.auth.set_auth_cookies",
         autospec=True,
     )
 
@@ -232,7 +232,7 @@ async def test_change_password_calls_uc_deletes_cookies_and_returns_ok(
     uc.change_password = AsyncMock(return_value=None)
 
     delete_cookies = mocker.patch(
-        "app.api.routes.account.delete_auth_cookies",
+        "app.api.routes.auth.delete_auth_cookies",
         autospec=True,
     )
 
@@ -258,7 +258,7 @@ async def test_change_password_does_not_delete_cookies_if_uc_fails(
     uc.change_password = AsyncMock(side_effect=Exception("boom"))
 
     delete_cookies = mocker.patch(
-        "app.api.routes.account.delete_auth_cookies",
+        "app.api.routes.auth.delete_auth_cookies",
         autospec=True,
     )
 
@@ -278,7 +278,7 @@ async def test_logout_calls_uc_deletes_cookies_and_returns_none(
     mocker, response, refresh_token_str
 ):
     delete_cookies = mocker.patch(
-        "app.api.routes.account.delete_auth_cookies",
+        "app.api.routes.auth.delete_auth_cookies",
         autospec=True,
     )
 

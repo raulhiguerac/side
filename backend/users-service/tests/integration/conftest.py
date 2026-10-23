@@ -63,17 +63,12 @@ os.environ.setdefault("FRONT_BASE_URL", "http://localhost:3000")
 
 # Ahora si podemos importar la app y sus dependencias
 from app.api.deps.auth import get_current_principal
-from app.api.deps.auth_use_cases import (
+from app.api.deps.shared.cache import get_cache_port
+from app.api.deps.shared.db import get_session
+from app.api.deps.shared.email import get_email_sender
+from app.api.deps.shared.identity_provider import (
     get_auth_provider,
     get_identity_provider,
-)
-from app.api.deps.auth_use_cases import (
-    get_cache_port as get_auth_cache_port,
-)
-from app.api.deps.db import get_session
-from app.api.deps.email import get_email_sender
-from app.api.deps.user_use_cases import (
-    get_cache_port as get_user_cache_port,
 )
 from app.main import create_app
 from app.schemas.common import Principal
@@ -322,10 +317,8 @@ def client(
     # --- OVERRIDE 3: Auth Provider (Keycloak OIDC) ---
     app.dependency_overrides[get_auth_provider] = lambda: mock_auth_provider
 
-    # --- OVERRIDE 4: Cache (Redis) - hay dos funciones get_cache_port! ---
-    # Una en auth_use_cases y otra en user_use_cases
-    app.dependency_overrides[get_auth_cache_port] = lambda: mock_cache
-    app.dependency_overrides[get_user_cache_port] = lambda: mock_cache
+    # --- OVERRIDE 4: Cache (Redis) ---
+    app.dependency_overrides[get_cache_port] = lambda: mock_cache
 
     # --- OVERRIDE 5: Email Sender (SMTP) ---
     app.dependency_overrides[get_email_sender] = lambda: mock_email_sender

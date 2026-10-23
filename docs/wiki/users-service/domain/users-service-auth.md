@@ -1,7 +1,7 @@
 ---
 title: Dominio auth — users-service
 status: draft
-last-verified: 2026-10-17
+last-verified: 2026-10-18
 owners: [users-service]
 related:
   - "[[users-service]]"
@@ -9,7 +9,7 @@ related:
   - "[[users-service-keycloak]]"
   - "[[adr-keycloak-saga-compensation]]"
   - "[[adr-action-tokens-redis]]"
-sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-10-14-mvp-close-and-demo-infra-costs.md]
+sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-10-14-mvp-close-and-demo-infra-costs.md, ../../../sources/users-service/2026-10-18-smtp-email-adapter-and-api-layout.md]
 ---
 
 ## TL;DR
@@ -58,7 +58,8 @@ Dos pasos desacoplados por un token en Redis (ver [[adr-action-tokens-redis]]):
 1. **Request** (`/auth/reset-password/request`):
    - Busca la cuenta por email; si no existe o no está activa, **retorna en silencio** (no filtra existencia).
    - Genera `secrets.token_urlsafe(32)`, guarda en Redis `{account_id}` bajo `reset_password_cache_key(hash_token(token))` con TTL.
-   - Manda email (Brevo) con URL al frontend que incluye el token en query.
+   - `ResetPasswordMailer` renderiza la plantilla y la manda por SMTP con la URL al frontend, que lleva el token en query ([[users-service-email]]).
+   - Si el envío falla, el endpoint responde 500 en vez de 202, y eso solo pasa con cuentas activas: la falla sí deja ver que la cuenta existe ([[open-items]]).
 2. **Confirm** (`/auth/reset-password/confirm`, token vía Bearer):
    - Valida que `new_password == confirm_password`.
    - `getdel_json` del token (consumo atómico — un solo uso).
@@ -78,6 +79,6 @@ Los endpoints de request (reset / reactivación) siempre responden 202 con mensa
 - El reset password guarda en Redis el `account_id` bajo el hash del token con TTL ([request_reset_password.py:34-41](backend/users-service/src/app/services/auth/use_cases/request_reset_password.py#L34-L41)).
 - Confirm consume el token con `getdel_json` (un solo uso) ([confirm_reset_password.py:59-67](backend/users-service/src/app/services/auth/use_cases/confirm_reset_password.py#L59-L67)).
 - Request-reset retorna en silencio si la cuenta no existe o está inactiva ([request_reset_password.py:31-32](backend/users-service/src/app/services/auth/use_cases/request_reset_password.py#L31-L32)).
-- Change-password borra las cookies de auth tras el cambio ([account.py:97-99](backend/users-service/src/app/api/routes/account.py#L97-L99)).
+- Change-password borra las cookies de auth tras el cambio ([auth.py:97-99](backend/users-service/src/app/api/routes/auth.py#L97-L99)).
 - El link de reset apunta a `/reset-password` y el de reactivación a `/reactivate`, sin `/#/` ([request_reset_password.py:45](backend/users-service/src/app/services/auth/use_cases/request_reset_password.py#L45), [request_account_reactivation.py:74](backend/users-service/src/app/services/user/use_cases/account/request_account_reactivation.py#L74)).
 - El token de reset es `secrets.token_urlsafe(32)` ([request_reset_password.py:34](backend/users-service/src/app/services/auth/use_cases/request_reset_password.py#L34)).

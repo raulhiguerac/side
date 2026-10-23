@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-10-17
+last-verified: 2026-10-18
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -49,6 +49,7 @@ sources:
   - ../../sources/frontend/2026-10-09-api-layer-map-cluster-and-typecheck.md
   - ../../sources/frontend/2026-10-16-shared-buttons.md
   - ../../sources/frontend/2026-10-16-shared-inputs-and-color-tokens.md
+  - ../../sources/frontend/2026-10-18-reset-and-reactivation-front-gaps.md
 ---
 
 ## TL;DR
@@ -387,6 +388,8 @@ response 401
 
 **`AUTH_ENTRYPOINTS`** excluye login y register del retry-refresh — un 401 ahí es "credenciales inválidas", no "sesión expirada". **Logout también está excluido (2026-10-09)**: si el refresh falla, `forceLogout → logout → 401` se encolaría en `failedQueue` esperando un refresh que ya terminó, y la promesa no resolvería nunca. Las rutas salen de `USERS_ENDPOINTS`.
 
+**Un endpoint con token propio que responde 401 tiene que ir en `AUTH_ENTRYPOINTS` (2026-10-18).** Los confirm de reset y de reactivación mandan un action token en `Authorization: Bearer` y responden `401 TOKEN_INVALID_OR_EXPIRED` si venció o ya se usó. Fuera de la lista, el interceptor lo toma por sesión vencida: intenta el refresh y rechaza con el error del refresh, así que la vista no puede decir "el enlace venció". Hoy esos endpoints no existen en el front ([[open-items]]).
+
 **`forceLogout()`** solo llama a `logout()` si `authStore.isAuthenticated` (2026-10-09): un anónimo cuyo `checkAuth` da 401 y no tiene refresh simplemente queda anónimo, sin redirección a `/`. Reemplazó al viejo `redirectToLogin()` (`window.location.href` hardcodeado a `/#/login`, hard reload). Ahora hace `const { useAuthStore } = await import("@/stores/auth"); await useAuthStore().logout()` — invalida el refresh token en el back de verdad y limpia el estado de Pinia antes de redirigir, en vez de solo tirar un reload. El `import()` dinámico es deliberado: evita un ciclo de imports estático (`auth.ts → usersApi.ts → interceptors.ts → auth.ts`), ya que `auth.ts` importa `usersApi` para sus propias llamadas.
 
 **`isRefreshing` y `failedQueue` son module-level** (declarados fuera de cualquier función o composable Vue), no instancia-por-componente. Esto es intencional: sobreviven al desmonte/remonte de componentes. Si fueran `ref` dentro de un composable, cada componente tendría su propio flag y podrían dispararse múltiples refresh concurrentes.
@@ -593,6 +596,7 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 
 ## Claims
 
+- `AUTH_ENTRYPOINTS` contiene solo `login`, `register` y `logout` ([interceptors.ts:29-33](frontend/src/api/clients/interceptors.ts#L29-L33)).
 - `main.ts` registra Pinia, vue-router, vue3-cookies y Vueform — sin axios instance global ([main.ts:15-20](frontend/src/main.ts#L15-L20)).
 - `useAuthStore.checkAuth` obtiene el perfil con `usersApi.getAuthProfile()` y usa `_authChecked` para no re-disparar en cada navegación protegida ([stores/auth.ts:42-48](frontend/src/stores/auth.ts#L42-L48)).
 - `useAuthStore.fillUserData()` no tiene try/catch propio — un 401 (con refresh fallido) lo maneja el interceptor de `usersApi` centralizadamente; el error que llegue a propagarse lo atrapa el `watch` de `App.vue` ([stores/auth.ts](frontend/src/stores/auth.ts), [App.vue](frontend/src/App.vue)).

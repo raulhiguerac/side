@@ -1,7 +1,7 @@
 ---
 title: Dev workflow — reglas de trabajo del monorepo
 status: stable
-last-verified: 2026-10-16
+last-verified: 2026-10-18
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -17,6 +17,7 @@ sources:
   - ../../sources/_shared/2026-10-16-backend-ruff-lint-green.md
   - ../../sources/_shared/2026-10-16-backend-ci-caller-and-gitignore.md
   - ../../sources/_shared/2026-10-16-backend-ci-first-run-and-sonar.md
+  - ../../sources/users-service/2026-10-18-smtp-email-adapter-and-api-layout.md
 ---
 
 ## TL;DR
@@ -34,7 +35,9 @@ antes de tocar nada:
 secrets de Keycloak, claves S3— esta versionada a proposito en
 `backend/<servicio>/.env.dev`: son valores de `localhost`, y fijarlos es lo que
 hace el entorno reproducible. En `.env.local` (gitignoreado) van solo siete
-valores: las cuatro claves de R2 y las de Mapbox, Brevo y Google Maps. Los
+valores: las cuatro claves de R2 y las de Mapbox, Brevo y Google Maps. La de Brevo ya no la
+lee ningún código: el email pasó a SMTP y faltan pasar sus credenciales a
+`.env.local.example` ([[users-service-email]]). Los
 binarios y los datos no van al repo: los baja `make bootstrap` desde R2.
 
 **Reconciliar, no restaurar.** Cuatro one-shots dejan la infra en su estado
