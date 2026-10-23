@@ -1,0 +1,20 @@
+Qué bueno tenerte de vuelta
+
+Hola {{ name }},
+
+Recibimos una solicitud para reactivar la cuenta de Mi Casa en Minutos asociada a {{ email }}.
+
+Si fuiste tú, abre este enlace y tu cuenta quedará activa de nuevo, con tus datos tal como los dejaste:
+
+{{ redirect_url }}
+
+Si no solicitaste la reactivación, puedes ignorar este mensaje con tranquilidad. Tu cuenta seguirá desactivada y no se realizará ningún cambio.
+
+Por tu seguridad, este enlace:
+- es de un solo uso
+- expira en {{ ttl_minutes }} minutos
+
+Si necesitas ayuda adicional, no dudes en responder este correo.
+¡Estamos para acompañarte en cada paso hacia tu nuevo hogar!
+
+Mi Casa en Minutos

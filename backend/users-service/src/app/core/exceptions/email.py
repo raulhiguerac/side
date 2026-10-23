@@ -20,3 +20,12 @@ class EmailSenderUnavailableError(BaseError):
             cause=cause,
             context=context
         )
+
+class SmtpMisconfiguredError(BaseError):
+    def __init__(self, *, cause: Exception | None = None, context: dict[str, Any] | None = None):
+        super().__init__(
+            message="SMTP is misconfigured",
+            code="SMTP_MISCONFIGURED",
+            cause=cause,
+            context=context
+        )
