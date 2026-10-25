@@ -1,14 +1,14 @@
 ---
 title: frontend
 status: draft
-last-verified: 2026-10-17
+last-verified: 2026-10-24
 owners: [frontend]
 related:
   - "[[architecture]]"
   - "[[frontend-architecture]]"
   - "[[frontend-onboarding-flow]]"
   - "[[frontend-local-dev]]"
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md, ../../sources/frontend/2026-06-20-property-detail-view-refactor.md, ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md, ../../sources/frontend/2026-06-28-endpoint-coverage-and-stepimages.md, ../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md, ../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md, ../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md, ../../sources/frontend/2026-10-09-api-layer-map-cluster-and-typecheck.md, ../../sources/frontend/2026-10-17-front-backend-gap-review-and-eslint-cache.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md, ../../sources/frontend/2026-06-20-property-detail-view-refactor.md, ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md, ../../sources/frontend/2026-06-28-endpoint-coverage-and-stepimages.md, ../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md, ../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md, ../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md, ../../sources/frontend/2026-10-09-api-layer-map-cluster-and-typecheck.md, ../../sources/frontend/2026-10-17-front-backend-gap-review-and-eslint-cache.md, ../../sources/frontend/2026-10-24-reset-password-flow-wired.md]
 ---
 
 ## TL;DR
@@ -29,8 +29,8 @@ Lo que NO hace (todavía): comunicar con propietarios (no hay contacto ni mensaj
 | Surface | Estado | Backend asociado |
 |---|---|---|
 | `/login`, `/register` | ✅ funcional end-to-end | users-service `POST /v1/auth/{login,register}` |
-| `/forgot-password` | ⚠ solo pide el correo; no hay vista para confirmar el reset ni para reactivar, y el envío de correos está caído sin proveedor ([[users-service-email]]) | users-service `POST /v1/auth/reset-password/request` |
-| `/settings/{profile,security,account}` | ✅ perfil, foto, cambio de contraseña, desactivar; borrar cuenta comentado porque el back no lo implementa | users-service `/v1/users/me/*`, `/v1/auth/change-password` |
+| `/forgot-password`, `/reset-password` | ✅ reset de password de punta a punta, probado en dev (2026-10-24); falta la reactivación de cuenta | users-service `POST /v1/auth/reset-password/{request,confirm}` |
+| `/settings/{profile,security,account}` | ⚠ perfil, foto y desactivar funcionan; el cambio de contraseña siempre da 422 (el front manda `current_password` y el back espera `old_password`, ver [[open-items]]); borrar cuenta comentado porque el back no lo implementa | users-service `/v1/users/me/*`, `/v1/auth/change-password` |
 | `/`, `/about` | ⚠ estáticos, sin data dinámica | n/a |
 | `/feed/list` | ✅ filtros + neighborhood lookup + paginación por cursor | properties-service `GET /v1/search/feed` |
 | `/feed/map` | ✅ todo el bbox en el mapa con cluster + lista con scroll infinito ([[adr-feed-map-whole-bbox-cluster]]) | properties-service `GET /v1/search/feed/map` |
@@ -42,7 +42,7 @@ Lo que NO hace (todavía): comunicar con propietarios (no hay contacto ni mensaj
 | `/dev/imagenes` | sandbox interno | n/a — no es producto |
 | Onboarding modal (4 pasos) | ✅ cableado ([[frontend-onboarding-flow]]) | users-service `POST /v1/onboarding/{intent,city,neighborhood,property-type}` |
 
-Endpoints del backend que el front aún no consume: `POST /v1/auth/reset-password/confirm`, `POST /v1/users/reactivation/{request,confirm}` y `POST /v1/admin/properties/{id}/estimated-price` (ver [[open-items]]).
+Endpoints del backend que el front aún no consume: `POST /v1/users/reactivation/{request,confirm}` y `POST /v1/admin/properties/{id}/estimated-price` (ver [[open-items]]).
 
 ## Stack
 
@@ -69,7 +69,8 @@ Endpoints del backend que el front aún no consume: `POST /v1/auth/reset-passwor
 | `/users/:userId` | público | `PublicProfileView` |
 | `/login` | guest-only (redirige si logged) | `LoginView` |
 | `/register` | guest-only | `RegisterView` |
-| `/forgot-password` | sin auth meta | `ResetPasswordView` |
+| `/forgot-password` | sin auth meta | `ForgotPasswordView` |
+| `/reset-password` | sin auth meta (sin `isLogged`, para no perder el token si hay sesión) | `ResetPasswordView` |
 | `/settings` → `/settings/profile` | auth required | `SettingsLayout` + 3 children (`profile`, `security`, `account`) |
 | `/dev/imagenes` | público | `StepImagenesDevView` — preview del paso de imágenes sin auth ni form |
 | `/avm` | público | `AvmView` |

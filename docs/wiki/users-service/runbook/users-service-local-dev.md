@@ -1,14 +1,14 @@
 ---
 title: Runbook — users-service local dev
 status: draft
-last-verified: 2026-10-18
+last-verified: 2026-10-24
 owners: [users-service]
 related:
   - "[[users-service]]"
   - "[[users-service-architecture]]"
   - "[[users-service-keycloak]]"
   - "[[catalog-service-local-dev]]"
-sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md, ../../../sources/_shared/2026-10-16-backend-ci-reusable-and-test-deps.md, ../../../sources/users-service/2026-10-17-brevo-account-deleted-and-email-templates.md, ../../../sources/users-service/2026-10-18-smtp-email-adapter-and-api-layout.md, ../../../sources/frontend/2026-10-18-reset-and-reactivation-front-gaps.md]
+sources: [../../../sources/users-service/2026-05-28-foundational-exploration.md, ../../../sources/_shared/2026-09-07-entorno-dev-migrable.md, ../../../sources/_shared/2026-10-16-backend-ci-reusable-and-test-deps.md, ../../../sources/users-service/2026-10-17-brevo-account-deleted-and-email-templates.md, ../../../sources/users-service/2026-10-18-smtp-email-adapter-and-api-layout.md, ../../../sources/frontend/2026-10-18-reset-and-reactivation-front-gaps.md, ../../../sources/frontend/2026-10-24-reset-password-flow-wired.md]
 ---
 
 ## TL;DR
@@ -80,12 +80,12 @@ MINIO_URL=http://minio:9000
 ACCEPTED_IMAGE_MAX_SIZE=5242880
 ACCEPTED_IMAGE_MIME_TYPES=image/jpeg,image/png
 
-# Email (SMTP) — usuario y password van en .env.local
-SMTP_HOST=<host>
+# Email (SMTP) — en .env.dev solo el puerto; el resto en backend/users-service/.env.local
 SMTP_PORT=587
-SMTP_USERNAME=<usuario>
-SMTP_PASSWORD=<password>
-SMTP_FROM=<remitente>
+SMTP_HOST=<host>            # .env.local
+SMTP_FROM=<remitente>       # .env.local
+SMTP_USERNAME=<usuario>     # .env.local
+SMTP_PASSWORD=<password>    # .env.local
 
 # Frontend (para los links de los emails)
 FRONT_BASE_URL=http://localhost:8080
@@ -94,11 +94,12 @@ CACHE_REACTIVATION_TTL_SECONDS=900
 
 ### Trampas
 
-- **Sin `SMTP_*` no hay correos.** `.env.dev` declara las `SMTP_*` pero, sin proveedor elegido, deja `SMTP_HOST` y `SMTP_FROM` vacíos (solo `SMTP_PORT=587`), y usuario y password van en `.env.local`. Si falta cualquiera de las cinco, `get_email_sender()` lanza `SmtpMisconfiguredError` y los endpoints de reset y reactivación responden 500, exista o no la cuenta ([[users-service-email]]).
+- **Sin `SMTP_*` no hay correos.** `.env.dev` solo declara `SMTP_PORT=587`; `SMTP_HOST`, `SMTP_FROM`, `SMTP_USERNAME` y `SMTP_PASSWORD` van en `backend/users-service/.env.local`, gitignoreado (2026-10-24). Todavía no hay un `.env.local.example` del servicio ([[open-items]]). Si falta cualquiera de las cinco, `get_email_sender()` lanza `SmtpMisconfiguredError` y los endpoints de reset y reactivación responden 500, exista o no la cuenta ([[users-service-email]]).
 - **Mailpit para probar en local.** Es un SMTP falso con UI web donde se ven los correos. Como usuario y password son obligatorios, arráncalo con `MP_SMTP_AUTH_ACCEPT_ANY=1` y `MP_SMTP_AUTH_ALLOW_INSECURE=1` para que acepte cualquier credencial sin TLS. Todavía no está en el compose.
 - **`uv add` y `uv remove` sincronizan el `.venv` con el lock** y borran los paquetes instalados a mano que no estén en él.
 - **Dos clients de Keycloak distintos**: `KC_CLIENT_ID`/`KC_ADMIN_SECRET` (admin) y `KC_CLIENT_AUTH`/`KC_AUTH_SECRET` (auth). No reusar el mismo client para ambos.
-- **El `FRONT_BASE_URL` real de `.env.dev` no es el de arriba.** Vale `app.micasaenminutos`, sin esquema ni TLD, así que los links de reset y reactivación del correo salen rotos. Para probarlos en dev tiene que ser `http://localhost:8080` ([[open-items]]).
+- **`up_dev_env.sh` carga el `.env.local` del servicio.** Si `backend/<ms>/.env.local` existe, lo exporta en el subshell que lanza ese servicio, así que pisa a los `.env.dev`. No llega a tu terminal (a propósito): para tenerlo en la shell, `set -a; . backend/users-service/.env.local; set +a`. Se lee al arrancar: si cambia, hay que bajar y volver a levantar el servicio.
+- **Cambiar un `.env.dev` exige recrear `develop`.** Entran por el `env_file` del compose, así que reiniciar los servicios no alcanza: `docker compose up -d develop` y después `./up_dev_env.sh`.
 - **`FRONT_BASE_URL` es obligatorio** — el settings hace `raise RuntimeError` si falta ([settings.py:9-11](backend/users-service/src/app/core/config/settings.py#L9-L11)).
 
 ## Configurar Keycloak (primera vez)
@@ -173,7 +174,9 @@ docker logs $(docker ps -qf name=keycloak) -f
 ## Claims
 
 - La DB es `postgres:17` (`identity_service_db`), sin PostGIS ([docker-compose.yml:19-24](docker-compose.yml#L19-L24)).
-- La dep de email exige `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` y `SMTP_FROM`, y `.env.dev` las declara con host y remitente vacíos ([email.py:10](backend/users-service/src/app/api/deps/shared/email.py#L10), [.env.dev:43-48](backend/users-service/.env.dev#L43-L48)).
+- La dep de email exige `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` y `SMTP_FROM`, y `.env.dev` solo declara `SMTP_PORT` ([email.py:10](backend/users-service/src/app/api/deps/shared/email.py#L10), [.env.dev:45](backend/users-service/.env.dev#L45)).
+- `FRONT_BASE_URL` vale `http://localhost:8080` en `.env.dev` ([.env.dev:41](backend/users-service/.env.dev#L41)).
+- `up_dev_env.sh` exporta el `.env.local` de cada servicio, si existe, antes de lanzarlo ([up_dev_env.sh:43](up_dev_env.sh#L43)).
 - `FRONT_BASE_URL` es obligatorio: el settings lanza `RuntimeError` si falta ([settings.py:9-11](backend/users-service/src/app/core/config/settings.py#L9-L11)).
 - La app monta el router bajo `/v1` e incluye el health router ([main.py:33](backend/users-service/src/app/main.py#L33), [api/main.py:3-11](backend/users-service/src/app/api/main.py#L3-L11)).
 - Hay 6 migraciones y 40 archivos de test al 2026-05-28 ([migrations/versions/](backend/users-service/src/app/migrations/versions), [tests/](backend/users-service/tests)).
