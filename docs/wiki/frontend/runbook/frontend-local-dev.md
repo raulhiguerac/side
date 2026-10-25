@@ -16,6 +16,8 @@ sources:
   - ../../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md
   - ../../../sources/frontend/2026-10-09-api-layer-map-cluster-and-typecheck.md
   - ../../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md
+  - ../../../sources/_shared/2026-10-17-front-delivery-ci-cd-and-cloudflare-terraform.md
+  - ../../../sources/frontend/2026-10-17-front-backend-gap-review-and-eslint-cache.md
 ---
 
 ## TL;DR
@@ -153,6 +155,8 @@ Salida: `dist/` con assets estáticos. **Update 2026-10-17:** el destino es Clou
 
 **Sin pipeline de CI/CD al 2026-09-28**: no existe `.github/workflows`, así que ni lint, ni typecheck, ni build corren solos.
 
+**Variables de entorno en el build (2026-10-17).** `vue-cli-service build` mete cada `process.env.VUE_APP_*` dentro del JS (y `VUE_APP_GMAPS_KEY` dentro de `public/index.html`), así que los valores se fijan al **compilar**: Pages, o cualquier host estático, no inyecta nada al servir. Solo `.env.development` está versionado. Sin variables, `config/index.ts` cae a `/api/*`, que en Pages respondería el fallback con `index.html`. En producción los valores no van al repo: salen del Environment `production` de GitHub y el paso de build los pasa como `env:`. Ver [[open-items]] ("CD del front con `wrangler`").
+
 ## Linting
 
 ```bash
@@ -166,6 +170,8 @@ Si se corre ESLint a mano, hay que pasar las extensiones: `eslint src` a secas *
 ```bash
 node_modules/.bin/eslint --ext .ts,.vue src
 ```
+
+**Trampa: `npm run serve` reporta errores de lint que `eslint` no ve.** El dev server lintea con `eslint-webpack-plugin` y caché en `node_modules/.cache/eslint/<hash>.json`. Esa caché valida cada archivo por mtime y tamaño, y el plugin de Vue CLI solo la invalida si cambia la versión de eslint o el `package.json`, no el resultado de prettier. El 2026-10-17 reportaba 230 errores `prettier/prettier` en 17 archivos que `eslint --ext .ts,.vue src` y `prettier --check` daban limpios. Arreglo: borrar `node_modules/.cache/eslint` en el contenedor y reiniciar `serve`.
 
 ## Typecheck
 

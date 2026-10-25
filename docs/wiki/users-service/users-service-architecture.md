@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna de users-service
 status: draft
-last-verified: 2026-07-16
+last-verified: 2026-10-18
 owners: [users-service]
 related:
   - "[[architecture]]"
@@ -10,12 +10,12 @@ related:
   - "[[users-service-user]]"
   - "[[users-service-keycloak]]"
   - "[[users-service-kc-compensation]]"
-sources: [../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-07-16-jwt-roles-is-admin.md]
+sources: [../../sources/users-service/2026-05-28-foundational-exploration.md, ../../sources/users-service/2026-07-16-jwt-roles-is-admin.md, ../../sources/users-service/2026-10-18-smtp-email-adapter-and-api-layout.md]
 ---
 
 ## TL;DR
 
-Hex pattern con dos dominios (`auth`, `user`) + `shared`. Tres capas: `api/` (HTTP + DI + cookies), `services/<domain>/` (use cases + ports + adapters + policies + schemas), `integrations/` (Keycloak, Brevo, MinIO, Redis). Persistencia SQLModel a Postgres. Worker de compensación in-process vía APScheduler en el lifespan de FastAPI.
+Hex pattern con dos dominios (`auth`, `user`) + `shared`. Tres capas: `api/` (HTTP + DI + cookies), `services/<domain>/` (use cases + ports + adapters + policies + schemas), `integrations/` (Keycloak, MinIO, Redis); el email va por SMTP desde un adapter de `services/shared`. Persistencia SQLModel a Postgres. Worker de compensación in-process vía APScheduler en el lifespan de FastAPI.
 
 ## Layout
 
@@ -29,11 +29,11 @@ src/app/
 │   │   ├── user_use_cases.py       # DI dominio user
 │   │   ├── onboarding_use_cases.py # DI onboarding
 │   │   ├── upload_validation.py    # valida MIME/size de foto
-│   │   └── db.py, storage.py
+│   │   └── shared/                 # providers de infra (lru_cache): cache, db, email, identity_provider, storage
 │   ├── http/cookies.py             # set/delete auth cookies
 │   ├── handlers/exception_handlers.py
 │   ├── middleware/correlation_id.py
-│   └── routes/{account,user,onboarding,health}.py
+│   └── routes/{auth,onboarding,health}.py, routes/user/{account,profile}.py
 ├── core/
 │   ├── config/settings.py          # FRONT_BASE_URL, TTLs, ADMIN_ROLE
 │   ├── exceptions/                 # base, auth, account, user, identity_provider, email, storage, cache, validation
@@ -43,11 +43,11 @@ src/app/
 │   └── logging/
 ├── integrations/
 │   ├── identity_provider/keycloak/{admin_client,auth_client}.py
-│   ├── email/brevo/client.py
 │   ├── storage/minio/storage.py
 │   └── cache/redis/cache.py
 ├── models/{account,interests,onboarding,kc_tasks}.py
 ├── schemas/{base,common}.py        # Principal
+├── templates/email/                # plantillas Jinja2 de reset y reactivación (.html + .txt)
 ├── services/
 │   ├── auth/                       # registro, sesiones, passwords
 │   ├── user/                       # cuenta, perfil, onboarding, intereses
@@ -81,8 +81,8 @@ Cuenta (get/deactivate/reactivate), perfil (get/update/foto), onboarding (4 paso
 
 ## Dominio `shared`
 
-- Ports: `AccountReader`, `CachePort`, `EmailSender`, `StoragePort`.
-- Adapters: `RedisCacheAdapter`, `BrevoEmailSenderAdapter`, `MinioStorageAdapter`, `SqlAccountReader`.
+- Ports: `AccountReader`, `CachePort`, `EmailSenderPort`, `StoragePort`.
+- Adapters: `RedisCacheAdapter`, `SmtpEmailSenderAdapter` (usa `aiosmtplib` directo, sin cliente en `integrations/`), `MinioStorageAdapter`, `SqlAccountReader`.
 - Policies: `AccountEmailAvailabilityPolicy` (email único al registrar), `ActiveAccountPolicy`.
 - Helpers: `security.hash_token`, `url_builder` (redirect/public URLs).
 
@@ -93,7 +93,7 @@ Cuenta (get/deactivate/reactivate), perfil (get/update/foto), onboarding (4 paso
 | **Keycloak** | `KeycloakAdminClient`, `KeycloakAuthClient` | Gestión de usuarios + autenticación. Ver [[users-service-keycloak]]. |
 | **Redis** | `CacheClient` | Cache de cuenta/perfil + tokens de un solo uso. |
 | **MinIO / S3** | `StorageClient` (boto3) | Fotos de perfil (upload directo a través del backend). |
-| **Brevo** | `BrevoClient` | Emails transaccionales. Ver [[users-service-email-brevo]]. |
+| **SMTP** | `aiosmtplib` (desde `SmtpEmailSenderAdapter`) | Emails transaccionales. Ver [[users-service-email]]. |
 
 ## Auth y sesiones
 
@@ -112,9 +112,10 @@ Jerarquía amplia en `core/exceptions/`: `base`, `auth`, `account`, `user`, `ide
 
 ## Claims
 
+- Los providers de infra con `lru_cache` viven en `api/deps/shared/` (`cache`, `db`, `email`, `identity_provider`, `storage`) ([deps/shared/](backend/users-service/src/app/api/deps/shared)).
 - `account_id` de `accounts` es el UUID generado por Keycloak (se usa como PK) ([register_account.py:77-84](backend/users-service/src/app/services/auth/use_cases/register_account.py#L77-L84)).
 - Hay 9 tablas: accounts, user_profile, company_profile, user_consents, onboarding_completions, user_interest, user_neighborhood_interest, user_property_type_interest, kc_compensation_tasks ([models/](backend/users-service/src/app/models)).
-- `user_neighborhood_interest.interest_rank` está acotado a 1-5 por `CheckConstraint` ([interests.py:66](backend/users-service/src/app/models/interests.py#L66)).
+- `user_neighborhood_interest.interest_rank` está acotado a 1-5 por `CheckConstraint` ([interests.py:65](backend/users-service/src/app/models/interests.py#L65)).
 - El `Principal` lleva `scope` y `roles` extraídos de `claims.scope`/`claims.realm_access.roles` ([auth.py:94-102](backend/users-service/src/app/api/deps/auth.py#L94-L102)).
 - `ADMIN_ROLE` (default `"admin"`) vive en `core/config/settings.py`, mismo nombre y default que en `catalog-service`/`properties-service`.
 - Hay dos clientes Keycloak: `KeycloakAdminClient` (admin secret) y `KeycloakAuthClient` (auth client secret) ([admin_client.py:18-46](backend/users-service/src/app/integrations/identity_provider/keycloak/admin_client.py#L18-L46), [auth_client.py:15-43](backend/users-service/src/app/integrations/identity_provider/keycloak/auth_client.py#L15-L43)).

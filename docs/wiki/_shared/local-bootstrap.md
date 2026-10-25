@@ -1,7 +1,7 @@
 ---
 title: Bootstrap del entorno local
 status: stable
-last-verified: 2026-09-27
+last-verified: 2026-10-18
 owners: [_shared]
 related:
   - "[[dev-workflow]]"
@@ -16,6 +16,7 @@ related:
 sources:
   - ../../sources/_shared/2026-09-07-entorno-dev-migrable.md
   - ../../sources/_shared/2026-09-27-minio-a-seaweedfs-y-rclone.md
+  - ../../sources/users-service/2026-10-18-smtp-email-adapter-and-api-layout.md
 ---
 
 ## TL;DR
@@ -51,7 +52,7 @@ declaran uno, y las dependencias usan `service_healthy` o
 | Origen | Contenido |
 |---|---|
 | git | Config determinista de dev (`backend/<svc>/.env.dev`, `frontend/.env.development`), el realm de Keycloak, los permisos S3 (`infra/seaweedfs/s3.json`), los scripts de init |
-| `.env.local` (gitignoreado) | Siete valores: 4 de Cloudflare R2 + Mapbox, Brevo y Google Maps |
+| `.env.local` (gitignoreado) | Siete valores: 4 de Cloudflare R2 + Mapbox, Brevo y Google Maps. `BREVO_API_KEY` ya no la lee nadie; falta reemplazarla por las credenciales SMTP ([[users-service-email]]) |
 | R2 `runtime/` (~85 MB) | El `.pbf` de Bogota, los dumps de seed y el modelo AVM con su registro |
 | R2 `datasets/` (~480 MB) | Scrape y CSVs de entrenamiento. Opcional, `make data-pull` |
 

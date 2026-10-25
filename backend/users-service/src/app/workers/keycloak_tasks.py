@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlmodel import Session, select
 
-from app.api.deps.db import engine
+from app.api.deps.shared.db import engine
 from app.core.logging.logger import get_logger
 from app.integrations.identity_provider.keycloak.admin_client import KeycloakAdminClient
 from app.models.kc_tasks import KcCompensationTask, KcTaskStatus

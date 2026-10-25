@@ -1,14 +1,14 @@
 ---
 title: frontend
 status: draft
-last-verified: 2026-10-09
+last-verified: 2026-10-17
 owners: [frontend]
 related:
   - "[[architecture]]"
   - "[[frontend-architecture]]"
   - "[[frontend-onboarding-flow]]"
   - "[[frontend-local-dev]]"
-sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md, ../../sources/frontend/2026-06-20-property-detail-view-refactor.md, ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md, ../../sources/frontend/2026-06-28-endpoint-coverage-and-stepimages.md, ../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md, ../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md, ../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md, ../../sources/frontend/2026-10-09-api-layer-map-cluster-and-typecheck.md]
+sources: [../../sources/frontend/2026-05-21-foundational-qa.md, ../../sources/frontend/2026-05-27-gmaps-places-avm-form.md, ../../sources/frontend/2026-06-03-feed-filters-neighborhood-lookup.md, ../../sources/frontend/2026-06-08-feed-pagination-map-view.md, ../../sources/frontend/2026-06-11-property-detail-router-refactor.md, ../../sources/frontend/2026-06-20-property-detail-view-refactor.md, ../../sources/frontend/2026-06-21-public-profile-view-and-properties-refactor.md, ../../sources/frontend/2026-06-28-endpoint-coverage-and-stepimages.md, ../../sources/frontend/2026-07-29-admin-table-tanstack-and-cleanup.md, ../../sources/frontend/2026-09-28-catalog-tabs-and-production-readiness.md, ../../sources/frontend/2026-10-04-admin-neighborhoods-tab.md, ../../sources/frontend/2026-10-09-api-layer-map-cluster-and-typecheck.md, ../../sources/frontend/2026-10-17-front-backend-gap-review-and-eslint-cache.md]
 ---
 
 ## TL;DR
@@ -22,21 +22,27 @@ Capa de presentación del producto inmobiliario. Tres jobs claros:
 2. **Consumir el catálogo geográfico** para autocomplete (countries/localities/neighborhoods).
 3. **Onboarding** del usuario tras autenticación: capturar intent + ubicación de interés + tipo de propiedad → personalizar el feed.
 
-Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con propietarios. Esos viewports están en scaffolding o no existen.
+Lo que NO hace (todavía): comunicar con propietarios (no hay contacto ni mensajería) ni confirmar el reset de contraseña o reactivar la cuenta.
 
-## Estado funcional al 2026-05-21
+## Estado funcional al 2026-10-17
 
 | Surface | Estado | Backend asociado |
 |---|---|---|
-| `/login` | ✅ funcional end-to-end | users-service `POST /v1/auth/login` |
-| `/register` | ✅ funcional end-to-end | users-service `POST /v1/auth/register` |
-| `/forgot-password` | ⚠ scaffolded | desconocido |
-| `/settings/{profile,security,account}` | ✅ con UCs en users-service | users-service (wiki pendiente) |
-| `/about`, `/` (home) | ⚠ scaffolded — sin data dinámica | n/a |
-| `/feed/list` (feed lista) | ✅ feed funcional — sidebar filtros + neighborhood lookup + paginación por cursor | properties-service `GET /v1/search/feed` |
-| `/feed/map` (feed mapa) | ✅ todo el bbox en el mapa con cluster + lista con scroll infinito (2026-10-09, [[adr-feed-map-whole-bbox-cluster]]) | properties-service `GET /v1/search/feed/map` |
-| `/dev` (DevPlayground) | sandbox interno | n/a — no es producto |
-| Onboarding modal (4 pasos) | ⚠ front completo, backend pausado | users-service `/v1/onboarding/{city,neighborhood}` — pausado |
+| `/login`, `/register` | ✅ funcional end-to-end | users-service `POST /v1/auth/{login,register}` |
+| `/forgot-password` | ⚠ solo pide el correo; no hay vista para confirmar el reset ni para reactivar, y el envío de correos está caído sin proveedor ([[users-service-email]]) | users-service `POST /v1/auth/reset-password/request` |
+| `/settings/{profile,security,account}` | ✅ perfil, foto, cambio de contraseña, desactivar; borrar cuenta comentado porque el back no lo implementa | users-service `/v1/users/me/*`, `/v1/auth/change-password` |
+| `/`, `/about` | ⚠ estáticos, sin data dinámica | n/a |
+| `/feed/list` | ✅ filtros + neighborhood lookup + paginación por cursor | properties-service `GET /v1/search/feed` |
+| `/feed/map` | ✅ todo el bbox en el mapa con cluster + lista con scroll infinito ([[adr-feed-map-whole-bbox-cluster]]) | properties-service `GET /v1/search/feed/map` |
+| `/listing/:id` | ✅ detalle + "Cerca del lugar" ([[frontend-poi-reachable]]); falta galería en popup y no hay contacto con el dueño | properties-service `GET /v1/properties/{id}`, catalog-service `POST /v1/geo-resolution/reachable-pois` |
+| `/properties`, `/properties/create`, `/properties/:id/edit` | ✅ listings propios, alta en 4 pasos con imágenes presigned, edición, visibilidad y borrado | properties-service `/v1/properties/*` |
+| `/users/:userId` | ✅ perfil público + listings; los botones WhatsApp/Mensaje/Llamar son decorativos | users-service `GET /v1/users/profiles/{id}`, properties-service `GET /v1/properties/users/{id}` |
+| `/avm` | ✅ formulario de avalúo | analytics-service `POST /v1/predict`, catalog-service `GET /v1/geo-resolution/by-coordinates` |
+| `/admin/*` | ✅ moderación, promociones, imports y catálogo (las cuatro tabs, pendientes de prueba en navegador) ([[frontend-admin-panel]]) | properties-service `/v1/admin/*`, catalog-service `/v1/admin/*` |
+| `/dev/imagenes` | sandbox interno | n/a — no es producto |
+| Onboarding modal (4 pasos) | ✅ cableado ([[frontend-onboarding-flow]]) | users-service `POST /v1/onboarding/{intent,city,neighborhood,property-type}` |
+
+Endpoints del backend que el front aún no consume: `POST /v1/auth/reset-password/confirm`, `POST /v1/users/reactivation/{request,confirm}` y `POST /v1/admin/properties/{id}/estimated-price` (ver [[open-items]]).
 
 ## Stack
 
@@ -54,25 +60,30 @@ Lo que NO hace (todavía): publicar listings, navegar el feed, comunicar con pro
 - ~~**Firebase 10** + Google sign-in~~: **removido el 2026-07-28** ejecutando [[adr-firebase-removal]]. El spike nunca llegó a funcionar — no se inicializaba y el endpoint backend no existía.
 - ~~`vue-class-component`~~: **removido el 2026-07-28**, la sospecha de zombie se confirmó (cero imports). Junto con él salieron `vuelidate`/`@vuelidate/*` y `vue-google-autocomplete`.
 
-## Routes (11)
+## Routes (17 de primer nivel)
 
 | Path | Auth | Componente |
 |---|---|---|
 | `/` | público | `HomeView` |
 | `/about` | público | `AboutView` |
+| `/users/:userId` | público | `PublicProfileView` |
 | `/login` | guest-only (redirige si logged) | `LoginView` |
 | `/register` | guest-only | `RegisterView` |
 | `/forgot-password` | sin auth meta | `ResetPasswordView` |
-| `/settings` → `/settings/profile` | auth required | `SettingsLayout` + 3 children |
-| `/dev` | público | `DevPlaygroundView` |
-| `/dev/imagenes` | público | `StepImagenesDevView` — preview del step 3 sin auth ni form |
-| `/properties` | auth required | `MyPropertiesView` |
-| `/listing/:id` | público | `PropertyDetailView` |
+| `/settings` → `/settings/profile` | auth required | `SettingsLayout` + 3 children (`profile`, `security`, `account`) |
+| `/dev/imagenes` | público | `StepImagenesDevView` — preview del paso de imágenes sin auth ni form |
+| `/avm` | público | `AvmView` |
 | `/feed` → `/feed/list` | público | `PropertiesView` (parent con toggle) + `FeedView` |
 | `/feed/map` | público | `PropertiesView` (parent) + `MapView` |
-| `/users/:userId` | público | `PublicProfileView` — ⚠ scaffolded, todo mock (perfil + listings), endpoint real `GET /v1/properties/users/{user_id}` existe pero aún no está cableado |
+| `/listing/:id` | público | `PropertyDetailView` |
+| `/properties` | auth required | `MyPropertiesView` |
+| `/properties/create` | auth required | `CreatePropertyView` |
+| `/properties/:id/edit` | auth required | `EditPropertyView` |
+| `/admin` | admin | `AdminHomeView` |
+| `/admin/properties` | admin | `AdminPropertiesLayout` + moderación (default), `promotions` (+ `new`), `imports` |
+| `/admin/catalog` | admin | `AdminCatalogView` + barrios (default), `localities`, `admin-divisions`, `countries` |
 
-Guard global en `router.beforeEach`: si la ruta `requiresAuth` y `_authChecked === false`, llama `authStore.checkAuth()`. Si tras eso `!isAuthenticated`, redirige a `/login`.
+Guard global en `router.beforeEach`: si la ruta `requiresAuth` y `_authChecked === false`, llama `authStore.checkAuth()`. Si tras eso `!isAuthenticated`, redirige a `/login`. Las rutas `requiresAdmin` cargan los datos del usuario si falta `accountId` y redirigen a `home` si no es admin.
 
 ## Consumers de servicios backend
 
