@@ -4,7 +4,23 @@ import axios from "axios";
 import * as usersApi from "@/api/users";
 import { logger } from "@/utils/logger";
 
-const INVALID_LINK_MESSAGE = "El enlace no es válido o venció";
+function isInvalidToken(error: unknown): boolean {
+  return (
+    axios.isAxiosError(error) &&
+    error.response?.data?.code === "TOKEN_INVALID_OR_EXPIRED"
+  );
+}
+
+function messageForError(error: unknown): string {
+  if (!axios.isAxiosError(error))
+    return "No pudimos cambiar la contraseña, intenta de nuevo";
+
+  if (error.response?.data?.code === "PASSWORDS_DO_NOT_MATCH")
+    return "Las contraseñas no coinciden";
+  if (error.response?.status === 422) return "Revisa la contraseña";
+
+  return "No pudimos cambiar la contraseña, intenta de nuevo";
+}
 
 export function useResetPassword() {
   const route = useRoute();
@@ -17,7 +33,7 @@ export function useResetPassword() {
   const sending = ref(false);
   const confirmed = ref(false);
   const invalidLink = ref(!token);
-  const error = ref<string | null>(token ? null : INVALID_LINK_MESSAGE);
+  const error = ref<string | null>(null);
 
   async function confirmReset(newPassword: string, confirmPassword: string) {
     sending.value = true;
@@ -30,15 +46,8 @@ export function useResetPassword() {
       confirmed.value = true;
     } catch (e) {
       logger.error("Error al confirmar el reset de contraseña:", e);
-      const status = axios.isAxiosError(e) ? e.response?.status : undefined;
-      if (status === 401) {
-        invalidLink.value = true;
-        error.value = INVALID_LINK_MESSAGE;
-      } else if (status === 400) {
-        error.value = "Las contraseñas no coinciden";
-      } else {
-        error.value = "No pudimos cambiar la contraseña, intenta de nuevo";
-      }
+      if (isInvalidToken(e)) invalidLink.value = true;
+      else error.value = messageForError(e);
     } finally {
       sending.value = false;
     }

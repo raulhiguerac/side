@@ -1,25 +1,9 @@
 <template>
-  <AuthLayout>
-    <template #aside>
-      <div class="flex-1 flex items-center justify-center w-full">
-        <img
-          src="@/assets/secure-account.svg"
-          alt=""
-          class="w-3/4 max-w-sm lg:max-w-md h-auto"
-        />
-      </div>
-      <div class="text-left space-y-3">
-        <h2
-          class="text-center text-white text-base sm:text-lg lg:text-xl font-bold"
-        >
-          ¡Encontramos las llaves!
-        </h2>
-        <p class="text-white/80 text-xs sm:text-sm">
-          Crea tu nueva contraseña y vuelve a entrar.
-        </p>
-      </div>
-    </template>
-
+  <AuthLayout
+    :illustration="secureAccountIllustration"
+    title="¡Encontramos las llaves!"
+    subtitle="Crea tu nueva contraseña y vuelve a entrar."
+  >
     <div class="text-center space-y-1 mb-8">
       <h2 class="text-brand-text text-2xl lg:text-[24px] font-bold">
         Crea una nueva contraseña
@@ -46,7 +30,7 @@
       class="w-full flex flex-col items-center gap-4"
     >
       <FormMessage variant="error" class="w-full text-center">
-        {{ error }}
+        El enlace no es válido o venció.
       </FormMessage>
       <router-link
         to="/forgot-password"
@@ -86,6 +70,7 @@
 
 <script lang="ts" setup>
 import { computed, ref } from "vue";
+import secureAccountIllustration from "@/assets/secure-account.svg";
 import AuthLayout from "@/components/shared/AuthLayout.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 import FormMessage from "@/components/shared/FormMessage.vue";

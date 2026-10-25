@@ -1,25 +1,9 @@
 <template>
-  <AuthLayout>
-    <template #aside>
-      <div class="flex-1 flex items-center justify-center w-full">
-        <img
-          src="@/assets/reset-password.svg"
-          alt="Logo"
-          class="w-3/4 max-w-sm lg:max-w-md h-auto"
-        />
-      </div>
-      <div class="text-left space-y-3">
-        <h2
-          class="text-center text-white text-base sm:text-lg lg:text-xl font-bold"
-        >
-          Parece que las llaves se perdieron…
-        </h2>
-        <p class="text-white/80 text-xs sm:text-sm">
-          Te ayudamos a crear una nueva contraseña.
-        </p>
-      </div>
-    </template>
-
+  <AuthLayout
+    :illustration="resetPasswordIllustration"
+    title="Parece que las llaves se perdieron…"
+    subtitle="Te ayudamos a crear una nueva contraseña."
+  >
     <div class="flex flex-col items-center gap-4 mb-8">
       <div class="text-center space-y-1">
         <h2 class="text-brand-text text-2xl lg:text-[24px] font-bold">
@@ -91,6 +75,7 @@
 
 <script lang="ts" setup>
 import { ref } from "vue";
+import resetPasswordIllustration from "@/assets/reset-password.svg";
 import AuthLayout from "@/components/shared/AuthLayout.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 import FormMessage from "@/components/shared/FormMessage.vue";
