@@ -55,37 +55,10 @@
             />
           </div>
 
-          <!-- Nueva contraseña -->
-          <div class="flex flex-col gap-1.5">
-            <label class="text-brand-text text-sm font-semibold"
-              >Nueva contraseña</label
-            >
-            <PasswordInput
-              v-model="form.newPassword"
-              placeholder="••••••••"
-              size="lg"
-            />
-            <p class="text-brand-placeholder text-xs">Mínimo 8 caracteres</p>
-          </div>
-
-          <!-- Confirmar contraseña -->
-          <div class="flex flex-col gap-1.5">
-            <label class="text-brand-text text-sm font-semibold"
-              >Confirmar contraseña</label
-            >
-            <PasswordInput
-              v-model="form.confirmPassword"
-              placeholder="••••••••"
-              size="lg"
-              :invalid="!!form.confirmPassword && !passwordsMatch"
-            />
-            <p
-              v-if="form.confirmPassword && !passwordsMatch"
-              class="text-brand-danger text-xs"
-            >
-              Las contraseñas no coinciden
-            </p>
-          </div>
+          <NewPasswordFields
+            v-model:password="form.newPassword"
+            v-model:confirmation="form.confirmPassword"
+          />
 
           <!-- Error message -->
           <p
@@ -147,10 +120,12 @@
 
 <script lang="ts" setup>
 import PasswordInput from "@/components/shared/form/PasswordInput.vue";
+import NewPasswordFields from "@/components/shared/form/NewPasswordFields.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref, computed } from "vue";
 import axios from "axios";
 import * as usersApi from "@/api/users";
+import { isNewPasswordValid } from "@/utils/password";
 
 const isLoading = ref(false);
 const errorMessage = ref("");
@@ -162,15 +137,10 @@ const form = ref({
   confirmPassword: "",
 });
 
-const passwordsMatch = computed(
-  () => form.value.newPassword === form.value.confirmPassword
-);
-
 const canSubmit = computed(
   () =>
     form.value.currentPassword &&
-    form.value.newPassword.length >= 8 &&
-    passwordsMatch.value
+    isNewPasswordValid(form.value.newPassword, form.value.confirmPassword)
 );
 
 const changePassword = async () => {
