@@ -16,6 +16,12 @@ export const authRoutes: RouteRecordRaw[] = [
   {
     path: "/forgot-password",
     name: "forgot-password",
+    component: () => import("@/views/auth/ForgotPasswordView.vue"),
+    meta: { hideNavbar: true },
+  },
+  {
+    path: "/reset-password",
+    name: "reset-password",
     component: () => import("@/views/auth/ResetPasswordView.vue"),
     meta: { hideNavbar: true },
   },

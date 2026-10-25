@@ -1,7 +1,7 @@
 ---
 title: Arquitectura interna del frontend
 status: draft
-last-verified: 2026-10-18
+last-verified: 2026-10-24
 owners: [frontend]
 related:
   - "[[architecture]]"
@@ -21,6 +21,8 @@ related:
   - "[[properties-service-search]]"
   - "[[open-items]]"
 sources:
+  - ../../sources/frontend/2026-10-24-reset-password-flow-wired.md
+  - ../../sources/frontend/2026-10-24-assets-cleanup-lucide-and-mvp-status.md
   - ../../sources/frontend/2026-05-21-foundational-qa.md
   - ../../sources/frontend/2026-05-28-avm-form-split-and-dumb-map.md
   - ../../sources/frontend/2026-05-29-vue35-gmaps-places-leaflet-markers.md
@@ -65,7 +67,7 @@ frontend/
 │   ├── App.vue                   # root: NavBar + router-view + onboarding modal
 │   ├── main.ts                   # createApp + use(pinia, router, VueCookies, Vueform)
 │   ├── shims-vue.d.ts            # types para imports .vue
-│   ├── assets/                   # tailwind.css, logo, etc.
+│   ├── assets/                   # logo.svg, reset-password.svg, secure-account.svg, landing_cover.png
 │   ├── config/
 │   │   └── index.ts              # API.USERS_BASE_URL, CATALOG_BASE_URL, AVM_BASE_URL (port 8003), LOCALE, STORAGE_KEYS
 │   ├── theme/
@@ -74,7 +76,7 @@ frontend/
 │   │   ├── index.ts              # instancia router + beforeEach guard; importa 6 módulos
 │   │   └── routes/
 │   │       ├── public.ts         # /, /about, /users/:userId
-│   │       ├── auth.ts           # /login, /register, /forgot-password
+│   │       ├── auth.ts           # /login, /register, /forgot-password, /reset-password
 │   │       ├── settings.ts       # /settings + children
 │   │       ├── properties.ts     # /properties, /listing/:id, /feed + children
 │   │       ├── analytics.ts      # /avm
@@ -96,13 +98,14 @@ frontend/
 │   │   ├── pois/useReachablePois.ts
 │   │   ├── properties/            # useCreatePropertyForm, useImageUpload, useMyProperties, usePropertyDetail, usePropertyMapper, usePropertyVisibility
 │   │   ├── shared/                # usePagination, useMultiselect, useInfiniteScroll (centinela + IntersectionObserver)
-│   │   └── users/                 # useProfileSettings, useAccountSettings, useProfileListings
+│   │   └── users/                 # useProfileSettings, useAccountSettings, useProfileListings, useForgotPassword, useResetPassword
 │   ├── api/                       # todo el HTTP — ver [[adr-api-layer-by-domain]]
 │   │   ├── clients/{users, catalog, properties, avm, interceptors}.ts   # instancias axios + interceptor de refresh
 │   │   ├── {users, catalog, properties, avm}.ts                         # una función tipada por endpoint, devuelve `data`
 │   │   └── admin/{properties, catalog}.ts                              # endpoints admin + loaders de opciones de filtros
 │   ├── utils/
 │   │   ├── money.ts               # formatMoney/parseMoney (inputs) + formatCurrency (display)
+│   │   ├── password.ts            # MIN_PASSWORD_LENGTH, isNewPasswordValid
 │   │   ├── number.ts              # formatNumber, formatArea (m² / km²)
 │   │   ├── date.ts                # formatShortDate, formatShortDateTime, formatLongDateTime — Intl construido una vez a nivel módulo
 │   │   ├── pagination.ts          # pageRange(page, pageSize, shown) → { from, to }
@@ -134,7 +137,7 @@ frontend/
 │   │   └── admin/                # un módulo por tema: properties, moderation, promotions, bulk, filters, catalog, actions
 │   ├── views/                    # páginas-ruta
 │   │   ├── public/{HomeView, AboutView, PublicProfileView}  # /users/:userId
-│   │   ├── auth/{LoginView, RegisterView, ResetPasswordView}
+│   │   ├── auth/{LoginView, RegisterView, ForgotPasswordView, ResetPasswordView}
 │   │   ├── settings/{SettingsLayout, SettingsProfile, SettingsSecurity, SettingsAccount}
 │   │   ├── properties/
 │   │   │   ├── PropertiesView.vue          # parent feed con toggle lista/mapa
@@ -145,7 +148,7 @@ frontend/
 │   │   ├── dev/{DevPlaygroundView, CreatePropertyDevView}  # sin auth, dev only
 │   │   └── admin/{AdminHomeView, properties/{AdminPropertiesLayout, moderation/AdminModerationView, promotions/{AdminPromotionsLayout, AdminPromotionsActiveView, AdminPromotionsCreateView}, imports/AdminImportsView}, catalog/{AdminCatalogView, neighborhoods/AdminNeighborhoodsView, localities/AdminLocalitiesView, divisions/AdminDivisionsView, countries/AdminCountriesView}}  # requiresAdmin — ver [[frontend-admin-panel]]
 │   └── components/
-│       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState, BaseButton, IconButton, ChoiceChip, OptionCard, BaseTable, FormMessage, form/{BaseInput, BaseSelect, BaseTextarea, PasswordInput, FormField}}
+│       ├── shared/{NavBar, NavGuest, NavUser, BaseModal, BaseSpinner, PaginationArrows, FilterTabs, EmptyState, BaseButton, IconButton, ChoiceChip, OptionCard, BaseTable, FormMessage, AuthLayout, form/{BaseInput, BaseSelect, BaseTextarea, PasswordInput, NewPasswordFields, FormField}}
 │       ├── onboarding/{OnboardingModal, IntentSelector, LocalitySelector, NeighborhoodSelector, PropertyTypeSelector}
 │       ├── properties/
 │       │   ├── cards/PropertyCard
@@ -336,6 +339,15 @@ Funciones puras (no es composable Vue strictly hablando, son helpers que aceptan
 - `locations()`: combina `detectLocation` (ipapi) + `countries` (catalog) → devuelve `(countryDetected, countryUser)`.
 - `getNeighborhood(lat, lon)`: dos requests en cadena — `catalogApi.resolveCoordinates` → `neighborhood_id`, luego `catalogApi.getNeighborhoodById` → nombre. Usado por `useAvmForm` para mostrar el barrio detectado al seleccionar dirección.
 
+### `useForgotPassword` y `useResetPassword` ([composables/users/](frontend/src/composables/users))
+
+El reset de password son dos vistas sobre `AuthLayout` (panel oscuro en el slot `#aside`, contenido en el default) (2026-10-24):
+
+- **`/forgot-password` → `ForgotPasswordView` + `useForgotPassword`.** Devuelve `{ sending, sent, error, requestReset(email) }`. No muestra el `message` del back, que viene en inglés y en un 5xx puede traer detalles de infra: 422 → "Revisa el correo", el resto → mensaje genérico. Con `sent` la vista cambia el formulario por el aviso y "Ya puedes cerrar esta pestaña o ir a iniciar sesión": el flujo sigue en la pestaña que abre el link del correo.
+- **`/reset-password` → `ResetPasswordView` + `useResetPassword`.** Lee `route.query.token` validando con `typeof === "string"` (puede llegar como array) y, si vino, lo quita con `router.replace({ query: {} })` para que no quede en el historial. Cambiar solo el query no vuelve a montar la vista, así que el token sigue en un `const`; recargar lo pierde. Devuelve `{ sending, confirmed, invalidLink, error, confirmReset(newPassword, confirmPassword) }`: sin token o con 401 → `invalidLink` y link a `/forgot-password`; 400 → contraseñas no coinciden; éxito → aviso con link a login, porque el confirm no setea cookies.
+- La ruta no lleva `isLogged`: con ese flag el guard manda a home a un usuario logueado y el token del link se pierde.
+- Los campos "nueva + confirmar" son `NewPasswordFields` (`v-model:password`, `v-model:confirmation`) y la regla vive en `utils/password.ts`; `SettingsSecurity` usa las mismas piezas.
+
 ## Router con guard global
 
 `router.beforeEach`:
@@ -375,7 +387,7 @@ Las baseURLs son rutas relativas (proxy en dev) — ver sección "Webpack devSer
 response 401
   └─ !error.config → reject inmediato (error sin config = cancelado/red)
   └─ original._retry → reject (evita loop infinito en el retry)
-  └─ url matchea AUTH_ENTRYPOINTS (login, register, logout) → reject inmediato
+  └─ url matchea AUTH_ENTRYPOINTS (login, register, logout, reset-password/confirm) → reject inmediato
   └─ isRefreshing === true → encolar en failedQueue; resolver/rechazar cuando termine el refresh en curso
   └─ isRefreshing === false →
        original._retry = true
@@ -388,7 +400,7 @@ response 401
 
 **`AUTH_ENTRYPOINTS`** excluye login y register del retry-refresh — un 401 ahí es "credenciales inválidas", no "sesión expirada". **Logout también está excluido (2026-10-09)**: si el refresh falla, `forceLogout → logout → 401` se encolaría en `failedQueue` esperando un refresh que ya terminó, y la promesa no resolvería nunca. Las rutas salen de `USERS_ENDPOINTS`.
 
-**Un endpoint con token propio que responde 401 tiene que ir en `AUTH_ENTRYPOINTS` (2026-10-18).** Los confirm de reset y de reactivación mandan un action token en `Authorization: Bearer` y responden `401 TOKEN_INVALID_OR_EXPIRED` si venció o ya se usó. Fuera de la lista, el interceptor lo toma por sesión vencida: intenta el refresh y rechaza con el error del refresh, así que la vista no puede decir "el enlace venció". Hoy esos endpoints no existen en el front ([[open-items]]).
+**Un endpoint con token propio que responde 401 tiene que ir en `AUTH_ENTRYPOINTS` (2026-10-18).** Los confirm de reset y de reactivación mandan un action token en `Authorization: Bearer` y responden `401 TOKEN_INVALID_OR_EXPIRED` si venció o ya se usó. Fuera de la lista, el interceptor lo toma por sesión vencida: intenta el refresh y rechaza con el error del refresh, así que la vista no puede decir "el enlace venció". **Update 2026-10-24:** `reset-password/confirm` ya está en la lista; el de reactivación entra cuando se cablee ([[open-items]]).
 
 **`forceLogout()`** solo llama a `logout()` si `authStore.isAuthenticated` (2026-10-09): un anónimo cuyo `checkAuth` da 401 y no tiene refresh simplemente queda anónimo, sin redirección a `/`. Reemplazó al viejo `redirectToLogin()` (`window.location.href` hardcodeado a `/#/login`, hard reload). Ahora hace `const { useAuthStore } = await import("@/stores/auth"); await useAuthStore().logout()` — invalida el refresh token en el back de verdad y limpia el estado de Pinia antes de redirigir, en vez de solo tirar un reload. El `import()` dinámico es deliberado: evita un ciclo de imports estático (`auth.ts → usersApi.ts → interceptors.ts → auth.ts`), ya que `auth.ts` importa `usersApi` para sus propias llamadas.
 
@@ -550,6 +562,8 @@ Acordadas al auditar los smells del front:
 - **Errores de formulario con `FormMessage`** (`variant="error" | "success"`, `role="alert"`), no con `alert()`.
 - **Logs con `logger.error`** de `utils/logger.ts`, no con `console`.
 - **Textos de la interfaz en tuteo**: la app es es-CO.
+- **Iconos como componentes de `@lucide/vue`** (2026-10-24), renderizados con `<component :is>` y tipados con `ChoiceOption` cuando son opciones; no como SVG copiados en `assets/`, porque un `<img>` no hereda `currentColor` y el icono no puede cambiar de color con el estado.
+- **Los assets del bundle no van a un CDN aparte** (2026-10-24): Cloudflare Pages sirve `dist/` y el build les pone hash (`img/<nombre>.<hash>.svg`), así que se cachean sin vencimiento. R2 es para lo que no viaja con el código, como las fotos de usuarios y de propiedades.
 
 Lo que la auditoría dejó abierto está en [[open-items]]. HTTP en vistas, rutas `/v1` a mano y tipos fuera de `types/` se cerraron el 2026-10-09; siguen abiertos los errores tragados, el último `alert()` y `useLocation`.
 
@@ -596,7 +610,8 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 
 ## Claims
 
-- `AUTH_ENTRYPOINTS` contiene solo `login`, `register` y `logout` ([interceptors.ts:29-33](frontend/src/api/clients/interceptors.ts#L29-L33)).
+- `src/assets/` contiene solo `logo.svg`, `reset-password.svg`, `secure-account.svg` y `landing_cover.png` ([src/assets/](frontend/src/assets)).
+- `AUTH_ENTRYPOINTS` contiene `login`, `register`, `logout` y `resetPasswordConfirm` ([interceptors.ts:29-34](frontend/src/api/clients/interceptors.ts#L29-L34)).
 - `main.ts` registra Pinia, vue-router, vue3-cookies y Vueform — sin axios instance global ([main.ts:15-20](frontend/src/main.ts#L15-L20)).
 - `useAuthStore.checkAuth` obtiene el perfil con `usersApi.getAuthProfile()` y usa `_authChecked` para no re-disparar en cada navegación protegida ([stores/auth.ts:42-48](frontend/src/stores/auth.ts#L42-L48)).
 - `useAuthStore.fillUserData()` no tiene try/catch propio — un 401 (con refresh fallido) lo maneja el interceptor de `usersApi` centralizadamente; el error que llegue a propagarse lo atrapa el `watch` de `App.vue` ([stores/auth.ts](frontend/src/stores/auth.ts), [App.vue](frontend/src/App.vue)).
@@ -607,7 +622,7 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 - Hay 4 instancias de axios dedicadas por servicio en `api/clients/`: `avm` sin `withCredentials` ni interceptor; `users`, `properties` y `catalog` con `withCredentials: true` y `applyAuthInterceptor` ([api/clients/](frontend/src/api/clients)).
 - `config/index.ts` usa `VUE_APP_CATALOG_URL` si está definida y si no `/api/catalog`; `frontend/.env.development` la define como `http://localhost:8001` ([config/index.ts:3](frontend/src/config/index.ts#L3), [.env.development](frontend/.env.development)).
 - `applyAuthInterceptor` intercepta 401, refresca token con POST `/v1/auth/refresh` (timeout 3s), reintenta la request original; si el refresh falla, llama `forceLogout()` ([api/clients/interceptors.ts](frontend/src/api/clients/interceptors.ts)).
-- `AUTH_ENTRYPOINTS` (login, register y logout, tomados de `USERS_ENDPOINTS`) están excluidos del retry-refresh del interceptor ([api/clients/interceptors.ts:29-33](frontend/src/api/clients/interceptors.ts#L29-L33)).
+- `AUTH_ENTRYPOINTS` (login, register, logout y el confirm del reset, tomados de `USERS_ENDPOINTS`) están excluidos del retry-refresh del interceptor ([api/clients/interceptors.ts:29-34](frontend/src/api/clients/interceptors.ts#L29-L34)).
 - `forceLogout()` solo llama a `authStore.logout()` si `authStore.isAuthenticated` es `true` ([api/clients/interceptors.ts:35-39](frontend/src/api/clients/interceptors.ts#L35-L39)).
 - `isRefreshing` y `failedQueue` en `interceptors.ts` son variables de módulo (no Vue ref ni composable) — garantizan que solo se dispare un refresh concurrente aunque múltiples requests fallen con 401 simultáneamente ([api/clients/interceptors.ts](frontend/src/api/clients/interceptors.ts)).
 - El guard `!error.config` en el interceptor evita TypeError cuando `error.config` es `undefined` (request cancelada o error de red antes de que axios termine de construirla) ([api/clients/interceptors.ts](frontend/src/api/clients/interceptors.ts)).
@@ -670,7 +685,10 @@ En `PublicProfileView`: `next(() => fetchUserListings(userId, total.value))` —
 - `useFeedMap` solo aplica la respuesta del último bbox pedido (`latestRequest`) y la ordena con `sortForMap` ([composables/feed/useFeedMap.ts:19-31](frontend/src/composables/feed/useFeedMap.ts#L19-L31)).
 - `authStore.onboardingStep` está tipado como `OnboardingStep` (`"intent" | "city" | "neighborhood" | "property_type" | "done"`) ([types/users/base.ts](frontend/src/types/users/base.ts)).
 - Las rutas `/listing/:id`, `/properties/:id/edit` y `/users/:userId` declaran `props: true` ([router/routes/properties.ts:21](frontend/src/router/routes/properties.ts#L21), [router/routes/public.ts:20](frontend/src/router/routes/public.ts#L20)).
-- `ResetPasswordView.vue` envía con `@submit.prevent="resetPasswordUser"` en el `<form>` y su botón de submit no declara `@click` ([views/auth/ResetPasswordView.vue:51](frontend/src/views/auth/ResetPasswordView.vue#L51)).
+- `useResetPassword` acepta el token solo si `route.query.token` es string y lo quita de la URL con `router.replace({ query: {} })` ([useResetPassword.ts:13-15](frontend/src/composables/users/useResetPassword.ts#L13-L15)).
+- `confirmPasswordReset` manda el action token en `Authorization: Bearer` solo en esa request ([api/users.ts:48](frontend/src/api/users.ts#L48)).
+- La ruta `/reset-password` declara solo `hideNavbar`, sin `isLogged` ([routes/auth.ts:22-27](frontend/src/router/routes/auth.ts#L22-L27)).
+- `useForgotPassword` traduce el 422 a un mensaje propio y no usa el `message` del back ([useForgotPassword.ts:19-22](frontend/src/composables/users/useForgotPassword.ts#L19-L22)).
 - `BaseInput.vue` enlaza `:value="model"` y escribe el modelo en su propio `@input`, sin la directiva `v-model`; `BaseSelect.vue` usa `v-model="model"` ([BaseInput.vue:4](frontend/src/components/shared/form/BaseInput.vue#L4), [BaseSelect.vue:3](frontend/src/components/shared/form/BaseSelect.vue#L3)).
 - `PasswordInput.vue` declara `inheritAttrs: false` y reenvía los attrs al `BaseInput` interno ([PasswordInput.vue:30](frontend/src/components/shared/form/PasswordInput.vue#L30)).
 - `brandColors.json` define `primary-strong` como `#15803D`, y la variante `primary` de `BaseButton` usa `bg-brand-primary-strong` ([brandColors.json:14](frontend/src/theme/brandColors.json#L14), [BaseButton.vue:48](frontend/src/components/shared/BaseButton.vue#L48)).

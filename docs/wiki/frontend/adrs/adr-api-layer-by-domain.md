@@ -1,7 +1,7 @@
 ---
 title: "ADR-0013 — Todo el HTTP del front pasa por funciones tipadas de api/, por dominio"
 status: stable
-last-verified: 2026-10-09
+last-verified: 2026-10-24
 owners: [frontend]
 related:
   - "[[frontend-architecture]]"
@@ -56,5 +56,5 @@ Las únicas llamadas HTTP fuera de los clientes son el refresh del interceptor (
 - Ningún archivo fuera de `src/api/` importa un cliente de `src/api/clients/` ([api/](frontend/src/api)).
 - `api/users.ts`, `api/catalog.ts`, `api/properties.ts`, `api/avm.ts` y `api/admin/*.ts` toman sus rutas de `constants/*Endpoints.ts` ([api/](frontend/src/api), [constants/](frontend/src/constants)).
 - Ninguna ruta `/v1/...` aparece fuera de `constants/*Endpoints.ts` en `src/` ([constants/](frontend/src/constants)).
-- `AUTH_ENTRYPOINTS` del interceptor incluye login, register y logout ([api/clients/interceptors.ts:29-33](frontend/src/api/clients/interceptors.ts#L29-L33)).
+- `AUTH_ENTRYPOINTS` del interceptor incluye login, register, logout y el confirm del reset ([api/clients/interceptors.ts:29-34](frontend/src/api/clients/interceptors.ts#L29-L34)).
 - `forceLogout` solo llama a `authStore.logout()` si `authStore.isAuthenticated` ([api/clients/interceptors.ts:35-39](frontend/src/api/clients/interceptors.ts#L35-L39)).

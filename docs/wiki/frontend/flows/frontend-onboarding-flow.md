@@ -1,13 +1,14 @@
 ---
 title: Onboarding flow (frontend)
 status: stable
-last-verified: 2026-10-09
+last-verified: 2026-10-24
 owners: [frontend, users-service]
 related:
   - "[[frontend]]"
   - "[[frontend-architecture]]"
   - "[[catalog-service-geo-catalog]]"
 sources:
+  - docs/sources/frontend/2026-10-24-assets-cleanup-lucide-and-mvp-status.md
   - docs/sources/frontend/2026-05-21-foundational-qa.md
   - docs/sources/frontend/2026-05-26-onboarding-wiring.md
   - docs/sources/frontend/2026-07-16-auth-user-store-consolidation.md
@@ -89,6 +90,8 @@ El step actual se determina así:
 | `city` | `LocalitySelector` | `components/onboarding/LocalitySelector.vue` |
 | `neighborhood` | `NeighborhoodSelector` | `components/onboarding/NeighborhoodSelector.vue` |
 | `property_type` | `PropertyTypeSelector` | `components/onboarding/PropertyTypeSelector.vue` |
+
+`PropertyTypeSelector` usa los mismos iconos y textos que el paso Tipo del alta de propiedad (`StepTipo`): `Building2` y `Home` de `@lucide/vue`, `ChoiceOption<PropertyType>[]` y `PROPERTY_TYPE_LABELS` (2026-10-24). El icono toma el color de la tarjeta: blanco sobre el primario si está seleccionada.
 
 `OnboardingModal.vue` (desde 2026-10-09) recibe `v-model` de `App.vue` y pinta el paso según `authStore.onboardingStep` con `v-if`/`v-else-if` — ya no hay `STEP_MAP`, `activeComponent` ni `dynamicProps`:
 
@@ -197,6 +200,7 @@ El cambio de paso lo dispara el store: `OnboardingModal` lee `authStore.onboardi
 
 ## Claims
 
+- `PropertyTypeSelector` arma sus opciones como `ChoiceOption<PropertyType>[]` con los iconos `Building2` y `Home` de `@lucide/vue` ([PropertyTypeSelector.vue:84-102](frontend/src/components/onboarding/PropertyTypeSelector.vue#L84-L102)).
 - El `watch` sobre `isAuthenticated` con `immediate: true` llama `authStore.fillUserData()` y `userStore.checkInterests()` y luego asigna `isOnboardingOpen.value = shouldStart()`, envuelto en un try/catch ([App.vue:56](frontend/src/App.vue#L56)).
 - `useOnboarding` no declara estado a nivel de módulo ni importa componentes; el abierto/cerrado del modal vive en `App.vue` como `isOnboardingOpen` ([composables/onboarding/useOnboarding.ts](frontend/src/composables/onboarding/useOnboarding.ts), [App.vue:36](frontend/src/App.vue#L36)).
 - `OnboardingModal` elige el selector con `v-if`/`v-else-if` sobre `authStore.onboardingStep`, cuyos valores son la unión `OnboardingStep` ([components/onboarding/OnboardingModal.vue:20-31](frontend/src/components/onboarding/OnboardingModal.vue#L20-L31), [types/users/base.ts](frontend/src/types/users/base.ts)).
