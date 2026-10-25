@@ -1,135 +1,104 @@
 <template>
-  <!-- Fondo de página -->
-  <div
-    class="min-h-screen bg-brand-bg flex items-center justify-center p-4 sm:p-8 lg:p-12"
-  >
-    <div
-      class="flex flex-col lg:flex-row w-full max-w-5xl bg-white rounded-2xl lg:rounded-3xl shadow-[0_20px_60px_-12px_rgba(0,0,0,0.08)] overflow-hidden"
-    >
-      <div
-        class="w-full lg:w-1/2 bg-brand-dark flex flex-col items-center justify-center p-8 sm:p-12 lg:p-16"
-      >
-        <!-- Logo -->
-        <div class="flex-1 flex items-center justify-center w-full">
-          <img
-            src="@/assets/reset-password.svg"
-            alt="Logo"
-            class="w-3/4 max-w-sm lg:max-w-md h-auto"
-          />
-        </div>
-        <!-- Tagline -->
-        <div class="text-left space-y-3">
-          <h2
-            class="text-center text-white text-base sm:text-lg lg:text-xl font-bold"
-          >
-            Parece que las llaves se perdieron…
-          </h2>
-          <p class="text-white/80 text-xs sm:text-sm">
-            Te ayudamos a crear una nueva contraseña.
-          </p>
-        </div>
+  <AuthLayout>
+    <template #aside>
+      <div class="flex-1 flex items-center justify-center w-full">
+        <img
+          src="@/assets/secure-account.svg"
+          alt=""
+          class="w-3/4 max-w-sm lg:max-w-md h-auto"
+        />
       </div>
-      <div
-        class="w-full lg:w-1/2 bg-white p-6 sm:p-10 lg:p-16 flex flex-col items-center justify-center"
-      >
-        <!-- Header -->
-        <div class="flex flex-col items-center gap-4 mb-8">
-          <div class="text-center space-y-1">
-            <h2 class="text-brand-text text-2xl lg:text-[24px] font-bold">
-              ¿Olvidaste la contraseña?
-            </h2>
-            <p class="text-brand-muted text-sm">
-              Tranqui, te ayudamos a recuperar las llaves.
-            </p>
-            <p class="text-brand-muted text-sm">
-              Ingresa el correo con el que te registraste
-            </p>
-          </div>
-        </div>
+      <div class="text-left space-y-3">
+        <h2
+          class="text-center text-white text-base sm:text-lg lg:text-xl font-bold"
+        >
+          ¡Encontramos las llaves!
+        </h2>
+        <p class="text-white/80 text-xs sm:text-sm">
+          Crea tu nueva contraseña y vuelve a entrar.
+        </p>
+      </div>
+    </template>
 
-        <div class="w-full flex flex-col">
-          <form
-            class="flex flex-col flex-1"
-            @submit.prevent="resetPasswordUser"
-          >
-            <!-- Campos -->
-            <div class="flex flex-col gap-4">
-              <!-- Email -->
-              <div class="flex flex-col gap-1.5">
-                <label class="text-brand-text text-xs font-semibold"
-                  >Email</label
-                >
-                <BaseInput
-                  size="lg"
-                  v-model="user.email"
-                  type="email"
-                  placeholder="correo@ejemplo.com"
-                />
-              </div>
-            </div>
-            <!-- Botones -->
-            <div class="flex flex-col gap-3 mt-6">
-              <!-- Botón iniciar sesión -->
-              <BaseButton
-                type="submit"
-                size="xl"
-                :disabled="!user.email"
-                :loading="isLoading"
-                block
-              >
-                Recupera las llaves
-              </BaseButton>
-            </div>
-          </form>
-        </div>
-        <div class="flex flex-col items-center justify-center py-5">
-          <div class="text-center space-y-1">
-            <p class="text-brand-muted text-sm">
-              Te enviaremos un enlace para crear una nueva contraseña.
-            </p>
-          </div>
-        </div>
-      </div>
+    <div class="text-center space-y-1 mb-8">
+      <h2 class="text-brand-text text-2xl lg:text-[24px] font-bold">
+        Crea una nueva contraseña
+      </h2>
+      <p class="text-brand-muted text-sm">
+        Usa una contraseña que no uses en otros sitios.
+      </p>
     </div>
-  </div>
+
+    <div v-if="confirmed" class="w-full flex flex-col items-center gap-4">
+      <FormMessage variant="success" class="w-full text-center">
+        Listo, tu contraseña se actualizó.
+      </FormMessage>
+      <router-link
+        to="/login"
+        class="text-brand-primary text-sm font-medium hover:underline"
+      >
+        Ir a iniciar sesión
+      </router-link>
+    </div>
+
+    <div
+      v-else-if="invalidLink"
+      class="w-full flex flex-col items-center gap-4"
+    >
+      <FormMessage variant="error" class="w-full text-center">
+        {{ error }}
+      </FormMessage>
+      <router-link
+        to="/forgot-password"
+        class="text-brand-primary text-sm font-medium hover:underline"
+      >
+        Pide un enlace nuevo
+      </router-link>
+    </div>
+
+    <form
+      v-else
+      class="w-full flex flex-col"
+      @submit.prevent="confirmReset(form.newPassword, form.confirmPassword)"
+    >
+      <NewPasswordFields
+        v-model:password="form.newPassword"
+        v-model:confirmation="form.confirmPassword"
+      />
+
+      <FormMessage v-if="error" variant="error" class="mt-4">
+        {{ error }}
+      </FormMessage>
+
+      <BaseButton
+        type="submit"
+        size="xl"
+        :disabled="!canSubmit"
+        :loading="sending"
+        block
+        class="mt-6"
+      >
+        Guardar contraseña
+      </BaseButton>
+    </form>
+  </AuthLayout>
 </template>
 
 <script lang="ts" setup>
-import BaseInput from "@/components/shared/form/BaseInput.vue";
+import { computed, ref } from "vue";
+import AuthLayout from "@/components/shared/AuthLayout.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
-/** Pantalla de recuperación de contraseña. */
-import { ref } from "vue";
-import axios from "axios";
-import * as usersApi from "@/api/users";
-import router from "@/router";
+import FormMessage from "@/components/shared/FormMessage.vue";
+import NewPasswordFields from "@/components/shared/form/NewPasswordFields.vue";
+import { useResetPassword } from "@/composables/users/useResetPassword";
+import { isNewPasswordValid } from "@/utils/password";
 
-// 📝 Datos del formulario (locales, no van al store)
-const user = ref({
-  email: "",
-});
+const form = ref({ newPassword: "", confirmPassword: "" });
 
-const isLoading = ref(false);
-const errorMessage = ref(""); // Para mostrar errores al usuario
+const { sending, confirmed, invalidLink, error, confirmReset } =
+  useResetPassword();
 
-/** Pide el cambio de contraseña y muestra el resultado. */
-const resetPasswordUser = async () => {
-  isLoading.value = true;
-  errorMessage.value = "";
-
-  try {
-    // 1. Hacemos la petición
-    await usersApi.requestPasswordReset(user.value.email);
-
-    // Éxito: el reset no loguea, solo avisa que revises el correo.
-    router.push("/login");
-  } catch (error) {
-    errorMessage.value =
-      (axios.isAxiosError<{ message?: string }>(error) &&
-        error.response?.data?.message) ||
-      "Error al solicitar el cambio";
-  } finally {
-    // 4. Pase lo que pase, quitamos el cargando
-    isLoading.value = false;
-  }
-};
+const canSubmit = computed(() =>
+  isNewPasswordValid(form.value.newPassword, form.value.confirmPassword)
+);
 </script>

@@ -30,6 +30,7 @@ const AUTH_ENTRYPOINTS = [
   USERS_ENDPOINTS.login,
   USERS_ENDPOINTS.register,
   USERS_ENDPOINTS.logout,
+  USERS_ENDPOINTS.resetPasswordConfirm,
 ];
 
 async function forceLogout() {

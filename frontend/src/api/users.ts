@@ -5,6 +5,7 @@ import type {
   ChangePasswordPayload,
   LoginPayload,
   RegisterPayload,
+  ResetPasswordPayload,
 } from "@/types/users/auth";
 import type { AccountIntent, User } from "@/types/users/base";
 import type {
@@ -37,6 +38,15 @@ export async function changePassword(
 
 export async function requestPasswordReset(email: string): Promise<void> {
   await usersClient.post(USERS_ENDPOINTS.resetPasswordRequest, { email });
+}
+
+export async function confirmPasswordReset(
+  token: string,
+  payload: ResetPasswordPayload
+): Promise<void> {
+  await usersClient.post(USERS_ENDPOINTS.resetPasswordConfirm, payload, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }
 
 export async function getAccount(): Promise<User> {

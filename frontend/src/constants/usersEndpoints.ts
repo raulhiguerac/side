@@ -5,6 +5,7 @@ export const USERS_ENDPOINTS = {
   refresh: "/v1/auth/refresh",
   changePassword: "/v1/auth/change-password",
   resetPasswordRequest: "/v1/auth/reset-password/request",
+  resetPasswordConfirm: "/v1/auth/reset-password/confirm",
   me: "/v1/users/me",
   interests: "/v1/users/me/interests",
   profile: "/v1/users/me/profile",
