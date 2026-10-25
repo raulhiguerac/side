@@ -174,7 +174,7 @@ docker logs $(docker ps -qf name=keycloak) -f
 ## Claims
 
 - La DB es `postgres:17` (`identity_service_db`), sin PostGIS ([docker-compose.yml:19-24](docker-compose.yml#L19-L24)).
-- La dep de email exige `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` y `SMTP_FROM`, y `.env.dev` solo declara `SMTP_PORT` ([email.py:10](backend/users-service/src/app/api/deps/shared/email.py#L10), [.env.dev:45](backend/users-service/.env.dev#L45)).
+- La dep de email exige `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` y `SMTP_FROM`, y `.env.dev` solo declara `SMTP_PORT` ([email.py:10](backend/users-service/src/app/api/deps/shared/email.py#L10), [.env.dev:44](backend/users-service/.env.dev#L44)).
 - `FRONT_BASE_URL` vale `http://localhost:8080` en `.env.dev` ([.env.dev:41](backend/users-service/.env.dev#L41)).
 - `up_dev_env.sh` exporta el `.env.local` de cada servicio, si existe, antes de lanzarlo ([up_dev_env.sh:43](up_dev_env.sh#L43)).
 - `FRONT_BASE_URL` es obligatorio: el settings lanza `RuntimeError` si falta ([settings.py:9-11](backend/users-service/src/app/core/config/settings.py#L9-L11)).
