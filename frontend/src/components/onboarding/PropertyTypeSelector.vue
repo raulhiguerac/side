@@ -43,9 +43,13 @@
         >
           <div
             class="w-8 h-8 rounded-lg flex items-center justify-center"
-            :class="isSelected(type.value) ? 'bg-brand-primary' : 'bg-brand-bg'"
+            :class="
+              isSelected(type.value)
+                ? 'bg-brand-primary text-white'
+                : 'bg-brand-bg text-brand-text'
+            "
           >
-            <img :src="type.icon" class="w-4 h-4" :alt="type.label" />
+            <component :is="type.icon" class="w-4 h-4" aria-hidden="true" />
           </div>
           <span
             class="text-xs font-medium"
@@ -77,19 +81,25 @@
 import BaseButton from "@/components/shared/BaseButton.vue";
 import OptionCard from "@/components/shared/OptionCard.vue";
 import { ref, onMounted } from "vue";
-import houseIcon from "@/assets/house.svg";
-import apartmentIcon from "@/assets/apartment.svg";
+import { Building2, Home } from "@lucide/vue";
 import { useLocalitiesWithNames } from "@/composables/catalog/useLocalitiesWithNames";
 import BaseSpinner from "@/components/shared/BaseSpinner.vue";
+import { PROPERTY_TYPE_LABELS } from "@/constants/propertyLabels";
 import type { CatalogItem } from "@/types/catalog/base";
+import type { PropertyType } from "@/types/properties/base";
+import type { ChoiceOption } from "@/types/shared/ui";
 
 defineProps<{ saving?: boolean }>();
 const emit = defineEmits<{ submit: [selections: Record<string, string[]>] }>();
 const { load: loadLocalities } = useLocalitiesWithNames();
 
-const propertyTypes = [
-  { value: "apartment", label: "Apartamento", icon: apartmentIcon },
-  { value: "house", label: "Casa", icon: houseIcon },
+const propertyTypes: ChoiceOption<PropertyType>[] = [
+  {
+    value: "apartment",
+    label: PROPERTY_TYPE_LABELS.apartment,
+    icon: Building2,
+  },
+  { value: "house", label: PROPERTY_TYPE_LABELS.house, icon: Home },
 ];
 
 const cities = ref<CatalogItem[]>([]);
