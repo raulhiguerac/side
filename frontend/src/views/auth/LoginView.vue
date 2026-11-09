@@ -95,8 +95,13 @@
                 />
               </div>
 
-              <!-- Olvidé contraseña -->
-              <div class="flex justify-end">
+              <div class="flex justify-between">
+                <router-link
+                  :to="{ name: 'reactivate' }"
+                  class="text-brand-primary text-xs font-medium hover:underline"
+                >
+                  Reactivar cuenta
+                </router-link>
                 <router-link
                   to="/forgot-password"
                   class="text-brand-primary text-xs font-medium hover:underline"
