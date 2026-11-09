@@ -42,7 +42,12 @@
           </div>
         </div>
 
-        <form @submit.prevent="changePassword" class="space-y-5">
+        <form
+          @submit.prevent="
+            changePassword(form.currentPassword, form.newPassword)
+          "
+          class="space-y-5"
+        >
           <!-- Contraseña actual -->
           <div class="flex flex-col gap-1.5">
             <label class="text-brand-text text-sm font-semibold"
@@ -62,18 +67,10 @@
 
           <!-- Error message -->
           <p
-            v-if="errorMessage"
+            v-if="error"
             class="text-brand-danger text-sm text-center bg-brand-danger-light py-3 px-4 rounded-xl"
           >
-            {{ errorMessage }}
-          </p>
-
-          <!-- Success message -->
-          <p
-            v-if="successMessage"
-            class="text-brand-success text-sm text-center bg-brand-success-light py-3 px-4 rounded-xl"
-          >
-            {{ successMessage }}
+            {{ error }}
           </p>
 
           <!-- Submit -->
@@ -81,10 +78,10 @@
             type="submit"
             size="xl"
             :disabled="!canSubmit"
-            :loading="isLoading"
+            :loading="sending"
             block
           >
-            {{ isLoading ? "Actualizando..." : "Actualizar contraseña" }}
+            {{ sending ? "Actualizando..." : "Actualizar contraseña" }}
           </BaseButton>
         </form>
       </div>
@@ -123,13 +120,8 @@ import PasswordInput from "@/components/shared/form/PasswordInput.vue";
 import NewPasswordFields from "@/components/shared/form/NewPasswordFields.vue";
 import BaseButton from "@/components/shared/BaseButton.vue";
 import { ref, computed } from "vue";
-import axios from "axios";
-import * as usersApi from "@/api/users";
+import { useChangePassword } from "@/composables/users/useChangePassword";
 import { isNewPasswordValid } from "@/utils/password";
-
-const isLoading = ref(false);
-const errorMessage = ref("");
-const successMessage = ref("");
 
 const form = ref({
   currentPassword: "",
@@ -143,27 +135,5 @@ const canSubmit = computed(
     isNewPasswordValid(form.value.newPassword, form.value.confirmPassword)
 );
 
-const changePassword = async () => {
-  errorMessage.value = "";
-  successMessage.value = "";
-  isLoading.value = true;
-
-  try {
-    await usersApi.changePassword({
-      current_password: form.value.currentPassword,
-      new_password: form.value.newPassword,
-    });
-
-    successMessage.value = "Contraseña actualizada correctamente";
-    form.value = { currentPassword: "", newPassword: "", confirmPassword: "" };
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.status === 400) {
-      errorMessage.value = "La contraseña actual es incorrecta";
-    } else {
-      errorMessage.value = "Error al actualizar la contraseña";
-    }
-  } finally {
-    isLoading.value = false;
-  }
-};
+const { sending, error, changePassword } = useChangePassword();
 </script>
