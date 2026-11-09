@@ -59,7 +59,7 @@ export function useReactivateAccount() {
   }
 
   onMounted(() => {
-    if (token) confirmReactivation();
+    if (token) void confirmReactivation();
   });
   onBeforeUnmount(() => clearTimeout(redirectTimer));
 
