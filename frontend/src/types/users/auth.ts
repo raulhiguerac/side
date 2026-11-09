@@ -44,7 +44,7 @@ export interface LoginPayload {
 }
 
 export interface ChangePasswordPayload {
-  current_password: string;
+  old_password: string;
   new_password: string;
 }
 

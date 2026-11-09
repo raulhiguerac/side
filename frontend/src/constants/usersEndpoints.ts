@@ -11,6 +11,8 @@ export const USERS_ENDPOINTS = {
   profile: "/v1/users/me/profile",
   profilePhoto: "/v1/users/me/profile/photo",
   deactivate: "/v1/users/me/deactivate",
+  reactivationRequest: "/v1/users/reactivation/request",
+  reactivationConfirm: "/v1/users/reactivation/confirm",
   publicProfile: (accountId: string) => `/v1/users/profiles/${accountId}`,
   onboardingIntent: "/v1/onboarding/intent",
   onboardingCity: "/v1/onboarding/city",

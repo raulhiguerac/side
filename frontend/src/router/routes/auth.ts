@@ -25,4 +25,10 @@ export const authRoutes: RouteRecordRaw[] = [
     component: () => import("@/views/auth/ResetPasswordView.vue"),
     meta: { hideNavbar: true },
   },
+  {
+    path: "/reactivate",
+    name: "reactivate",
+    component: () => import("@/views/auth/ReactivateAccountView.vue"),
+    meta: { hideNavbar: true },
+  },
 ];

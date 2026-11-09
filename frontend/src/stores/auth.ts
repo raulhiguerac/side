@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import type { RouteLocationRaw } from "vue-router";
 import router from "@/router";
 import * as usersApi from "@/api/users";
 import { useUserStore } from "./user";
@@ -91,7 +92,7 @@ export const useAuthStore = defineStore("auth", {
     },
 
     /** Logout optimizado: no bloquea la transición out-in. */
-    async logout(): Promise<void> {
+    async logout(to: RouteLocationRaw = "/"): Promise<void> {
       try {
         await usersApi.logout();
       } catch (error) {
@@ -108,8 +109,7 @@ export const useAuthStore = defineStore("auth", {
         /** `_authChecked` en true evita que el guard llame a `checkAuth()` durante la animación de salida. */
         this._authChecked = true;
 
-        // Redirigimos al Home o Login
-        router.push("/");
+        router.push(to);
       }
     },
 

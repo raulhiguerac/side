@@ -63,6 +63,16 @@ export async function deactivateAccount(): Promise<void> {
   await usersClient.post(USERS_ENDPOINTS.deactivate, {});
 }
 
+export async function requestReactivation(email: string): Promise<void> {
+  await usersClient.post(USERS_ENDPOINTS.reactivationRequest, { email });
+}
+
+export async function confirmReactivation(token: string): Promise<void> {
+  await usersClient.post(USERS_ENDPOINTS.reactivationConfirm, null, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function getAuthProfile(): Promise<AuthProfileResponse> {
   const { data } = await usersClient.get<AuthProfileResponse>(
     USERS_ENDPOINTS.profile
