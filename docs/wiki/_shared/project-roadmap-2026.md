@@ -1,7 +1,7 @@
 ---
 title: Project roadmap 2026
 status: stable
-last-verified: 2026-10-17
+last-verified: 2026-11-09
 owners: [_shared]
 related:
   - "[[architecture]]"
@@ -11,7 +11,9 @@ related:
   - "[[frontend]]"
   - "[[adr-history-mode-cloudflare-pages]]"
   - "[[avm-training]]"
-sources: [../../sources/_shared/2026-05-29-project-roadmap.md, ../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md, ../../sources/_shared/2026-10-05-stacked-prs-and-roadmap.md, ../../sources/_shared/2026-10-05-public-demo-deploy-gke-cloudflare.md, ../../sources/_shared/2026-10-05-stateless-cluster-external-data.md, ../../sources/_shared/2026-10-14-mvp-close-and-demo-infra-costs.md]
+  - "[[gitops-repo]]"
+  - "[[adr-kustomize-applicationsets-gitops]]"
+sources: [../../sources/_shared/2026-05-29-project-roadmap.md, ../../sources/_shared/2026-05-31-impressions-feed-personalization-supply.md, ../../sources/properties-service/2026-06-08-feed-cache-geo-scaling.md, ../../sources/_shared/2026-06-09-mvp-audit-scores.md, ../../sources/_shared/2026-10-05-stacked-prs-and-roadmap.md, ../../sources/_shared/2026-10-05-public-demo-deploy-gke-cloudflare.md, ../../sources/_shared/2026-10-05-stateless-cluster-external-data.md, ../../sources/_shared/2026-10-14-mvp-close-and-demo-infra-costs.md, ../../sources/_shared/2026-11-09-sidehq-org-gitops-repo-and-kustomize-layout.md]
 ---
 
 ## TL;DR
@@ -103,6 +105,12 @@ INTERNET → CLOUDFLARE (DNS · CDN · WAF · DDoS · rate limit)
 | 4 | Infra: Argo + Helm + ApplicationSet, primer deploy | según el autor, 3–5 días |
 | 5 | Netpols, deploy estable, empezar el catálogo mínimo | — |
 | 6 | Catálogo mínimo (listar y activar/desactivar localidades, divisiones y países), margen y demo de punta a punta | 20–30 con los `GET` admin |
+
+**Update 2026-11-09 — infra.** El autor dejó el código como está tras #41 (change-password y reactivación) y pasó a la semana 4 antes que el AVM. Cambios respecto al plan:
+- Dos repos en la org `sidehq`: `app` (el monorepo, antes `raulhiguerac/side`) e `infra` (GitOps). Ver [[gitops-repo]].
+- Kustomize + ApplicationSets en lugar de "Helm + ApplicationSet" ([[adr-kustomize-applicationsets-gitops]]).
+- GKE Standard zonal con el módulo de Terraform de `pde`.
+- Primera versión recortada: sin Kafka ni el consumer de analytics, ORS solo si catalog lo necesita para arrancar, y Cloudflare y Neon a mano antes de pasarlos a Terraform.
 
 El AVM va antes que la infra a propósito: es lo que más puede sorprender. Si la infra lleva 3–5 días completos y no sesiones, el catálogo mínimo queda como stretch. Vitest no espera a la migración a Vite (ver [[adr-vue-cli-deferred-vite-migration]]).
 

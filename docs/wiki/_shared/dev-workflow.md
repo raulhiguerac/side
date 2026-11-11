@@ -1,13 +1,14 @@
 ---
 title: Dev workflow — reglas de trabajo del monorepo
 status: stable
-last-verified: 2026-10-18
+last-verified: 2026-11-09
 owners: [_shared]
 related:
   - "[[architecture]]"
   - "[[glossary]]"
   - "[[local-bootstrap]]"
   - "[[adr-seaweedfs-dev-object-storage]]"
+  - "[[gitops-repo]]"
 sources:
   - ../../sources/_shared/2026-05-23-repo-tooling-claude-md-precommit.md
   - ../../sources/_shared/2026-10-05-stacked-prs-and-roadmap.md
@@ -18,6 +19,7 @@ sources:
   - ../../sources/_shared/2026-10-16-backend-ci-caller-and-gitignore.md
   - ../../sources/_shared/2026-10-16-backend-ci-first-run-and-sonar.md
   - ../../sources/users-service/2026-10-18-smtp-email-adapter-and-api-layout.md
+  - ../../sources/_shared/2026-11-09-sidehq-org-gitops-repo-and-kustomize-layout.md
 ---
 
 ## TL;DR
@@ -159,7 +161,7 @@ El hook `post-edit-lint.sh` y `scripts/audit.sh` todavía usan `uvx ruff` sin ve
 
 **Sonar sobre el CI (2026-10-16).** Sonar marcó `uv run` sin `--locked` ni `--no-build`. El paso de tests usa `uv run --no-sync --no-build`: el entorno ya viene de `uv sync --locked`, y `--no-build` se añade solo porque la regla de Sonar es estática. Sigue abierto el aviso de `uv sync` sin `--no-build`, que deja su Quality Gate en "C Security Rating": users necesita compilar `brevo-python` (solo publica sdist) y uv no admite excepciones por paquete. Ver [[open-items]].
 
-**Ruleset de `main` (2026-10-16).** Exige 1 aprobación e historial lineal, y bloquea borrar la rama y el force-push. El rol admin tiene bypass `always`. Todavía no exige status checks. Claude Code no puede mergear con bypass (`gh pr merge --admin` lo bloquea su modo automático por "Merge Without Review"), así que esos merges los hace el autor.
+**Ruleset de `main` (2026-10-16).** Exige 1 aprobación e historial lineal, y bloquea borrar la rama y el force-push. El rol admin tiene bypass `always`. Todavía no exige status checks. Claude Code no puede mergear con bypass (`gh pr merge --admin` lo bloquea su modo automático por "Merge Without Review"), así que esos merges los hace el autor. **Update 2026-11-09:** el repo pasó a `sidehq/app` y el ruleset viajó con él, pero sin bypass: `bypass_actors: []` y `current_user_can_bypass: "never"`. Para volver a mergear sin aprobación hay que agregar el rol Repository admin como bypass actor en Settings → Rules. El repo de GitOps es aparte (`sidehq/infra`, clonado en `side/gitops/` y excluido con `.git/info/exclude`): ver [[gitops-repo]].
 
 **`.gitignore` (2026-10-16).** El de la raíz cubre las cachés y artefactos de las herramientas (`.venv/`, `.ruff_cache/`, `.pytest_cache/`, `.mypy_cache/`, `htmlcov/`, `coverage.xml`, `dist/`, `build/`) y los archivos de editor y sistema (`.idea/`, `.vscode/`, `*.swp`, `.DS_Store`). Los servicios backend ya no tienen `.gitignore` propio; `frontend/` conserva el suyo.
 

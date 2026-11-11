@@ -12,8 +12,9 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
 - [architecture](wiki/_shared/architecture.md) — visión global del monorepo, hex pattern, patrones de comunicación (sync HTTP + async messaging), decisiones cross-cutting
 - [dev-workflow](wiki/_shared/dev-workflow.md) — reglas de trabajo: discuss-before-code (CLAUDE.md) + pre-commit hook de wiki staleness
 - [local-bootstrap](wiki/_shared/local-bootstrap.md) — como levantar el monorepo en una maquina limpia: topologia del compose, los one-shots de infra, que viaja por git y que por R2
+- [gitops-repo](wiki/_shared/gitops-repo.md) — repo `sidehq/infra`: layout de Kustomize + ApplicationSets, flujo de CD por digest, config y secretos con ESO, Terraform (gke, neon, cloudflare, maps)
 - [open-items](wiki/_shared/open-items.md) — backlog vivo de gaps y deuda técnica cross-service (checklist marcable entre sesiones)
-- [project-roadmap-2026](wiki/_shared/project-roadmap-2026.md) — fases del producto: completado (catálogo, users, AVM), en progreso (properties), pendiente (infra K3s, heatmap DWH, notifications-ms, payments-ms)
+- [project-roadmap-2026](wiki/_shared/project-roadmap-2026.md) — fases del producto: completado (catálogo, users, AVM), en progreso (properties), pendiente (infra en GKE con Argo + Kustomize, heatmap DWH, notifications-ms, payments-ms)
 - [business-model](wiki/_shared/business-model.md) — monetización por fases (promocionados, comisiones, B2B data, FinTech), análisis competitivo (Cerouno, Rentpana, Habi), moat y features planeadas
 - _shared/adrs/_:
   - [ADR-0001 — Auth vía Keycloak JWT](wiki/_shared/adrs/adr-auth-keycloak-jwt.md)
@@ -26,6 +27,7 @@ Wiki del monorepo `side`. Si es tu primera vez aquí, lee [CONVENTIONS.md](CONVE
   - [ADR-0008 — La infra se reconcilia con init jobs idempotentes](wiki/_shared/adrs/adr-infra-reconciled-by-init-jobs.md)
   - [ADR-0009 — SeaweedFS como S3 de dev y rclone como cliente](wiki/_shared/adrs/adr-seaweedfs-dev-object-storage.md)
   - [ADR-0011 — Cluster sin estado para la demo pública: datos en Neon y R2, Redis efímero adentro](wiki/_shared/adrs/adr-stateless-cluster-external-data.md)
+  - [ADR-0016 — Kustomize + ApplicationSets en un repo de GitOps aparte, en lugar del chart genérico de Helm](wiki/_shared/adrs/adr-kustomize-applicationsets-gitops.md)
 
 ## analytics-service (piloto)
 
