@@ -1,7 +1,7 @@
 ---
 title: ADR-0011 — Cluster sin estado para la demo pública; datos en Neon y R2, Redis efímero adentro
 status: draft
-last-verified: 2026-10-14
+last-verified: 2026-11-11
 owners: [_shared]
 related:
   - "[[project-roadmap-2026]]"
@@ -10,10 +10,12 @@ related:
   - "[[adr-seaweedfs-dev-object-storage]]"
   - "[[adr-dev-config-versioned-artifacts-in-r2]]"
   - "[[adr-hash-history-static-hosting]]"
+  - "[[gitops-repo]]"
 sources:
   - ../../../sources/_shared/2026-10-05-stateless-cluster-external-data.md
   - ../../../sources/_shared/2026-10-05-public-demo-deploy-gke-cloudflare.md
   - ../../../sources/_shared/2026-10-14-mvp-close-and-demo-infra-costs.md
+  - ../../../sources/_shared/2026-11-11-terraform-gke-neon-cloudflare-modules.md
 decision-date: 2026-10-05
 decision-status: accepted
 ---
@@ -54,6 +56,13 @@ INTERNET → CLOUDFLARE (DNS · CDN · WAF · DDoS · rate limit)
   - Bucket **público** detrás de `cdn.<dominio>` para fotos y avatares.
   - Buckets **privados** sin dominio para los CSV de imports y los artefactos del modelo.
   - Las subidas presignadas van al endpoint S3 de R2, no a `cdn.`.
+
+**Update 2026-11-11.**
+- **Límites del plan Free de Neon.** La doc de Neon de hoy da **1 GB por project** (20 GB en total, no 0,5 GB), hasta 100 projects, 10 branches por project, 6 horas de historia y scale to zero fijo en 5 minutos. Las CU-horas (100) y el egress (5 GB) por project no cambiaron.
+- **R2: dos buckets públicos** en lugar de uno detrás de `cdn.`: `property-images` en `img.<dominio>` y `profile-photos` en `avatars.<dominio>`. Hay dos razones:
+  - los tokens de R2 se limitan por bucket, no por prefijo;
+  - Universal SSL solo cubre un nivel de subdominio, así que `x.cdn.<dominio>` necesitaría Advanced Certificate Manager.
+- **URLs con custom domain.** El bucket no va en la ruta, así que `build_public_url` tiene que armar `{base}/{key}`. El Terraform está en [[gitops-repo]].
 - **Dentro del cluster:**
   - Redis efímero (~50–100 MB de RAM).
   - Kafka con un PVC chico.
